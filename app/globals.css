@@ -39,7 +39,9 @@
 }
 
 html {
+  direction: ltr;
   min-height: 100%;
+  overflow-x: hidden;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -47,7 +49,10 @@ html {
 }
 
 body {
+  direction: ltr;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: hidden;
   margin: 0;
   background: var(--theme-background);
   color: var(--theme-foreground);

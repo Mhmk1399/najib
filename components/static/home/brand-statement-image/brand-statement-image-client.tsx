@@ -312,7 +312,7 @@ export function BrandStatementImageClient({
   }, [enableScrollReveal]);
 
   return (
-    <div ref={rootRef} className="relative h-full w-full overflow-x-hidden">
+    <div ref={rootRef} className="relative h-full w-full overflow-clip">
       {children}
     </div>
   );

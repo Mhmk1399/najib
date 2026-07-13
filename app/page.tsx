@@ -13,30 +13,46 @@ import { cinematicVideoHeroData } from "@/components/static/home/cinematic-video
 import { ColorStorySlider } from "@/components/static/home/color-story-slider/color-story-slider";
 import { colorStorySliderData } from "@/components/static/home/color-story-slider/color-story-slider-data";
 import { HOME_SECTION_DIVIDER_CLASS } from "@/components/static/home/home-section-classes";
+import { HomeSectionEntrance } from "@/components/static/home/motion/home-section-entrance";
 import { ProductFocusSlider } from "@/components/static/home/product-focus-slider/product-focus-slider";
 import { productFocusSliderData } from "@/components/static/home/product-focus-slider/product-focus-slider-data.example";
 
 export default function Home() {
   return (
-    <main className="isolate overflow-x-hidden bg-[#FCFAF7] text-[#231F20] dark:bg-[#0B1117] dark:text-[#F8F5F0]">
+    <main className="isolate overflow-x-clip bg-[#FCFAF7] text-[#231F20] dark:bg-[#0B1117] dark:text-[#F8F5F0]">
       <CinematicVideoHero {...cinematicVideoHeroData} />
-      <CategoryEditorialGrid {...categoryEditorialGridData} />
-      <ProductFocusSlider
-        {...productFocusSliderData}
-        className={HOME_SECTION_DIVIDER_CLASS}
-      />
+      <HomeSectionEntrance variant="up">
+        <CategoryEditorialGrid {...categoryEditorialGridData} />
+      </HomeSectionEntrance>
+      <HomeSectionEntrance variant="start">
+        <ProductFocusSlider
+          {...productFocusSliderData}
+          className={HOME_SECTION_DIVIDER_CLASS}
+        />
+      </HomeSectionEntrance>
 
-      <CampaignDiptych
-        {...campaignDiptychData}
-        className={HOME_SECTION_DIVIDER_CLASS}
-      />
-      <ColorStorySlider {...colorStorySliderData} />
-      <FaqSection {...homepageFaqData} className={HOME_SECTION_DIVIDER_CLASS} />
+      <HomeSectionEntrance variant="end">
+        <CampaignDiptych
+          {...campaignDiptychData}
+          className={HOME_SECTION_DIVIDER_CLASS}
+        />
+      </HomeSectionEntrance>
+      <HomeSectionEntrance variant="soft">
+        <ColorStorySlider {...colorStorySliderData} />
+      </HomeSectionEntrance>
+      <HomeSectionEntrance variant="start">
+        <FaqSection
+          {...homepageFaqData}
+          className={HOME_SECTION_DIVIDER_CLASS}
+        />
+      </HomeSectionEntrance>
       <BrandStatementImage {...brandStatementImageData} />
-      <BrandSeoSummary
-        {...brandSeoSummaryData}
-        className={HOME_SECTION_DIVIDER_CLASS}
-      />
+      <HomeSectionEntrance variant="up">
+        <BrandSeoSummary
+          {...brandSeoSummaryData}
+          className={HOME_SECTION_DIVIDER_CLASS}
+        />
+      </HomeSectionEntrance>
     </main>
   );
 }

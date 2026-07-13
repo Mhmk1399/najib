@@ -100,31 +100,31 @@ export default function RootLayout({
     <html
       className="scroll-smooth"
       lang="en"
-      dir="rtl"
+      dir="ltr"
       suppressHydrationWarning
     >
       <head></head>
 
-      <body
-        className={`antialiased ${Dana.className} flex min-h-dvh flex-col`}
-      >
-        <ThemeProvider defaultTheme="light">
-          <LenisProvider>
-            <Navbar
-              logo={navbarLogo}
-              primaryLinks={navbarPrimaryLinks}
-              categories={navbarCategories}
-              labels={navbarLabels}
-              // user={user}
-              // cartCount={cartCount}
-              overlayAtTop
-              heroTone="light"
-              showCategoryRail
-            />
-            <div className="flex-1">{children}</div>
-            <Footer {...footerData} />
-          </LenisProvider>
-        </ThemeProvider>
+      <body dir="ltr" className={`antialiased ${Dana.className} min-h-dvh`}>
+        <div dir="rtl" className="flex min-h-dvh flex-col">
+          <ThemeProvider defaultTheme="light">
+            <LenisProvider>
+              <Navbar
+                logo={navbarLogo}
+                primaryLinks={navbarPrimaryLinks}
+                categories={navbarCategories}
+                labels={navbarLabels}
+                // user={user}
+                // cartCount={cartCount}
+                overlayAtTop
+                heroTone="light"
+                showCategoryRail
+              />
+              <div className="flex-1">{children}</div>
+              <Footer {...footerData} />
+            </LenisProvider>
+          </ThemeProvider>
+        </div>
       </body>
     </html>
   );

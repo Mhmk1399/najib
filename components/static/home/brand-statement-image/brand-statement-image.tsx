@@ -75,13 +75,13 @@ export function BrandStatementImage(props: BrandStatementImageProps) {
       aria-labelledby={headingId}
       className={cn(
         "relative min-h-[100svh] md:min-h-[125svh] lg:min-h-[140svh]",
-        "overflow-x-hidden",
+        "overflow-clip",
         HOME_PAGE_SURFACE_CLASS,
         HOME_SECTION_DIVIDER_CLASS,
         props.className,
       )}
     >
-      <div className="sticky top-0 h-[100svh] w-full overflow-x-hidden">
+      <div className="sticky top-0 h-[100svh] w-full overflow-clip">
         <BrandStatementImageClient enableScrollReveal={enableScrollReveal}>
           <div
             data-sticky-inner
