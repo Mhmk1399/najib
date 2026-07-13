@@ -1,0 +1,101 @@
+import type { SilentLookbookProps } from "./silent-lookbook.types";
+
+export const silentLookbookData = {
+    id: "homepage-silent-lookbook",
+    eyebrow: "لوک‌بوک نجیب‌زاده",
+    title: "روایتی از فرم، سکوت و حضور.",
+    description:
+        "نگاهی تصویری به مجموعه‌هایی که با تناسب، جزئیات و وقاری آرام شکل گرفته‌اند.",
+    items: [
+        {
+            id: "architectural-form",
+            number: "01",
+            title: "فرم در معماری",
+            href: "/collections/suits",
+            size: "wide",
+            image: {
+        src: "/assets/images/hero.webp",
+                width: 2000,
+                height: 1350,
+                alt: "مدل مرد با کت‌وشلوار نجیب‌زاده در فضای معماری مدرن",
+            },
+            objectPosition: "center",
+        },
+        {
+            id: "quiet-portrait",
+            number: "02",
+            title: "پرتره‌ای از وقار",
+            href: "/collections/jackets",
+            size: "portrait",
+            image: {
+        src: "/assets/images/hero3.webp",
+                width: 1200,
+                height: 1600,
+                alt: "پرتره مدل مرد با کت رسمی نجیب‌زاده",
+            },
+            objectPosition: "center",
+        },
+        {
+            id: "tailored-silhouette",
+            number: "03",
+            title: "سیلوئت سنجیده",
+            href: "/bespoke",
+            size: "large-portrait",
+            image: {
+        src: "/assets/images/hero4.webp",
+                width: 1400,
+                height: 1900,
+                alt: "فرم کامل کت‌وشلوار خیاطی‌شده نجیب‌زاده",
+            },
+            objectPosition: "center",
+        },
+        {
+            id: "evening-composition",
+            number: "04",
+            title: "ترکیب شب",
+            href: "/collections/suits",
+            size: "landscape",
+            image: {
+        src: "/assets/images/hero5.webp",
+                width: 1800,
+                height: 1200,
+                alt: "مدل مرد با پوشش رسمی نجیب‌زاده در فضای شب",
+            },
+            objectPosition: "center",
+        },
+        {
+            id: "finishing-detail",
+            number: "05",
+            title: "جزئیات نهایی",
+            href: "/collections/accessories",
+            size: "narrow",
+            image: {
+        src: "/assets/images/hero.webp",
+                width: 1100,
+                height: 1600,
+                alt: "نمای نزدیک از جزئیات پوشش رسمی مردانه نجیب‌زاده",
+            },
+            objectPosition: "center",
+        },
+        {
+            id: "dignity-in-motion",
+            number: "06",
+            title: "وقار در حرکت",
+            href: "/collections",
+            size: "final-wide",
+            image: {
+                src: "/assets/images/hero3.webp",
+                width: 2100,
+                height: 1400,
+                alt: "مدل مرد با استایل رسمی نجیب‌زاده در حال حرکت",
+            },
+            objectPosition: "center",
+        },
+    ],
+    finalAction: {
+        label: "مشاهده همه کالکشن‌ها",
+        href: "/collections",
+        ariaLabel: "مشاهده همه کالکشن‌های پوشاک مردانه نجیب‌زاده",
+    },
+    enablePointerDrag: true,
+} as const satisfies Omit<SilentLookbookProps, "locale" | "className">;
