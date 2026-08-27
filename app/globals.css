@@ -1,89 +1,23 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *, [data-theme="dark"], [data-theme="dark"] *));
-
 :root {
-  --theme-background: #fcfaf7;
-  --theme-foreground: #231f20;
-  --theme-surface: #ffffff;
-  --theme-surface-muted: #f8f3eb;
-  --theme-surface-brand: #f2dbb4;
-  --theme-text-muted: #6c6662;
-  --theme-border: #ded8d1;
-  --theme-border-strong: #bdb5ad;
-  --theme-accent: #c15427;
-  --theme-accent-text: #a94420;
-  --theme-accent-foreground: #ffffff;
-  --duration-normal: 200ms;
-  --ease-standard: ease;
+  --ink: #17130f;
+  --bone: #efe9df;
+  --warm-glass: rgba(63, 47, 34, 0.76);
+  --dark-glass: rgba(20, 17, 14, 0.8);
+  --line: rgba(255, 255, 255, 0.2);
 }
-
-:root.dark,
-:root[data-theme="dark"] {
-  --theme-background: #0b1117;
-  --theme-foreground: #f8f5f0;
-  --theme-surface: #111820;
-  --theme-surface-muted: #171f27;
-  --theme-surface-brand: #211a17;
-  --theme-text-muted: #b8b2ac;
-  --theme-border: #2c343c;
-  --theme-border-strong: #46515b;
-  --theme-accent: #c15427;
-  --theme-accent-text: #e18a68;
-  --theme-accent-foreground: #ffffff;
-}
-
-*,
-*::before,
-*::after {
+* {
   box-sizing: border-box;
 }
-
 html {
-  direction: ltr;
-  min-height: 100%;
-  overflow-x: hidden;
   scroll-behavior: smooth;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  background: #111;
+  scrollbar-gutter: stable;
 }
-
 body {
-  direction: ltr;
-  min-height: 100dvh;
-  max-width: 100%;
-  overflow-x: hidden;
   margin: 0;
-  background: var(--theme-background);
-  color: var(--theme-foreground);
-  font-family: Dana, sans-serif;
-  transition:
-    background-color var(--duration-normal) var(--ease-standard),
-    color var(--duration-normal) var(--ease-standard);
-}
-
-.najib-wordmark-shine {
-  color: transparent;
-  background:
-    linear-gradient(
-      100deg,
-      color-mix(in srgb, var(--theme-foreground) 72%, transparent),
-      var(--theme-foreground) 36%,
-      var(--theme-accent-text) 50%,
-      var(--theme-foreground) 64%,
-      color-mix(in srgb, var(--theme-foreground) 72%, transparent)
-    );
-  background-size: 220% 100%;
-  -webkit-background-clip: text;
-  background-clip: text;
-}
-
-@keyframes najib-signature-shine {
-  from {
-    background-position: 160% 50%;
-  }
-
-  to {
-    background-position: -60% 50%;
-  }
-}
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  color: #fff;
+  background: #111;
+} 

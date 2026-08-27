@@ -19,19 +19,12 @@
  */
 
 import type { Metadata } from "next";
-import { ThemeProvider } from "@/contexts/theme-context";
 import "./globals.css";
- import { Footer } from "@/components/global/footer";
 import { LenisProvider } from "@/components/providers/lenis-provider";
-import { Navbar } from "@/components/global/navbar";
-import {
-  navbarCategories,
-  navbarLabels,
-  navbarLogo,
-  navbarPrimaryLinks,
-} from "@/components/global/navbar/navbar-data.example";
-import { footerData } from "@/components/global/footer/footer.data";
+
 import { Dana } from "@/next-persian-fonts/dana";
+import Navbar from "@/components/global/Navbar";
+import Footer from "@/components/global/Footer";
 // ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
@@ -106,24 +99,12 @@ export default function RootLayout({
       <head></head>
 
       <body dir="ltr" className={`antialiased ${Dana.className} min-h-dvh`}>
-        <div dir="rtl" className="flex min-h-dvh flex-col">
-          <ThemeProvider defaultTheme="light">
-            <LenisProvider>
-              <Navbar
-                logo={navbarLogo}
-                primaryLinks={navbarPrimaryLinks}
-                categories={navbarCategories}
-                labels={navbarLabels}
-                // user={user}
-                // cartCount={cartCount}
-                overlayAtTop
-                heroTone="light"
-                showCategoryRail
-              />
-              <div className="flex-1">{children}</div>
-              <Footer {...footerData} />
-            </LenisProvider>
-          </ThemeProvider>
+        <div  className="flex min-h-dvh flex-col">
+          <Navbar />
+          <LenisProvider>
+            <div className="flex-1">{children}</div>
+            <Footer />
+          </LenisProvider>
         </div>
       </body>
     </html>

@@ -1,200 +1,511 @@
 /**
  * theme-colors.ts
  *
- * Single source of truth for all brand colors and Tailwind class tokens.
+ * Najibzadeh global visual theme.
  *
- * RULES:
- * - All Tailwind class strings must be complete and static so the Tailwind
- *   compiler can detect them via content scanning.
- * - Dark variants are embedded directly in each token string.
- * - No runtime logic lives here — this file is imported by Server Components.
+ * This file is the single source of truth for:
+ * - Brand colors
+ * - Semantic colors
+ * - Tailwind class tokens
+ *
+ * IMPORTANT:
+ * Copper is an accent, NOT a primary surface color.
  */
 
-// ---------------------------------------------------------------------------
-// Official Najibzadeh Brand Colors
-// ---------------------------------------------------------------------------
+// -----------------------------------------------------------------------------
+// Official Brand Palette
+// -----------------------------------------------------------------------------
 
 export const brandColors = {
     copper: {
-        hex: '#C15427',
-        rgb: '193 84 39',
-        cmyk: '18 79 100 7',
-        pantone: '7584 C',
+        // Micro accent only.
+        hex: "#C15427",
+        rgb: "193 84 39",
+        cmyk: "18 79 100 7",
+        pantone: "7584 C",
     },
+
     black: {
-        hex: '#231F20',
-        rgb: '35 31 32',
-        cmyk: '0 0 0 100',
+        hex: "#0B0B0B",
+        rgb: "11 11 11",
+        cmyk: "0 0 0 100",
     },
+
+    /**
+     * Soft editorial cream.
+     *
+     * Never use as primary text color.
+     * Never use for buttons by default.
+     * Background use only.
+     */
     cream: {
-        hex: '#F2DBB4',
-        rgb: '242 219 180',
-        cmyk: '0 9 28 5',
-        pantone: '7506 C',
+        hex: "#F6F2EB",
+        rgb: "246 242 235",
     },
+
     silver: {
-        hex: '#77787B',
-        rgb: '119 120 123',
-        cmyk: '0 0 0 65',
+        hex: "#737373",
+        rgb: "115 115 115",
     },
-    // Official neutral scale
-    gray80: { hex: '#58595B' },
-    gray50: { hex: '#939598' },
-    gray15: { hex: '#DCDDDE' },
+
+    gray80: {
+        hex: "#3F3F3F",
+    },
+
+    gray50: {
+        hex: "#8A8A8A",
+    },
+
+    gray15: {
+        hex: "#E5E5E5",
+    },
+
+    white: {
+        hex: "#FFFFFF",
+        rgb: "255 255 255",
+    },
 } as const;
 
-// ---------------------------------------------------------------------------
-// Raw semantic design tokens (used in CSS custom properties)
-// ---------------------------------------------------------------------------
-// These values map to the exact hex codes defined in the brief.
-// They are intentionally not Tailwind classes — they feed tailwind.config.ts.
+// -----------------------------------------------------------------------------
+// Light Theme
+// -----------------------------------------------------------------------------
 
 export const lightTokens = {
-    canvas: '#FCFAF7',
-    surface: '#FFFFFF',
-    surfaceMuted: '#F8F3EB',
-    surfaceBrand: '#F2DBB4',
-    text: '#231F20',
-    textMuted: '#6C6662',
-    border: '#DED8D1',
-    borderStrong: '#BDB5AD',
-    accent: '#C15427',
-    accentText: '#A94420',
-    accentForeground: '#FFFFFF',
-    destructive: '#A33A32',
+  /* Main page */
+  canvas: "#FFFFFF",
+
+  /* Cards / navbar / sections */
+  surface: "#FFFFFF",
+
+  /* Very subtle neutral separation */
+  surfaceMuted: "#F7F7F7",
+
+  /**
+   * Editorial background only.
+   * This is the ONLY cream surface.
+   */
+  surfaceBrand: "#F6F2EB",
+
+  /* Main typography */
+  text: "#0B0B0B",
+
+  /* Secondary typography */
+  textMuted: "#707070",
+
+  /* Tiny tertiary copy */
+  textSoft: "#989898",
+
+  /* Structure */
+  border: "#E5E5E5",
+
+  borderStrong: "#B8B8B8",
+
+  /**
+   * Copper = eyebrow only.
+   */
+  accent: "#C15427",
+
+  accentStrong: "#C15427",
+
+  accentForeground: "#FFFFFF",
+
+  destructive: "#A33A32",
 } as const;
+
+// -----------------------------------------------------------------------------
+// Dark Theme
+// -----------------------------------------------------------------------------
 
 export const darkTokens = {
-    canvas: '#0B1117',
-    surface: '#111820',
-    surfaceMuted: '#171F27',
-    surfaceBrand: '#211A17',
-    text: '#F8F5F0',
-    textMuted: '#B8B2AC',
-    border: '#2C343C',
-    borderStrong: '#46515B',
-    accent: '#C15427',
-    accentText: '#E18A68',
-    accentForeground: '#FFFFFF',
-    destructive: '#E27368',
+  canvas: "#0B0B0B",
+
+  surface: "#111111",
+
+  surfaceMuted: "#181818",
+
+  /**
+   * Warm editorial dark.
+   * Use rarely.
+   */
+  surfaceBrand: "#161311",
+
+  text: "#FFFFFF",
+
+  textMuted: "#B5B5B5",
+
+  textSoft: "#777777",
+
+  border: "#292929",
+
+  borderStrong: "#474747",
+
+  accent: "#C15427",
+
+  accentStrong: "#C15427",
+
+  accentForeground: "#FFFFFF",
+
+  destructive: "#D95C54",
 } as const;
 
-// ---------------------------------------------------------------------------
-// Typography tokens
-// ---------------------------------------------------------------------------
-// Font families are referenced by name only.
-// Actual font loading is handled separately via next/font/local or
-// next/font/google.  These strings match the CSS variable names you will
-// expose in your Tailwind fontFamily config.
+// -----------------------------------------------------------------------------
+// Typography
+// -----------------------------------------------------------------------------
 
 export const fontTokens = {
-    /** Persian typeface — Dana */
-    persian: 'var(--font-dana)',
-    /** English typeface — Open Sans */
-    english: 'var(--font-open-sans)',
+    persian: "var(--font-dana)",
+
+    english: "var(--font-open-sans)",
 } as const;
 
-// ---------------------------------------------------------------------------
-// Reusable Tailwind Class Tokens
-// ---------------------------------------------------------------------------
-// Every string is a complete, static Tailwind class list.
-// Tailwind's content scanner reads these at build time → no purge issues.
-// Components import and spread these strings with cn() / clsx().
+// -----------------------------------------------------------------------------
+// Tailwind Theme Tokens
+// -----------------------------------------------------------------------------
+//
+// Keep ALL classes complete and static.
+// No dynamic Tailwind class construction.
+// -----------------------------------------------------------------------------
 
 export const themeClasses = {
-    // ── Surfaces ─────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------
+    // PAGE
+    // ---------------------------------------------------------------------------
+    navbarOverlayLight: [
+        "bg-transparent",
+        "text-white",
+        "border-transparent",
+    ].join(" "),
 
-    /** Full-page canvas background */
-    page: 'bg-[#FCFAF7] dark:bg-[#0B1117]',
+    navbarOverlayDark: [
+        "bg-transparent",
+        "text-[#231F20]",
+        "border-transparent",
+    ].join(" "),
 
-    /** Default card / panel surface */
-    surface: 'bg-white dark:bg-[#111820]',
+    breadcrumbOverlayLight: [
+        "text-white/70",
+    ].join(" "),
 
-    /** Slightly recessed / secondary surface */
-    surfaceMuted: 'bg-[#F8F3EB] dark:bg-[#171F27]',
+    breadcrumbOverlayDark: [
+        "text-[#6C6662]",
+    ].join(" "),
+    page: [
+        "bg-[#FCFAF7]",
+        "text-[#231F20]",
+        "dark:bg-[#0B1117]",
+        "dark:text-[#F8F5F0]",
+    ].join(" "),
 
-    /** Warm brand-tinted surface (cream / deep warmth) */
-    surfaceBrand: 'bg-[#F2DBB4] dark:bg-[#211A17]',
+    // ---------------------------------------------------------------------------
+    // SURFACES
+    // ---------------------------------------------------------------------------
 
-    // ── Typography ───────────────────────────────────────────────────────────
+    surface: [
+        "bg-white",
+        "dark:bg-[#111820]",
+    ].join(" "),
 
-    /** Primary body / heading text */
-    textPrimary: 'text-[#231F20] dark:text-[#F8F5F0]',
+    surfaceMuted: [
+        "bg-[#F8F3EB]",
+        "dark:bg-[#171F27]",
+    ].join(" "),
 
-    /** Secondary / supporting text */
-    textSecondary: 'text-[#6C6662] dark:text-[#B8B2AC]',
+    surfaceBrand: [
+        "bg-[#F2DBB4]",
+        "dark:bg-[#211A17]",
+    ].join(" "),
+
+    surfaceTransparent: [
+        "bg-transparent",
+    ].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // TYPOGRAPHY
+    // ---------------------------------------------------------------------------
+
+    textPrimary: [
+        "text-[#231F20]",
+        "dark:text-[#F8F5F0]",
+    ].join(" "),
+
+    textSecondary: [
+        "text-[#77787B]",
+        "dark:text-[#B8B2AC]",
+    ].join(" "),
+
+    textSoft: [
+        "text-[#939598]",
+        "dark:text-[#77787B]",
+    ].join(" "),
 
     /**
-     * Copper accent text — use only for labels, captions, active states.
-     * Never use for long body copy (contrast + copper-usage rule).
+     * Copper must only be used for:
+     * - active states
+     * - small labels
+     * - selected items
+     * - subtle brand moments
      */
-    textAccent: 'text-[#A94420] dark:text-[#E18A68]',
+    textAccent: [
+        "text-[#A94420]",
+        "dark:text-[#E18A68]",
+    ].join(" "),
 
-    // ── Borders ──────────────────────────────────────────────────────────────
+    // ---------------------------------------------------------------------------
+    // ICONS
+    // ---------------------------------------------------------------------------
 
-    /** Default subtle border */
-    border: 'border-[#DED8D1] dark:border-[#2C343C]',
+    iconPrimary: [
+        "text-[#231F20]",
+        "dark:text-[#F8F5F0]",
+    ].join(" "),
 
-    /** Stronger / more prominent border */
-    borderStrong: 'border-[#BDB5AD] dark:border-[#46515B]',
+    iconMuted: [
+        "text-[#77787B]",
+        "dark:text-[#B8B2AC]",
+    ].join(" "),
 
-    // ── Interactive Controls ─────────────────────────────────────────────────
+    iconAccent: [
+        "text-[#C15427]",
+        "dark:text-[#E18A68]",
+    ].join(" "),
 
-    /**
-     * Primary CTA button — copper background, white text.
-     * Copper usage is intentional here (≤8% surface rule applies at page level).
-     */
-    primaryButton: [
-        'bg-[#C15427] text-white',
-        'hover:bg-[#A94420]',
-        'dark:bg-[#C15427] dark:text-white dark:hover:bg-[#A94420]',
-        'transition-colors duration-150',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-    ].join(' '),
+    // ---------------------------------------------------------------------------
+    // BORDERS
+    // ---------------------------------------------------------------------------
 
-    /**
-     * Secondary button — bordered, no fill.
-     */
-    secondaryButton: [
-        'bg-transparent text-[#231F20] border border-[#BDB5AD]',
-        'hover:border-[#C15427] hover:text-[#A94420]',
-        'dark:text-[#F8F5F0] dark:border-[#46515B]',
-        'dark:hover:border-[#C15427] dark:hover:text-[#E18A68]',
-        'transition-colors duration-150',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-    ].join(' '),
+    border: [
+        "border-[#DCDDDE]",
+        "dark:border-[#2C343C]",
+    ].join(" "),
 
-    /**
-     * Ghost / text button — no border, no background.
-     */
+    borderStrong: [
+        "border-[#939598]",
+        "dark:border-[#46515B]",
+    ].join(" "),
+
+    divider: [
+        "border-t",
+        "border-[#DCDDDE]",
+        "dark:border-[#2C343C]",
+    ].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // PRIMARY BLACK BUTTON
+    // ---------------------------------------------------------------------------
+    //
+    // For Najibzadeh the dominant CTA should usually be BLACK,
+    // not copper.
+    //
+
+  primaryButton: [
+  "bg-[#0B0B0B]",
+  "text-white",
+
+  "border",
+  "border-[#0B0B0B]",
+
+  "hover:bg-[#262626]",
+  "hover:border-[#262626]",
+
+  "dark:bg-white",
+  "dark:text-[#0B0B0B]",
+  "dark:border-white",
+
+  "dark:hover:bg-[#EDEDED]",
+  "dark:hover:border-[#EDEDED]",
+
+  "transition-colors",
+  "duration-200",
+
+  "disabled:pointer-events-none",
+  "disabled:opacity-40",
+].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // COPPER BUTTON
+    // ---------------------------------------------------------------------------
+    //
+    // Only for strategically important actions.
+    //
+
+    accentButton: [
+        "bg-[#C15427]",
+        "text-white",
+
+        "hover:bg-[#A94420]",
+
+        "dark:bg-[#C15427]",
+        "dark:text-white",
+        "dark:hover:bg-[#A94420]",
+
+        "transition-colors",
+        "duration-200",
+
+        "disabled:pointer-events-none",
+        "disabled:opacity-40",
+    ].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // SECONDARY BUTTON
+    // ---------------------------------------------------------------------------
+
+ secondaryButton: [
+  "bg-transparent",
+
+  "border",
+  "border-[#0B0B0B]/30",
+
+  "text-[#0B0B0B]",
+
+  "hover:border-[#0B0B0B]",
+  "hover:bg-[#0B0B0B]",
+  "hover:text-white",
+
+  "dark:border-white/35",
+  "dark:text-white",
+
+  "dark:hover:border-white",
+  "dark:hover:bg-white",
+  "dark:hover:text-[#0B0B0B]",
+
+  "transition-colors",
+  "duration-200",
+
+  "disabled:pointer-events-none",
+  "disabled:opacity-40",
+].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // GHOST BUTTON
+    // ---------------------------------------------------------------------------
+
     ghostButton: [
-        'bg-transparent text-[#6C6662]',
-        'hover:text-[#231F20]',
-        'dark:text-[#B8B2AC] dark:hover:text-[#F8F5F0]',
-        'transition-colors duration-150',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-    ].join(' '),
+        "bg-transparent",
 
-    // ── Focus ────────────────────────────────────────────────────────────────
+        "text-[#77787B]",
+        "hover:text-[#231F20]",
 
-    /**
-     * Keyboard focus ring — copper accent, clearly visible in both themes.
-     * Apply with focus-visible: on interactive elements.
-     */
-    focusRing: [
-        'focus-visible:outline-none',
-        'focus-visible:ring-2',
-        'focus-visible:ring-[#C15427]',
-        'focus-visible:ring-offset-2',
-        'focus-visible:ring-offset-[#FCFAF7]',
-        'dark:focus-visible:ring-offset-[#0B1117]',
-    ].join(' '),
+        "dark:text-[#B8B2AC]",
+        "dark:hover:text-[#F8F5F0]",
 
-    // ── Dividers ─────────────────────────────────────────────────────────────
+        "transition-colors",
+        "duration-200",
+    ].join(" "),
 
-    /** Hairline horizontal rule between sections */
-    divider: 'border-t border-[#DED8D1] dark:border-[#2C343C]',
+    // ---------------------------------------------------------------------------
+    // ACCENT / ACTIVE STATE
+    // ---------------------------------------------------------------------------
 
+    activeIndicator: [
+  "bg-[#0B0B0B]",
+  "dark:bg-white",
+].join(" "),
+
+activeText: [
+  "text-[#0B0B0B]",
+  "dark:text-white",
+].join(" "),
+
+activeBorder: [
+  "border-[#0B0B0B]",
+  "dark:border-white",
+].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // PRODUCT CARD
+    // ---------------------------------------------------------------------------
+
+    productCard: [
+        "bg-white",
+        "border",
+        "border-[#DCDDDE]",
+
+        "dark:bg-[#111820]",
+        "dark:border-[#2C343C]",
+
+        "transition-colors",
+        "duration-200",
+    ].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // NAVBAR
+    // ---------------------------------------------------------------------------
+
+   navbar: [
+  "bg-white/95",
+  "text-[#0B0B0B]",
+
+  "border-b",
+  "border-[#E5E5E5]",
+
+  "backdrop-blur-md",
+
+  "dark:bg-[#0B0B0B]/95",
+  "dark:text-white",
+  "dark:border-[#292929]",
+].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // MEGA MENU
+    // ---------------------------------------------------------------------------
+
+megaMenu: [
+  "bg-white",
+  "text-[#0B0B0B]",
+
+  "dark:bg-[#0B0B0B]",
+  "dark:text-white",
+].join(" "),
+
+megaMenuMuted: [
+  "bg-[#F7F7F7]",
+  "dark:bg-[#111111]",
+].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // INPUTS
+    // ---------------------------------------------------------------------------
+
+    input: [
+        "bg-white",
+
+        "border",
+        "border-[#DCDDDE]",
+
+        "text-[#231F20]",
+        "placeholder:text-[#939598]",
+
+        "hover:border-[#939598]",
+
+        "focus:border-[#231F20]",
+        "focus:outline-none",
+
+        "dark:bg-[#111820]",
+        "dark:border-[#2C343C]",
+        "dark:text-[#F8F5F0]",
+        "dark:placeholder:text-[#77787B]",
+        "dark:focus:border-[#B8B2AC]",
+
+        "transition-colors",
+        "duration-150",
+    ].join(" "),
+
+    // ---------------------------------------------------------------------------
+    // FOCUS
+    // ---------------------------------------------------------------------------
+
+   focusRing: [
+  "focus-visible:outline-none",
+
+  "focus-visible:ring-2",
+  "focus-visible:ring-[#0B0B0B]",
+
+  "focus-visible:ring-offset-2",
+  "focus-visible:ring-offset-white",
+
+  "dark:focus-visible:ring-white",
+  "dark:focus-visible:ring-offset-[#0B0B0B]",
+].join(" "),
 } as const;
 
 export type ThemeClasses = typeof themeClasses;
