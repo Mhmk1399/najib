@@ -6,7 +6,7 @@ import { type CSSProperties, type ReactNode } from "react";
 
 import { brandColors, fontTokens, lightTokens } from "@/theme/theme-colors";
 
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/Button";
 
 /* ==========================================================================
    TYPES
@@ -37,7 +37,6 @@ type SocialLink = {
 const FOOTER_GROUPS: FooterGroup[] = [
   {
     id: "shop",
-
     title: "Shop",
 
     links: [
@@ -70,7 +69,6 @@ const FOOTER_GROUPS: FooterGroup[] = [
 
   {
     id: "services",
-
     title: "Services",
 
     links: [
@@ -98,7 +96,6 @@ const FOOTER_GROUPS: FooterGroup[] = [
 
   {
     id: "house",
-
     title: "The House",
 
     links: [
@@ -131,7 +128,6 @@ const FOOTER_GROUPS: FooterGroup[] = [
 
   {
     id: "information",
-
     title: "Information",
 
     links: [
@@ -166,37 +162,28 @@ const FOOTER_GROUPS: FooterGroup[] = [
 const SOCIAL_LINKS: SocialLink[] = [
   {
     id: "instagram",
-
     label: "Instagram",
-
     href: "https://instagram.com/",
-
     icon: <InstagramIcon />,
   },
 
   {
     id: "linkedin",
-
     label: "LinkedIn",
-
     href: "https://linkedin.com/",
-
     icon: <LinkedInIcon />,
   },
 
   {
     id: "pinterest",
-
     label: "Pinterest",
-
     href: "https://pinterest.com/",
-
     icon: <PinterestIcon />,
   },
 ];
 
 /* ==========================================================================
-   COMPONENT
+   FOOTER
 ============================================================================ */
 
 export default function Footer() {
@@ -214,13 +201,7 @@ export default function Footer() {
     "--footer-border": lightTokens.border,
 
     "--footer-copper": brandColors.copper.hex,
-
-    "--footer-black-rgb": brandColors.black.rgb,
   } as CSSProperties;
-
-  /* ------------------------------------------------------------------------
-     BACK TO TOP
-  ------------------------------------------------------------------------- */
 
   function scrollToTop() {
     const reducedMotion = window.matchMedia(
@@ -271,181 +252,11 @@ export default function Footer() {
           xl:px-14
         "
       >
-        {/* ================================================================
-            TOP EDITORIAL
-        ================================================================= */}
-
-        <div
-          className="
-            grid
-
-            border-b
-            border-[var(--footer-border)]
-
-            py-14
-
-            md:py-16
-
-            lg:grid-cols-[minmax(0,1.4fr)_minmax(300px,0.6fr)]
-            lg:items-end
-            lg:gap-16
-            lg:py-20
-
-            xl:py-24
-          "
-        >
-          {/* ==============================================================
-              BRAND INTRO
-          =============================================================== */}
-
-          <div
-            className="
-              max-w-[850px]
-            "
-          >
-            {/* Copper only here */}
-
-            <div
-              className="
-                mb-6
-
-                flex
-                items-center
-                gap-3
-
-                text-[7px]
-                font-semibold
-
-                uppercase
-                tracking-[0.24em]
-
-                text-[var(--footer-copper)]
-
-                sm:text-[8px]
-              "
-            >
-              <span
-                className="
-                  h-px
-                  w-6
-
-                  bg-[var(--footer-copper)]
-                "
-              />
-
-              <span>The House of Najibzadeh</span>
-            </div>
-
-            <h2
-              className="
-                max-w-[800px]
-
-                font-serif
-
-                text-[clamp(2.8rem,9vw,4.7rem)]
-                font-normal
-
-                leading-[0.95]
-                tracking-[-0.05em]
-
-                text-[var(--footer-text)]
-
-                sm:text-[clamp(3.5rem,7vw,5.4rem)]
-
-                lg:text-[clamp(4rem,5vw,6.2rem)]
-              "
-            >
-              Presence shaped
-              <br />
-              with intention.
-            </h2>
-
-            <p
-              className="
-                mt-6
-
-                max-w-[520px]
-
-                text-[10px]
-                font-normal
-
-                leading-[1.8]
-
-                text-[var(--footer-muted)]
-
-                sm:text-[11px]
-
-                lg:mt-7
-                lg:text-xs
-              "
-            >
-              Modern tailoring, distinctive fragrance and considered objects
-              created around a quieter expression of luxury.
-            </p>
-          </div>
-
-          {/* ==============================================================
-              APPOINTMENT
-          =============================================================== */}
-
-          <div
-            className="
-              mt-10
-
-              w-full
-              max-w-[340px]
-
-              lg:mt-0
-              lg:ml-auto
-            "
-          >
-            <p
-              className="
-                mb-4
-
-                text-[8px]
-                font-semibold
-
-                uppercase
-                tracking-[0.19em]
-
-                text-[var(--footer-text)]
-              "
-            >
-              Private Services
-            </p>
-
-            <p
-              className="
-                mb-6
-
-                max-w-[300px]
-
-                text-[10px]
-                leading-[1.7]
-
-                text-[var(--footer-muted)]
-              "
-            >
-              Discover the house in person with a private appointment tailored
-              to you.
-            </p>
-
-            <Button
-              href="/appointments"
-              variant="black"
-              size="lg"
-              icon={<ArrowRightIcon />}
-              fullWidth
-            >
-              Book an Appointment
-            </Button>
-          </div>
-        </div>
-
-        {/* ================================================================
+        {/* =============================================================
             MAIN NAVIGATION
-        ================================================================= */}
+
+            Top Editorial کاملاً حذف شده.
+        ============================================================== */}
 
         <div
           className="
@@ -454,74 +265,93 @@ export default function Footer() {
             grid-cols-2
 
             gap-x-8
-            gap-y-12
+            gap-y-10
 
             border-b
             border-[var(--footer-border)]
 
-            py-12
+            py-10
 
             sm:gap-x-12
+            sm:py-12
 
             md:grid-cols-4
 
             lg:gap-x-16
-            lg:py-16
+            lg:py-14
           "
         >
           {FOOTER_GROUPS.map((group) => (
-            <FooterGroup key={group.id} group={group} />
+            <FooterGroupColumn key={group.id} group={group} />
           ))}
         </div>
 
-        {/* ================================================================
-            SOCIAL + CLIENT SERVICES
-        ================================================================= */}
+        {/* =============================================================
+            SOCIAL / CLIENT SERVICES
+
+            بسیار compact تر از نسخه قبلی.
+        ============================================================== */}
 
         <div
           className="
-            grid
+            flex
+
+            flex-col
+
+            gap-8
 
             border-b
             border-[var(--footer-border)]
 
-            py-9
+            py-7
 
-            md:grid-cols-2
+            md:flex-row
             md:items-center
-            md:gap-12
+            md:justify-between
 
-            lg:py-10
+            lg:py-8
           "
         >
-          {/* ==============================================================
-              SOCIAL
-          =============================================================== */}
+          {/* SOCIAL */}
 
-          <div>
+          <div
+            className="
+              flex
+
+              flex-col
+
+              gap-4
+
+              sm:flex-row
+              sm:items-center
+              sm:gap-7
+            "
+          >
             <p
               className="
-                mb-5
+                shrink-0
 
-                text-[8px]
+                text-[7px]
                 font-semibold
 
                 uppercase
-                tracking-[0.19em]
+                tracking-[0.18em]
 
                 text-[var(--footer-text)]
               "
             >
-              Follow Najibzadeh
+              Follow
             </p>
 
             <div
               className="
+                group/social
+
                 flex
                 flex-wrap
 
-                gap-x-7
-                gap-y-4
+                gap-x-6
+                gap-y-3
               "
             >
               {SOCIAL_LINKS.map((social) => (
@@ -530,48 +360,41 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* ==============================================================
-              CLIENT SERVICES
-          =============================================================== */}
+          {/* CLIENT SERVICE */}
 
           <div
             className="
-              mt-9
+              flex
 
-              border-t
-              border-[var(--footer-border)]
+              flex-col
 
-              pt-7
+              gap-2
 
-              md:mt-0
-              md:border-l
-              md:border-t-0
-              md:pl-10
-              md:pt-0
+              sm:flex-row
+              sm:items-center
+              sm:gap-5
+
+              md:justify-end
             "
           >
-            <p
+            <span
               className="
-                mb-4
-
-                text-[8px]
+                text-[7px]
                 font-semibold
 
                 uppercase
-                tracking-[0.19em]
+                tracking-[0.17em]
 
                 text-[var(--footer-text)]
               "
             >
               Client Services
-            </p>
+            </span>
 
             <a
               href="mailto:clientservices@najibzadeh.com"
               className="
-                inline-block
-
-                text-[10px]
+                text-[9px]
 
                 text-[var(--footer-muted)]
 
@@ -588,28 +411,14 @@ export default function Footer() {
             >
               clientservices@najibzadeh.com
             </a>
-
-            <p
-              className="
-                mt-3
-
-                max-w-[340px]
-
-                text-[9px]
-                leading-[1.65]
-
-                text-[var(--footer-soft)]
-              "
-            >
-              For appointments, product enquiries and assistance with your
-              order.
-            </p>
           </div>
         </div>
 
-        {/* ================================================================
-            LARGE WORDMARK
-        ================================================================= */}
+        {/* =============================================================
+            WORDMARK
+
+            نسبت به قبل کم‌ارتفاع‌تر.
+        ============================================================== */}
 
         <div
           className="
@@ -618,11 +427,11 @@ export default function Footer() {
             border-b
             border-[var(--footer-border)]
 
-            py-8
+            py-7
 
-            sm:py-10
+            sm:py-8
 
-            lg:py-12
+            lg:py-9
           "
         >
           <Link
@@ -635,19 +444,19 @@ export default function Footer() {
 
               text-center
 
-              text-[clamp(2.7rem,12.5vw,13rem)]
+              text-[clamp(2.8rem,11.5vw,11rem)]
               font-medium
 
-              leading-[0.8]
+              leading-[0.78]
 
-              tracking-[0.04em]
+              tracking-[0.045em]
 
               text-[var(--footer-text)]
 
               transition-opacity
-              duration-200
+              duration-300
 
-              hover:opacity-60
+              hover:opacity-45
 
               focus-visible:outline-none
               focus-visible:ring-2
@@ -658,37 +467,36 @@ export default function Footer() {
           </Link>
         </div>
 
-        {/* ================================================================
-            LEGAL / BOTTOM
-        ================================================================= */}
+        {/* =============================================================
+            LEGAL
+        ============================================================== */}
 
         <div
           className="
             flex
+
             flex-col
 
-            gap-7
+            gap-5
 
-            py-7
+            py-6
 
-            md:flex-row
-            md:items-center
-            md:justify-between
+            sm:flex-row
+            sm:items-center
+            sm:justify-between
 
-            lg:py-8
+            lg:py-7
           "
         >
-          {/* ==============================================================
-              COPYRIGHT
-          =============================================================== */}
+          {/* COPYRIGHT */}
 
           <p
             className="
-              text-[7px]
+              text-[6.5px]
               font-medium
 
               uppercase
-              tracking-[0.17em]
+              tracking-[0.16em]
 
               text-[var(--footer-soft)]
             "
@@ -696,9 +504,7 @@ export default function Footer() {
             © {year} Najibzadeh. All rights reserved.
           </p>
 
-          {/* ==============================================================
-              LEGAL LINKS
-          =============================================================== */}
+          {/* LEGAL */}
 
           <div
             className="
@@ -728,7 +534,7 @@ export default function Footer() {
               className="
                 cursor-pointer
 
-                text-[7px]
+                text-[6.5px]
                 font-semibold
 
                 uppercase
@@ -751,30 +557,18 @@ export default function Footer() {
             </button>
           </div>
 
-          {/* ==============================================================
-              BACK TO TOP
+          {/* BACK TO TOP */}
 
-              Dynamic Button
-          =============================================================== */}
-
-          <div
-            className="
-              w-full
-
-              sm:w-auto
-            "
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            icon={<ArrowUpIcon />}
+            iconPosition="right"
+            onClick={scrollToTop}
           >
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              icon={<ArrowUpIcon />}
-              iconPosition="right"
-              onClick={scrollToTop}
-            >
-              Back to Top
-            </Button>
-          </div>
+            Back to Top
+          </Button>
         </div>
       </div>
     </footer>
@@ -782,21 +576,25 @@ export default function Footer() {
 }
 
 /* ==========================================================================
-   FOOTER GROUP
+   FOOTER COLUMN
+
+   IMPORTANT:
+
+   وقتی روی یکی از لینک‌ها hover شود:
+   تمام لینک‌های همان ستون fade می‌شوند
+   ولی hovered link دوباره opacity 100 می‌گیرد.
 ============================================================================ */
 
-function FooterGroup({ group }: { group: FooterGroup }) {
+function FooterGroupColumn({ group }: { group: FooterGroup }) {
   return (
     <section>
-      {/* ================================================================
-          GROUP TITLE
-      ================================================================= */}
+      {/* TITLE */}
 
       <p
         className="
           mb-5
 
-          text-[8px]
+          text-[7px]
           font-semibold
 
           uppercase
@@ -808,13 +606,13 @@ function FooterGroup({ group }: { group: FooterGroup }) {
         {group.title}
       </p>
 
-      {/* ================================================================
-          LINKS
-      ================================================================= */}
+      {/* LINKS */}
 
       <ul
         className="
-          space-y-1
+          group/column
+
+          space-y-0.5
         "
       >
         {group.links.map((link) => (
@@ -827,52 +625,63 @@ function FooterGroup({ group }: { group: FooterGroup }) {
                   relative
 
                   inline-flex
-                  min-h-8
+                  min-h-7
 
                   items-center
 
-                  text-[11px]
+                  text-[10.5px]
                   font-normal
 
                   text-[var(--footer-muted)]
 
-                  transition-[color,transform]
-                  duration-200
+                  opacity-75
 
-                  hover:translate-x-1
-                  hover:text-[var(--footer-text)]
+                  transition-[opacity,color,transform]
+                  duration-300
 
+                  ease-[cubic-bezier(0.22,1,0.36,1)]
+
+                  group-hover/column:opacity-20
+
+                  hover:!translate-x-1
+                  hover:!text-[var(--footer-text)]
+                  hover:!opacity-100
+
+                  focus-visible:!opacity-100
                   focus-visible:outline-none
                   focus-visible:ring-2
                   focus-visible:ring-black
                   focus-visible:ring-offset-2
                 "
             >
-              <span>{link.label}</span>
+              {link.label}
 
-              {/* Black hover line */}
+              {/* =====================================================
+                    SMALL ARROW
+
+                    فقط روی لینک hover شده ظاهر می‌شود.
+                ====================================================== */}
 
               <span
                 aria-hidden="true"
                 className="
-                    absolute
+                    ml-2
 
-                    inset-x-0
-                    bottom-0
+                    -translate-x-1
 
-                    h-px
+                    text-[9px]
 
-                    origin-left
-                    scale-x-0
+                    opacity-0
 
-                    bg-[var(--footer-text)]
-
-                    transition-transform
+                    transition-[opacity,transform]
                     duration-300
 
-                    group-hover/link:scale-x-100
+                    group-hover/link:translate-x-0
+                    group-hover/link:opacity-100
                   "
-              />
+              >
+                →
+              </span>
             </Link>
           </li>
         ))}
@@ -893,20 +702,26 @@ function SocialLinkItem({ social }: { social: SocialLink }) {
       rel="noopener noreferrer"
       aria-label={social.label}
       className="
-        group
+        group/item
 
         flex
 
         items-center
-        gap-2.5
+        gap-2
 
         text-[var(--footer-muted)]
 
-        transition-colors
-        duration-200
+        opacity-65
 
-        hover:text-[var(--footer-text)]
+        transition-[opacity,color,transform]
+        duration-300
 
+        group-hover/social:opacity-20
+
+        hover:!opacity-100
+        hover:!text-[var(--footer-text)]
+
+        focus-visible:!opacity-100
         focus-visible:outline-none
         focus-visible:ring-2
         focus-visible:ring-black
@@ -916,7 +731,7 @@ function SocialLinkItem({ social }: { social: SocialLink }) {
       <span
         className="
           flex
-          size-5
+          size-[18px]
 
           shrink-0
 
@@ -924,9 +739,9 @@ function SocialLinkItem({ social }: { social: SocialLink }) {
           justify-center
 
           transition-transform
-          duration-200
+          duration-300
 
-          group-hover:-translate-y-px
+          group-hover/item:-translate-y-px
         "
       >
         {social.icon}
@@ -934,7 +749,7 @@ function SocialLinkItem({ social }: { social: SocialLink }) {
 
       <span
         className="
-          text-[10px]
+          text-[9px]
         "
       >
         {social.label}
@@ -947,24 +762,16 @@ function SocialLinkItem({ social }: { social: SocialLink }) {
    LEGAL
 ============================================================================ */
 
-function LegalLink({
-  href,
-
-  children,
-}: {
-  href: string;
-
-  children: ReactNode;
-}) {
+function LegalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
       className="
-        text-[7px]
+        text-[6.5px]
         font-semibold
 
         uppercase
-        tracking-[0.17em]
+        tracking-[0.16em]
 
         text-[var(--footer-muted)]
 
@@ -1029,11 +836,11 @@ function InstagramIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="17"
-      height="17"
+      width="16"
+      height="16"
       fill="none"
       stroke="currentColor"
-      strokeWidth="1.25"
+      strokeWidth="1.15"
       aria-hidden="true"
     >
       <rect x="4" y="4" width="16" height="16" />
@@ -1049,8 +856,8 @@ function LinkedInIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="17"
-      height="17"
+      width="16"
+      height="16"
       fill="currentColor"
       aria-hidden="true"
     >
@@ -1063,8 +870,8 @@ function PinterestIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      width="17"
-      height="17"
+      width="16"
+      height="16"
       fill="currentColor"
       aria-hidden="true"
     >
