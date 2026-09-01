@@ -15,6 +15,10 @@ interface LenisProviderProps {
   children: React.ReactNode;
 }
 
+type LenisWindow = Window & {
+  __lenis?: Lenis;
+};
+
 export function LenisProvider({
   children,
 }: LenisProviderProps): React.JSX.Element {
@@ -41,6 +45,7 @@ export function LenisProvider({
     });
 
     lenisRef.current = lenis;
+    (window as LenisWindow).__lenis = lenis;
 
     // ── RAF loop ──────────────────────────────────────────────────────
     function raf(time: number): void {
@@ -56,6 +61,9 @@ export function LenisProvider({
         cancelAnimationFrame(rafRef.current);
       }
       lenis.destroy();
+      if ((window as LenisWindow).__lenis === lenis) {
+        delete (window as LenisWindow).__lenis;
+      }
       lenisRef.current = null;
     };
   }, []);

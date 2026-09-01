@@ -1,58 +1,97 @@
-import { homepageFaqData } from "@/components/global/faq/faq-data.example";
-import { FaqSection } from "@/components/global/faq/faq-section";
-import { BrandSeoSummary } from "@/components/static/home/brand-seo-summary/brand-seo-summary";
-import { brandSeoSummaryData } from "@/components/static/home/brand-seo-summary/brand-seo-summary-data";
-import { BrandStatementImage } from "@/components/static/home/brand-statement-image/brand-statement-image";
-import { brandStatementImageData } from "@/components/static/home/brand-statement-image/brand-statement-image-data";
-import { CampaignDiptych } from "@/components/static/home/campaign-diptych/campaign-diptych";
-import { campaignDiptychData } from "@/components/static/home/campaign-diptych/campaign-diptych-data";
-import { CategoryEditorialGrid } from "@/components/static/home/category-editorial-grid/category-editorial-grid";
-import { categoryEditorialGridData } from "@/components/static/home/category-editorial-grid/category-editorial-grid-data";
-import { CinematicVideoHero } from "@/components/static/home/cinematic-video-hero/cinematic-video-hero";
-import { cinematicVideoHeroData } from "@/components/static/home/cinematic-video-hero/cinematic-video-hero-data.example";
-import { ColorStorySlider } from "@/components/static/home/color-story-slider/color-story-slider";
-import { colorStorySliderData } from "@/components/static/home/color-story-slider/color-story-slider-data";
-import { HOME_SECTION_DIVIDER_CLASS } from "@/components/static/home/home-section-classes";
-import { HomeSectionEntrance } from "@/components/static/home/motion/home-section-entrance";
-import { ProductFocusSlider } from "@/components/static/home/product-focus-slider/product-focus-slider";
-import { productFocusSliderData } from "@/components/static/home/product-focus-slider/product-focus-slider-data.example";
 
-export default function Home() {
+import { BrandStorySection } from "@/components/static/Home/BrandStorySection";
+import { CategoryShowcase } from "@/components/static/Home/CategoryShowcase";
+import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
+import { HeroSection } from "@/components/static/Home/HeroSection";
+import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSection";
+import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
+import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
+
+export default function Page() {
   return (
-    <main className="isolate overflow-x-clip bg-[#FCFAF7] text-[#231F20] dark:bg-[#0B1117] dark:text-[#F8F5F0]">
-      <CinematicVideoHero {...cinematicVideoHeroData} />
-      <HomeSectionEntrance variant="up">
-        <CategoryEditorialGrid {...categoryEditorialGridData} />
-      </HomeSectionEntrance>
-      <HomeSectionEntrance variant="start">
-        <ProductFocusSlider
-          {...productFocusSliderData}
-          className={HOME_SECTION_DIVIDER_CLASS}
-        />
-      </HomeSectionEntrance>
-
-      <HomeSectionEntrance variant="end">
-        <CampaignDiptych
-          {...campaignDiptychData}
-          className={HOME_SECTION_DIVIDER_CLASS}
-        />
-      </HomeSectionEntrance>
-      <HomeSectionEntrance variant="soft">
-        <ColorStorySlider {...colorStorySliderData} />
-      </HomeSectionEntrance>
-      <HomeSectionEntrance variant="start">
-        <FaqSection
-          {...homepageFaqData}
-          className={HOME_SECTION_DIVIDER_CLASS}
-        />
-      </HomeSectionEntrance>
-      <BrandStatementImage {...brandStatementImageData} />
-      <HomeSectionEntrance variant="up">
-        <BrandSeoSummary
-          {...brandSeoSummaryData}
-          className={HOME_SECTION_DIVIDER_CLASS}
-        />
-      </HomeSectionEntrance>
+    <main>
+      <HeroSection />
+      <CategoryShowcase />
+      <CinematicVideoSection
+        videoSrc="/assets/video/videoCinema.mp4"
+        posterSrc="/images/craftsmanship-poster.webp"
+        eyebrow="The House"
+        title="Crafted with intention."
+        description="A closer look at the details, materials and hands behind the Najibzadeh world."
+        primaryAction={{
+          label: "Discover Our Story",
+          href: "/our-story",
+        }}
+        secondaryAction={{
+          label: "Explore Categories",
+          href: "/craftsmanship",
+        }}
+      />
+      <WhyChooseUsSection backgroundImage="/assets/images/banner.webp" />
+      <HouseEditorialSection
+        imageSrc="/assets/images/banner.webp"
+        imageAlt="Najibzadeh tailoring"
+        eyebrow="New Season"
+        title="Tailored for the memorable."
+        description="Timeless tailoring. Distinctive fragrance. Objects made with intention, for a life well-lived."
+        primaryAction={{
+          label: "Explore the Collection",
+          href: "/collections",
+        }}
+        secondaryAction={{
+          label: "Discover the House",
+          href: "/our-story",
+        }}
+        mobileImagePosition="62% center"
+        desktopImagePosition="center"
+      />
+      <ProductEditorialGrid
+        products={[
+          {
+            id: "tailoring",
+            title: "Tailoring",
+            eyebrow: "01 / Collection",
+            href: "/tailoring",
+            image: "/assets/images/banner.webp",
+          },
+          {
+            id: "shoes",
+            title: "Shoes",
+            eyebrow: "02 / Essentials",
+            href: "/shoes",
+            image: "/assets/images/banner.webp",
+          },
+          {
+            id: "fragrance",
+            title: "Fragrance",
+            eyebrow: "03 / Signature",
+            href: "/fragrance",
+            image: "/assets/images/banner.webp",
+          },
+          {
+            id: "knitwear",
+            title: "Knitwear",
+            eyebrow: "04 / Softness",
+            href: "/knitwear",
+            image: "/assets/images/hero4.webp",
+          },
+          {
+            id: "leather-goods",
+            title: "Leather Goods",
+            eyebrow: "05 / Craft",
+            href: "/accessories",
+            image: "/assets/images/banner.webp",
+          },
+          {
+            id: "accessories",
+            title: "Accessories",
+            eyebrow: "06 / Details",
+            href: "/accessories",
+            image: "/assets/images/hero2.webp",
+          },
+        ]}
+      />
+      <BrandStorySection />
     </main>
   );
 }
