@@ -27,7 +27,7 @@ export default function Page() {
           href: "/craftsmanship",
         }}
       />
-      <WhyChooseUsSection backgroundImage="/assets/images/banner.webp" />
+      <WhyChooseUsSection backgroundImage="/assets/images/whyus.webp" />
       <HouseEditorialSection
         imageSrc="/assets/images/banner.webp"
         imageAlt="Najibzadeh tailoring"
@@ -52,42 +52,44 @@ export default function Page() {
             title: "Tailoring",
             eyebrow: "01 / Collection",
             href: "/tailoring",
-            image: "/assets/images/banner.webp",
+            image: "/assets/images/p1.webp",
           },
           {
             id: "shoes",
             title: "Shoes",
             eyebrow: "02 / Essentials",
             href: "/shoes",
-            image: "/assets/images/banner.webp",
+            image: "/assets/images/p2.webp",
           },
           {
             id: "fragrance",
             title: "Fragrance",
             eyebrow: "03 / Signature",
             href: "/fragrance",
-            image: "/assets/images/banner.webp",
+            image: "/assets/images/p6.webp",
           },
           {
             id: "knitwear",
             title: "Knitwear",
             eyebrow: "04 / Softness",
             href: "/knitwear",
-            image: "/assets/images/hero4.webp",
+            image: "/assets/images/p7.webp",
           },
           {
             id: "leather-goods",
             title: "Leather Goods",
             eyebrow: "05 / Craft",
             href: "/accessories",
-            image: "/assets/images/banner.webp",
+            image: "/assets/images/p8.webp",
           },
           {
             id: "accessories",
             title: "Accessories",
             eyebrow: "06 / Details",
             href: "/accessories",
-            image: "/assets/images/hero2.webp",
+            image: "/assets/images/p10.webp",
+            imagePosition:"center",
+            
           },
         ]}
       />

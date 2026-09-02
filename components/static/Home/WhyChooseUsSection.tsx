@@ -132,7 +132,7 @@ const DEFAULT_FEATURES: WhyChooseFeature[] = [
 ============================================================================ */
 
 export function WhyChooseUsSection({
-  backgroundImage="/assets/images/banner.webp",
+  backgroundImage="/assets/images/whyus.webp",
 
   backgroundImageAlt = "",
 
@@ -225,39 +225,17 @@ export function WhyChooseUsSection({
           inset-0
           -z-30
 
-          bg-black/68
+          bg-black/5
         "
       />
 
       {/* Slight cinematic tonal layer */}
 
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-20
-
-          bg-[linear-gradient(180deg,rgb(var(--why-black-rgb)/0.18)_0%,rgb(var(--why-black-rgb)/0.38)_45%,rgb(var(--why-black-rgb)/0.72)_100%)]
-        "
-      />
+     
 
       {/* subtle vignette */}
 
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-10
-
-          bg-[radial-gradient(circle_at_center,transparent_30%,rgb(var(--why-black-rgb)/0.48)_120%)]
-        "
-      />
+      
 
       {/* =====================================================
           INNER
@@ -323,7 +301,7 @@ export function WhyChooseUsSection({
 
               تنها استفاده Copper.
           ================================================ */}
-
+{/* 
           <div
             className="
               mb-5
@@ -346,20 +324,9 @@ export function WhyChooseUsSection({
             "
           >
             <span>{eyebrow}</span>
-          </div>
+          </div> */}
 
-          <span
-            aria-hidden="true"
-            className="
-              mb-5
-
-              h-px
-              w-7
-
-              bg-[var(--why-copper)]
-            "
-          />
-
+        
           {/* ===============================================
               TITLE
           ================================================ */}
@@ -383,7 +350,7 @@ export function WhyChooseUsSection({
 
               text-white
 
-              sm:text-[clamp(3.8rem,7vw,5.5rem)]
+              
 
               lg:text-[clamp(4.8rem,5.2vw,6.7rem)]
             "
@@ -442,7 +409,7 @@ export function WhyChooseUsSection({
 
             grid
 
-            grid-cols-1
+             
 
             border-l
             border-t
@@ -453,10 +420,10 @@ export function WhyChooseUsSection({
 
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
-            sm:grid-cols-2
+            grid-cols-2
 
             lg:mt-16
-            lg:grid-cols-3
+            lg:grid-cols-6
 
             ${
               revealed
@@ -611,7 +578,7 @@ function FeatureCard({
 
         flex
 
-        min-h-[330px]
+        min-h-[230px]
 
         flex-col
         items-center
@@ -626,7 +593,7 @@ function FeatureCard({
         bg-black/10
 
         px-7
-        py-10
+        py-6
 
         text-center
 
@@ -637,13 +604,12 @@ function FeatureCard({
 
         hover:bg-white/[0.055]
 
-        sm:min-h-[360px]
-        sm:px-8
+        
 
         lg:min-h-[380px]
         lg:px-10
 
-        xl:min-h-[410px]
+       
       "
     >
       {/* =================================================
@@ -673,24 +639,7 @@ function FeatureCard({
           INDEX
       ================================================= */}
 
-      <span
-        className="
-          absolute
-
-          left-5
-          top-5
-
-          text-[6px]
-          font-medium
-
-          tracking-[0.18em]
-
-          text-white/20
-        "
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
-
+      
       {/* =================================================
           ICON
       ================================================= */}
@@ -699,8 +648,9 @@ function FeatureCard({
         className="
           relative
 
-          grid
-          size-12
+          grid size-8
+          md:size-10
+
 
           place-items-center
 
@@ -730,15 +680,15 @@ function FeatureCard({
         className="
           relative
 
-          mt-7
+          mt-4
 
           max-w-[310px]
 
           font-serif
-
-          text-[clamp(1.65rem,4vw,2.2rem)]
+text-sm
+          md:text-lg
           font-normal
-
+ text-nowrap
           leading-[1.05]
           tracking-[-0.035em]
 
@@ -788,14 +738,14 @@ function FeatureCard({
           mt-5
 
           max-w-[290px]
+text-[8px]
+          md:text-[9px]
 
-          text-[9px]
-
-          leading-[1.8]
+          md:leading-[1.8]
 
           text-white/52
 
-          sm:text-[10px]
+         
         "
       >
         {feature.description}

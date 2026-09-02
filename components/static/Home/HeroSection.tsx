@@ -184,46 +184,7 @@ export function HeroSection() {
             }
           `}
         >
-          {/* =================================================
-              EYEBROW
-
-              Copper فقط همینجا.
-          ================================================= */}
-
-          <div
-            className="
-              mb-5
-
-              flex
-              items-center
-              justify-center
-
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.24em]
-
-              text-[var(--hero-white)]/70
-
-              sm:text-[8px]
-            "
-          >
-            <span>New Season</span>
-
-            <span
-              className="
-                h-px
-                w-5
-
-                bg-[var(--hero-copper)]
-              "
-            />
-
-            <span>Najibzadeh</span>
-          </div>
+          
 
           {/* =================================================
               TITLE
@@ -234,9 +195,9 @@ export function HeroSection() {
 
           <h1
             className="
-              m-0
+             
 
-              flex
+              flex mt-68
               flex-col
               items-center
 
@@ -265,30 +226,7 @@ export function HeroSection() {
               Presence, tailored.
             </span>
 
-            <span
-              className="
-                mt-[0.13em]
-
-                block
-
-                font-normal
-                italic
-
-                text-[clamp(3.05rem,10vw,5.4rem)]
-
-                tracking-[-0.045em]
-
-                text-[var(--hero-white)]/78
-
-                sm:text-[clamp(4rem,8.1vw,6rem)]
-
-                md:text-[clamp(4.8rem,7vw,6.8rem)]
-
-                lg:text-[clamp(5.5rem,6.05vw,7.2rem)]
-              "
-            >
-              Memory, distilled.
-            </span>
+       
           </h1>
 
           {/* =================================================
@@ -312,7 +250,7 @@ export function HeroSection() {
               sm:text-[10px]
 
               md:mt-7
-              md:text-[11px]
+              md:text-[13px]
             "
           >
             Modern tailoring, signature fragrance and considered objects shaped

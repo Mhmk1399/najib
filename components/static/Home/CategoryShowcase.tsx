@@ -57,7 +57,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/tailoring",
 
-    image: "/assets/images/banner.webp",
+    image: "/assets/images/suit.webp",
 
     imagePosition: "center",
   },
@@ -69,7 +69,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/fragrance",
 
-    image: "/assets/images/hero4.webp",
+    image: "/assets/images/kafsh.webp",
 
     imagePosition: "center",
   },
@@ -81,7 +81,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/clothing",
 
-    image: "/assets/images/banner.webp",
+    image: "/assets/images/accessory.webp",
 
     imagePosition: "center",
   },
@@ -136,7 +136,7 @@ export function CategoryShowcase({
       style={themeVars}
       className={`
         relative
-
+mb-8
         w-full
         overflow-hidden
 
@@ -163,7 +163,7 @@ export function CategoryShowcase({
 
           px-6
 
-          py-4 
+          py-8 
 
           text-center
 
@@ -196,7 +196,7 @@ export function CategoryShowcase({
             تنها استفاده Copper در component.
         ================================================= */}
 
-        <div
+        {/* <div
           className="
             mb-5
 
@@ -236,7 +236,7 @@ export function CategoryShowcase({
               bg-[var(--cat-accent)]
             "
           />
-        </div>
+        </div> */}
 
         {/* =================================================
             TITLE
@@ -258,9 +258,9 @@ export function CategoryShowcase({
 
             text-[var(--cat-text)]
 
-            sm:text-[clamp(3.2rem,7vw,4.7rem)]
+             
 
-            lg:text-[clamp(3.7rem,4.5vw,5.1rem)]
+            lg:text-[clamp(3.1rem,4.5vw,4.1rem)]
           "
         >
           {title}
@@ -270,7 +270,7 @@ export function CategoryShowcase({
             DESCRIPTION
         ================================================= */}
 
-        <p
+        {/* <p
           className="
             mt-5
 
@@ -290,7 +290,7 @@ export function CategoryShowcase({
           "
         >
           {description}
-        </p>
+        </p> */}
       </div>
 
       {/* =====================================================

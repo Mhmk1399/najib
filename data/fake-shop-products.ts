@@ -106,36 +106,35 @@ type ImageKey =
 
 const IMAGE_LIBRARY: Record<ImageKey, Omit<ShopProductImage, "id" | "alt">> = {
   "tailor-wide": {
-    src: "/assets/images/hero.webp",
+    src: "/assets/images/p1.webp",
     position: "center 42%",
   },
   "tailor-portrait": {
-    src: "/assets/images/hero2.webp",
+    src: "/assets/images/p2.webp",
     position: "center 22%",
   },
   "white-atelier": {
-    src: "/assets/images/hero3.webp",
+    src: "/assets/images/p3.webp",
     position: "center 34%",
   },
   "gallery-suit": {
-    src: "/assets/images/hero4.webp",
-    position: "center 34%",
+    src: "/assets/images/p4.webp",
+    position: "top",
   },
   "office-suit": {
-    src: "/assets/images/hero5.webp",
-    position: "center 42%",
+    src: "/assets/images/p5.webp",
+    position: "top",
   },
   "fragrance-hero": {
-    src: "/hero.jpg",
-    position: "center",
+    src: "/assets/images/p6.webp", position: "top",
   },
   "fragrance-pack": {
-    src: "/product.jpg",
-    position: "center",
+    src: "/assets/images/p7.webp",
+    position: "top",
   },
   "stone-drape": {
-    src: "/assets/images/banner.webp",
-    position: "center 34%",
+    src: "/assets/images/p8.webp",
+    position: "top"
   },
 };
 
@@ -643,9 +642,8 @@ export function getShopProductDetailBySlug(
           (image, imageIndex): ProductDetailImage => ({
             id: `${colorId}-${image.id}`,
             src: image.src,
-            alt: `${product.title} ${color?.label ?? colorId} view ${
-              imageIndex + 1
-            }`,
+            alt: `${product.title} ${color?.label ?? colorId} view ${imageIndex + 1
+              }`,
             position: image.position,
           }),
         ),

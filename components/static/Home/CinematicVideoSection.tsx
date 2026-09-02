@@ -270,7 +270,7 @@ export function CinematicVideoSection({
 
         overflow-hidden
 
-        bg-[var(--video-black)]
+         bg-[var(--cat-bg)]
         text-[var(--video-white)]
 
         ${className}
@@ -298,7 +298,7 @@ export function CinematicVideoSection({
             object-[var(--video-mobile-position)]
 
             transition-opacity
-            duration-700
+            duration-700 
 
             md:object-[var(--video-desktop-position)]
 
