@@ -1,4 +1,6 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { type InferSchemaType } from "mongoose";
+
+const { Schema, model, models } = mongoose;
 
 export const USER_ROLES = [
   "customer",
@@ -89,4 +91,3 @@ userSchema.index({ email: 1 }, { unique: true });
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
 export const User = models.User || model("User", userSchema);
-

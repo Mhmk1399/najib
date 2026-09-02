@@ -1,0 +1,55 @@
+import { z } from "zod";
+export declare const customerActivityTypeSchema: z.ZodEnum<{
+    PageViewed: "PageViewed";
+    ProductViewed: "ProductViewed";
+    ColorSelected: "ColorSelected";
+    SizeSelected: "SizeSelected";
+    SearchPerformed: "SearchPerformed";
+    RecommendationShown: "RecommendationShown";
+    RecommendationClicked: "RecommendationClicked";
+    ProductSaved: "ProductSaved";
+    CartItemAdded: "CartItemAdded";
+    CartItemRemoved: "CartItemRemoved";
+    CheckoutStarted: "CheckoutStarted";
+    CheckoutAbandoned: "CheckoutAbandoned";
+    OrderViewed: "OrderViewed";
+    PurchaseCompleted: "PurchaseCompleted";
+}>;
+export declare const recordCustomerActivitySchema: z.ZodObject<{
+    eventId: z.ZodString;
+    eventType: z.ZodEnum<{
+        PageViewed: "PageViewed";
+        ProductViewed: "ProductViewed";
+        ColorSelected: "ColorSelected";
+        SizeSelected: "SizeSelected";
+        SearchPerformed: "SearchPerformed";
+        RecommendationShown: "RecommendationShown";
+        RecommendationClicked: "RecommendationClicked";
+        ProductSaved: "ProductSaved";
+        CartItemAdded: "CartItemAdded";
+        CartItemRemoved: "CartItemRemoved";
+        CheckoutStarted: "CheckoutStarted";
+        CheckoutAbandoned: "CheckoutAbandoned";
+        OrderViewed: "OrderViewed";
+        PurchaseCompleted: "PurchaseCompleted";
+    }>;
+    occurredAt: z.ZodCoercedDate<unknown>;
+    userId: z.ZodOptional<z.ZodString>;
+    anonymousId: z.ZodOptional<z.ZodString>;
+    sessionId: z.ZodString;
+    productId: z.ZodOptional<z.ZodString>;
+    storeId: z.ZodOptional<z.ZodString>;
+    cityId: z.ZodOptional<z.ZodString>;
+    variantId: z.ZodOptional<z.ZodString>;
+    correlationId: z.ZodString;
+    causationId: z.ZodOptional<z.ZodString>;
+    consentScope: z.ZodEnum<{
+        essential: "essential";
+        analytics: "analytics";
+        personalization: "personalization";
+        marketing: "marketing";
+    }>;
+    payload: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodUnknown>>;
+}, z.core.$strict>;
+export type CustomerActivityType = z.infer<typeof customerActivityTypeSchema>;
+export type RecordCustomerActivity = z.infer<typeof recordCustomerActivitySchema>;

@@ -33,6 +33,9 @@ const checkoutSessionSchema = new Schema(
       index: true,
     },
     expiresAt: { type: Date, required: true, index: true },
+    correlationId: { type: String, required: true, trim: true },
+    inventoryReservationId: { type: String, trim: true },
+    paymentId: { type: String, trim: true },
   },
   { timestamps: true },
 );
@@ -93,4 +96,3 @@ export const CheckoutSession =
 export const AbandonedCheckout =
   models.AbandonedCheckout ||
   model("AbandonedCheckout", abandonedCheckoutSchema);
-

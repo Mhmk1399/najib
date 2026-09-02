@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { mongoObjectIdSchema } from "@najib/contracts";
 
 export const catalogResources = [
   "categories",
@@ -14,9 +15,7 @@ export const catalogResources = [
 
 export type CatalogResource = (typeof catalogResources)[number];
 
-export const objectIdSchema = z
-  .string()
-  .regex(/^[a-f\d]{24}$/i, "Must be a valid MongoDB ObjectId");
+export const objectIdSchema = mongoObjectIdSchema;
 
 export const listCatalogQuerySchema = z
   .object({

@@ -1,4 +1,6 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { type InferSchemaType } from "mongoose";
+
+const { Schema, model, models } = mongoose;
 
 export const CUSTOMER_ACTIVITY_TYPES = [
   "PageViewed",
@@ -14,6 +16,7 @@ export const CUSTOMER_ACTIVITY_TYPES = [
   "CheckoutStarted",
   "CheckoutAbandoned",
   "OrderViewed",
+  "PurchaseCompleted",
 ] as const;
 
 const customerActivityEventSchema = new Schema(
