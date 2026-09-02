@@ -25,6 +25,10 @@ const environmentSchema = z.object({
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),
+  INVENTORY_API_URL: z.url().default("http://127.0.0.1:4002/api/v1"),
+  PAYMENT_API_URL: z.url().default("http://127.0.0.1:4003/api/v1"),
+  CUSTOMER_DATA_API_URL: z.url().default("http://127.0.0.1:4004/api/v1"),
+  INTERNAL_SERVICE_TOKEN: z.string().min(16).default("najib-local-service-token"),
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

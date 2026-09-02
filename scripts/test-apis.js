@@ -21,6 +21,18 @@ const services = [
     expectedName: "inventory",
     expectedDocsTitle: "Najib Inventory API",
   },
+  {
+    name: "Payment",
+    baseUrl: process.env.PAYMENT_API_URL || "http://127.0.0.1:4003",
+    expectedName: "payment",
+    expectedDocsTitle: "Najib Payment API",
+  },
+  {
+    name: "Customer Data",
+    baseUrl: process.env.CUSTOMER_DATA_API_URL || "http://127.0.0.1:4004",
+    expectedName: "customer-data",
+    expectedDocsTitle: "Najib Customer Data API",
+  },
 ];
 
 const timeoutMs = Number.parseInt(
@@ -88,14 +100,39 @@ for (const resource of catalogResources) {
   });
 }
 
+const inventory = services.find((service) => service.expectedName === "inventory");
+tests.push(
+  {
+    name: "Inventory: availability validation",
+    method: "POST",
+    url: `${inventory.baseUrl}/api/v1/availability/check`,
+    body: {},
+    check: (response) => response.status === 400,
+  },
+  {
+    name: "Inventory: reservation ID validation",
+    url: `${inventory.baseUrl}/api/v1/reservations/not-an-object-id`,
+    check: (response) => response.status === 400,
+  },
+  {
+    name: "Inventory: reservation creation validation",
+    method: "POST",
+    url: `${inventory.baseUrl}/api/v1/reservations`,
+    body: {},
+    check: (response) => response.status === 400,
+  },
+);
+
 function log(label, color, message) {
   process.stdout.write(`${color}[${label}]${colors.reset} ${message}\n`);
 }
 
-async function request(url) {
+async function request(url, method = "GET", body) {
   const startedAt = Date.now();
   const response = await fetch(url, {
-    headers: { accept: "application/json" },
+    method,
+    headers: { accept: "application/json", "content-type": "application/json" },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const text = await response.text();
@@ -124,7 +161,7 @@ async function run() {
 
   for (const apiTest of tests) {
     try {
-      const response = await request(apiTest.url);
+      const response = await request(apiTest.url, apiTest.method, apiTest.body);
       if (apiTest.check(response)) {
         passed += 1;
         log(

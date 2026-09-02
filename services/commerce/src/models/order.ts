@@ -2,6 +2,18 @@ import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
 
+export const ORDER_STATUSES = [
+  "pending_inventory",
+  "pending_payment",
+  "payment_failed",
+  "confirmed",
+  "cancelled",
+  "expired",
+  "compensation_required",
+  "fulfilled",
+  "refunded",
+] as const;
+
 const orderItemSchema = new Schema(
   {
     variantId: { type: String, required: true, trim: true },
@@ -48,6 +60,7 @@ const orderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, trim: true, uppercase: true },
     idempotencyKey: { type: String, required: true, trim: true },
+    correlationId: { type: String, required: true, trim: true },
     cartId: { type: String, required: true, trim: true },
     checkoutSessionId: { type: String, required: true, trim: true },
     userId: { type: String, trim: true, index: true },
@@ -77,16 +90,7 @@ const orderSchema = new Schema(
     totalMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     status: {
       type: String,
-      enum: [
-        "pending_inventory",
-        "pending_payment",
-        "payment_failed",
-        "confirmed",
-        "cancelled",
-        "expired",
-        "compensation_required",
-        "refunded",
-      ],
+      enum: ORDER_STATUSES,
       default: "pending_inventory",
       index: true,
     },
@@ -103,4 +107,3 @@ orderSchema.index({ checkoutSessionId: 1 }, { unique: true });
 
 export type OrderDocument = InferSchemaType<typeof orderSchema>;
 export const Order = models.Order || model("Order", orderSchema);
-

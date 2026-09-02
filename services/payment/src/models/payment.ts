@@ -1,4 +1,6 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { type InferSchemaType } from "mongoose";
+
+const { Schema, model, models } = mongoose;
 
 export const PAYMENT_STATUSES = [
   "created",
@@ -119,4 +121,3 @@ export type PaymentAttemptDocument = InferSchemaType<typeof paymentAttemptSchema
 export const Payment = models.Payment || model("Payment", paymentSchema);
 export const PaymentAttempt =
   models.PaymentAttempt || model("PaymentAttempt", paymentAttemptSchema);
-

@@ -1,2 +1,1 @@
-export * from "./models/payment";
-
+export * from "./models/payment.js";

@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import paymentModels from "../dist/index.js";
-
-const { Payment, PaymentAttempt } = paymentModels;
+import { Payment, PaymentAttempt } from "../dist/index.js";
 
 function paymentData(overrides = {}) {
   return {
@@ -36,4 +34,3 @@ test("provider webhook events are deduplicated by index", () => {
   assert.ok(index);
   assert.equal(index[1].unique, true);
 });
-

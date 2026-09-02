@@ -27,12 +27,17 @@ test("Inventory exposes service and health endpoints", async () => {
     method: "GET",
     url: "/api/v1/health/ready",
   });
+  const invalidAvailabilityResponse = await app.inject({
+    method: "POST",
+    url: "/api/v1/availability/check",
+    payload: {},
+  });
 
   assert.equal(serviceResponse.statusCode, 200);
   assert.equal(serviceResponse.json().name, "inventory");
   assert.equal(readinessResponse.statusCode, 200);
   assert.equal(readinessResponse.json().checks.mongodb, "up");
+  assert.equal(invalidAvailabilityResponse.statusCode, 400);
 
   await app.close();
 });
-

@@ -61,6 +61,10 @@ Next.js storefront
         +--> Commerce API ------> najib_commerce MongoDB database
         |
         +--> Inventory API -----> najib_inventory MongoDB database
+        |
+        +--> Payment API -------> najib_payment MongoDB database
+        |
+        +--> Customer Data API -> najib_customer_data MongoDB database
 ```
 
 Start the storefront and APIs in separate terminals:
@@ -69,12 +73,22 @@ Start the storefront and APIs in separate terminals:
 pnpm dev
 pnpm dev:commerce
 pnpm dev:inventory
+pnpm dev:payment
+pnpm dev:customer-data
 ```
 
 Run backend API checks:
 
 ```bash
 pnpm test:apis
+```
+
+Run the isolated inventory transaction test (it removes its own temporary
+records):
+
+```bash
+pnpm test:inventory-flow
+pnpm test:vertical-slice
 ```
 
 ## Service Ownership
@@ -135,32 +149,39 @@ pnpm test:apis
 - [x] Added validated MongoDB catalog APIs for categories, subcategories,
       collections, colors, size groups, sizes, products, variants, and
       shoppable images.
+- [x] Added store-level availability and transactional inventory reservation
+      APIs, including idempotent creation, commit, release, and expiry.
+- [x] Added versioned shared HTTP and event contracts for Commerce, Inventory,
+      Payment, and Customer Data.
+- [x] Completed the Berlin / White / Large checkout vertical slice across all
+      four currently runnable backend services.
+- [x] Added verified sandbox payment webhooks and retryable Commerce callbacks.
+- [x] Added OrderConfirmed and accounting transactional outbox records.
 
 ## Current Validation Status
 
-- Logged API runner: 17/17 live service and catalog checks passing on
-  2026-09-01.
-- Commerce and Inventory API type checks: passing.
-- Commerce and Inventory API lint: passing.
-- Service model and API tests: passing.
-- Existing Next.js production build: passing.
+- Logged API runner: 28/28 live service, catalog, and Inventory route checks
+  passing on 2026-09-02.
+- Isolated real-MongoDB inventory transaction flow: passing on 2026-09-02.
+- Commerce, Inventory, Payment, and Customer Data type checks: passing.
+- New backend and contract lint checks: passing.
+- Shared contract tests: 6/6 passing.
+- Service model, API, and contract-compatibility tests: 43/43 passing.
+- Isolated Berlin / White / Large end-to-end purchase test: passing.
+- Existing Next.js production build currently stops at the unrelated missing
+  `contexts/theme-context` storefront import.
 - Existing storefront full lint: has pre-existing React lint errors that still
   need a dedicated cleanup task.
 
 ## Next Implementation Phases
 
-1. Add Inventory availability and reservation endpoints.
-2. Add shared request, response, and event contracts.
-3. Implement the Berlin / White / Large checkout vertical slice.
-4. Turn Payment into a runnable sandbox-payment API.
-5. Add cart and order orchestration between Commerce and Inventory.
-6. Add the Admin dashboard foundation.
-7. Add authentication and permission enforcement.
-8. Add promotions, returns, cancellations, and refunds.
-9. Add customer activity ingestion and abandoned-checkout recovery.
-10. Add AI search, styling, and authenticated order support.
-11. Add business policy and accounting integration services.
-12. Add production infrastructure, observability, Redis, and RabbitMQ.
+1. Add the Admin dashboard foundation.
+2. Add authentication and permission enforcement.
+3. Add promotions, returns, cancellations, and refunds.
+4. Add abandoned-checkout recovery and preference-profile processing.
+5. Add AI search, styling, and authenticated order support.
+6. Add business policy and accounting integration services.
+7. Add production infrastructure, observability, Redis, and RabbitMQ.
 
 ## Change Log
 
@@ -175,3 +196,29 @@ pnpm test:apis
   filtering, strict request validation, duplicate handling, and archive or
   active-state workflows instead of destructive deletion.
 - Extended the live API test runner to check every catalog collection.
+
+### 2026-09-02
+
+- Added exact store-level availability checks across active locations in the
+  store's effective inventory-pool binding.
+- Added atomic reservation creation with cross-location allocation,
+  idempotency keys, expiry timestamps, and stock movement audit records.
+- Added reservation commit, release, and expired-reservation processing.
+- Verified the complete reserve, idempotent retry, commit, and release flow
+  against the configured MongoDB cluster using isolated temporary data.
+- Extended the logged live API suite to 20 checks; all pass.
+- Created the `@najib/contracts` workspace package with common money, identity,
+  pagination, error, checkout, reservation, payment, customer activity, and
+  versioned event schemas.
+- Replaced duplicated Commerce and Inventory validation primitives with shared
+  contracts and added compatibility tests for service status values.
+- Verified 6 contract tests, 43 service tests, and 20 live API checks.
+- Made Payment and Customer Data independently runnable NestJS/Fastify APIs.
+- Added cart creation, exact-variant cart items, immutable order snapshots, and
+  Commerce checkout orchestration.
+- Added signed sandbox webhooks, payment callback retries, reservation commit
+  or release, confirmed-order events, customer purchase activity, and an
+  accounting outbox queue.
+- Verified that only Berlin White/Large changed from 3 to 2; Berlin
+  Black/Large, Berlin White/Small, and Dubai White/Large remained at 3.
+- Extended the live API runner to all four services; 28/28 checks pass.

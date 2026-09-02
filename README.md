@@ -18,9 +18,9 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Backend services
 
-Commerce and Inventory are independent Node.js services built with NestJS and
-Fastify. Each service validates its own configuration and connects to its own
-MongoDB database.
+Commerce, Inventory, Payment, and Customer Data are independent Node.js
+services built with NestJS and Fastify. Each validates its own configuration
+and connects to its own MongoDB database.
 
 Add a server-only MongoDB connection string to the root `.env` file:
 
@@ -28,23 +28,48 @@ Add a server-only MongoDB connection string to the root `.env` file:
 MONGODB_URI=mongodb+srv://username:password@your-cluster.example.mongodb.net
 ```
 
-Both services can use the same MongoDB cluster. Commerce uses the
-`najib_commerce` database and Inventory uses the `najib_inventory` database.
+All services can use the same MongoDB cluster while keeping separate Commerce,
+Inventory, Payment, and Customer Data databases.
 Start each service in a separate terminal:
 
 ```bash
 pnpm dev:commerce
 pnpm dev:inventory
+pnpm dev:payment
+pnpm dev:customer-data
 ```
 
-Commerce runs on port `4001` and Inventory runs on port `4002`. Both expose
+Check the live APIs, or run the isolated inventory reservation transaction
+test (its temporary MongoDB records are automatically removed):
+
+```bash
+pnpm test:apis
+pnpm test:inventory-flow
+pnpm test:vertical-slice
+```
+
+Commerce runs on port `4001`, Inventory on `4002`, Payment on `4003`, and
+Customer Data on `4004`. All expose
 service information under `/api/v1`, liveness under `/api/v1/health/live`,
 readiness under `/api/v1/health/ready`, and OpenAPI documentation under `/docs`.
+
+### Shared service contracts
+
+`packages/contracts` contains the validated HTTP commands, responses, and
+versioned events shared by Commerce, Inventory, Payment, and Customer Data.
+Run its tests with:
+
+```bash
+pnpm contracts:test
+```
+
+`pnpm test:vertical-slice` creates an isolated Berlin / White / Large purchase,
+verifies all four services, and removes its temporary records.
 
 ### Optional container infrastructure
 
 The files under `infrastructure/` are optional and intended for a later DevOps
-phase. The current Commerce and Inventory services run normally without Docker,
+phase. The current backend services run normally without Docker,
 Redis, or RabbitMQ.
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.

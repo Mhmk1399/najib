@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import customerModels from "../dist/index.js";
-
-const { CustomerActivityEvent, CustomerPreferenceProfile, User } = customerModels;
+import { CustomerActivityEvent, CustomerPreferenceProfile, User } from "../dist/index.js";
 
 test("new users default to the customer role", async () => {
   const user = new User({
