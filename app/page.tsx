@@ -14,7 +14,7 @@ export default function Page() {
       <CategoryShowcase />
       <CinematicVideoSection
         videoSrc="/assets/video/videoCinema.mp4"
-        posterSrc="/images/craftsmanship-poster.webp"
+        posterSrc="/assets/images/p1.webp"
         eyebrow="The House"
         title="Crafted with intention."
         description="A closer look at the details, materials and hands behind the Najibzadeh world."
@@ -27,9 +27,9 @@ export default function Page() {
           href: "/craftsmanship",
         }}
       />
-      <WhyChooseUsSection backgroundImage="/assets/images/whyus.webp" />
+      <WhyChooseUsSection  backgroundImage="/assets/images/whyus.webp" />
       <HouseEditorialSection
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p2.webp"
         imageAlt="Najibzadeh tailoring"
         eyebrow="New Season"
         title="Tailored for the memorable."

@@ -1,15 +1,12 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
 
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties } from "react";
 
 import { brandColors, themeClasses } from "@/theme/theme-colors";
-
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
 
-/* ==========================================================================
+/* ========================================================================== 
    TYPES
 ============================================================================ */
 
@@ -20,155 +17,109 @@ type HouseAction = {
 
 type HouseFeature = {
   id: string;
-
   title: string;
-
   description: string;
-
   href: string;
-
   icon: "tailoring" | "fragrance" | "story";
 };
 
 type HouseEditorialSectionProps = {
   imageSrc: string;
-
   imageAlt?: string;
-
   eyebrow?: string;
-
   title?: string;
-
   description?: string;
-
   primaryAction?: HouseAction;
-
   secondaryAction?: HouseAction;
-
   features?: HouseFeature[];
-
   mobileImagePosition?: string;
-
   desktopImagePosition?: string;
-
   className?: string;
 };
 
-/* ==========================================================================
-   FAKE DATA
+/* ========================================================================== 
+   DATA
 ============================================================================ */
 
 const defaultFeatures: HouseFeature[] = [
   {
     id: "tailoring",
-
     title: "Tailoring",
-
     description: "Discover suiting and knitwear",
-
     href: "/tailoring",
-
     icon: "tailoring",
   },
-
   {
     id: "fragrance",
-
     title: "Fragrance",
-
     description: "Explore signature scents",
-
     href: "/fragrance",
-
     icon: "fragrance",
   },
-
   {
     id: "story",
-
     title: "Our Story",
-
     description: "The values behind the house",
-
     href: "/our-story",
-
     icon: "story",
   },
 ];
 
-/* ==========================================================================
+/* ========================================================================== 
+   HELPERS
+============================================================================ */
+
+function headingIdFromTitle(title: string) {
+  const normalized = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  return `house-editorial-${normalized || "section"}`;
+}
+
+/* ========================================================================== 
    COMPONENT
 ============================================================================ */
 
 export function HouseEditorialSection({
   imageSrc,
-
   imageAlt = "",
-
   eyebrow = "New Season",
-
   title = "Tailored for the memorable.",
-
   description = "Timeless tailoring. Distinctive fragrance. Objects made with intention, for a life well-lived.",
-
   primaryAction = {
     label: "Explore Collection",
     href: "/collections",
   },
-
   secondaryAction = {
     label: "Discover the House",
     href: "/our-story",
   },
-
   features = defaultFeatures,
-
   mobileImagePosition = "60% center",
-
   desktopImagePosition = "center",
-
   className = "",
 }: HouseEditorialSectionProps) {
-  const { ref, revealed } = useRevealOnce<HTMLElement>();
+  const visibleFeatures = features.slice(0, 3);
+  const headingId = headingIdFromTitle(title);
 
   const themeVars = {
     "--house-black": brandColors.black.hex,
-
     "--house-black-rgb": brandColors.black.rgb,
-
     "--house-white": brandColors.white.hex,
-
     "--house-copper": brandColors.copper.hex,
-
     "--house-mobile-position": mobileImagePosition,
-
     "--house-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
   return (
     <section
-      ref={ref}
+      aria-labelledby={headingId}
       style={themeVars}
-      className={`
-        relative
-        isolate
-
-        h-[100svh]
-        min-h-[640px]
-
-        w-full
-        overflow-hidden
-
-        bg-[var(--house-black)]
-        text-[var(--house-white)]
-
-        ${className}
-      `}
+      className={`relative isolate w-full overflow-hidden bg-[var(--house-black)] text-[var(--house-white)] ${className}`}
     >
-      {/* =====================================================
-          IMAGE
-      ====================================================== */}
-
+      {/* Background media */}
       <Image
         src={imageSrc}
         alt={imageAlt}
@@ -176,541 +127,100 @@ export function HouseEditorialSection({
         sizes="100vw"
         loading="lazy"
         draggable={false}
-        className="
-          -z-30
-
-          object-cover
-          object-[var(--house-mobile-position)]
-
-          md:object-[var(--house-desktop-position)]
-        "
+        className="-z-30 object-cover object-[var(--house-mobile-position)] md:object-[var(--house-desktop-position)]"
       />
 
-      {/* =====================================================
-          CINEMATIC OVERLAY
-      ====================================================== */}
-
+      {/* Restrained contrast layers keep the photography present. */}
       <div
         aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-20
-
-          bg-[linear-gradient(180deg,rgb(var(--house-black-rgb)/0.10)_0%,rgb(var(--house-black-rgb)/0.05)_35%,rgb(var(--house-black-rgb)/0.22)_62%,rgb(var(--house-black-rgb)/0.76)_100%)]
-
-          md:bg-[linear-gradient(90deg,rgb(var(--house-black-rgb)/0.70)_0%,rgb(var(--house-black-rgb)/0.42)_38%,rgb(var(--house-black-rgb)/0.05)_72%,rgb(var(--house-black-rgb)/0.18)_100%)]
-        "
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--house-black-rgb)/0.28)_0%,rgb(var(--house-black-rgb)/0.16)_32%,rgb(var(--house-black-rgb)/0.25)_66%,rgb(var(--house-black-rgb)/0.72)_100%)]"
       />
-
       <div
         aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-10
-
-          bg-[radial-gradient(circle_at_center,transparent_38%,rgb(var(--house-black-rgb)/0.24)_120%)]
-        "
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgb(var(--house-black-rgb)/0.04)_0%,rgb(var(--house-black-rgb)/0.10)_46%,rgb(var(--house-black-rgb)/0.38)_118%)]"
       />
 
-      {/* Mobile bottom readability */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-x-0
-          bottom-0
-          -z-10
-
-          h-[52%]
-
-          bg-gradient-to-t
-          from-black/75
-          via-black/20
-          to-transparent
-
-          md:hidden
-        "
-      />
-
-      {/* =====================================================
-          SMALL HOUSE MARK
-
-          White only.
-          Copper not used here.
-      ====================================================== */}
-
-      <div
-        className={`
-          absolute
-
-          left-6
-          top-8
-
-          z-10
-
-          transition-[opacity,transform]
-          duration-700
-
-          ease-[cubic-bezier(0.22,1,0.36,1)]
-
-          sm:left-10
-          sm:top-10
-
-          lg:left-[7vw]
-          lg:top-[10vh]
-
-          ${
-            revealed
-              ? `
-                translate-y-0
-                opacity-100
-              `
-              : `
-                translate-y-4
-                opacity-0
-              `
-          }
-        `}
-      >
-        <p
-          className="
-            text-[6px]
-            font-medium
-
-            uppercase
-            tracking-[0.22em]
-
-            text-white/50
-          "
-        >
-          The House of
-        </p>
-
-        <p
-          className="
-            mt-1
-
-            font-serif
-            text-[13px]
-
-            uppercase
-            tracking-[0.2em]
-
-            text-white
-          "
-        >
-          Najibzadeh
-        </p>
-      </div>
-
-      {/* =====================================================
-          MAIN CONTENT
-      ====================================================== */}
-
-      <div
-        className="
-          relative
-          z-10
-
-          flex
-          h-full
-
-          items-center
-
-          px-6
-
-          pb-24
-          pt-24
-
-          sm:px-10
-
-          md:pb-32
-
-          lg:px-[7vw]
-        "
-      >
-        <div
-          className={`
-            w-full
-            max-w-[590px]
-
-            transition-[opacity,transform]
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? `
-                  translate-y-0
-                  opacity-100
-                `
-                : `
-                  translate-y-10
-                  opacity-0
-                `
-            }
-          `}
-        >
-          {/* =================================================
-              EYEBROW
-
-              تنها نقطه Copper.
-          ================================================= */}
-
-          <div
-            className="
-              mb-5
-
-              flex
-              items-center
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.22em]
-
-              text-[var(--house-copper)]
-
-              sm:text-[8px]
-            "
-          >
-            <span>{eyebrow}</span>
-
+      <div className="relative z-10 mx-auto flex min-h-[720px] w-full max-w-[1440px] flex-col items-center justify-center px-5 py-16 text-center sm:min-h-[760px] sm:px-8 sm:py-20 lg:min-h-[min(900px,100svh)] lg:px-12 lg:py-24">
+        {/* Main editorial statement */}
+        <header className="mx-auto flex w-full max-w-[860px] flex-col items-center">
+          <p className="flex items-center justify-center gap-3 text-[7px] font-semibold uppercase tracking-[0.22em] text-white/64 sm:text-[8px]">
             <span
-              className="
-                h-px
-                w-6
-
-                bg-[var(--house-copper)]
-              "
+              aria-hidden="true"
+              className="h-px w-6 bg-[var(--house-copper)]"
             />
-          </div>
-
-          {/* =================================================
-              TITLE
-          ================================================= */}
+            <span>{eyebrow}</span>
+            <span
+              aria-hidden="true"
+              className="h-px w-6 bg-[var(--house-copper)]"
+            />
+          </p>
 
           <h2
-            className="
-              max-w-[560px]
-
-              font-serif
-
-              text-[clamp(3rem,13vw,4.7rem)]
-              font-normal
-
-              leading-[0.93]
-              tracking-[-0.055em]
-
-              text-white
-
-              md:text-[clamp(4.5rem,6vw,6.4rem)]
-
-              lg:max-w-[680px]
-            "
+            id={headingId}
+            className="mt-5 max-w-[820px] font-serif text-[clamp(3rem,12vw,4.6rem)] font-normal leading-[0.94] tracking-[-0.052em] text-white sm:text-[clamp(3.8rem,9vw,5.4rem)] md:text-[clamp(4.4rem,6.4vw,6.6rem)]"
           >
             {title}
           </h2>
 
-          {/* =================================================
-              DESCRIPTION
-          ================================================= */}
-
-          {description && (
-            <p
-              className="
-                mt-5
-
-                max-w-[390px]
-
-                text-[9px]
-                font-normal
-
-                leading-[1.75]
-
-                text-white/68
-
-                sm:max-w-[430px]
-                sm:text-[10px]
-
-                md:mt-6
-                md:text-[11px]
-
-                lg:text-xs
-              "
-            >
+          {description ? (
+            <p className="mt-6 max-w-[500px] text-[11px] font-normal leading-[1.75] text-white/68 sm:text-[12px] md:mt-7 md:text-[13px]">
               {description}
             </p>
+          ) : null}
+
+          {(primaryAction || secondaryAction) && (
+            <div
+              className={`mt-8 grid w-full gap-2 sm:w-auto sm:min-w-[460px] sm:grid-cols-2 ${
+                primaryAction && secondaryAction ? "grid-cols-1" : "grid-cols-1"
+              }`}
+            >
+              {primaryAction ? (
+                <Button
+                  href={primaryAction.href}
+                  variant="cream"
+                  size="lg"
+                  icon={<ArrowRightIcon />}
+                  fullWidth
+                >
+                  {primaryAction.label}
+                </Button>
+              ) : null}
+
+              {secondaryAction ? (
+                <Button
+                  href={secondaryAction.href}
+                  variant="outline"
+                  size="lg"
+                  icon={<ArrowRightIcon />}
+                  fullWidth
+                  className="border-white/40 bg-black/18 text-white backdrop-blur-[6px] hover:border-white hover:bg-white hover:text-black"
+                >
+                  {secondaryAction.label}
+                </Button>
+              ) : null}
+            </div>
           )}
+        </header>
 
-          {/* =================================================
-              DESKTOP ACTIONS
-
-              موبایل جداگانه پایین component است.
-          ================================================= */}
-
-          <div
-            className="
-              mt-7
-
-              hidden
-              w-full
-              max-w-[470px]
-
-              grid-cols-2
-              gap-2
-
-              md:grid
-            "
+        {/* Minimal discovery rail: one responsive DOM, centered in every viewport. */}
+        {visibleFeatures.length ? (
+          <nav
+            aria-label="Explore the House"
+            className="mt-12 w-full max-w-[980px] border-y border-white/14 bg-black/22 backdrop-blur-[8px] sm:mt-14 lg:mt-16"
           >
-            <Button
-              href={secondaryAction.href}
-              variant="outline"
-              size="lg"
-              icon={<ArrowRightIcon />}
-              fullWidth
-              className="
-                border-white/45
-
-                text-white
-
-                hover:border-white
-                hover:bg-white
-                hover:text-black
-              "
-            >
-              {secondaryAction.label}
-            </Button>
-
-            <Button
-              href={primaryAction.href}
-              size="lg"
-              icon={<ArrowRightIcon />}
-              fullWidth
-            >
-              {primaryAction.label}
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* =====================================================
-          MOBILE ACTIONS
-
-          کنار هم + پایین component.
-      ====================================================== */}
-
-      <div
-        className={`
-          absolute
-
-          inset-x-4
-
-          bottom-[max(25  8px,env(safe-area-inset-bottom))]
-
-          z-30
-
-          grid
-          grid-cols-2
-          gap-2
-
-          transition-[opacity,transform]
-          duration-700
-
-          ease-[cubic-bezier(0.22,1,0.36,1)]
-
-          md:hidden
-
-          ${
-            revealed
-              ? `
-                translate-y-0
-                opacity-100
-
-                delay-200
-              `
-              : `
-                translate-y-5
-                opacity-0
-              `
-          }
-        `}
-      >
-        <Button
-          href={secondaryAction.href}
-          variant="outline"
-          size="md"
-          icon={<ArrowRightIcon />}
-          fullWidth
-          className="
-            min-w-0
-
-            border-white/45
-
-            bg-black/20
-
-            text-white
-
-            backdrop-blur-md
-
-            hover:border-white
-            hover:bg-white
-            hover:text-black
-          "
-        >
-          {secondaryAction.label}
-        </Button>
-
-        <Button
-          href={primaryAction.href}
-          size="md"
-          icon={<ArrowRightIcon />}
-          fullWidth
-          className="min-w-0 text-xs text-nowrap"
-        >
-          {primaryAction.label}
-        </Button>
-      </div>
-
-      {/* =====================================================
-          DESKTOP DISCOVERY RAIL
-
-          No rounded container.
-          No copper icons.
-      ====================================================== */}
-
-      <div
-        className={`
-          absolute
-
-          bottom-[72px]
-          left-[7vw]
-
-          z-20
-
-          hidden
-
-          w-[min(780px,78vw)]
-
-          border
-          border-white/18
-
-          bg-black/25
-
-          backdrop-blur-xl
-
-          transition-[opacity,transform]
-          duration-[900ms]
-
-          ease-[cubic-bezier(0.22,1,0.36,1)]
-
-          md:flex
-
-          ${
-            revealed
-              ? `
-                translate-y-0
-                opacity-100
-
-                delay-200
-              `
-              : `
-                translate-y-8
-                opacity-0
-              `
-          }
-        `}
-      >
-        {/* Lead */}
-
-        <div
-          className="
-            flex
-
-            min-w-[230px]
-
-            items-center
-            gap-4
-
-            px-5
-            py-4
-          "
-        >
-          <span
-            className="
-              grid
-              size-10
-
-              shrink-0
-              place-items-center
-
-              border
-              border-white/25
-
-              text-white
-            "
-          >
-            <ArrowIcon />
-          </span>
-
-          <div>
-            <p
-              className="
-                text-[9px]
-
-                text-white
-              "
-            >
-              What are you drawn to today?
-            </p>
-
-            <p
-              className="
-                mt-1
-
-                text-[7px]
-                leading-[1.5]
-
-                text-white/45
-              "
-            >
-              Explore craft and character.
-            </p>
-          </div>
-        </div>
-
-        {/* Features */}
-
-        <div
-          className="
-            grid
-            flex-1
-
-            grid-cols-3
-          "
-        >
-          {features.slice(0, 3).map((feature) => (
-            <FeatureItem key={feature.id} feature={feature} />
-          ))}
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-3">
+              {visibleFeatures.map((feature) => (
+                <FeatureItem key={feature.id} feature={feature} />
+              ))}
+            </div>
+          </nav>
+        ) : null}
       </div>
     </section>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    FEATURE ITEM
 ============================================================================ */
 
@@ -718,115 +228,54 @@ function FeatureItem({ feature }: { feature: HouseFeature }) {
   return (
     <Link
       href={feature.href}
-      className={`
-        group
-
-        flex
-        items-center
-        gap-3
-
-        border-l
-        border-white/10
-
-        px-4
-        py-4
-
-        transition-colors
-        duration-200
-
-        hover:bg-white/[0.06]
-
-        ${themeClasses.focusRing}
-      `}
+      className={`group relative flex min-h-[118px] items-center justify-center gap-4 border-b border-white/10 px-6 py-5 text-left transition-colors duration-300 last:border-b-0 hover:bg-white/[0.045] md:min-h-[142px] md:flex-col md:gap-3 md:border-b-0 md:border-r md:px-5 md:text-center md:last:border-r-0 ${themeClasses.focusRing}`}
     >
-      <FeatureIcon type={feature.icon} />
+      <span className="grid size-9 shrink-0 place-items-center border border-white/20 text-white/70 transition-[border-color,background-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-white/65 group-hover:bg-white group-hover:text-black md:size-10">
+        <FeatureIcon type={feature.icon} />
+      </span>
 
-      <div className="min-w-0">
-        <p
-          className="
-            text-[8px]
-
-            text-white
-          "
-        >
+      <span className="min-w-0">
+        <span className="block font-serif text-[15px] font-normal leading-none tracking-[-0.02em] text-white md:text-[16px]">
           {feature.title}
-        </p>
-
-        <p
-          className="
-            mt-1
-
-            max-w-[100px]
-
-            text-[6.5px]
-            leading-[1.45]
-
-            text-white/42
-          "
-        >
+        </span>
+        <span className="mt-2 block text-[8px] leading-[1.55] text-white/45 md:mx-auto md:max-w-[180px] md:text-[9px]">
           {feature.description}
-        </p>
-      </div>
+        </span>
+      </span>
+
+      <span
+        aria-hidden="true"
+        className="ml-auto text-white/38 transition-[color,transform] duration-300 group-hover:translate-x-1 group-hover:text-white md:absolute md:bottom-4 md:left-1/2 md:ml-0 md:-translate-x-1/2 md:group-hover:translate-x-[calc(-50%+4px)]"
+      >
+        <ArrowIcon />
+      </span>
     </Link>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    FEATURE ICON
 ============================================================================ */
 
 function FeatureIcon({ type }: { type: HouseFeature["icon"] }) {
-  return (
-    <span
-      className="
-        grid
-        size-8
-
-        shrink-0
-        place-items-center
-
-        text-white/65
-
-        transition-colors
-        duration-200
-
-        group-hover:text-white
-      "
-    >
-      {type === "tailoring" && <TailoringIcon />}
-
-      {type === "fragrance" && <FragranceIcon />}
-
-      {type === "story" && <StoryIcon />}
-    </span>
-  );
+  if (type === "tailoring") return <TailoringIcon />;
+  if (type === "fragrance") return <FragranceIcon />;
+  return <StoryIcon />;
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    ICONS
 ============================================================================ */
 
 function ArrowIcon() {
   return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="
-        size-4
-
-        transition-transform
-        duration-200
-
-        group-hover:translate-x-0.5
-      "
-    >
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="size-4">
       <path
         d="M2.5 8H13M9.5 4.5L13 8L9.5 11.5"
         stroke="currentColor"
         strokeWidth="1"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        strokeLinecap="square"
+        strokeLinejoin="miter"
       />
     </svg>
   );
@@ -834,21 +283,24 @@ function ArrowIcon() {
 
 function TailoringIcon() {
   return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className="size-6">
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      className="size-5 md:size-6"
+    >
       <path
         d="M12 6L9 9L7 14L10 26H22L25 14L23 9L20 6L17 9H15L12 6Z"
         stroke="currentColor"
         strokeWidth="1"
-        strokeLinejoin="round"
+        strokeLinejoin="miter"
       />
-
       <path
         d="M15 9L13 15L16 18L19 15L17 9"
         stroke="currentColor"
         strokeWidth="1"
-        strokeLinejoin="round"
+        strokeLinejoin="miter"
       />
-
       <path d="M16 18V26" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
@@ -856,16 +308,19 @@ function TailoringIcon() {
 
 function FragranceIcon() {
   return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className="size-6">
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      className="size-5 md:size-6"
+    >
       <path d="M11 12H21V26H11V12Z" stroke="currentColor" strokeWidth="1" />
-
       <path d="M13 8H19V12H13V8Z" stroke="currentColor" strokeWidth="1" />
-
       <path
         d="M14 5H18"
         stroke="currentColor"
         strokeWidth="1"
-        strokeLinecap="round"
+        strokeLinecap="square"
       />
     </svg>
   );
@@ -873,7 +328,12 @@ function FragranceIcon() {
 
 function StoryIcon() {
   return (
-    <svg viewBox="0 0 32 32" fill="none" aria-hidden="true" className="size-6">
+    <svg
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+      className="size-5 md:size-6"
+    >
       <rect
         x="8"
         y="6"
@@ -882,75 +342,12 @@ function StoryIcon() {
         stroke="currentColor"
         strokeWidth="1"
       />
-
       <path
         d="M12 11H20M12 15H20M12 19H17"
         stroke="currentColor"
         strokeWidth="1"
-        strokeLinecap="round"
+        strokeLinecap="square"
       />
     </svg>
   );
-}
-
-/* ==========================================================================
-   REVEAL ONCE
-============================================================================ */
-
-function useRevealOnce<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-
-    if (!node) {
-      return;
-    }
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    if (reducedMotion.matches) {
-      setRevealed(true);
-
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setRevealed(true);
-
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
-        requestAnimationFrame(() => {
-          setRevealed(true);
-        });
-
-        observer.disconnect();
-      },
-      {
-        threshold: 0.14,
-
-        rootMargin: "0px 0px -6% 0px",
-      },
-    );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return {
-    ref,
-    revealed,
-  };
 }

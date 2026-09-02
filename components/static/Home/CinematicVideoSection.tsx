@@ -1,14 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import { brandColors } from "@/theme/theme-colors";
-
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
-
-/* ==========================================================================
-   TYPES
-============================================================================ */
 
 type VideoAction = {
   label: string;
@@ -17,141 +13,83 @@ type VideoAction = {
 
 type CinematicVideoSectionProps = {
   videoSrc: string;
-
   posterSrc: string;
-
   posterAlt?: string;
-
   eyebrow?: string;
-
   title: string;
-
   description?: string;
-
   primaryAction?: VideoAction;
-
   secondaryAction?: VideoAction;
-
   mobileVideoPosition?: string;
-
   desktopVideoPosition?: string;
-
   className?: string;
 };
 
-/* ==========================================================================
-   COMPONENT
-============================================================================ */
-
 export function CinematicVideoSection({
   videoSrc,
-
   posterSrc,
-
   posterAlt = "",
-
   eyebrow = "The House",
-
   title,
-
   description,
-
   primaryAction,
-
   secondaryAction,
-
   mobileVideoPosition = "center top",
-
   desktopVideoPosition = "center",
-
   className = "",
 }: CinematicVideoSectionProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
-
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
-  const [shouldMountMedia, setShouldMountMedia] = useState(false);
-
+  const [shouldMountVideo, setShouldMountVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
-
-  const [revealed, setRevealed] = useState(false);
-
   const [reducedMotion, setReducedMotion] = useState(false);
 
   const themeVars = {
     "--video-black": brandColors.black.hex,
-
     "--video-black-rgb": brandColors.black.rgb,
-
     "--video-white": brandColors.white.hex,
-
     "--video-copper": brandColors.copper.hex,
-
     "--video-mobile-position": mobileVideoPosition,
-
     "--video-desktop-position": desktopVideoPosition,
   } as CSSProperties;
 
-  /* ==========================================================================
-     REDUCED MOTION
-  ========================================================================== */
+  const hasBothActions = Boolean(primaryAction && secondaryAction);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    const update = () => {
+    const updatePreference = () => {
       setReducedMotion(media.matches);
     };
 
-    update();
-
-    media.addEventListener("change", update);
+    updatePreference();
+    media.addEventListener("change", updatePreference);
 
     return () => {
-      media.removeEventListener("change", update);
+      media.removeEventListener("change", updatePreference);
     };
   }, []);
 
-  /* ==========================================================================
-     LAZY MEDIA MOUNT
-
-     ویدیو در initial render وجود ندارد.
-  ========================================================================== */
-
   useEffect(() => {
-    const section = sectionRef.current;
+    if (reducedMotion || shouldMountVideo) return;
 
-    if (!section) {
-      return;
-    }
+    const section = sectionRef.current;
+    if (!section) return;
 
     if (!("IntersectionObserver" in window)) {
-      setShouldMountMedia(true);
-
+      setShouldMountVideo(true);
       return;
     }
-
-    let cancelIdle: (() => void) | undefined;
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
+        if (!entry?.isIntersecting) return;
+        setShouldMountVideo(true);
         observer.disconnect();
-
-        cancelIdle = runWhenBrowserIsIdle(() => {
-          setShouldMountMedia(true);
-        });
       },
       {
-        /*
-         * کمی قبل از رسیدن کاربر
-         * شروع به آماده‌سازی کن.
-         */
-        rootMargin: "600px 0px 600px 0px",
-
+        rootMargin: "480px 0px 480px 0px",
         threshold: 0,
       },
     );
@@ -160,76 +98,19 @@ export function CinematicVideoSection({
 
     return () => {
       observer.disconnect();
-
-      cancelIdle?.();
     };
-  }, []);
-
-  /* ==========================================================================
-     REVEAL ONCE
-  ========================================================================== */
+  }, [reducedMotion, shouldMountVideo]);
 
   useEffect(() => {
-    const section = sectionRef.current;
-
-    if (!section) {
-      return;
-    }
-
-    if (reducedMotion) {
-      setRevealed(true);
-
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setRevealed(true);
-
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
-        requestAnimationFrame(() => {
-          setRevealed(true);
-        });
-
-        observer.disconnect();
-      },
-      {
-        threshold: 0.14,
-
-        rootMargin: "0px 0px -6% 0px",
-      },
-    );
-
-    observer.observe(section);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [reducedMotion]);
-
-  /* ==========================================================================
-     PLAY / PAUSE
-
-     فقط وقتی واقعاً visible است.
-  ========================================================================== */
-
-  useEffect(() => {
-    if (!shouldMountMedia || reducedMotion) {
-      return;
-    }
+    if (!shouldMountVideo || reducedMotion) return;
 
     const section = sectionRef.current;
-
     const video = videoRef.current;
 
-    if (!section || !video) {
+    if (!section || !video) return;
+
+    if (!("IntersectionObserver" in window)) {
+      void video.play().catch(() => {});
       return;
     }
 
@@ -241,523 +122,129 @@ export function CinematicVideoSection({
           video.pause();
         }
       },
-      {
-        threshold: 0.15,
-      },
+      { threshold: 0.18 },
     );
 
     observer.observe(section);
 
     return () => {
       observer.disconnect();
-
       video.pause();
     };
-  }, [shouldMountMedia, reducedMotion]);
+  }, [shouldMountVideo, reducedMotion]);
 
   return (
     <section
       ref={sectionRef}
       style={themeVars}
-      className={`
-        relative
-        isolate
-
-        h-[100svh]
-        min-h-[620px]
-
-        w-full
-
-        overflow-hidden
-
-         bg-[var(--cat-bg)]
-        text-[var(--video-white)]
-
-        ${className}
-      `}
+      className={`relative isolate flex h-[86svh] min-h-[640px] max-h-[920px] w-full items-center justify-center overflow-hidden bg-[var(--video-black)] text-[var(--video-white)] sm:min-h-[680px] lg:h-[88svh] ${className}`}
     >
-      {/* =====================================================
-          POSTER
-      ====================================================== */}
+      <Image
+        src={posterSrc}
+        alt={posterAlt}
+        fill
+        loading="lazy"
+        fetchPriority="low"
+        sizes="100vw"
+        draggable={false}
+        style={{
+          objectPosition: mobileVideoPosition,
+        }}
+        className={`-z-40 object-cover transition-opacity duration-500 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
+          videoReady ? "opacity-0" : "opacity-100"
+        }`}
+      />
 
-      {shouldMountMedia && (
-        <img
-          src={posterSrc}
-          alt={posterAlt}
-          draggable={false}
-          decoding="async"
-          fetchPriority="low"
-          className={`
-            absolute
-            inset-0
-            -z-40
-
-            size-full
-
-            object-cover
-            object-[var(--video-mobile-position)]
-
-            transition-opacity
-            duration-700 
-
-            md:object-[var(--video-desktop-position)]
-
-            ${videoReady ? "opacity-0" : "opacity-100"}
-          `}
-        />
-      )}
-
-      {/* =====================================================
-          VIDEO
-      ====================================================== */}
-
-      {shouldMountMedia && !reducedMotion && (
+      {shouldMountVideo && !reducedMotion && (
         <video
           ref={videoRef}
           muted
           loop
           playsInline
           preload="metadata"
-          onCanPlay={() => {
-            setVideoReady(true);
+          aria-hidden="true"
+          tabIndex={-1}
+          onCanPlay={() => setVideoReady(true)}
+          onError={() => setVideoReady(false)}
+          style={{
+            objectPosition: mobileVideoPosition,
           }}
-          className={`
-              absolute
-              inset-0
-              -z-30
-
-              size-full
-
-              object-cover
-              object-[var(--video-mobile-position)]
-
-              transition-opacity
-              duration-700
-
-              md:object-[var(--video-desktop-position)]
-
-              ${videoReady ? "opacity-100" : "opacity-0"}
-            `}
+          className={`absolute inset-0 -z-30 size-full object-cover transition-opacity duration-500 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
+            videoReady ? "opacity-100" : "opacity-0"
+          }`}
         >
           <source src={videoSrc} type="video/mp4" />
         </video>
       )}
 
-      {/* =====================================================
-          OVERLAY
-      ====================================================== */}
-
       <div
         aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-20
-
-          bg-[linear-gradient(180deg,rgb(var(--video-black-rgb)/0.10)_0%,rgb(var(--video-black-rgb)/0.02)_32%,rgb(var(--video-black-rgb)/0.10)_60%,rgb(var(--video-black-rgb)/0.66)_100%)]
-        "
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--video-black-rgb)/0.26)_0%,rgb(var(--video-black-rgb)/0.08)_30%,rgb(var(--video-black-rgb)/0.14)_58%,rgb(var(--video-black-rgb)/0.66)_100%)]"
       />
 
       <div
         aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-20
-
-          bg-[radial-gradient(circle_at_center,transparent_34%,rgb(var(--video-black-rgb)/0.26)_120%)]
-        "
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgb(var(--video-black-rgb)/0.02)_0%,transparent_34%,rgb(var(--video-black-rgb)/0.34)_112%)]"
       />
 
-      {/* Mobile bottom readability */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-x-0
-          bottom-0
-          -z-10
-
-          h-[48%]
-
-          bg-gradient-to-t
-          from-black/70
-          via-black/15
-          to-transparent
-
-          md:h-[36%]
-          md:from-black/35
-        "
-      />
-
-      {/* =====================================================
-          MAIN CONTENT
-      ====================================================== */}
-
-      <div
-        className="
-          absolute
-          inset-0
-          z-10
-
-          flex
-          items-center
-          justify-center
-
-          px-5
-
-          /*
-           * موبایل:
-           * فضای پایین برای CTAها.
-           */
-          pb-24
-
-          sm:px-8
-
-          md:pb-0
-        "
-      >
-        <div
-          className={`
-            flex
-            w-full
-            max-w-[940px]
-
-            flex-col
-            items-center
-
-            text-center
-
-            transition-[opacity,transform]
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? `
-                  translate-y-0
-                  opacity-100
-                `
-                : `
-                  translate-y-10
-                  opacity-0
-                `
-            }
-          `}
-        >
-          {/* =================================================
-              EYEBROW
-
-              Copper فقط اینجاست.
-          ================================================= */}
-
-          <div
-            className="
-              mb-4
-
-              flex
-              items-center
-              justify-center
-
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.24em]
-
-              text-white/70
-
-              sm:text-[8px]
-
-              md:mb-5
-            "
-          >
+      <div className="relative z-10 mx-auto flex w-full max-w-[980px] flex-col items-center px-5 text-center sm:px-8 lg:px-10">
+        {eyebrow && (
+          <div className="mb-5 flex flex-col items-center gap-3 sm:mb-6">
             <span
-              className="
-                h-px
-                w-5
-
-                bg-[var(--video-copper)]
-              "
+              aria-hidden="true"
+              className="h-px w-7 bg-[var(--video-copper)]"
             />
-
-            <span>{eyebrow}</span>
-
-            <span
-              className="
-                h-px
-                w-5
-
-                bg-[var(--video-copper)]
-              "
-            />
-          </div>
-
-          {/* =================================================
-              TITLE
-          ================================================= */}
-
-          <h2
-            className="
-              max-w-[880px]
-
-              font-serif
-
-              text-[clamp(3rem,12vw,4.5rem)]
-              font-normal
-
-              leading-[0.92]
-              tracking-[-0.055em]
-
-              text-white
-
-              drop-shadow-[0_4px_24px_rgb(var(--video-black-rgb)/0.35)]
-
-              sm:text-[clamp(3.6rem,9vw,5rem)]
-
-              md:text-[clamp(4.5rem,6vw,6.5rem)]
-
-              lg:text-[clamp(5rem,5.4vw,7rem)]
-            "
-          >
-            {title}
-          </h2>
-
-          {/* =================================================
-              DESCRIPTION
-          ================================================= */}
-
-          {description && (
-            <p
-              className="
-                mt-5
-
-                max-w-[360px]
-
-                text-[9px]
-                font-normal
-
-                leading-[1.7]
-
-                text-white/68
-
-                sm:max-w-[430px]
-                sm:text-[10px]
-
-                md:max-w-[560px]
-                md:text-[11px]
-
-                lg:text-xs
-              "
-            >
-              {description}
+            <p className="text-[7px] font-semibold uppercase tracking-[0.24em] text-white/58 sm:text-[8px]">
+              {eyebrow}
             </p>
-          )}
+          </div>
+        )}
 
-          {/* =================================================
-              DESKTOP ACTIONS
-          ================================================= */}
+        <h2 className="max-w-[880px] font-serif text-[clamp(3rem,12vw,4.45rem)] font-normal leading-[0.92] tracking-[-0.055em] text-white drop-shadow-[0_4px_26px_rgb(var(--video-black-rgb)/0.34)] sm:text-[clamp(3.8rem,9vw,5.2rem)] md:text-[clamp(4.6rem,6.3vw,6.5rem)] lg:text-[clamp(5rem,5.35vw,6.9rem)]">
+          {title}
+        </h2>
 
-          {(primaryAction || secondaryAction) && (
-            <div
-              className={`
-                  mt-7
+        {description && (
+          <p className="mt-5 max-w-[390px] text-[11px] font-normal leading-[1.75] text-white/66 sm:mt-6 sm:max-w-[470px] sm:text-[12px] md:max-w-[560px] md:text-[13px]">
+            {description}
+          </p>
+        )}
 
-                  hidden
-                  w-full
-                  max-w-[470px]
+        {(primaryAction || secondaryAction) && (
+          <div
+            className={`mt-8 grid w-full gap-2 sm:mt-9 ${
+              hasBothActions
+                ? "max-w-[440px] grid-cols-1 min-[420px]:grid-cols-2"
+                : "max-w-[220px] grid-cols-1"
+            }`}
+          >
+            {primaryAction && (
+              <Button
+                href={primaryAction.href}
+                variant="cream"
+                size="lg"
+                icon={<ArrowRightIcon />}
+                fullWidth
+              >
+                {primaryAction.label}
+              </Button>
+            )}
 
-                  grid-cols-2
-                  gap-2
-
-                  transition-[opacity,transform]
-                  duration-700
-
-                  md:grid
-
-                  ${
-                    revealed
-                      ? `
-                        translate-y-0
-                        opacity-100
-
-                        delay-200
-                      `
-                      : `
-                        translate-y-4
-                        opacity-0
-                      `
-                  }
-                `}
-            >
-              {secondaryAction && (
-                <Button
-                  href={secondaryAction.href}
-                  variant="cream"
-                  size="lg"
-                  icon={<ArrowRightIcon />}
-                  fullWidth
-                  className="
-                      border-white/45
-                      text-black
-
-                      hover:border-white
-                      hover:bg-white
-                      hover:text-black
-                    "
-                >
-                  {secondaryAction.label}
-                </Button>
-              )}
-
-              {primaryAction && (
-                <Button
-                  href={primaryAction.href}
-                  variant="copper"
-                  size="lg"
-                  icon={<ArrowRightIcon />}
-                  fullWidth
-                >
-                  {primaryAction.label}
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
+            {secondaryAction && (
+              <Button
+                href={secondaryAction.href}
+                variant="outline"
+                size="lg"
+                icon={<ArrowRightIcon />}
+                fullWidth
+                className="border-white/42 bg-black/16 text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
+              >
+                {secondaryAction.label}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
-
-      {/* =====================================================
-          MOBILE ACTIONS
-
-          همیشه پایین.
-          همیشه کنار هم.
-      ====================================================== */}
-
-      {(primaryAction || secondaryAction) && (
-        <div
-          className={`
-              absolute
-
-              inset-x-4
-              bottom-[max(18px,env(safe-area-inset-bottom))]
-
-              z-30
-
-              grid
-              grid-cols-2
-              gap-2
-
-              transition-[opacity,transform]
-              duration-700
-
-              ease-[cubic-bezier(0.22,1,0.36,1)]
-
-              md:hidden
-
-              ${
-                revealed
-                  ? `
-                    translate-y-0
-                    opacity-100
-
-                    delay-200
-                  `
-                  : `
-                    translate-y-5
-                    opacity-0
-                  `
-              }
-            `}
-        >
-          {secondaryAction ? (
-            <Button
-              href={secondaryAction.href}
-              variant="outline"
-              size="md"
-              icon={<ArrowRightIcon />}
-              fullWidth
-              className="
-                  min-w-0
-
-                  border-white/45
-
-                  bg-black/20
-
-                  text-white
-
-                  backdrop-blur-md
-
-                  hover:border-white
-                  hover:bg-white
-                  hover:text-black
-                "
-            >
-              {secondaryAction.label}
-            </Button>
-          ) : (
-            <span />
-          )}
-
-          {primaryAction && (
-            <Button
-              href={primaryAction.href}
-              variant="copper"
-              size="md"
-              icon={<ArrowRightIcon />}
-              fullWidth
-              className="min-w-0"
-            >
-              {primaryAction.label}
-            </Button>
-          )}
-        </div>
-      )}
-
-   
     </section>
   );
-}
-
-/* ==========================================================================
-   IDLE
-============================================================================ */
-
-function runWhenBrowserIsIdle(callback: () => void) {
-  const browserWindow = window as Window & {
-    requestIdleCallback?: (
-      callback: () => void,
-
-      options?: {
-        timeout?: number;
-      },
-    ) => number;
-
-    cancelIdleCallback?: (id: number) => void;
-  };
-
-  if (browserWindow.requestIdleCallback) {
-    const id = browserWindow.requestIdleCallback(callback, {
-      timeout: 700,
-    });
-
-    return () => {
-      browserWindow.cancelIdleCallback?.(id);
-    };
-  }
-
-  const timeout = window.setTimeout(callback, 100);
-
-  return () => {
-    window.clearTimeout(timeout);
-  };
 }

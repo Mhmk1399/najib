@@ -420,52 +420,7 @@ export default function Footer() {
             نسبت به قبل کم‌ارتفاع‌تر.
         ============================================================== */}
 
-        <div
-          className="
-            overflow-hidden
-
-            border-b
-            border-[var(--footer-border)]
-
-            py-7
-
-            sm:py-8
-
-            lg:py-9
-          "
-        >
-          <Link
-            href="/"
-            aria-label="Najibzadeh home"
-            className="
-              block
-
-              whitespace-nowrap
-
-              text-center
-
-              text-[clamp(2.8rem,11.5vw,11rem)]
-              font-medium
-
-              leading-[0.78]
-
-              tracking-[0.045em]
-
-              text-[var(--footer-text)]
-
-              transition-opacity
-              duration-300
-
-              hover:opacity-45
-
-              focus-visible:outline-none
-              focus-visible:ring-2
-              focus-visible:ring-black
-            "
-          >
-            NAJIBZADEH
-          </Link>
-        </div>
+      
 
         {/* =============================================================
             LEGAL

@@ -1,14 +1,11 @@
-"use client";
-
 import Image from "next/image";
 
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import { type CSSProperties } from "react";
 
 import { brandColors } from "@/theme/theme-colors";
-
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
 
-/* ==========================================================================
+/* ========================================================================== 
    TYPES
 ============================================================================ */
 
@@ -22,177 +19,108 @@ type FeatureIcon =
 
 export type WhyChooseFeature = {
   id: string;
-
   title: string;
-
   description: string;
-
   icon: FeatureIcon;
 };
 
 type WhyChooseUsSectionProps = {
-  backgroundImage: string;
-
+  backgroundImage?: string;
   backgroundImageAlt?: string;
-
   backgroundPosition?: string;
-
   eyebrow?: string;
-
   title?: string;
-
   italicTitle?: string;
-
   description?: string;
-
   features?: WhyChooseFeature[];
-
   action?: {
     label: string;
     href: string;
   };
-
   className?: string;
 };
 
-/* ==========================================================================
+/* ========================================================================== 
    DATA
 ============================================================================ */
 
 const DEFAULT_FEATURES: WhyChooseFeature[] = [
   {
     id: "quality",
-
     title: "Uncompromising Quality",
-
     description:
-      "Exceptional materials are selected for their character, performance and ability to become more personal with time.",
-
+      "Exceptional materials carefully selected for their character and durability.",
     icon: "quality",
   },
-
   {
     id: "craftsmanship",
-
     title: "Considered Craftsmanship",
-
     description:
-      "Traditional knowledge meets a contemporary point of view, with every proportion, seam and finish approached with intention.",
-
+      "Traditional techniques refined through time, executed with intent.",
     icon: "craftsmanship",
   },
-
   {
     id: "experience",
-
     title: "Thoughtful Experience",
-
     description:
-      "From discovery to delivery, every interaction is designed to feel calm, personal and unmistakably Najibzadeh.",
-
+      "From discovery to delivery, every touchpoint is designed around you.",
     icon: "experience",
   },
-
   {
     id: "responsibility",
-
     title: "Responsible Luxury",
-
-    description:
-      "We favour considered production, enduring materials and pieces intended to remain relevant beyond a single season.",
-
+    description: "We choose better materials and mindful processes.",
     icon: "responsibility",
   },
-
   {
     id: "exclusive",
-
     title: "Exclusive, Not Excessive",
-
-    description:
-      "Luxury is expressed through restraint, distinction and considered choices rather than unnecessary abundance.",
-
+    description: "Limited quantities. Timeless designs. No unnecessary noise.",
     icon: "exclusive",
   },
-
   {
     id: "lasting",
-
     title: "Made to Last",
-
     description:
-      "Objects are created to age beautifully, gather memory and become a meaningful part of your personal story.",
-
+      "Crafted to be worn, lived in, and remembered for years to come.",
     icon: "lasting",
   },
 ];
 
-/* ==========================================================================
+/* ========================================================================== 
    COMPONENT
 ============================================================================ */
 
 export function WhyChooseUsSection({
-  backgroundImage="/assets/images/whyus.webp",
-
+  backgroundImage = "/assets/images/whyus.webp",
   backgroundImageAlt = "",
-
   backgroundPosition = "center",
-
   eyebrow = "Why Choose Najibzadeh",
-
   title = "Beyond fashion.",
-
   italicTitle = "A standard of distinction.",
-
   description = "Every choice we make is guided by purpose, precision and a belief that true luxury should endure.",
-
   features = DEFAULT_FEATURES,
-
   action = {
     label: "Discover Our Story",
-
     href: "/our-story",
   },
-
   className = "",
 }: WhyChooseUsSectionProps) {
-  const { ref, revealed } = useRevealOnce<HTMLElement>();
-
   const visibleFeatures = features.slice(0, 6);
+
+  if (!visibleFeatures.length) return null;
 
   const themeVars = {
     "--why-copper": brandColors.copper.hex,
-
-    "--why-black-rgb": brandColors.black.rgb,
-
-    "--why-position": backgroundPosition,
+    "--why-black": "#0B0B0B",
+    "--why-cream": "#F6F2EB",
   } as CSSProperties;
-
-  if (!visibleFeatures.length) {
-    return null;
-  }
 
   return (
     <section
-      ref={ref}
       style={themeVars}
-      className={`
-        relative
-        isolate
-
-        w-full
-        overflow-hidden
-
-        bg-black
-        text-white
-
-        ${className}
-      `}
+      className={`relative isolate w-full overflow-hidden bg-[var(--why-black)] text-white ${className}`}
     >
-      {/* =====================================================
-          FULL BACKGROUND IMAGE
-      ====================================================== */}
-
       <Image
         src={backgroundImage}
         alt={backgroundImageAlt}
@@ -200,561 +128,106 @@ export function WhyChooseUsSection({
         sizes="100vw"
         loading="lazy"
         draggable={false}
-        style={{
-          objectPosition: backgroundPosition,
-        }}
-        className="
-          -z-40
-
-          object-cover
-
-          scale-[1.01]
-        "
+        style={{ objectPosition: backgroundPosition }}
+        className="-z-30 object-cover"
       />
-
-      {/* =====================================================
-          GLOBAL DARK TREATMENT
-      ====================================================== */}
 
       <div
         aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-30
-
-          bg-black/5
-        "
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(8,8,8,0.36)_0%,rgba(8,8,8,0.50)_42%,rgba(8,8,8,0.88)_100%)]"
       />
 
-      {/* Slight cinematic tonal layer */}
-
-     
-
-      {/* subtle vignette */}
-
-      
-
-      {/* =====================================================
-          INNER
-      ====================================================== */}
-
       <div
-        className="
-          mx-auto
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_center,transparent_18%,rgba(0,0,0,0.30)_110%)]"
+      />
 
-          w-full
-          max-w-[1600px]
+      <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center px-5 py-20 text-center sm:px-8 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
+        <header className="flex max-w-[760px] flex-col items-center">
+          {eyebrow ? (
+            <div className="flex items-center justify-center gap-3 text-[7px] font-semibold uppercase tracking-[0.24em] text-white/58 sm:text-[8px]">
+              <span
+                aria-hidden="true"
+                className="h-px w-5 bg-[var(--why-copper)]"
+              />
+              <span>{eyebrow}</span>
+              <span
+                aria-hidden="true"
+                className="h-px w-5 bg-[var(--why-copper)]"
+              />
+            </div>
+          ) : null}
 
-          px-5
-
-          py-20
-
-          sm:px-8
-          sm:py-24
-
-          lg:px-10
-          lg:py-28
-
-          xl:px-14
-          xl:py-32
-        "
-      >
-        {/* =================================================
-            INTRO
-        ================================================= */}
-
-        <div
-          className={`
-            mx-auto
-
-            flex
-            max-w-[900px]
-
-            flex-col
-            items-center
-
-            text-center
-
-            transition-[opacity,transform]
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? `
-                  translate-y-0
-                  opacity-100
-                `
-                : `
-                  translate-y-8
-                  opacity-0
-                `
-            }
-          `}
-        >
-          {/* ===============================================
-              EYEBROW
-
-              تنها استفاده Copper.
-          ================================================ */}
-{/* 
-          <div
-            className="
-              mb-5
-
-              flex
-              items-center
-              justify-center
-
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.24em]
-
-              text-[var(--why-copper)]
-
-              sm:text-[8px]
-            "
-          >
-            <span>{eyebrow}</span>
-          </div> */}
-
-        
-          {/* ===============================================
-              TITLE
-          ================================================ */}
-
-          <h2
-            className="
-              flex
-
-              max-w-[900px]
-
-              flex-col
-              items-center
-
-              font-serif
-
-              text-[clamp(3rem,10vw,4.7rem)]
-              font-normal
-
-              leading-[0.92]
-              tracking-[-0.055em]
-
-              text-white
-
-              
-
-              lg:text-[clamp(4.8rem,5.2vw,6.7rem)]
-            "
-          >
-            <span>{title}</span>
-
-            <span
-              className="
-                mt-[0.12em]
-
-                italic
-
-                text-white/78
-              "
-            >
+          <h2 className="mt-5 font-serif font-normal text-white sm:mt-6">
+            <span className="block text-[clamp(2.9rem,10vw,4.6rem)] leading-[0.94] tracking-[-0.05em] sm:text-[clamp(3.7rem,8vw,5.4rem)] lg:text-[clamp(4.6rem,5.6vw,6.4rem)]">
+              {title}
+            </span>
+            <span className="mt-2 block text-[clamp(1.9rem,6.8vw,3.1rem)] italic leading-[1] tracking-[-0.04em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2.4rem,5vw,3.5rem)] lg:text-[clamp(2.9rem,3.4vw,4rem)]">
               {italicTitle}
             </span>
           </h2>
 
-          {/* ===============================================
-              DESCRIPTION
-          ================================================ */}
-
-          {description && (
-            <p
-              className="
-                mt-6
-
-                max-w-[530px]
-
-                text-[9px]
-                font-normal
-
-                leading-[1.8]
-
-                text-white/58
-
-                sm:text-[10px]
-
-                lg:mt-7
-                lg:text-[11px]
-              "
-            >
+          {description ? (
+            <p className="mt-5 max-w-[520px] text-[11px] leading-[1.8] text-white/62 sm:mt-6 sm:text-[12px] lg:text-[13px]">
               {description}
             </p>
-          )}
-        </div>
+          ) : null}
 
-        {/* =================================================
-            GRID
-        ================================================= */}
-
-        <div
-          className={`
-            mt-14
-
-            grid
-
-             
-
-            border-l
-            border-t
-            border-white/15
-
-            transition-[opacity,transform]
-            duration-[1000ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            grid-cols-2
-
-            lg:mt-16
-            lg:grid-cols-6
-
-            ${
-              revealed
-                ? `
-                  translate-y-0
-                  opacity-100
-
-                  delay-150
-                `
-                : `
-                  translate-y-12
-                  opacity-0
-                `
-            }
-          `}
-        >
-          {visibleFeatures.map((feature, index) => (
-            <FeatureCard key={feature.id} feature={feature} index={index} />
-          ))}
-        </div>
-
-        {/* =================================================
-            BOTTOM
-        ================================================= */}
-
-        {action && (
-          <div
-            className={`
-              flex
-
-              flex-col
-              items-center
-
-              border-x
-              border-b
-              border-white/15
-
-              px-6
-              py-10
-
-              text-center
-
-              transition-[opacity,transform]
-              duration-[900ms]
-
-              lg:flex-row
-              lg:justify-between
-
-              lg:px-10
-              lg:py-11
-
-              lg:text-left
-
-              ${
-                revealed
-                  ? `
-                    translate-y-0
-                    opacity-100
-
-                    delay-300
-                  `
-                  : `
-                    translate-y-6
-                    opacity-0
-                  `
-              }
-            `}
-          >
-            <div>
-              <p
-                className="
-                  text-[7px]
-                  font-semibold
-
-                  uppercase
-                  tracking-[0.2em]
-
-                  text-white/40
-                "
-              >
-                The Najibzadeh Standard
-              </p>
-
-              <p
-                className="
-                  mt-3
-
-                  max-w-[540px]
-
-                  font-serif
-
-                  text-[clamp(1.8rem,5vw,2.8rem)]
-
-                  leading-[1.03]
-                  tracking-[-0.04em]
-
-                  text-white
-                "
-              >
-                Created with purpose.
-                <br />
-                Remembered for character.
-              </p>
-            </div>
-
-            <div
-              className="
-                mt-7
-
-                w-full
-                max-w-[260px]
-
-                lg:mt-0
-              "
-            >
+          {action ? (
+            <div className="mt-7 w-full max-w-[226px] sm:mt-8">
               <Button
                 href={action.href}
                 variant="cream"
-                size="lg"
+                size="md"
                 icon={<ArrowRightIcon />}
                 fullWidth
               >
                 {action.label}
               </Button>
             </div>
+          ) : null}
+        </header>
+
+        <div className="mt-14 w-full max-w-[1180px] border-l border-t border-white/1 sm:mt-16 lg:mt-20">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleFeatures.map((feature) => (
+              <FeatureCard key={feature.id} feature={feature} />
+            ))}
           </div>
-        )}
+        </div>
       </div>
     </section>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    FEATURE CARD
 ============================================================================ */
 
-function FeatureCard({
-  feature,
-
-  index,
-}: {
-  feature: WhyChooseFeature;
-
-  index: number;
-}) {
+function FeatureCard({ feature }: { feature: WhyChooseFeature }) {
   return (
-    <article
-      className="
-        group
-
-        relative
-
-        flex
-
-        min-h-[230px]
-
-        flex-col
-        items-center
-        justify-center
-
-        overflow-hidden
-
-        border-b
-        border-r
-        border-white/15
-
-        bg-black/10
-
-        px-7
-        py-6
-
-        text-center
-
-        backdrop-blur-[1px]
-
-        transition-[background-color]
-        duration-500
-
-        hover:bg-white/[0.055]
-
-        
-
-        lg:min-h-[380px]
-        lg:px-10
-
-       
-      "
-    >
-      {/* =================================================
-          VERY SUBTLE HOVER GLOW
-      ================================================= */}
-
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-
-          opacity-0
-
-          bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.07)_0%,transparent_67%)]
-
-          transition-opacity
-          duration-500
-
-          group-hover:opacity-100
-        "
-      />
-
-      {/* =================================================
-          INDEX
-      ================================================= */}
-
-      
-      {/* =================================================
-          ICON
-      ================================================= */}
-
-      <span
-        className="
-          relative
-
-          grid size-8
-          md:size-10
-
-
-          place-items-center
-
-          border
-          border-white/25
-
-          text-white/65
-
-          transition-[background-color,border-color,color,transform]
-          duration-300
-
-          group-hover:-translate-y-1
-
-          group-hover:border-white/70
-          group-hover:bg-white
-          group-hover:text-black
-        "
-      >
+    <article className="group relative flex min-h-[154px] flex-col items-center justify-center border-b border-r border-white/[0.14] bg-black/[0.10] px-6 py-7 text-center transition-colors duration-300 hover:bg-white/[0.035] sm:min-h-[168px] sm:px-7 lg:min-h-[190px] lg:px-8 lg:py-8">
+      <span className="grid size-9 place-items-center border border-white/22 text-white/68 transition-[border-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--why-copper)]/70 group-hover:text-[var(--why-copper)] lg:size-10">
         <FeatureIcon type={feature.icon} />
       </span>
 
-      {/* =================================================
-          TITLE
-      ================================================= */}
-
-      <h3
-        className="
-          relative
-
-          mt-4
-
-          max-w-[310px]
-
-          font-serif
-text-sm
-          md:text-lg
-          font-normal
- text-nowrap
-          leading-[1.05]
-          tracking-[-0.035em]
-
-          text-white
-
-          transition-transform
-          duration-500
-
-          group-hover:-translate-y-1
-        "
-      >
+      <h3 className="mt-4 max-w-[280px] font-serif text-[17px] font-normal leading-[1.08] tracking-[-0.025em] text-white sm:text-[18px] lg:mt-5 lg:text-[19px]">
         {feature.title}
       </h3>
 
-      {/* =================================================
-          HAIRLINE
-      ================================================= */}
-
       <span
         aria-hidden="true"
-        className="
-          relative
-
-          mt-5
-
-          h-px
-          w-8
-
-          bg-white/30
-
-          transition-[width,background-color]
-          duration-500
-
-          group-hover:w-14
-          group-hover:bg-white/70
-        "
+        className="mt-4 h-px w-7 bg-white/24 transition-[width,background-color] duration-300 group-hover:w-10 group-hover:bg-[var(--why-copper)]/65"
       />
 
-      {/* =================================================
-          DESCRIPTION
-      ================================================= */}
-
-      <p
-        className="
-          relative
-
-          mt-5
-
-          max-w-[290px]
-text-[8px]
-          md:text-[9px]
-
-          md:leading-[1.8]
-
-          text-white/52
-
-         
-        "
-      >
+      <p className="mt-4 max-w-[300px] text-[10px] leading-[1.7] text-white/48 sm:text-[10.5px] lg:text-[11px]">
         {feature.description}
       </p>
     </article>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    ICON SWITCH
 ============================================================================ */
 
@@ -762,34 +235,28 @@ function FeatureIcon({ type }: { type: FeatureIcon }) {
   switch (type) {
     case "quality":
       return <QualityIcon />;
-
     case "craftsmanship":
       return <CraftsmanshipIcon />;
-
     case "experience":
       return <ExperienceIcon />;
-
     case "responsibility":
       return <ResponsibilityIcon />;
-
     case "exclusive":
       return <ExclusiveIcon />;
-
     case "lasting":
       return <LastingIcon />;
-
     default:
       return null;
   }
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    ICONS
 ============================================================================ */
 
 function QualityIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path
         d="M12 3L15 9L21 10L16.5 14.5L17.5 21L12 18L6.5 21L7.5 14.5L3 10L9 9L12 3Z"
         stroke="currentColor"
@@ -802,14 +269,13 @@ function QualityIcon() {
 
 function CraftsmanshipIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path
         d="M7 4L4 8L6 20H18L20 8L17 4L14 7H10L7 4Z"
         stroke="currentColor"
         strokeWidth="1"
         strokeLinejoin="miter"
       />
-
       <path
         d="M10 7L9 12L12 15L15 12L14 7"
         stroke="currentColor"
@@ -822,11 +288,9 @@ function CraftsmanshipIcon() {
 
 function ExperienceIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path d="M4 8H20V20H4V8Z" stroke="currentColor" strokeWidth="1" />
-
       <path d="M8 8V5H16V8" stroke="currentColor" strokeWidth="1" />
-
       <path d="M12 8V20M4 12H20" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
@@ -834,16 +298,14 @@ function ExperienceIcon() {
 
 function ResponsibilityIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path d="M12 21V11" stroke="currentColor" strokeWidth="1" />
-
       <path
         d="M12 13C8 13 5 10 5 6C9 6 12 8 12 13Z"
         stroke="currentColor"
         strokeWidth="1"
         strokeLinejoin="miter"
       />
-
       <path
         d="M12 10C15 10 18 8 19 4C15 4 12 6 12 10Z"
         stroke="currentColor"
@@ -856,14 +318,13 @@ function ResponsibilityIcon() {
 
 function ExclusiveIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path
         d="M4 8L7 18H17L20 8L15 12L12 5L9 12L4 8Z"
         stroke="currentColor"
         strokeWidth="1"
         strokeLinejoin="miter"
       />
-
       <path d="M7 21H17" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
@@ -871,15 +332,13 @@ function ExclusiveIcon() {
 
 function LastingIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-5">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-4">
       <path d="M7 3H17M7 21H17" stroke="currentColor" strokeWidth="1" />
-
       <path
         d="M8 3C8 7 10 9 12 12C14 9 16 7 16 3"
         stroke="currentColor"
         strokeWidth="1"
       />
-
       <path
         d="M8 21C8 17 10 15 12 12C14 15 16 17 16 21"
         stroke="currentColor"
@@ -887,67 +346,4 @@ function LastingIcon() {
       />
     </svg>
   );
-}
-
-/* ==========================================================================
-   REVEAL
-============================================================================ */
-
-function useRevealOnce<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
-
-  const [revealed, setRevealed] = useState(false);
-
-  useEffect(() => {
-    const node = ref.current;
-
-    if (!node) {
-      return;
-    }
-
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-    if (reducedMotion.matches) {
-      setRevealed(true);
-
-      return;
-    }
-
-    if (!("IntersectionObserver" in window)) {
-      setRevealed(true);
-
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
-        requestAnimationFrame(() => {
-          setRevealed(true);
-        });
-
-        observer.disconnect();
-      },
-
-      {
-        threshold: 0.08,
-
-        rootMargin: "0px 0px -5% 0px",
-      },
-    );
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return {
-    ref,
-    revealed,
-  };
 }
