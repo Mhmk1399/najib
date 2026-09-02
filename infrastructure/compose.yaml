@@ -1,0 +1,89 @@
+name: najib-local
+
+services:
+  mongodb:
+    image: mongo:8.0.29-noble
+    command:
+      - mongod
+      - --replSet
+      - rs0
+      - --bind_ip_all
+      - --port
+      - "27017"
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --host localhost:27017 --quiet --eval
+          'try { if (rs.status().ok !== 1) quit(1) } catch (error) { quit(1) }'
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  mongodb-init:
+    image: mongo:8.0.29-noble
+    depends_on:
+      mongodb:
+        condition: service_started
+    volumes:
+      - ./mongodb/init-replica-set.sh:/usr/local/bin/init-replica-set.sh:ro
+    entrypoint: ["/bin/sh", "/usr/local/bin/init-replica-set.sh"]
+    restart: "no"
+
+  redis:
+    image: redis:8.10.1-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:-najib-local-redis}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-najib-local-redis}
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - redis-cli --no-auth-warning -a "$$REDIS_PASSWORD" ping | grep PONG
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4.3.5-management-alpine
+    hostname: najib-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-najib}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-najib-local-rabbit}
+      RABBITMQ_DEFAULT_VHOST: ${RABBITMQ_VHOST:-najib}
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  mongodb-data:
+  mongodb-config:
+  redis-data:
+  rabbitmq-data:
+

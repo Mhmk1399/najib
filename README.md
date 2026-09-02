@@ -16,6 +16,37 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Backend services
+
+Commerce and Inventory are independent Node.js services built with NestJS and
+Fastify. Each service validates its own configuration and connects to its own
+MongoDB database.
+
+Add a server-only MongoDB connection string to the root `.env` file:
+
+```bash
+MONGODB_URI=mongodb+srv://username:password@your-cluster.example.mongodb.net
+```
+
+Both services can use the same MongoDB cluster. Commerce uses the
+`najib_commerce` database and Inventory uses the `najib_inventory` database.
+Start each service in a separate terminal:
+
+```bash
+pnpm dev:commerce
+pnpm dev:inventory
+```
+
+Commerce runs on port `4001` and Inventory runs on port `4002`. Both expose
+service information under `/api/v1`, liveness under `/api/v1/health/live`,
+readiness under `/api/v1/health/ready`, and OpenAPI documentation under `/docs`.
+
+### Optional container infrastructure
+
+The files under `infrastructure/` are optional and intended for a later DevOps
+phase. The current Commerce and Inventory services run normally without Docker,
+Redis, or RabbitMQ.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
