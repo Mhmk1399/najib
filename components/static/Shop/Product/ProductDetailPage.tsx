@@ -1371,9 +1371,7 @@ function MobileProductSheet({
     sizeOptions.length,
   ]);
 
-  const handlePointerDown = (
-    event: ReactPointerEvent<HTMLButtonElement>,
-  ) => {
+  const handlePointerDown = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) {
       return;
     }
@@ -1389,9 +1387,7 @@ function MobileProductSheet({
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (
-    event: ReactPointerEvent<HTMLButtonElement>,
-  ) => {
+  const handlePointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
     if (activePointerIdRef.current !== event.pointerId) {
       return;
     }
@@ -1439,9 +1435,7 @@ function MobileProductSheet({
     }, 0);
   };
 
-  const handleToggleClick = (
-    event: ReactMouseEvent<HTMLButtonElement>,
-  ) => {
+  const handleToggleClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
     if (didDragRef.current) {
       event.preventDefault();
 
@@ -1665,7 +1659,7 @@ function MobileProductSheet({
 
                 pt-5
               "
-            >
+          >
             {/* COLOR */}
 
             <div
