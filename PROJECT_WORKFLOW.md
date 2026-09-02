@@ -157,6 +157,11 @@ pnpm test:vertical-slice
       four currently runnable backend services.
 - [x] Added verified sandbox payment webhooks and retryable Commerce callbacks.
 - [x] Added OrderConfirmed and accounting transactional outbox records.
+- [x] Added the standalone Najib Admin foundation with a responsive operations
+      dashboard, dark mode, global search, and server-side service health.
+- [x] Added staff authentication, rotating database sessions, role/permission
+      contracts, audit records, protected Admin routes, and guarded Commerce
+      catalog writes.
 
 ## Current Validation Status
 
@@ -165,9 +170,15 @@ pnpm test:vertical-slice
 - Isolated real-MongoDB inventory transaction flow: passing on 2026-09-02.
 - Commerce, Inventory, Payment, and Customer Data type checks: passing.
 - New backend and contract lint checks: passing.
-- Shared contract tests: 6/6 passing.
-- Service model, API, and contract-compatibility tests: 43/43 passing.
+- Shared contract tests: 9/9 passing.
+- Shared authentication tests: 2/2 passing.
+- Service model, API, security, and contract-compatibility tests: 49/49 passing.
+- Live staff authentication flow: 11/11 checks passing.
+- Live Admin session-gateway flow: 5/5 checks passing.
 - Isolated Berlin / White / Large end-to-end purchase test: passing.
+- Admin lint, TypeScript check, and production build: passing on 2026-09-02.
+- Admin browser checks completed at 1440x1000 and 390x844; mobile navigation,
+  responsive tables, and horizontal overflow were verified.
 - Existing Next.js production build currently stops at the unrelated missing
   `contexts/theme-context` storefront import.
 - Existing storefront full lint: has pre-existing React lint errors that still
@@ -175,13 +186,14 @@ pnpm test:vertical-slice
 
 ## Next Implementation Phases
 
-1. Add the Admin dashboard foundation.
-2. Add authentication and permission enforcement.
-3. Add promotions, returns, cancellations, and refunds.
-4. Add abandoned-checkout recovery and preference-profile processing.
-5. Add AI search, styling, and authenticated order support.
-6. Add business policy and accounting integration services.
-7. Add production infrastructure, observability, Redis, and RabbitMQ.
+1. Add protected admin catalog and inventory workflows.
+2. Add admin reporting endpoints and replace dashboard demo data.
+3. Add staff management, invitations, password recovery, and MFA.
+4. Add promotions, returns, cancellations, and refunds.
+5. Add abandoned-checkout recovery and preference-profile processing.
+6. Add AI search, styling, and authenticated order support.
+7. Add business policy and accounting integration services.
+8. Add production infrastructure, observability, Redis, and RabbitMQ.
 
 ## Change Log
 
@@ -222,3 +234,24 @@ pnpm test:vertical-slice
 - Verified that only Berlin White/Large changed from 3 to 2; Berlin
   Black/Large, Berlin White/Small, and Dubai White/Large remained at 3.
 - Extended the live API runner to all four services; 28/28 checks pass.
+- Added `apps/admin` as an independently runnable Next.js application aligned
+  with the storefront's cream, black, white, and copper design language.
+- Added responsive navigation, theme persistence, command search, KPI and
+  order views, inventory alerts, a lightweight chart, activity, quick actions,
+  and graceful server-only health checks.
+- Kept aggregate commerce figures clearly marked as demo data until reporting
+  APIs are available, with authentication and RBAC recorded as the next gate.
+- Verified the Admin lint, type check, production build, and desktop/mobile
+  browser layouts.
+- Added canonical staff roles and permissions plus a dependency-light shared
+  access-token verifier for independently deployed services.
+- Added salted scrypt password hashing, generic login failures, temporary
+  account lockout, hashed rotating refresh sessions, replay-family revocation,
+  staff audit records, logout, and logout-all support to Customer Data.
+- Added the branded Admin sign-in page, strict HTTP-only cookies, optimistic
+  route redirection, secure database-backed profile verification, logout, and
+  permission-aware navigation.
+- Protected Commerce catalog mutations with `catalog.write` while preserving
+  public storefront catalog reads.
+- Added isolated backend and Admin live authentication flow tests and staff
+  bootstrap documentation without creating a default credential.

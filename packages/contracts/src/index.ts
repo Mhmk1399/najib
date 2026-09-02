@@ -1,4 +1,5 @@
 export * from "./common.js";
+export * from "./auth.js";
 export * from "./commerce.js";
 export * from "./customer-data.js";
 export * from "./events.js";

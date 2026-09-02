@@ -25,10 +25,22 @@ test("unknown staff roles are rejected", async () => {
     email: "invalid@example.com",
     firstName: "Invalid",
     lastName: "Role",
-    roles: ["owner"],
+    roles: ["superuser"],
   });
 
   await assert.rejects(user.validate(), /not a valid enum value/);
+});
+
+test("owner is a valid staff role", async () => {
+  const user = new User({
+    email: "owner@example.com",
+    firstName: "Store",
+    lastName: "Owner",
+    roles: ["owner"],
+  });
+
+  await user.validate();
+  assert.deepEqual(user.roles, ["owner"]);
 });
 
 test("anonymous customer history is stored as activity events", async () => {

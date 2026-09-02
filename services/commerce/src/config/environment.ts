@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+const localAccessSecret = "najib-local-staff-access-secret-change-me";
 const environmentSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().min(1).max(65_535).default(4001),
@@ -29,6 +30,11 @@ const environmentSchema = z.object({
   PAYMENT_API_URL: z.url().default("http://127.0.0.1:4003/api/v1"),
   CUSTOMER_DATA_API_URL: z.url().default("http://127.0.0.1:4004/api/v1"),
   INTERNAL_SERVICE_TOKEN: z.string().min(16).default("najib-local-service-token"),
+  AUTH_ACCESS_TOKEN_SECRET: z.string().min(32).default(localAccessSecret),
+}).superRefine((value, context) => {
+  if (value.NODE_ENV === "production" && value.AUTH_ACCESS_TOKEN_SECRET === localAccessSecret) {
+    context.addIssue({ code: "custom", path: ["AUTH_ACCESS_TOKEN_SECRET"], message: "A unique production access-token secret is required" });
+  }
 });
 
 export type Environment = z.infer<typeof environmentSchema>;

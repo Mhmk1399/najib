@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query } from "@nestjs/common";
-import { ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { CatalogService } from "./catalog.service.js";
+import { RequireStaffPermissions, StaffAuthGuard } from "../auth/staff-auth.guard.js";
 
 @ApiTags("catalog")
 @Controller("catalog")
@@ -23,6 +24,9 @@ export class CatalogController {
   }
 
   @Post(":resource")
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermissions("catalog.write")
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Create a validated catalog record" })
   create(@Param("resource") resourceValue: string, @Body() body: unknown) {
     const resource = this.catalog.parseResource(resourceValue);
@@ -30,6 +34,9 @@ export class CatalogController {
   }
 
   @Patch(":resource/:id")
+  @UseGuards(StaffAuthGuard)
+  @RequireStaffPermissions("catalog.write")
+  @ApiBearerAuth()
   @ApiOperation({ summary: "Update selected fields on a catalog record" })
   update(
     @Param("resource") resourceValue: string,

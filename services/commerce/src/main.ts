@@ -24,6 +24,7 @@ async function bootstrap(): Promise<void> {
     .setTitle("Najib Commerce API")
     .setDescription("Catalog, cart, checkout, and order orchestration API")
     .setVersion("1.0")
+    .addBearerAuth()
     .build();
   SwaggerModule.setup(
     "docs",

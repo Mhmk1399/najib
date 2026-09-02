@@ -1,10 +1,10 @@
 # Najib Admin
 
-An independent Next.js operations application for the Najibzadeh commerce platform. This foundation includes the responsive shell, overview dashboard, dark mode, global search interaction, demo metrics, and server-side service health checks.
+The admin application is the protected operational workspace for the Najibzadeh commerce platform. It includes staff sign-in, server-verified sessions, permission-aware navigation, the responsive application shell, overview dashboard, theme support, global search, demo commerce data, and server-side service health checks.
 
 ## Commands
 
-From the repository root:
+Run from the repository root:
 
 ```bash
 pnpm dev:admin
@@ -13,19 +13,36 @@ pnpm typecheck:admin
 pnpm lint:admin
 ```
 
-The development server runs at `http://localhost:3001`.
+The development server uses `http://localhost:3001`.
 
-## Service health environment
+Create the first staff account before signing in. Choose your own credentials;
+the project intentionally has no default administrator password:
 
-The dashboard reads health status on the server. All variables are optional and fall back to local development ports:
+```bash
+STAFF_EMAIL=owner@example.com \
+STAFF_PASSWORD='choose-a-long-unique-password' \
+STAFF_FIRST_NAME=Store \
+STAFF_LAST_NAME=Owner \
+STAFF_ROLES=owner \
+npm run staff:create
+```
 
-- `COMMERCE_API_URL` (`http://127.0.0.1:4001`)
-- `INVENTORY_API_URL` (`http://127.0.0.1:4002`)
-- `PAYMENT_API_URL` (`http://127.0.0.1:4003`)
-- `CUSTOMER_DATA_API_URL` (`http://127.0.0.1:4004`)
+## Service URLs
 
-Base URLs never reach browser code. Unreachable services are shown as unavailable after a short timeout.
+Health checks run only on the server and use these optional environment variables:
 
-## Current boundary
+```bash
+COMMERCE_API_URL=http://127.0.0.1:4001/api/v1
+INVENTORY_API_URL=http://127.0.0.1:4002/api/v1
+PAYMENT_API_URL=http://127.0.0.1:4003/api/v1
+CUSTOMER_DATA_API_URL=http://127.0.0.1:4004/api/v1
+AUTH_ACCESS_TOKEN_SECRET=replace-with-at-least-32-random-bytes
+```
 
-The KPI, chart, order, stock, and activity content is deliberately marked as demo data. Aggregate admin endpoints, authentication, staff sessions, RBAC, and write operations are future phases. Navigation stays within the shell so unfinished areas never lead to broken routes.
+The local ports above are the built-in defaults. If a service is stopped or unavailable, the dashboard degrades safely and shows `Unavailable`.
+
+## Current data boundary
+
+KPI totals, charts, orders, inventory warnings, and activity entries are intentional demo data from `lib/demo-data.ts`. The dashboard labels this clearly. Service status is read live from the existing backend health endpoints.
+
+Staff authentication, rotating sessions, role-based navigation, and protected Commerce catalog writes are active. Aggregate reporting endpoints and Admin mutation screens remain later phases. See `docs/STAFF_AUTHORIZATION.md` for the permission matrix and production requirements.

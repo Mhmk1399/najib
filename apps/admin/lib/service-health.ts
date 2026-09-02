@@ -7,10 +7,10 @@ export type ServiceHealth = {
 };
 
 const services = [
-  ["Commerce", "COMMERCE_API_URL", "http://127.0.0.1:4001"],
-  ["Inventory", "INVENTORY_API_URL", "http://127.0.0.1:4002"],
-  ["Payments", "PAYMENT_API_URL", "http://127.0.0.1:4003"],
-  ["Customer Data", "CUSTOMER_DATA_API_URL", "http://127.0.0.1:4004"],
+  ["Commerce", "COMMERCE_API_URL", "http://127.0.0.1:4001/api/v1"],
+  ["Inventory", "INVENTORY_API_URL", "http://127.0.0.1:4002/api/v1"],
+  ["Payments", "PAYMENT_API_URL", "http://127.0.0.1:4003/api/v1"],
+  ["Customer Data", "CUSTOMER_DATA_API_URL", "http://127.0.0.1:4004/api/v1"],
 ] as const;
 
 async function inspectService(name: string, envName: string, fallback: string): Promise<ServiceHealth> {

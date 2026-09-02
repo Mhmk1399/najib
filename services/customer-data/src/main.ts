@@ -8,6 +8,6 @@ import { JsonLogger } from "./infrastructure/json-logger.js";
 const environment = validateEnvironment(process.env);
 const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter({ logger: true }), { logger: new JsonLogger("customer-data") });
 app.setGlobalPrefix("api/v1"); app.enableShutdownHooks();
-const config = new DocumentBuilder().setTitle("Najib Customer Data API").setVersion("1.0").build();
+const config = new DocumentBuilder().setTitle("Najib Customer Data API").setVersion("1.0").addBearerAuth().build();
 SwaggerModule.setup("docs", app, SwaggerModule.createDocument(app, config));
 await app.listen(environment.PORT, environment.HOST);

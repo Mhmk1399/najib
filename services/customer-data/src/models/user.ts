@@ -4,12 +4,18 @@ const { Schema, model, models } = mongoose;
 
 export const USER_ROLES = [
   "customer",
-  "store_staff",
-  "inventory_manager",
-  "accountant",
-  "customer_support",
-  "merchandiser",
+  "owner",
   "administrator",
+  "catalog_manager",
+  "inventory_manager",
+  "order_manager",
+  "customer_support",
+  "finance",
+  "store_staff",
+  // Kept for compatibility with existing records; new staff should use finance.
+  "accountant",
+  // Kept for compatibility with existing records; new staff should use catalog_manager.
+  "merchandiser",
 ] as const;
 
 const addressSchema = new Schema(
@@ -83,6 +89,9 @@ const userSchema = new Schema(
     addresses: { type: [addressSchema], default: [] },
     consents: { type: [consentSchema], default: [] },
     lastLoginAt: Date,
+    failedLoginAttempts: { type: Number, min: 0, default: 0, select: false },
+    lockedUntil: { type: Date, select: false },
+    passwordChangedAt: Date,
   },
   { timestamps: true },
 );

@@ -46,6 +46,8 @@ test (its temporary MongoDB records are automatically removed):
 pnpm test:apis
 pnpm test:inventory-flow
 pnpm test:vertical-slice
+pnpm test:auth-flow
+pnpm test:admin-auth-flow
 ```
 
 Commerce runs on port `4001`, Inventory on `4002`, Payment on `4003`, and
@@ -65,6 +67,19 @@ pnpm contracts:test
 
 `pnpm test:vertical-slice` creates an isolated Berlin / White / Large purchase,
 verifies all four services, and removes its temporary records.
+
+### Admin and staff access
+
+The Admin application runs separately on port `3001`:
+
+```bash
+npm run dev:admin
+```
+
+Staff identity and sessions are owned by Customer Data. Create the first owner
+account with `npm run staff:create`; the exact safe command and role matrix are
+documented in `docs/STAFF_AUTHORIZATION.md`. No default password is stored in
+the repository.
 
 ### Optional container infrastructure
 

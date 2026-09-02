@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Box, ChevronDown, Ellipsis, ExternalLink, PackagePlus, RefreshCw, TrendingUp } from "lucide-react";
+import { ArrowRight, Box, Ellipsis, ExternalLink, PackagePlus, RefreshCw, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { activity, chartRanges, type ChartRange, kpis, lowStock, recentOrders } from "@/lib/demo-data";
 import type { ServiceHealth } from "@/lib/service-health";
