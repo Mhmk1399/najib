@@ -57,7 +57,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/tailoring",
 
-    image: "/assets/images/banner.webp",
+    image: "/assets/images/suit.webp",
 
     imagePosition: "center",
   },
@@ -69,7 +69,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/fragrance",
 
-    image: "/assets/images/hero4.webp",
+    image: "/assets/images/kafsh.webp",
 
     imagePosition: "center",
   },
@@ -81,7 +81,7 @@ export const fakeCategories: CategoryItem[] = [
 
     href: "/clothing",
 
-    image: "/assets/images/banner.webp",
+    image: "/assets/images/accessory.webp",
 
     imagePosition: "center",
   },

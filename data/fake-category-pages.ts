@@ -37,7 +37,7 @@ export const fakeCategoryPages: Record<
                 "A refined wardrobe shaped through proportion, material and quiet confidence. Discover clothing designed for modern life and lasting presence.",
 
             image:
-                "/assets/images/banner.webp",
+                "/assets/images/suit.webp",
 
             imageAlt:
                 "Najibzadeh clothing collection",
@@ -87,7 +87,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/jackets",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center 28%",
@@ -103,7 +103,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/knitwear",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center",
@@ -119,7 +119,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/shirts",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center",
@@ -135,7 +135,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/trousers",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center",
@@ -151,7 +151,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/outerwear",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center",
@@ -167,7 +167,7 @@ export const fakeCategoryPages: Record<
                     "/clothing/polos",
 
                 image:
-                    "/assets/images/banner.webp",
+                    "/assets/images/suit.webp",
 
                 imagePosition:
                     "center",

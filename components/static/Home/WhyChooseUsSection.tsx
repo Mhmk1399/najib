@@ -132,7 +132,7 @@ const DEFAULT_FEATURES: WhyChooseFeature[] = [
 ============================================================================ */
 
 export function WhyChooseUsSection({
-  backgroundImage="/assets/images/banner.webp",
+  backgroundImage="/assets/images/whyus.webp",
 
   backgroundImageAlt = "",
 
@@ -225,39 +225,17 @@ export function WhyChooseUsSection({
           inset-0
           -z-30
 
-          bg-black/68
+          bg-black/5
         "
       />
 
       {/* Slight cinematic tonal layer */}
 
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-20
-
-          bg-[linear-gradient(180deg,rgb(var(--why-black-rgb)/0.18)_0%,rgb(var(--why-black-rgb)/0.38)_45%,rgb(var(--why-black-rgb)/0.72)_100%)]
-        "
-      />
+     
 
       {/* subtle vignette */}
 
-      <div
-        aria-hidden="true"
-        className="
-          pointer-events-none
-
-          absolute
-          inset-0
-          -z-10
-
-          bg-[radial-gradient(circle_at_center,transparent_30%,rgb(var(--why-black-rgb)/0.48)_120%)]
-        "
-      />
+      
 
       {/* =====================================================
           INNER

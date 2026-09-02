@@ -65,7 +65,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Tailoring",
     eyebrow: "01 / Collection",
     href: "/tailoring",
-    image: "/images/editorial/tailoring.jpg",
+    image: "/assets/images/p1.webp",
     imagePosition: "center",
   },
 
@@ -74,7 +74,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Shoes",
     eyebrow: "02 / Essentials",
     href: "/shoes",
-    image: "/images/editorial/shoes.jpg",
+    image: "/assets/images/p2.webp",
     imagePosition: "center",
   },
 
@@ -83,7 +83,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Fragrance",
     eyebrow: "03 / Signature",
     href: "/fragrance",
-    image: "/images/editorial/fragrance.jpg",
+    image: "/assets/images/p6.webp",
     imagePosition: "center",
   },
 
@@ -92,7 +92,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Knitwear",
     eyebrow: "04 / Softness",
     href: "/knitwear",
-    image: "/images/editorial/knitwear.jpg",
+    image: "/assets/images/p3.webp",
     imagePosition: "center",
   },
 
@@ -101,7 +101,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Leather Goods",
     eyebrow: "05 / Craft",
     href: "/accessories",
-    image: "/images/editorial/leather-bag.jpg",
+    image: "/assets/images/p8.webp",
     imagePosition: "center",
   },
 
@@ -110,7 +110,7 @@ export const fakeEditorialProducts: EditorialProduct[] = [
     title: "Accessories",
     eyebrow: "06 / Details",
     href: "/accessories",
-    image: "/images/editorial/accessories.jpg",
+    image: "/assets/images/p7.webp",
     imagePosition: "center",
   },
 ];
