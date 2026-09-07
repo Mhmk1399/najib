@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import {
   BarChart3, Bell, ChevronLeft, ChevronRight, CircleDollarSign, Command, CreditCard,
   FolderKanban, Grid2X2, Menu, Package, Search, Settings, ShoppingBag, Sun, Moon,
@@ -27,8 +28,8 @@ function getDarkTheme() {
 }
 
 const navigation = [
-  { label: "Overview", icon: Grid2X2, group: "Workspace", permission: "admin.access" },
-  { label: "Catalog", icon: ShoppingBag, group: "Commerce", permission: "catalog.read" },
+  { label: "Overview", icon: Grid2X2, group: "Workspace", permission: "admin.access", href: "/" },
+  { label: "Catalog", icon: ShoppingBag, group: "Commerce", permission: "catalog.read", href: "/catalog/products" },
   { label: "Inventory", icon: Package, group: "Commerce", count: 18, permission: "inventory.read" },
   { label: "Orders", icon: FolderKanban, group: "Commerce", count: 6, permission: "orders.read" },
   { label: "Customers", icon: Users, group: "Relations", permission: "customers.read" },
@@ -47,31 +48,34 @@ function Brand({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function Navigation({ collapsed, active, onNavigate, permissions }: { collapsed: boolean; active: string; onNavigate: (label: string) => void; permissions: string[] }) {
+function Navigation({ collapsed, pathname, onNavigate, permissions }: { collapsed: boolean; pathname: string; onNavigate: () => void; permissions: string[] }) {
   const allowedNavigation = navigation.filter((item) => permissions.includes(item.permission));
   const groups = [...new Set(allowedNavigation.map((item) => item.group))];
   return <nav aria-label="Primary navigation" className="sidebar-nav">
     {groups.map((group) => <div className="nav-group" key={group}>
       {!collapsed && <p>{group}</p>}
-      {allowedNavigation.filter((item) => item.group === group).map(({ label, icon: Icon, count }) => (
-        <button key={label} className={active === label ? "nav-item active" : "nav-item"} onClick={() => onNavigate(label)} title={collapsed ? label : undefined} aria-current={active === label ? "page" : undefined}>
-          <Icon size={18} strokeWidth={1.6} />
-          {!collapsed && <><span>{label}</span>{count && <em>{count}</em>}</>}
-        </button>
-      ))}
+      {allowedNavigation.filter((item) => item.group === group).map(({ label, icon: Icon, count, href }) => {
+        const isActive = href === "/" ? pathname === "/" : Boolean(href && pathname.startsWith(href));
+        const content = <><Icon size={18} strokeWidth={1.6} />{!collapsed && <><span>{label}</span>{count && <em>{count}</em>}</>}</>;
+        return href ? (
+          <Link key={label} href={href} className={isActive ? "nav-item active" : "nav-item"} onClick={onNavigate} title={collapsed ? label : undefined} aria-current={isActive ? "page" : undefined}>{content}</Link>
+        ) : (
+          <button key={label} className="nav-item nav-item--disabled" disabled title={collapsed ? `${label} — coming soon` : "Coming soon"}>{content}</button>
+        );
+      })}
     </div>)}
   </nav>;
 }
 
 export function AdminShell({ children, staff }: { children: ReactNode; staff?: StaffProfile }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const darkTheme = useSyncExternalStore(subscribeToTheme, getDarkTheme, () => false);
-  const [active, setActive] = useState("Overview");
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -121,7 +125,7 @@ export function AdminShell({ children, staff }: { children: ReactNode; staff?: S
     localStorage.setItem("najib-admin-theme", next);
   };
 
-  const navigate = (label: string) => { setActive(label); setMobileOpen(false); };
+  const active = pathname.startsWith("/catalog") ? "Catalog" : "Overview";
 
   const logout = async () => {
     if (loggingOut) return;
@@ -137,7 +141,7 @@ export function AdminShell({ children, staff }: { children: ReactNode; staff?: S
   return <div className={collapsed ? "admin-shell is-collapsed" : "admin-shell"}>
     <aside className="sidebar">
       <Brand compact={collapsed} />
-      <Navigation collapsed={collapsed} active={active} onNavigate={navigate} permissions={permissions} />
+      <Navigation collapsed={collapsed} pathname={pathname} onNavigate={() => setMobileOpen(false)} permissions={permissions} />
       <button className="collapse-control" onClick={() => setCollapsed(!collapsed)} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}>
         {collapsed ? <ChevronRight size={17} /> : <><ChevronLeft size={17} /><span>Collapse</span></>}
       </button>
@@ -197,12 +201,12 @@ export function AdminShell({ children, staff }: { children: ReactNode; staff?: S
           </div>
         </div>
       </header>
-      <main>{active === "Overview" ? children : <Placeholder title={active} onBack={() => setActive("Overview")} />}</main>
+      <main>{children}</main>
     </div>
 
     {mobileOpen && <><button className="sheet-overlay" onClick={() => setMobileOpen(false)} aria-label="Close navigation" /><aside className="mobile-sheet" aria-label="Mobile navigation">
       <div className="sheet-head"><Brand /><button className="icon-button inverse" onClick={() => setMobileOpen(false)} aria-label="Close navigation"><X size={20} /></button></div>
-      <Navigation collapsed={false} active={active} onNavigate={navigate} permissions={permissions} />
+      <Navigation collapsed={false} pathname={pathname} onNavigate={() => setMobileOpen(false)} permissions={permissions} />
     </aside></>}
 
     {searchOpen && <div className="command-layer" role="dialog" aria-modal="true" aria-label="Global search" onMouseDown={(e) => { if (e.currentTarget === e.target) setSearchOpen(false); }}>
@@ -213,8 +217,4 @@ export function AdminShell({ children, staff }: { children: ReactNode; staff?: S
       </section>
     </div>}
   </div>;
-}
-
-function Placeholder({ title, onBack }: { title: string; onBack: () => void }) {
-  return <section className="placeholder-state"><span>Module foundation</span><h1>{title}</h1><p>This workspace is prepared for the next delivery phase. The navigation stays functional without sending you to an unfinished route.</p><button className="primary-button" onClick={onBack}>Return to overview</button></section>;
 }

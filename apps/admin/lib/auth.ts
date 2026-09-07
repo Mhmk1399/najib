@@ -18,6 +18,11 @@ const staffProfileSchema = z.object({
 
 export type AdminStaff = z.infer<typeof staffProfileSchema>;
 
+export type AdminSession = {
+  accessToken: string;
+  staff: AdminStaff;
+};
+
 export const authSessionSchema = z.object({
   accessToken: z.string().min(1),
   refreshToken: z.string().min(32),
@@ -34,7 +39,7 @@ export function cookieOptions(maxAge: number) {
   return { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict" as const, path: "/", maxAge };
 }
 
-export async function getStaff(): Promise<AdminStaff | null> {
+export async function getAdminSession(): Promise<AdminSession | null> {
   const accessToken = (await cookies()).get(ACCESS_COOKIE)?.value;
   if (!accessToken) return null;
   try {
@@ -45,15 +50,25 @@ export async function getStaff(): Promise<AdminStaff | null> {
     });
     if (!response.ok) return null;
     const parsed = staffProfileSchema.safeParse(await response.json());
-    return parsed.success ? parsed.data : null;
+    return parsed.success ? { accessToken, staff: parsed.data } : null;
   } catch {
     return null;
   }
 }
 
+export async function getStaff(): Promise<AdminStaff | null> {
+  return (await getAdminSession())?.staff ?? null;
+}
+
 export async function requireStaff(): Promise<AdminStaff> {
   const staff = await getStaff();
   if (!staff || !staff.permissions.includes("admin.access")) redirect("/login?reason=session");
+  return staff;
+}
+
+export async function requireStaffPermission(permission: string): Promise<AdminStaff> {
+  const staff = await requireStaff();
+  if (!staff.permissions.includes(permission)) redirect("/?reason=permission");
   return staff;
 }
 

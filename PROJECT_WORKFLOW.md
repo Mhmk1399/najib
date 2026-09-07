@@ -162,6 +162,13 @@ pnpm test:vertical-slice
 - [x] Added staff authentication, rotating database sessions, role/permission
       contracts, audit records, protected Admin routes, and guarded Commerce
       catalog writes.
+- [x] Added the protected Admin product ledger with real search, filters,
+      pagination, category-aware create/edit forms, integer-price conversion,
+      and permission-aware actions.
+- [x] Added a server-only Admin catalog gateway that keeps staff tokens out of
+      browser code and enforces catalog read/write permissions.
+- [x] Aligned category/subcategory page-content API validation with MongoDB and
+      added product taxonomy/reference integrity checks.
 
 ## Current Validation Status
 
@@ -176,7 +183,13 @@ pnpm test:vertical-slice
 - Live staff authentication flow: 11/11 checks passing.
 - Live Admin session-gateway flow: 5/5 checks passing.
 - Isolated Berlin / White / Large end-to-end purchase test: passing.
-- Admin lint, TypeScript check, and production build: passing on 2026-09-02.
+- Commerce catalog tests: 22/22 passing on 2026-09-07.
+- Live Admin catalog flow: anonymous rejection, sign-in, list, create, search,
+  update, relation validation, and safe-query checks passing; temporary data is
+  removed automatically.
+- Admin lint, TypeScript check, and production build: passing on 2026-09-07.
+- Independent Admin catalog visual evaluation: PASS at 1440x1000 and 390x844;
+  mobile controls were refined to the required 44px minimum.
 - Admin browser checks completed at 1440x1000 and 390x844; mobile navigation,
   responsive tables, and horizontal overflow were verified.
 - Existing Next.js production build currently stops at the unrelated missing
@@ -186,14 +199,15 @@ pnpm test:vertical-slice
 
 ## Next Implementation Phases
 
-1. Add protected admin catalog and inventory workflows.
-2. Add admin reporting endpoints and replace dashboard demo data.
-3. Add staff management, invitations, password recovery, and MFA.
-4. Add promotions, returns, cancellations, and refunds.
-5. Add abandoned-checkout recovery and preference-profile processing.
-6. Add AI search, styling, and authenticated order support.
-7. Add business policy and accounting integration services.
-8. Add production infrastructure, observability, Redis, and RabbitMQ.
+1. Add Admin category/subcategory page content and shoppable image management.
+2. Add product variants, colors, sizes, collections, then exact stock.
+3. Add admin reporting endpoints and replace dashboard demo data.
+4. Add staff management, invitations, password recovery, and MFA.
+5. Add promotions, returns, cancellations, and refunds.
+6. Add abandoned-checkout recovery and preference-profile processing.
+7. Add AI search, styling, and authenticated order support.
+8. Add business policy and accounting integration services.
+9. Add production infrastructure, observability, Redis, and RabbitMQ.
 
 ## Change Log
 
@@ -255,3 +269,18 @@ pnpm test:vertical-slice
   public storefront catalog reads.
 - Added isolated backend and Admin live authentication flow tests and staff
   bootstrap documentation without creating a default credential.
+
+### 2026-09-07
+
+- Added a real-data Admin product ledger and create/edit folio with search,
+  status/category filters, pagination, responsive cards, validation, and
+  permission-aware controls.
+- Added protected same-origin Admin catalog routes; browser code never receives
+  the internal Commerce URL or staff bearer token.
+- Fixed the category/subcategory page-content contract so its two banners, two
+  structured descriptions, and SEO fields match the Mongo model.
+- Added product reference validation for category/subcategory pairing,
+  collections, and images, plus explicit clearing of optional product-story
+  fields.
+- Added an isolated logged Admin catalog flow test and completed independent
+  desktop/mobile visual evaluation.

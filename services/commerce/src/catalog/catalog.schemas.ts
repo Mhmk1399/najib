@@ -48,7 +48,7 @@ const slug = z
   .min(1)
   .max(180)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use a lowercase URL slug");
-const optionalObjectId = objectIdSchema.optional();
+const optionalObjectId = objectIdSchema.nullable().optional();
 const sortOrder = z.number().int().default(0);
 const active = z.boolean().default(true);
 
@@ -57,7 +57,7 @@ const pageBannerSchema = z
     imageId: objectIdSchema,
     eyebrow: z.string().trim().max(120).optional(),
     heading: z.string().trim().min(1).max(200),
-    body: z.string().trim().min(1).max(2000),
+    body: z.string().trim().max(1200).optional(),
     ctaLabel: z.string().trim().max(80).optional(),
     ctaHref: z.string().trim().max(500).optional(),
   })
@@ -65,10 +65,22 @@ const pageBannerSchema = z
 
 const pageContentSchema = z
   .object({
-    firstBanner: pageBannerSchema,
-    firstDescription: z.string().trim().min(1).max(4000),
-    secondBanner: pageBannerSchema,
-    secondDescription: z.string().trim().min(1).max(4000),
+    primaryBanner: pageBannerSchema,
+    primaryDescription: z
+      .object({
+        heading: z.string().trim().max(240).optional(),
+        body: z.string().trim().min(1).max(5000),
+      })
+      .strict(),
+    secondaryBanner: pageBannerSchema,
+    secondaryDescription: z
+      .object({
+        heading: z.string().trim().max(240).optional(),
+        body: z.string().trim().min(1).max(5000),
+      })
+      .strict(),
+    seoTitle: z.string().trim().max(70).optional(),
+    seoDescription: z.string().trim().max(170).optional(),
   })
   .strict();
 
@@ -76,7 +88,7 @@ const categorySchema = z
   .object({
     name,
     slug,
-    description: z.string().trim().max(2000).optional(),
+    description: z.string().trim().max(2000).nullable().optional(),
     thumbnailImageId: optionalObjectId,
     pageContent: pageContentSchema,
     isActive: active,
@@ -143,9 +155,9 @@ const productSchema = z
     currency: z.string().trim().length(3),
     status: z.enum(["draft", "active", "archived"]).default("draft"),
     material: z.array(z.string().trim().min(1)).default([]),
-    fit: z.string().trim().max(120).optional(),
-    silhouette: z.string().trim().max(120).optional(),
-    pattern: z.string().trim().max(120).optional(),
+    fit: z.string().trim().max(120).nullable().optional(),
+    silhouette: z.string().trim().max(120).nullable().optional(),
+    pattern: z.string().trim().max(120).nullable().optional(),
     seasons: z.array(z.string().trim().min(1)).default([]),
     occasions: z.array(z.string().trim().min(1)).default([]),
     styleTags: z.array(z.string().trim().min(1)).default([]),
@@ -182,7 +194,15 @@ const productLinkSchema = z
 
 const imageSchema = z
   .object({
-    url: z.string().trim().min(1).max(2000),
+    url: z
+      .string()
+      .trim()
+      .min(1)
+      .max(2000)
+      .refine(
+        (value) => value.startsWith("/") || /^https?:\/\//i.test(value),
+        "Use an HTTP(S) or root-relative image URL",
+      ),
     alt: z.string().trim().min(1).max(500),
     kind: z.enum([
       "product",
@@ -192,8 +212,8 @@ const imageSchema = z
       "editorial",
       "lookbook",
     ]),
-    width: z.number().int().positive().optional(),
-    height: z.number().int().positive().optional(),
+    width: z.number().int().positive().nullable().optional(),
+    height: z.number().int().positive().nullable().optional(),
     focalPointX: z.number().min(0).max(100).default(50),
     focalPointY: z.number().min(0).max(100).default(50),
     linkedProducts: z.array(productLinkSchema).default([]),

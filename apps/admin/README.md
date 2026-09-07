@@ -1,6 +1,6 @@
 # Najib Admin
 
-The admin application is the protected operational workspace for the Najibzadeh commerce platform. It includes staff sign-in, server-verified sessions, permission-aware navigation, the responsive application shell, overview dashboard, theme support, global search, demo commerce data, and server-side service health checks.
+The admin application is the protected operational workspace for the Najibzadeh commerce platform. It includes staff sign-in, server-verified sessions, permission-aware navigation, the responsive application shell, overview dashboard, real product catalog management, theme support, global search, and server-side service health checks.
 
 ## Commands
 
@@ -11,6 +11,7 @@ pnpm dev:admin
 pnpm build:admin
 pnpm typecheck:admin
 pnpm lint:admin
+pnpm test:admin-catalog-flow
 ```
 
 The development server uses `http://localhost:3001`.
@@ -45,4 +46,9 @@ The local ports above are the built-in defaults. If a service is stopped or unav
 
 KPI totals, charts, orders, inventory warnings, and activity entries are intentional demo data from `lib/demo-data.ts`. The dashboard labels this clearly. Service status is read live from the existing backend health endpoints.
 
-Staff authentication, rotating sessions, role-based navigation, and protected Commerce catalog writes are active. Aggregate reporting endpoints and Admin mutation screens remain later phases. See `docs/STAFF_AUTHORIZATION.md` for the permission matrix and production requirements.
+Staff authentication, rotating sessions, role-based navigation, the protected
+product ledger, and Commerce catalog writes are active. The product editor uses
+real category, subcategory, and collection records and never inserts demo
+products. Product imagery, variants, inventory, and aggregate reporting remain
+later phases. See `docs/STAFF_AUTHORIZATION.md` for the permission matrix and
+production requirements.

@@ -80,16 +80,26 @@ export class CatalogService {
     ] as const;
 
     for (const key of permittedFilters) {
-      if (query[key] !== undefined) filter[key] = query[key];
+      if (query[key] === undefined) continue;
+      if (resource === "images" && key === "productId") {
+        filter["linkedProducts.productId"] = query[key];
+      } else {
+        filter[key] = query[key];
+      }
     }
     if (query.isActive !== undefined) filter.isActive = query.isActive === "true";
     if (query.search) {
       const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.$or = [
-        { name: { $regex: escaped, $options: "i" } },
-        { slug: { $regex: escaped, $options: "i" } },
-        { sku: { $regex: escaped, $options: "i" } },
-      ];
+      filter.$or = resource === "images"
+        ? [
+            { alt: { $regex: escaped, $options: "i" } },
+            { url: { $regex: escaped, $options: "i" } },
+          ]
+        : [
+            { name: { $regex: escaped, $options: "i" } },
+            { slug: { $regex: escaped, $options: "i" } },
+            { sku: { $regex: escaped, $options: "i" } },
+          ];
     }
 
     const model = models[resource];
@@ -118,6 +128,15 @@ export class CatalogService {
 
   async create(resource: CatalogResource, input: unknown) {
     try {
+      if (resource === "products") {
+        await this.assertProductReferences(input as Record<string, unknown>);
+      }
+      if (resource === "categories" || resource === "subcategories") {
+        await this.assertTaxonomyReferences(resource, input as Record<string, unknown>);
+      }
+      if (resource === "images") {
+        await this.assertImageReferences(input as Record<string, unknown>);
+      }
       return await models[resource].create(input);
     } catch (error) {
       this.handleDatabaseError(error);
@@ -126,6 +145,24 @@ export class CatalogService {
 
   async update(resource: CatalogResource, id: string, input: unknown) {
     try {
+      if (resource === "products") {
+        const existing = await Product.findById(id).lean();
+        if (!existing) throw new NotFoundException("products record was not found");
+        await this.assertProductReferences({
+          ...existing,
+          ...(input as Record<string, unknown>),
+        });
+      }
+      if (resource === "categories" || resource === "subcategories" || resource === "images") {
+        const existing = await models[resource].findById(id).lean();
+        if (!existing) throw new NotFoundException(`${resource} record was not found`);
+        const merged = { ...existing, ...(input as Record<string, unknown>) };
+        if (resource === "images") {
+          await this.assertImageReferences(merged);
+        } else {
+          await this.assertTaxonomyReferences(resource, merged);
+        }
+      }
       const item = await models[resource]
         .findByIdAndUpdate(id, input as Record<string, unknown>, {
           new: true,
@@ -145,6 +182,118 @@ export class CatalogService {
       throw new BadRequestException({ message: "Validation failed", issues: result.error.issues });
     }
     return result.data;
+  }
+
+  private async assertProductReferences(input: Record<string, unknown>): Promise<void> {
+    const categoryId = String(input.categoryId);
+    const subcategoryId = String(input.subcategoryId);
+    const [categoryExists, subcategoryValue] = await Promise.all([
+      Category.exists({ _id: categoryId }),
+      Subcategory.findById(subcategoryId).select({ categoryId: 1 }).lean(),
+    ]);
+    const subcategory = subcategoryValue as { categoryId: unknown } | null;
+
+    if (!categoryExists) throw new BadRequestException("Product category does not exist");
+    if (!subcategory) throw new BadRequestException("Product subcategory does not exist");
+    if (String(subcategory.categoryId) !== categoryId) {
+      throw new BadRequestException("Product subcategory does not belong to the selected category");
+    }
+
+    const collectionIds = Array.isArray(input.collectionIds)
+      ? input.collectionIds.map(String)
+      : [];
+    if (collectionIds.length > 0) {
+      const collectionCount = await Collection.countDocuments({ _id: { $in: collectionIds } });
+      if (collectionCount !== new Set(collectionIds).size) {
+        throw new BadRequestException("One or more product collections do not exist");
+      }
+    }
+
+    const imageIds = new Set<string>();
+    if (input.primaryImageId) imageIds.add(String(input.primaryImageId));
+    if (Array.isArray(input.imageIds)) {
+      for (const imageId of input.imageIds) imageIds.add(String(imageId));
+    }
+    if (imageIds.size > 0) {
+      const imageCount = await ImageAsset.countDocuments({ _id: { $in: [...imageIds] } });
+      if (imageCount !== imageIds.size) {
+        throw new BadRequestException("One or more product images do not exist");
+      }
+    }
+  }
+
+  private async assertTaxonomyReferences(
+    resource: "categories" | "subcategories",
+    input: Record<string, unknown>,
+  ): Promise<void> {
+    if (resource === "subcategories") {
+      const categoryExists = await Category.exists({ _id: input.categoryId });
+      if (!categoryExists) throw new BadRequestException("Subcategory parent category does not exist");
+    }
+
+    const pageContent = input.pageContent as {
+      primaryBanner?: { imageId?: unknown };
+      secondaryBanner?: { imageId?: unknown };
+    } | undefined;
+    const requiredImageIds = [
+      pageContent?.primaryBanner?.imageId,
+      pageContent?.secondaryBanner?.imageId,
+    ].filter(Boolean).map(String);
+
+    if (requiredImageIds.length !== 2) {
+      throw new BadRequestException("Two banner images are required for category page content");
+    }
+
+    const allowedKinds = resource === "categories"
+      ? ["category_banner", "editorial", "lookbook"]
+      : ["subcategory_banner", "editorial", "lookbook"];
+    const bannerCount = await ImageAsset.countDocuments({
+      _id: { $in: requiredImageIds },
+      kind: { $in: allowedKinds },
+    });
+    if (bannerCount !== new Set(requiredImageIds).size) {
+      throw new BadRequestException(
+        `Page banners must reference existing ${resource === "categories" ? "category" : "subcategory"}, editorial, or lookbook images`,
+      );
+    }
+
+    if (input.thumbnailImageId) {
+      const thumbnailExists = await ImageAsset.exists({ _id: input.thumbnailImageId });
+      if (!thumbnailExists) throw new BadRequestException("Taxonomy thumbnail image does not exist");
+    }
+  }
+
+  private async assertImageReferences(input: Record<string, unknown>): Promise<void> {
+    const links = Array.isArray(input.linkedProducts)
+      ? input.linkedProducts as Array<Record<string, unknown>>
+      : [];
+    if (links.length === 0) return;
+
+    const productIds = [...new Set(links.map((link) => String(link.productId)))];
+    const productCount = await Product.countDocuments({ _id: { $in: productIds } });
+    if (productCount !== productIds.length) {
+      throw new BadRequestException("One or more linked products do not exist");
+    }
+
+    const variantIds = [...new Set(
+      links.filter((link) => link.variantId).map((link) => String(link.variantId)),
+    )];
+    if (variantIds.length === 0) return;
+
+    const variants = await ProductVariant.find({ _id: { $in: variantIds } })
+      .select({ _id: 1, productId: 1 })
+      .lean();
+    const variantProducts = new Map(
+      variants.map((variant) => [String(variant._id), String(variant.productId)]),
+    );
+    for (const link of links) {
+      if (!link.variantId) continue;
+      const productId = variantProducts.get(String(link.variantId));
+      if (!productId) throw new BadRequestException("One or more linked variants do not exist");
+      if (productId !== String(link.productId)) {
+        throw new BadRequestException("A linked variant does not belong to its selected product");
+      }
+    }
   }
 
   private handleDatabaseError(error: unknown): never {

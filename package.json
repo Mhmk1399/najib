@@ -22,6 +22,8 @@
     "test:vertical-slice": "pnpm contracts:build && pnpm build:services && node scripts/test-vertical-slice.js",
     "test:auth-flow": "node --env-file=.env scripts/test-auth-flow.js",
     "test:admin-auth-flow": "node --env-file=.env scripts/test-admin-auth-flow.js",
+    "test:admin-catalog-flow": "node --env-file=.env scripts/test-admin-catalog-flow.js",
+    "test:admin-content-flow": "node --env-file=.env scripts/test-admin-content-flow.js",
     "contracts:build": "pnpm --filter @najib/contracts build",
     "contracts:typecheck": "pnpm --filter @najib/contracts typecheck",
     "contracts:test": "pnpm --filter @najib/contracts test",

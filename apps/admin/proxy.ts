@@ -8,4 +8,4 @@ export function proxy(request: NextRequest) {
   return NextResponse.redirect(login);
 }
 
-export const config = { matcher: ["/"] };
+export const config = { matcher: ["/", "/catalog/:path*"] };
