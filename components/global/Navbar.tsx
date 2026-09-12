@@ -1015,7 +1015,7 @@ export default function Navbar({
         <div className="relative mx-auto flex h-full max-w-[1920px] items-center px-4 sm:px-6 lg:px-8 xl:px-10">
           <div className="flex min-w-[104px] flex-1 items-center lg:min-w-[280px]">
             <Button
-               type="button"
+              type="button"
               variant="outline"
               size="sm"
               uppercase={false}
@@ -1069,16 +1069,6 @@ export default function Navbar({
           </Link>
 
           <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
-            <div className="hidden lg:block">
-              <TextNavAction
-                href="/search"
-                label="Search"
-                onReadableSurface={readableNavbar}
-              >
-                <SearchIcon />
-              </TextNavAction>
-            </div>
-
             <div className="hidden sm:block">
               <NavAction
                 href="/profile"
@@ -1419,18 +1409,6 @@ export default function Navbar({
                     Najibzadeh
                   </p>
                 </div>
-
-                <Button
-                  href="/search"
-                  onClick={hideMenu}
-                  variant="outline"
-                  size="md"
-                  icon={<SearchIcon />}
-                  iconPosition="right"
-                  className="!tracking-[0.14em]"
-                >
-                  Search
-                </Button>
               </div>
 
               <div className="mt-3 overflow-hidden border border-black/[0.08] dark:border-white/10">
@@ -2037,25 +2015,6 @@ function HistoryIcon() {
       <path d="M5 5h14v14H5z" />
       <path d="M12 8v5l3 2" />
       <path d="M8 2h8" />
-    </svg>
-  );
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.35"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden="true"
-    >
-      <path d="M4 4h11v11H4z" />
-      <path d="m14 14 6 6" />
     </svg>
   );
 }
