@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+
 import { usePathname } from "next/navigation";
 
 import {
@@ -13,6 +14,7 @@ import {
   useState,
 } from "react";
 
+import { Button } from "@/components/ui/Button";
 import { fontTokens, themeClasses } from "@/theme/theme-colors";
 
 /* ==========================================================================
@@ -742,26 +744,26 @@ const BREADCRUMB_LABELS: Record<string, string> = {
 };
 
 /* ==========================================================================
-   CONFIG
+   LUXURY NAVBAR V2
 ============================================================================ */
 
-const MENU_ANIMATION_MS = 220;
+const MENU_ANIMATION_MS = 320;
 
 const NAVBAR_GLASS_CLASSES = [
-  "bg-white/[0.72]",
+  "bg-[#F7F5F0]/[0.86]",
   "backdrop-blur-2xl",
   "backdrop-saturate-150",
-  "shadow-[0_12px_42px_rgba(11,11,11,0.08)]",
-  "dark:bg-[#0B0B0B]/70",
-  "dark:shadow-[0_12px_42px_rgba(0,0,0,0.28)]",
+  "shadow-[0_10px_40px_rgba(9,9,9,0.055)]",
+  "dark:bg-[#0A0A0A]/[0.86]",
+  "dark:shadow-[0_10px_40px_rgba(0,0,0,0.22)]",
 ].join(" ");
 
 const NAVBAR_OVERLAY_CHROME_CLASSES = [
   "text-white",
-  "drop-shadow-[0_1px_8px_rgba(0,0,0,0.35)]",
+  "drop-shadow-[0_1px_12px_rgba(0,0,0,0.34)]",
   "focus-visible:outline-none",
   "focus-visible:ring-1",
-  "focus-visible:ring-white",
+  "focus-visible:ring-white/80",
 ].join(" ");
 
 const NAVBAR_SURFACE_CHROME_CLASSES = [
@@ -769,74 +771,35 @@ const NAVBAR_SURFACE_CHROME_CLASSES = [
   themeClasses.focusRing,
 ].join(" ");
 
-/* ==========================================================================
-   UTILS
-============================================================================ */
-
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-/* ==========================================================================
-   NAVBAR
-============================================================================ */
-
 export default function Navbar({
   overlayTone = "light",
 }: {
-  /**
-   * فقط برای Breadcrumb استفاده می‌شود.
-   *
-   * خود Navbar همیشه:
-   * transparent + white over hero, glass/readable after scroll
-   */
   overlayTone?: "light" | "dark";
 }) {
   const pathname = usePathname();
 
-  /* ------------------------------------------------------------------------
-     STATES
-  ------------------------------------------------------------------------- */
-
   const [open, setOpen] = useState(false);
-
   const [menuMounted, setMenuMounted] = useState(false);
-
   const [menuVisible, setMenuVisible] = useState(false);
-
   const [scrolled, setScrolled] = useState(false);
-
   const [activeId, setActiveId] = useState(MENU[0].id);
-
-  const [mobileOpen, setMobileOpen] = useState<string | null>(null);
-
+  const [mobileOpen, setMobileOpen] = useState<string | null>(MENU[0].id);
   const [hoveredSubcategory, setHoveredSubcategory] = useState<string | null>(
     null,
   );
 
-  /* ------------------------------------------------------------------------
-     REFS
-  ------------------------------------------------------------------------- */
-
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   const savedScrollPosition = useRef(0);
-
-  /* ------------------------------------------------------------------------
-     ACTIVE
-  ------------------------------------------------------------------------- */
 
   const active = useMemo(
     () => MENU.find((section) => section.id === activeId) ?? MENU[0],
-
     [activeId],
   );
-
-  /* ------------------------------------------------------------------------
-     BREADCRUMBS
-  ------------------------------------------------------------------------- */
 
   const breadcrumbs = useMemo(() => {
     if (!pathname || pathname === "/") {
@@ -847,7 +810,6 @@ export default function Navbar({
 
     return segments.map((segment, index) => {
       const href = "/" + segments.slice(0, index + 1).join("/");
-
       const generatedLabel = segment
         .split("-")
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -855,49 +817,29 @@ export default function Navbar({
 
       return {
         href,
-
         label: BREADCRUMB_LABELS[segment] ?? generatedLabel,
       };
     });
   }, [pathname]);
 
-  /* ------------------------------------------------------------------------
-     SHOW MENU
-  ------------------------------------------------------------------------- */
-
   const showMenu = useCallback(() => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
-
       closeTimerRef.current = null;
     }
 
     setMenuMounted(true);
-
     setOpen(true);
-
-    setMobileOpen(null);
-
     setHoveredSubcategory(null);
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        setMenuVisible(true);
-      });
+      requestAnimationFrame(() => setMenuVisible(true));
     });
   }, []);
 
-  /* ------------------------------------------------------------------------
-     HIDE MENU
-  ------------------------------------------------------------------------- */
-
   const hideMenu = useCallback(() => {
     setOpen(false);
-
     setMenuVisible(false);
-
-    setMobileOpen(null);
-
     setHoveredSubcategory(null);
 
     const reduceMotion =
@@ -908,23 +850,17 @@ export default function Navbar({
 
     closeTimerRef.current = setTimeout(() => {
       setMenuMounted(false);
-
       menuButtonRef.current?.focus();
     }, delay);
   }, []);
 
-  function toggleMenu() {
+  const toggleMenu = useCallback(() => {
     if (open) {
       hideMenu();
-      return;
+    } else {
+      showMenu();
     }
-
-    showMenu();
-  }
-
-  /* ------------------------------------------------------------------------
-     TIMER CLEANUP
-  ------------------------------------------------------------------------- */
+  }, [hideMenu, open, showMenu]);
 
   useEffect(() => {
     return () => {
@@ -934,122 +870,74 @@ export default function Navbar({
     };
   }, []);
 
-  /* ------------------------------------------------------------------------
-     SCROLL READABILITY
-  ------------------------------------------------------------------------- */
-
   useEffect(() => {
     let frame: number | null = null;
 
     const updateScrolled = () => {
       frame = null;
-
-      const next = window.scrollY > 18;
-
+      const next = window.scrollY > 24;
       setScrolled((current) => (current === next ? current : next));
     };
 
     const handleScroll = () => {
-      if (frame !== null) {
-        return;
-      }
-
+      if (frame !== null) return;
       frame = requestAnimationFrame(updateScrolled);
     };
 
     frame = requestAnimationFrame(updateScrolled);
-
-    window.addEventListener("scroll", handleScroll, {
-      passive: true,
-    });
+    window.addEventListener("scroll", handleScroll, { passive: true });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-      }
+      if (frame !== null) cancelAnimationFrame(frame);
     };
   }, []);
 
-  /* ------------------------------------------------------------------------
-     BODY LOCK
-  ------------------------------------------------------------------------- */
-
   useEffect(() => {
-    if (!menuMounted) {
-      return;
-    }
+    if (!menuMounted) return;
 
     const body = document.body;
-
     const html = document.documentElement;
-
     const scrollY = window.scrollY;
-
     const lenis = getLenisController();
-
     const lockPathname = window.location.pathname;
 
     savedScrollPosition.current = scrollY;
-
     lenis?.stop();
 
     const previous = {
       bodyPosition: body.style.position,
-
       bodyTop: body.style.top,
-
       bodyLeft: body.style.left,
-
       bodyRight: body.style.right,
-
       bodyWidth: body.style.width,
-
       bodyOverflow: body.style.overflow,
-
       htmlOverflow: html.style.overflow,
-
       htmlScrollBehavior: html.style.scrollBehavior,
     };
 
     html.style.scrollBehavior = "auto";
-
     body.style.position = "fixed";
-
     body.style.top = `-${scrollY}px`;
-
     body.style.left = "0";
-
     body.style.right = "0";
-
     body.style.width = "100%";
-
     body.style.overflow = "hidden";
-
     html.style.overflow = "hidden";
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        hideMenu();
-      }
+      if (event.key === "Escape") hideMenu();
     };
 
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
       body.style.position = previous.bodyPosition;
-
       body.style.top = previous.bodyTop;
-
       body.style.left = previous.bodyLeft;
-
       body.style.right = previous.bodyRight;
-
       body.style.width = previous.bodyWidth;
-
       body.style.overflow = previous.bodyOverflow;
-
       html.style.overflow = previous.htmlOverflow;
 
       const shouldRestoreScroll = window.location.pathname === lockPathname;
@@ -1068,7 +956,6 @@ export default function Navbar({
           immediate: true,
           lock: false,
         });
-
         lenis?.resize?.();
       }
 
@@ -1079,13 +966,11 @@ export default function Navbar({
           const restoredScrollY = getClampedScrollY(
             savedScrollPosition.current,
           );
-
           window.scrollTo({
             top: restoredScrollY,
             left: 0,
             behavior: "instant",
           });
-
           lenis?.scrollTo(restoredScrollY, {
             force: true,
             immediate: true,
@@ -1098,302 +983,140 @@ export default function Navbar({
 
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [menuMounted, hideMenu]);
-
-  /* ------------------------------------------------------------------------
-     BREADCRUMB COLOR
-
-     Navbar خودش همیشه سفید است.
-  ------------------------------------------------------------------------- */
-
-  const breadcrumbColor =
-    overlayTone === "light" ? "text-[#0B0B0B]" : "text-[#0B0B0B]";
+  }, [hideMenu, menuMounted]);
 
   const readableNavbar = menuMounted || scrolled;
-
-  /* ==========================================================================
-     RENDER
-  ========================================================================== */
+  const overlayBreadcrumbClass =
+    overlayTone === "dark" ? "text-white" : "text-[#0B0B0B]";
 
   return (
     <>
-      {/* ================================================================
-          NAVBAR
-
-          IMPORTANT:
-          - transparent over the hero/page top
-          - glass surface after scroll
-          - mega-menu surface while menu is mounted
-      ================================================================= */}
-
       <header
         dir="ltr"
-        style={{
-          fontFamily: fontTokens.english,
-        }}
+        style={{ fontFamily: fontTokens.english }}
         className={cx(
-          "fixed",
-          "inset-x-0",
-          "top-0",
-
-          "z-[1000]",
-
-          "h-[72px]",
-          "md:h-[76px]",
-
-          menuMounted
-            ? themeClasses.megaMenu
-            : scrolled
-              ? NAVBAR_GLASS_CLASSES
-              : "bg-transparent",
-
+          "fixed inset-x-0 top-0 z-[1000]",
+          "h-[70px] md:h-[78px]",
           "border-b",
-
-          menuMounted
-            ? themeClasses.border
-            : scrolled
-              ? "border-white/60 dark:border-white/10"
-              : "border-transparent",
-
-          readableNavbar ? themeClasses.textPrimary : "text-white",
-
           "transition-[background-color,border-color,box-shadow,color,backdrop-filter]",
-          "duration-300",
-          "ease-[cubic-bezier(.22,.7,.2,1)]",
+          "duration-500 ease-linear",
           "motion-reduce:transition-none",
+          menuMounted
+            ? cx(themeClasses.megaMenu, themeClasses.border)
+            : scrolled
+              ? cx(
+                  NAVBAR_GLASS_CLASSES,
+                  "border-black/[0.06] dark:border-white/10",
+                )
+              : "border-transparent bg-transparent",
+          readableNavbar ? themeClasses.textPrimary : "text-white",
         )}
       >
-        <div
-          className="
-            relative
-            mx-auto
-
-            flex
-            h-full
-
-            max-w-[1920px]
-
-            items-stretch
-          "
-        >
-          {/* ============================================================
-              LEFT — MENU
-          ============================================================= */}
-
-          <div
-            className={cx(
-              "flex",
-
-              "w-[72px]",
-              "shrink-0",
-
-              "items-center",
-              "justify-start",
-
-              "pl-4",
-
-              "sm:w-[96px]",
-              "sm:pl-6",
-
-              "lg:w-[250px]",
-              "lg:pl-8",
-
-              "xl:w-[270px]",
-              "xl:pl-9",
-            )}
-          >
-            <button
-              ref={menuButtonRef}
+        <div className="relative mx-auto flex h-full max-w-[1920px] items-center px-4 sm:px-6 lg:px-8 xl:px-10">
+          <div className="flex min-w-[104px] flex-1 items-center lg:min-w-[280px]">
+            <Button
               type="button"
+              variant="outline"
+              size="sm"
+              uppercase={false}
+              align="left"
               aria-expanded={open}
-              aria-controls="najibzadeh-mega-menu"
+              aria-controls="najibzadeh-luxury-menu"
               aria-label={open ? "Close menu" : "Open menu"}
               onClick={toggleMenu}
+              icon={open ? <CloseIcon /> : <MenuIcon />}
+              iconPosition="left"
               className={cx(
-                "group",
-                "flex h-12 cursor-pointer items-center gap-3",
-                "transition-[color,filter,opacity]",
-                "duration-150",
-                "hover:opacity-65",
+                "h-11 !min-h-0 !border-0 !bg-transparent !px-0 !text-current",
+                "gap-3 !tracking-normal",
+                "transition-opacity duration-200 hover:!border-0 hover:!bg-transparent hover:opacity-60",
                 readableNavbar
                   ? NAVBAR_SURFACE_CHROME_CLASSES
-                  : [
-                      NAVBAR_OVERLAY_CHROME_CLASSES,
-                      "focus-visible:ring-offset-2",
-                      "focus-visible:ring-offset-transparent",
-                    ].join(" "),
+                  : NAVBAR_OVERLAY_CHROME_CLASSES,
               )}
             >
-              {open ? <CloseIcon /> : <MenuIcon />}
-
-              <span
-                className="
-                  hidden
-
-                  text-[9px]
-                  font-medium
-
-                  uppercase
-                  tracking-[0.22em]
-
-                  md:inline
-                "
-              >
+              <span className="hidden text-[9px] font-semibold uppercase tracking-[0.22em] sm:inline">
                 {open ? "Close" : "Menu"}
               </span>
-            </button>
+            </Button>
           </div>
-
-          {/* ============================================================
-              CENTER LOGO
-          ============================================================= */}
 
           <Link
             href="/"
             onClick={hideMenu}
             aria-label="Najibzadeh home"
             className={cx(
-              "absolute left-1/2 top-1/2 z-10",
-              "-translate-x-1/2 -translate-y-1/2",
-              "whitespace-nowrap",
-              "text-[14px] font-medium tracking-[0.28em]",
-              "transition-[color,filter,opacity]",
-              "duration-150",
-              "hover:opacity-70",
-              "sm:text-[16px] sm:tracking-[0.34em]",
-              "md:text-[18px] md:tracking-[0.42em]",
-              "lg:text-[19px] lg:tracking-[0.46em]",
+              "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
+              "transition-[opacity,transform,filter] duration-300",
+              "hover:scale-[1.025] hover:opacity-80",
               readableNavbar
                 ? NAVBAR_SURFACE_CHROME_CLASSES
                 : NAVBAR_OVERLAY_CHROME_CLASSES,
             )}
           >
-            NAJIBZADEH
+            <Image
+              src={
+                readableNavbar
+                  ? "/assets/images/logoblack.png"
+                  : "/assets/images/logo.png"
+              }
+              alt="Najibzadeh"
+              width={84}
+              height={84}
+              priority
+              className="h-auto w-[66px] sm:w-[72px] md:w-[78px]"
+            />
           </Link>
 
-          <div className="min-w-0 flex-1" />
-
-          {/* ============================================================
-              RIGHT ACTIONS
-          ============================================================= */}
-
-          <div
-            className="
-              flex
-              shrink-0
-
-              items-center
-              justify-end
-
-              gap-0.5
-
-              pr-3
-
-              sm:pr-5
-
-              md:gap-2
-
-              lg:gap-3
-              lg:pr-8
-
-              xl:pr-9
-            "
-          >
-            <div className="hidden md:block">
-              <NavIcon
-                href="/recently-viewed"
-                label="Recently viewed"
+          <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
+            <div className="hidden sm:block">
+              <NavAction
+                href="/profile"
+                label="Profile"
                 onReadableSurface={readableNavbar}
               >
-                <HistoryIcon />
-              </NavIcon>
+                <ProfileIcon />
+              </NavAction>
             </div>
 
-            <NavIcon
-              href="/wishlist"
-              label="Wishlist"
-              onReadableSurface={readableNavbar}
-            >
-              <HeartIcon />
-            </NavIcon>
+            <div className="hidden md:block">
+              <NavAction
+                href="/wishlist"
+                label="Wishlist"
+                onReadableSurface={readableNavbar}
+              >
+                <HeartIcon />
+              </NavAction>
+            </div>
 
-            <NavIcon
+            <NavAction
               href="/cart"
               label="Shopping bag"
               badge={2}
               onReadableSurface={readableNavbar}
             >
               <BagIcon />
-            </NavIcon>
+            </NavAction>
           </div>
         </div>
       </header>
-
-      {/* ================================================================
-          BREADCRUMBS
-      ================================================================= */}
 
       {!menuMounted && breadcrumbs.length > 0 && (
         <nav
           dir="ltr"
           aria-label="Breadcrumb"
-          style={{
-            fontFamily: fontTokens.english,
-          }}
+          style={{ fontFamily: fontTokens.english }}
           className={cx(
-            "absolute",
-            "inset-x-0",
-
-            "top-[68px]",
-
-            "z-[80]",
-
-            breadcrumbColor,
-
-            "md:top-[76px]",
+            "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
+            scrolled ? themeClasses.textPrimary : overlayBreadcrumbClass,
           )}
         >
-          <div
-            className="
-                mx-auto
-
-                max-w-[1920px]
-
-                overflow-x-auto
-
-                whitespace-nowrap
-
-                px-4
-                py-3
-
-                sm:px-6
-
-                lg:px-10
-              "
-          >
-            <ol
-              className="
-                  flex
-                  items-center
-                  gap-2
-
-                  text-[9px]
-                  font-medium
-
-                  uppercase
-                  tracking-[0.14em]
-                "
-            >
+          <div className="mx-auto max-w-[1920px] overflow-x-auto px-4 py-3 sm:px-6 lg:px-10">
+            <ol className="flex items-center gap-2 whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.16em]">
               <li>
                 <Link
                   href="/"
-                  className="
-                      opacity-55
-
-                      transition-opacity
-
-                      hover:opacity-100
-                    "
+                  className="opacity-45 transition-opacity hover:opacity-100"
                 >
                   Home
                 </Link>
@@ -1403,30 +1126,16 @@ export default function Navbar({
                 const last = index === breadcrumbs.length - 1;
 
                 return (
-                  <li
-                    key={breadcrumb.href}
-                    className="
-                          flex
-                          items-center
-                          gap-2
-                        "
-                  >
-                    <span aria-hidden className="opacity-30">
+                  <li key={breadcrumb.href} className="flex items-center gap-2">
+                    <span aria-hidden className="opacity-25">
                       /
                     </span>
-
                     {last ? (
-                      <span>{breadcrumb.label}</span>
+                      <span className="opacity-90">{breadcrumb.label}</span>
                     ) : (
                       <Link
                         href={breadcrumb.href}
-                        className="
-                              opacity-55
-
-                              transition-opacity
-
-                              hover:opacity-100
-                            "
+                        className="opacity-45 transition-opacity hover:opacity-100"
                       >
                         {breadcrumb.label}
                       </Link>
@@ -1439,138 +1148,54 @@ export default function Navbar({
         </nav>
       )}
 
-      {/* ================================================================
-          MEGA MENU
-      ================================================================= */}
-
       {menuMounted && (
-        <nav
-          id="najibzadeh-mega-menu"
+        <div
+          id="najibzadeh-luxury-menu"
           dir="ltr"
           data-lenis-prevent=""
-          aria-label="Main navigation"
           aria-hidden={!open}
-          style={{
-            fontFamily: fontTokens.english,
-          }}
+          style={{ fontFamily: fontTokens.english }}
           className={cx(
-            "fixed",
-            "inset-x-0",
-            "bottom-0",
-
-            /*
-             * Header remains above menu.
-             */
-            "top-[72px]",
-
-            "z-[990]",
-
-            "overflow-y-auto",
-
-            "overscroll-contain",
-
-            "touch-pan-y",
-
-            "[-webkit-overflow-scrolling:touch]",
-
-            "transform-gpu",
-
-            "transition-[opacity,transform]",
-
-            "duration-[220ms]",
-
-            "ease-[cubic-bezier(.22,.7,.2,1)]",
-
+            "fixed inset-x-0 bottom-0 top-[70px] z-[990] md:top-[78px]",
+            "transition-opacity duration-[320ms] ease-linear",
             "motion-reduce:transition-none",
-
-            "md:top-[76px]",
-
-            "lg:overflow-hidden",
-
             menuVisible
-              ? `
-                pointer-events-auto
-
-                translate-y-0
-                opacity-100
-              `
-              : `
-                pointer-events-none
-
-                -translate-y-2
-                opacity-0
-              `,
-
-            themeClasses.megaMenu,
+              ? "pointer-events-auto opacity-100"
+              : "pointer-events-none opacity-0",
           )}
         >
-          {/* ============================================================
-              DESKTOP
-          ============================================================= */}
+          <button
+            type="button"
+            aria-label="Close navigation"
+            onClick={hideMenu}
+            className={cx(
+              "absolute inset-0 hidden bg-black/35 backdrop-blur-[3px] transition-opacity duration-300 lg:block",
+              menuVisible ? "opacity-100" : "opacity-0",
+            )}
+          />
 
           <div
-            className="
-              mx-auto
-
-              hidden
-              h-full
-
-              max-w-[1920px]
-
-              lg:grid
-
-              lg:grid-cols-[250px_minmax(0,1fr)_360px]
-
-              xl:grid-cols-[270px_minmax(0,1fr)_430px]
-            "
+            className={cx(
+              "relative mx-auto h-full max-w-[1920px] overflow-hidden",
+              "transition-[transform,opacity] duration-[320ms] ease-linear",
+              "motion-reduce:transition-none",
+              menuVisible
+                ? "translate-y-0 opacity-100"
+                : "-translate-y-3 opacity-0",
+            )}
           >
-            {/* ==========================================================
-                CATEGORY RAIL
-            =========================================================== */}
+            <div className="hidden h-[min(760px,calc(100vh-92px))] min-h-[560px] grid-cols-[270px_minmax(0,1fr)_390px] overflow-hidden border-t border-black/[0.06] bg-[#F7F5F0] shadow-[0_30px_90px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#0E0E0E] lg:grid xl:grid-cols-[300px_minmax(0,1fr)_450px]">
+              <aside className="flex min-h-0 flex-col bg-[#0C0C0C] text-white">
+                <div className="flex items-center justify-between border-b border-white/10 px-6 py-5 xl:px-7">
+                  <p className="text-[8px] font-semibold uppercase tracking-[0.24em] text-white/45">
+                    Collections
+                  </p>
+                  <span className="text-[8px] font-medium tabular-nums text-white/35">
+                    {String(MENU.length).padStart(2, "0")}
+                  </span>
+                </div>
 
-            <aside
-              className={cx(
-                "flex",
-                "min-h-0",
-
-                "flex-col",
-
-                "border-r",
-
-                themeClasses.border,
-              )}
-            >
-              <div
-                className="
-                  min-h-0
-                  flex-1
-
-                  overflow-y-auto
-
-                  px-4
-                  py-7
-
-                  xl:px-5
-                "
-              >
-                <p
-                  className={cx(
-                    "mb-4",
-                    "px-3",
-
-                    "text-[9px]",
-                    "font-semibold",
-
-                    "uppercase",
-                    "tracking-[0.24em]",
-
-                    themeClasses.textSoft,
-                  )}
-                >
-                  Explore
-                </p>
-
-                <div className="space-y-1">
+                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 xl:px-4">
                   {MENU.map((section, index) => {
                     const selected = activeId === section.id;
 
@@ -1580,97 +1205,39 @@ export default function Navbar({
                         type="button"
                         onMouseEnter={() => {
                           setActiveId(section.id);
-
                           setHoveredSubcategory(null);
                         }}
                         onFocus={() => {
                           setActiveId(section.id);
-
                           setHoveredSubcategory(null);
                         }}
-                        onClick={() => {
-                          setActiveId(section.id);
-                        }}
+                        onClick={() => setActiveId(section.id)}
                         className={cx(
-                          "group",
-                          "relative",
-
-                          "flex",
-                          "min-h-[58px]",
-
-                          "w-full",
-
-                          "cursor-pointer",
-
-                          "items-center",
-                          "gap-3",
-
-                          "px-3",
-                          "py-2",
-
-                          "text-left",
-
-                          "transition-[background-color,color]",
-
-                          "duration-150",
-
+                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-left",
+                          "transition-[background-color,transform] duration-300",
+                          "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-inset",
                           selected
-                            ? themeClasses.surfaceMuted
-                            : "bg-transparent",
-
-                          themeClasses.focusRing,
+                            ? "bg-white/[0.075]"
+                            : "hover:bg-white/[0.04]",
                         )}
                       >
-                        {/* ACTIVE LINE — BLACK / WHITE */}
-
                         <span
                           className={cx(
-                            "absolute",
-
-                            "bottom-3",
-                            "left-0",
-                            "top-3",
-
-                            "w-[2px]",
-
-                            "bg-[#0B0B0B]",
-
-                            "dark:bg-white",
-
-                            "transition-opacity",
-
+                            "absolute inset-y-3 left-0 w-px bg-white transition-opacity duration-300",
                             selected ? "opacity-100" : "opacity-0",
                           )}
                         />
 
-                        <span
-                          className={cx(
-                            "w-5",
-                            "shrink-0",
-
-                            "text-[8px]",
-
-                            "tabular-nums",
-
-                            themeClasses.textSoft,
-                          )}
-                        >
+                        <span className="w-6 shrink-0 text-[8px] font-medium tabular-nums tracking-[0.08em] text-white/35">
                           {String(index + 1).padStart(2, "0")}
                         </span>
 
                         <span
                           className={cx(
-                            "min-w-0",
-                            "flex-1",
-
-                            "text-[16px]",
-                            "font-medium",
-
-                            "tracking-[-0.02em]",
-
+                            "min-w-0 flex-1 text-[17px] font-medium tracking-[-0.025em] transition-all duration-300 xl:text-[18px]",
                             selected
-                              ? themeClasses.textPrimary
-                              : themeClasses.textSecondary,
+                              ? "translate-x-1 text-white"
+                              : "text-white/62 group-hover:text-white/90",
                           )}
                         >
                           {section.title}
@@ -1678,17 +1245,10 @@ export default function Navbar({
 
                         <span
                           className={cx(
-                            "shrink-0",
-
-                            "transition-[opacity,transform]",
-
-                            "duration-150",
-
+                            "transition-[opacity,transform] duration-300",
                             selected
                               ? "translate-x-0 opacity-100"
                               : "-translate-x-1 opacity-0",
-
-                            themeClasses.textPrimary,
                           )}
                         >
                           <ArrowIcon />
@@ -1697,836 +1257,364 @@ export default function Navbar({
                     );
                   })}
                 </div>
-              </div>
 
-              {/* CLIENT SERVICES */}
-
-              <div
-                className={cx(
-                  "shrink-0",
-
-                  "border-t",
-
-                  "p-5",
-
-                  themeClasses.border,
-                )}
-              >
-                <p
-                  className={cx(
-                    "mb-3",
-
-                    "text-[8px]",
-                    "font-semibold",
-
-                    "uppercase",
-                    "tracking-[0.18em]",
-
-                    themeClasses.textSoft,
-                  )}
-                >
-                  Client Services
-                </p>
-
-                <div className="space-y-1">
-                  <UtilityLink href="/appointments" onClick={hideMenu}>
-                    Private Appointment
-                  </UtilityLink>
-
-                  <UtilityLink href="/stores" onClick={hideMenu}>
-                    Find a Store
-                  </UtilityLink>
-
-                  <UtilityLink href="/customer-care" onClick={hideMenu}>
-                    Client Care
-                  </UtilityLink>
-                </div>
-              </div>
-            </aside>
-
-            {/* ==========================================================
-                MAIN
-            =========================================================== */}
-
-            <section
-              className="
-                min-h-0
-                min-w-0
-
-                overflow-y-auto
-
-                px-8
-                py-7
-
-                [scrollbar-gutter:stable]
-
-                xl:px-11
-                xl:py-9
-              "
-            >
-              <div
-                key={active.id}
-                className="
-                  mx-auto
-
-                  flex
-                  min-h-full
-                  max-w-[940px]
-
-                  flex-col
-                "
-              >
-                {/* HEADER */}
-
-                <div
-                  className={cx(
-                    "flex",
-
-                    "items-start",
-                    "justify-between",
-
-                    "gap-8",
-
-                    "border-b",
-
-                    "pb-7",
-
-                    themeClasses.border,
-                  )}
-                >
-                  <div className="max-w-[620px]">
-                    {/* Copper allowed here as eyebrow */}
-
-                    <p
-                      className={cx(
-                        "mb-3",
-
-                        "text-[8px]",
-                        "font-semibold",
-
-                        "uppercase",
-                        "tracking-[0.22em]",
-
-                        themeClasses.textAccent,
-                      )}
-                    >
-                      Explore Collection
-                    </p>
-
-                    <h2
-                      className={cx(
-                        "text-[34px]",
-
-                        "font-medium",
-
-                        "leading-[1.03]",
-
-                        "tracking-[-0.035em]",
-
-                        "xl:text-[42px]",
-
-                        themeClasses.textPrimary,
-                      )}
-                    >
-                      {active.title}
-                    </h2>
-
-                    <p
-                      className={cx(
-                        "mt-3",
-
-                        "max-w-[540px]",
-
-                        "text-[12px]",
-
-                        "leading-6",
-
-                        themeClasses.textSecondary,
-                      )}
-                    >
-                      {active.subtitle}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={active.href}
-                    onClick={hideMenu}
-                    className={cx(
-                      "group",
-
-                      "flex",
-                      "shrink-0",
-
-                      "items-center",
-                      "gap-3",
-
-                      "py-2",
-
-                      "text-[9px]",
-                      "font-semibold",
-
-                      "uppercase",
-                      "tracking-[0.18em]",
-
-                      themeClasses.textSecondary,
-
-                      themeClasses.focusRing,
-                    )}
-                  >
-                    View all
-                    <span
-                      className="
-                        transition-transform
-                        duration-150
-
-                        group-hover:translate-x-1
-                      "
-                    >
-                      <ArrowIcon />
-                    </span>
-                  </Link>
-                </div>
-
-                {/* GROUPS */}
-
-                <div
-                  onMouseLeave={() => setHoveredSubcategory(null)}
-                  className={cx(
-                    "grid",
-
-                    "grid-cols-2",
-
-                    "gap-x-10",
-                    "gap-y-10",
-
-                    "py-8",
-
-                    active.groups.length >= 4
-                      ? "xl:grid-cols-4"
-                      : "xl:grid-cols-3",
-                  )}
-                >
-                  {active.groups.map((group) => (
-                    <DesktopMenuGroup
-                      key={group.title}
-                      group={group}
-                      hovered={hoveredSubcategory}
-                      setHovered={setHoveredSubcategory}
-                      closeMenu={hideMenu}
-                    />
-                  ))}
-                </div>
-
-                {/* QUICK ACCESS */}
-
-                <div
-                  className={cx(
-                    "mt-auto",
-
-                    "border-t",
-
-                    "pt-5",
-
-                    themeClasses.border,
-                  )}
-                >
-                  <p
-                    className={cx(
-                      "mb-4",
-
-                      "text-[8px]",
-                      "font-semibold",
-
-                      "uppercase",
-                      "tracking-[0.2em]",
-
-                      themeClasses.textSoft,
-                    )}
-                  >
-                    Quick Access
+                <div className="border-t border-white/10 p-5 xl:p-6">
+                  <p className="mb-3 text-[8px] font-semibold uppercase tracking-[0.22em] text-white/35">
+                    Client services
                   </p>
-
-                  <div
-                    className={cx(
-                      "grid",
-
-                      "grid-cols-4",
-
-                      "gap-px",
-
-                      "overflow-hidden",
-
-                      "border",
-
-                      "lg:grid-cols-6",
-
-                      themeClasses.border,
-                    )}
-                  >
-                    {QUICK_LINKS.map((item) => (
-                      <QuickAccessLink
-                        key={item.href}
-                        href={item.href}
-                        icon={item.icon}
-                        onClick={hideMenu}
-                      >
-                        {item.label}
-                      </QuickAccessLink>
-                    ))}
+                  <div className="space-y-1">
+                    <DarkUtilityLink href="/appointments" onClick={hideMenu}>
+                      Private appointment
+                    </DarkUtilityLink>
+                    <DarkUtilityLink href="/stores" onClick={hideMenu}>
+                      Find a store
+                    </DarkUtilityLink>
+                    <DarkUtilityLink href="/customer-care" onClick={hideMenu}>
+                      Client care
+                    </DarkUtilityLink>
                   </div>
                 </div>
-              </div>
-            </section>
+              </aside>
 
-            {/* ==========================================================
-                EDITORIAL SIDE
-            =========================================================== */}
-
-            <aside
-              className={cx(
-                "flex",
-                "min-h-0",
-
-                "flex-col",
-
-                "border-l",
-
-                "p-4",
-
-                "xl:p-5",
-
-                themeClasses.border,
-
-                themeClasses.surfaceMuted,
-              )}
-            >
-              <EditorialImage
-                key={active.image}
-                src={active.image}
-                label={active.imageLabel}
-                eager
-                className="
-                  min-h-[280px]
-                  flex-1
-                "
-              />
-
-              <div className="shrink-0 pt-5">
-                <p
-                  className={cx(
-                    "mb-2",
-
-                    "text-[8px]",
-                    "font-semibold",
-
-                    "uppercase",
-                    "tracking-[0.2em]",
-
-                    themeClasses.textAccent,
-                  )}
-                >
-                  Najibzadeh Selection
-                </p>
-
+              <main className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 xl:px-12 xl:py-10">
                 <div
-                  className="
-                    flex
-
-                    items-end
-                    justify-between
-
-                    gap-5
-                  "
+                  key={active.id}
+                  className="mx-auto flex min-h-full max-w-[920px] flex-col"
                 >
-                  <div>
-                    <h3
-                      className={cx(
-                        "text-[23px]",
+                  <div className="flex items-start justify-between gap-8 border-b border-black/[0.09] pb-8 dark:border-white/10">
+                    <div className="max-w-[620px]">
+                      <div className="mb-4 flex items-center gap-3">
+                        <span
+                          className={cx(
+                            "text-[8px] font-semibold uppercase tracking-[0.24em]",
+                            themeClasses.textAccent,
+                          )}
+                        >
+                          Najibzadeh / {active.id}
+                        </span>
+                        <span className="h-px w-8 bg-current opacity-15" />
+                      </div>
 
-                        "font-medium",
-
-                        "tracking-[-0.025em]",
-
-                        themeClasses.textPrimary,
-                      )}
-                    >
-                      {active.imageLabel}
-                    </h3>
-
-                    <p
-                      className={cx(
-                        "mt-2",
-
-                        "max-w-[290px]",
-
-                        "text-[10px]",
-
-                        "leading-5",
-
-                        themeClasses.textSecondary,
-                      )}
-                    >
-                      {active.subtitle}
-                    </p>
-                  </div>
-
-                  <Link
-                    href={active.href}
-                    onClick={hideMenu}
-                    aria-label={`Explore ${active.title}`}
-                    className={cx(
-                      "flex",
-
-                      "h-11",
-                      "w-11",
-
-                      "shrink-0",
-
-                      "items-center",
-                      "justify-center",
-
-                      "border",
-
-                      "transition-colors",
-
-                      themeClasses.borderStrong,
-
-                      themeClasses.textPrimary,
-
-                      themeClasses.focusRing,
-                    )}
-                  >
-                    <ArrowIcon />
-                  </Link>
-                </div>
-              </div>
-            </aside>
-          </div>
-
-          {/* ============================================================
-              MOBILE
-          ============================================================= */}
-
-          <div
-            className="
-              min-h-full
-
-              px-4
-
-              pb-[calc(2rem+env(safe-area-inset-bottom))]
-              pt-2
-
-              sm:px-6
-
-              lg:hidden
-            "
-          >
-            {/* TOP */}
-
-            <div
-              className={cx(
-                "flex",
-
-                "min-h-[52px]",
-
-                "items-center",
-                "justify-between",
-
-                "border-b",
-
-                themeClasses.border,
-              )}
-            >
-              <p
-                className={cx(
-                  "text-[8px]",
-                  "font-semibold",
-
-                  "uppercase",
-                  "tracking-[0.2em]",
-
-                  themeClasses.textSoft,
-                )}
-              >
-                Explore Najibzadeh
-              </p>
-
-              <Link
-                href="/search"
-                onClick={hideMenu}
-                className={cx(
-                  "flex",
-
-                  "h-11",
-
-                  "items-center",
-                  "gap-2",
-
-                  "text-[9px]",
-                  "font-semibold",
-
-                  "uppercase",
-                  "tracking-[0.14em]",
-
-                  themeClasses.textSecondary,
-
-                  themeClasses.focusRing,
-                )}
-              >
-                Search
-                <SearchIcon />
-              </Link>
-            </div>
-
-            {/* ACCORDIONS */}
-
-            <div>
-              {MENU.map((section, index) => {
-                const expanded = mobileOpen === section.id;
-
-                return (
-                  <section
-                    key={section.id}
-                    className={cx(
-                      "border-b",
-
-                      themeClasses.border,
-                    )}
-                  >
-                    <button
-                      type="button"
-                      aria-expanded={expanded}
-                      aria-controls={`mobile-mega-${section.id}`}
-                      onClick={() => {
-                        setMobileOpen((current) =>
-                          current === section.id ? null : section.id,
-                        );
-                      }}
-                      className={cx(
-                        "flex",
-
-                        "min-h-[68px]",
-
-                        "w-full",
-
-                        "cursor-pointer",
-
-                        "items-center",
-                        "gap-3",
-
-                        "text-left",
-
-                        themeClasses.focusRing,
-                      )}
-                    >
-                      <span
+                      <h2
                         className={cx(
-                          "w-5",
-                          "shrink-0",
-
-                          "text-[8px]",
-
-                          "tabular-nums",
-
-                          themeClasses.textSoft,
-                        )}
-                      >
-                        {String(index + 1).padStart(2, "0")}
-                      </span>
-
-                      <span
-                        className={cx(
-                          "min-w-0",
-                          "flex-1",
-
-                          "text-[19px]",
-                          "font-medium",
-
-                          "tracking-[-0.025em]",
-
+                          "text-[40px] font-medium leading-[0.98] tracking-[-0.045em] xl:text-[50px]",
                           themeClasses.textPrimary,
                         )}
                       >
-                        {section.title}
-                      </span>
+                        {active.title}
+                      </h2>
 
-                      <span
+                      <p
                         className={cx(
-                          "flex",
-
-                          "h-9",
-                          "w-9",
-
-                          "shrink-0",
-
-                          "items-center",
-                          "justify-center",
-
-                          "transition-transform",
-                          "duration-200",
-
-                          expanded && "rotate-45",
-
+                          "mt-4 max-w-[560px] text-[12px] leading-6 xl:text-[13px]",
                           themeClasses.textSecondary,
                         )}
                       >
-                        <PlusIcon />
-                      </span>
-                    </button>
+                        {active.subtitle}
+                      </p>
+                    </div>
 
-                    {expanded && (
-                      <div
-                        id={`mobile-mega-${section.id}`}
-                        className="
-                            pb-8
-                            pl-8
-                          "
+                    <Button
+                      href={active.href}
+                      onClick={hideMenu}
+                      variant="outline"
+                      size="md"
+                      icon={<ArrowIcon />}
+                      iconPosition="right"
+                      className="mt-1 !tracking-[0.18em]"
+                    >
+                      View collection
+                    </Button>
+                  </div>
+
+                  <div
+                    onMouseLeave={() => setHoveredSubcategory(null)}
+                    className={cx(
+                      "grid flex-1 grid-cols-2 gap-x-10 gap-y-10 py-9",
+                      active.groups.length >= 4
+                        ? "xl:grid-cols-4"
+                        : "xl:grid-cols-3",
+                    )}
+                  >
+                    {active.groups.map((group, groupIndex) => (
+                      <LuxuryMenuGroup
+                        key={group.title}
+                        group={group}
+                        index={groupIndex}
+                        hovered={hoveredSubcategory}
+                        setHovered={setHoveredSubcategory}
+                        closeMenu={hideMenu}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="border-t border-black/[0.09] pt-5 dark:border-white/10">
+                    <div className="flex items-center justify-between gap-5">
+                      <p
+                        className={cx(
+                          "text-[8px] font-semibold uppercase tracking-[0.2em]",
+                          themeClasses.textSoft,
+                        )}
                       >
-                        <EditorialImage
-                          src={section.image}
-                          label={section.imageLabel}
-                          className="
-                              aspect-[16/10]
-                              w-full
-                            "
-                        />
+                        Quick access
+                      </p>
 
-                        <div className="mt-5">
-                          <p
-                            className={cx(
-                              "text-[8px]",
-                              "font-semibold",
-
-                              "uppercase",
-                              "tracking-[0.18em]",
-
-                              themeClasses.textAccent,
-                            )}
+                      <div className="flex flex-wrap justify-end gap-2">
+                        {QUICK_LINKS.map((item) => (
+                          <QuickAccessLink
+                            key={item.href}
+                            href={item.href}
+                            onClick={hideMenu}
                           >
-                            Discover
-                          </p>
+                            {item.label}
+                          </QuickAccessLink>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </main>
 
-                          <p
-                            className={cx(
-                              "mt-1",
+              <aside className="min-h-0 border-l border-black/[0.08] bg-[#EFEBE4] p-4 dark:border-white/10 dark:bg-[#151515] xl:p-5">
+                <LuxuryEditorialCard
+                  key={active.image}
+                  section={active}
+                  onClick={hideMenu}
+                />
+              </aside>
+            </div>
 
-                              "text-[18px]",
-                              "font-medium",
+            <div
+              className={cx(
+                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:hidden",
+                themeClasses.megaMenu,
+              )}
+            >
+              <div className="flex min-h-[52px] items-center justify-between border-b border-black/[0.08] dark:border-white/10">
+                <div>
+                  <p
+                    className={cx(
+                      "text-[8px] font-semibold uppercase tracking-[0.22em]",
+                      themeClasses.textSoft,
+                    )}
+                  >
+                    Explore
+                  </p>
+                  <p
+                    className={cx(
+                      "mt-1 text-[16px] font-medium tracking-[-0.02em]",
+                      themeClasses.textPrimary,
+                    )}
+                  >
+                    Najibzadeh
+                  </p>
+                </div>
+              </div>
 
-                              themeClasses.textPrimary,
-                            )}
-                          >
-                            {section.imageLabel}
-                          </p>
+              <div className="mt-3 overflow-hidden border border-black/[0.08] dark:border-white/10">
+                {MENU.map((section, index) => {
+                  const expanded = mobileOpen === section.id;
 
-                          <p
-                            className={cx(
-                              "mt-2",
-
-                              "max-w-[340px]",
-
-                              "text-[11px]",
-
-                              "leading-5",
-
-                              themeClasses.textSecondary,
-                            )}
-                          >
-                            {section.subtitle}
-                          </p>
-                        </div>
-
-                        <div className="mt-7 space-y-8">
-                          {section.groups.map((group) => (
-                            <MobileMenuGroup
-                              key={group.title}
-                              group={group}
-                              closeMenu={hideMenu}
-                            />
-                          ))}
-                        </div>
-
-                        <Link
-                          href={section.href}
-                          onClick={hideMenu}
+                  return (
+                    <section
+                      key={section.id}
+                      className="border-b border-black/[0.08] last:border-b-0 dark:border-white/10"
+                    >
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={`mobile-luxury-${section.id}`}
+                        onClick={() => {
+                          setMobileOpen((current) =>
+                            current === section.id ? null : section.id,
+                          );
+                          setActiveId(section.id);
+                        }}
+                        className={cx(
+                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-left sm:px-5",
+                          "transition-colors duration-300",
+                          expanded
+                            ? "bg-black/[0.025] dark:bg-white/[0.035]"
+                            : "bg-transparent",
+                          themeClasses.focusRing,
+                        )}
+                      >
+                        <span
                           className={cx(
-                            "group",
-
-                            "mt-8",
-
-                            "inline-flex",
-
-                            "min-h-11",
-
-                            "items-center",
-                            "gap-3",
-
-                            "text-[9px]",
-                            "font-semibold",
-
-                            "uppercase",
-                            "tracking-[0.16em]",
-
-                            themeClasses.textPrimary,
-
-                            themeClasses.focusRing,
+                            "w-6 shrink-0 text-[8px] tabular-nums",
+                            themeClasses.textSoft,
                           )}
                         >
-                          View all {section.title}
-                          <span
-                            className="
-                                transition-transform
-                                duration-150
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <span
+                          className={cx(
+                            "min-w-0 flex-1 text-[18px] font-medium tracking-[-0.025em]",
+                            themeClasses.textPrimary,
+                          )}
+                        >
+                          {section.title}
+                        </span>
+                        <span
+                          className={cx(
+                            "flex h-9 w-9 shrink-0 items-center justify-center border transition-transform duration-300",
+                            themeClasses.border,
+                            themeClasses.textSecondary,
+                            expanded && "rotate-45",
+                          )}
+                        >
+                          <PlusIcon />
+                        </span>
+                      </button>
 
-                                group-hover:translate-x-1
-                              "
-                          >
-                            <ArrowIcon />
-                          </span>
-                        </Link>
+                      <div
+                        id={`mobile-luxury-${section.id}`}
+                        className={cx(
+                          "grid transition-[grid-template-rows] duration-300 ease-linear",
+                          expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="px-4 pb-6 sm:px-5">
+                            <Link
+                              href={section.href}
+                              onClick={hideMenu}
+                              className="group relative block aspect-[16/8.5] overflow-hidden"
+                            >
+                              <Image
+                                src={section.image}
+                                alt={section.imageLabel}
+                                fill
+                                sizes="(max-width: 1024px) 100vw, 50vw"
+                                className="object-cover transition-transform duration-700 ease-linear group-hover:scale-[1.025]"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
+                              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 text-white">
+                                <div>
+                                  <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/55">
+                                    Featured
+                                  </p>
+                                  <p className="mt-1 text-[18px] font-medium tracking-[-0.02em]">
+                                    {section.imageLabel}
+                                  </p>
+                                </div>
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/30 bg-white/10 backdrop-blur-md">
+                                  <ArrowIcon />
+                                </span>
+                              </div>
+                            </Link>
+
+                            <p
+                              className={cx(
+                                "mt-4 max-w-[420px] text-[11px] leading-5",
+                                themeClasses.textSecondary,
+                              )}
+                            >
+                              {section.subtitle}
+                            </p>
+
+                            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+                              {section.groups.map((group) => (
+                                <MobileLuxuryGroup
+                                  key={group.title}
+                                  group={group}
+                                  closeMenu={hideMenu}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </section>
-                );
-              })}
-            </div>
-
-            {/* CLIENT SERVICES */}
-
-            <div
-              className={cx(
-                "mt-9",
-
-                "border-t",
-
-                "pt-6",
-
-                themeClasses.border,
-              )}
-            >
-              <p
-                className={cx(
-                  "mb-3",
-
-                  "text-[8px]",
-                  "font-semibold",
-
-                  "uppercase",
-                  "tracking-[0.2em]",
-
-                  themeClasses.textSoft,
-                )}
-              >
-                Client Services
-              </p>
-
-              <div className="space-y-1">
-                <UtilityLink href="/appointments" onClick={hideMenu}>
-                  Private Appointment
-                </UtilityLink>
-
-                <UtilityLink href="/stores" onClick={hideMenu}>
-                  Find a Store
-                </UtilityLink>
-
-                <UtilityLink href="/customer-care" onClick={hideMenu}>
-                  Customer Care
-                </UtilityLink>
+                    </section>
+                  );
+                })}
               </div>
-            </div>
 
-            {/* QUICK ACCESS */}
-
-            <div
-              className={cx(
-                "mt-8",
-
-                "border-t",
-
-                "pt-6",
-
-                themeClasses.border,
-              )}
-            >
-              <p
-                className={cx(
-                  "mb-4",
-
-                  "text-[8px]",
-                  "font-semibold",
-
-                  "uppercase",
-                  "tracking-[0.2em]",
-
-                  themeClasses.textSoft,
-                )}
-              >
-                Quick Access
-              </p>
-
-              <div className="grid grid-cols-2 gap-px">
+              <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
                 {QUICK_LINKS.map((item) => (
-                  <QuickAccessLink
+                  <Button
                     key={item.href}
                     href={item.href}
-                    icon={item.icon}
                     onClick={hideMenu}
+                    variant="outline"
+                    size="md"
+                    fullWidth
+                    align="left"
+                    icon={item.icon}
+                    iconPosition="left"
+                    className="!min-h-[54px] !px-3 !tracking-[0.11em]"
                   >
                     {item.label}
-                  </QuickAccessLink>
+                  </Button>
                 ))}
+              </div>
+
+              <div className="mt-6 border-t border-black/[0.08] pt-5 dark:border-white/10">
+                <p
+                  className={cx(
+                    "mb-3 text-[8px] font-semibold uppercase tracking-[0.2em]",
+                    themeClasses.textSoft,
+                  )}
+                >
+                  Client services
+                </p>
+                <div className="grid gap-1 sm:grid-cols-3">
+                  <LightUtilityLink href="/appointments" onClick={hideMenu}>
+                    Private appointment
+                  </LightUtilityLink>
+                  <LightUtilityLink href="/stores" onClick={hideMenu}>
+                    Find a store
+                  </LightUtilityLink>
+                  <LightUtilityLink href="/customer-care" onClick={hideMenu}>
+                    Client care
+                  </LightUtilityLink>
+                </div>
               </div>
             </div>
           </div>
-        </nav>
+        </div>
       )}
     </>
   );
 }
 
-/* ==========================================================================
-   DESKTOP MENU GROUP
-============================================================================ */
-
-function DesktopMenuGroup({
+function LuxuryMenuGroup({
   group,
-
+  index,
   hovered,
-
   setHovered,
-
   closeMenu,
 }: {
   group: MenuGroup;
-
+  index: number;
   hovered: string | null;
-
   setHovered: (href: string | null) => void;
-
   closeMenu: () => void;
 }) {
   return (
     <div>
-      <p
-        className={cx(
-          "mb-4",
-
-          "text-[8px]",
-          "font-semibold",
-
-          "uppercase",
-          "tracking-[0.2em]",
-
-          themeClasses.textSoft,
-        )}
-      >
-        {group.title}
-      </p>
+      <div className="mb-4 flex items-center gap-2">
+        <span
+          className={cx(
+            "text-[8px] font-semibold tabular-nums",
+            themeClasses.textSoft,
+          )}
+        >
+          {String(index + 1).padStart(2, "0")}
+        </span>
+        <p
+          className={cx(
+            "text-[8px] font-semibold uppercase tracking-[0.2em]",
+            themeClasses.textSoft,
+          )}
+        >
+          {group.title}
+        </p>
+      </div>
 
       <ul className="space-y-1">
         {group.items.map((item) => {
           const selected = hovered === item.href;
-
           const dimmed = hovered !== null && !selected;
 
           return (
@@ -2538,46 +1626,28 @@ function DesktopMenuGroup({
                 onFocus={() => setHovered(item.href)}
                 onBlur={() => setHovered(null)}
                 className={cx(
-                  "group",
-
-                  "flex",
-
-                  "min-h-9",
-
-                  "w-fit",
-
-                  "items-center",
-                  "gap-2",
-
-                  "text-[13px]",
-                  "font-medium",
-
-                  "tracking-[-0.01em]",
-
-                  "transition-[opacity,transform,color]",
-
-                  "duration-200",
-
-                  dimmed ? "opacity-[0.28]" : "opacity-100",
-
+                  "group inline-flex min-h-9 items-center gap-2 text-[13px] font-medium tracking-[-0.012em]",
+                  "transition-[opacity,transform] duration-300",
+                  dimmed ? "opacity-30" : "opacity-100",
                   selected && "translate-x-1",
-
                   themeClasses.textPrimary,
-
                   themeClasses.focusRing,
                 )}
               >
-                <span>{item.label}</span>
+                <span className="relative">
+                  {item.label}
+                  <span
+                    className={cx(
+                      "absolute -bottom-0.5 left-0 h-px bg-current transition-[width,opacity] duration-300",
+                      selected ? "w-full opacity-40" : "w-0 opacity-0",
+                    )}
+                  />
+                </span>
 
                 {item.badge && (
                   <span
                     className={cx(
-                      "text-[7px]",
-                      "font-semibold",
-
-                      "uppercase",
-                      "tracking-[0.12em]",
-
+                      "text-[7px] font-semibold uppercase tracking-[0.12em]",
                       themeClasses.textAccent,
                     )}
                   >
@@ -2587,15 +1657,8 @@ function DesktopMenuGroup({
 
                 <span
                   className={cx(
-                    "translate-x-0",
-
-                    "opacity-0",
-
-                    "transition-[opacity,transform]",
-
-                    "duration-150",
-
-                    selected && "translate-x-1 opacity-100",
+                    "-translate-x-1 opacity-0 transition-[opacity,transform] duration-300",
+                    selected && "translate-x-0 opacity-100",
                   )}
                 >
                   <ArrowIcon />
@@ -2609,80 +1672,40 @@ function DesktopMenuGroup({
   );
 }
 
-/* ==========================================================================
-   MOBILE MENU GROUP
-============================================================================ */
-
-function MobileMenuGroup({
+function MobileLuxuryGroup({
   group,
-
   closeMenu,
 }: {
   group: MenuGroup;
-
   closeMenu: () => void;
 }) {
   return (
     <div>
-      {/* Allowed as small eyebrow */}
-
       <p
         className={cx(
-          "mb-3",
-
-          "text-[8px]",
-          "font-semibold",
-
-          "uppercase",
-          "tracking-[0.2em]",
-
+          "mb-2 text-[8px] font-semibold uppercase tracking-[0.18em]",
           themeClasses.textAccent,
         )}
       >
         {group.title}
       </p>
-
-      <ul
-        className={cx(
-          "border-l",
-
-          "pl-4",
-
-          themeClasses.border,
-        )}
-      >
+      <ul className="space-y-0.5">
         {group.items.map((item) => (
           <li key={item.href}>
             <Link
               href={item.href}
               onClick={closeMenu}
               className={cx(
-                "flex",
-
-                "min-h-10",
-
-                "items-center",
-                "gap-2",
-
-                "text-[13px]",
-                "font-medium",
-
+                "flex min-h-9 items-center gap-2 text-[12px] font-medium",
                 themeClasses.textPrimary,
-
                 themeClasses.focusRing,
               )}
             >
               {item.label}
-
               {item.badge && (
                 <span
                   className={cx(
-                    "text-[7px]",
-                    "font-semibold",
-
-                    "uppercase",
-                    "tracking-[0.12em]",
-
+                    "text-[7px] font-semibold uppercase tracking-[0.12em]",
                     themeClasses.textAccent,
                   )}
                 >
@@ -2697,239 +1720,103 @@ function MobileMenuGroup({
   );
 }
 
-/* ==========================================================================
-   EDITORIAL IMAGE
-============================================================================ */
-
-function EditorialImage({
-  src,
-
-  label,
-
-  className,
-
-  eager = false,
+function LuxuryEditorialCard({
+  section,
+  onClick,
 }: {
-  src: string;
-
-  label: string;
-
-  className?: string;
-
-  eager?: boolean;
+  section: MenuSection;
+  onClick: () => void;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
-
-  const failed = failedSrc === src;
+  const failed = failedSrc === section.image;
 
   return (
-    <div
+    <Link
+      href={section.href}
+      onClick={onClick}
       className={cx(
-        "relative",
-
-        "overflow-hidden",
-
-        themeClasses.surface,
-
-        className,
+        "group relative flex h-full min-h-[510px] overflow-hidden",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/60 focus-visible:ring-offset-2 dark:focus-visible:ring-white/70 dark:focus-visible:ring-offset-[#151515]",
       )}
     >
       {!failed ? (
-        <>
-          <Image
-            src={src}
-            alt={label}
-            fill
-            sizes="(max-width: 1024px) 100vw, 360px"
-            loading={eager ? "eager" : "lazy"}
-            decoding="async"
-            onError={() => setFailedSrc(src)}
-            className="
-              absolute
-              inset-0
-
-              size-full
-
-              object-cover
-
-              transition-transform
-              duration-700
-
-              ease-[cubic-bezier(.22,.7,.2,1)]
-            "
-          />
-
-          <div
-            aria-hidden
-            className="
-              pointer-events-none
-
-              absolute
-              inset-0
-
-              bg-gradient-to-t
-
-              from-black/65
-              via-black/10
-              to-transparent
-            "
-          />
-
-          <div
-            className="
-              absolute
-              inset-x-0
-              bottom-0
-
-              p-4
-            "
-          >
-            <p
-              className="
-                text-[8px]
-                font-semibold
-
-                uppercase
-                tracking-[0.18em]
-
-                text-white/60
-              "
-            >
-              Najibzadeh
-            </p>
-
-            <p
-              className="
-                mt-1
-
-                text-[18px]
-                font-medium
-
-                text-white
-              "
-            >
-              {label}
-            </p>
-          </div>
-        </>
+        <Image
+          src={section.image}
+          alt={section.imageLabel}
+          fill
+          sizes="(min-width: 1280px) 450px, 390px"
+          loading="eager"
+          decoding="async"
+          onError={() => setFailedSrc(section.image)}
+          className="object-cover transition-transform duration-[1100ms] ease-linear group-hover:scale-[1.035]"
+        />
       ) : (
-        <div
-          className={cx(
-            "absolute",
-            "inset-0",
+        <div className="absolute inset-0 bg-[#D9D4CC] dark:bg-[#222]" />
+      )}
 
-            "flex",
-            "items-end",
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/5" />
+      <div className="absolute inset-x-0 bottom-0 p-6 text-white xl:p-7">
+        <div className="mb-3 flex items-center gap-3">
+          <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/55">
+            Editorial selection
+          </span>
+          <span className="h-px w-8 bg-white/30" />
+        </div>
 
-            "p-5",
-
-            themeClasses.surfaceMuted,
-          )}
-        >
+        <div className="flex items-end justify-between gap-6">
           <div>
-            <p
-              className={cx(
-                "text-[8px]",
-                "font-semibold",
-
-                "uppercase",
-                "tracking-[0.2em]",
-
-                themeClasses.textAccent,
-              )}
-            >
-              Najibzadeh
-            </p>
-
-            <p
-              className={cx(
-                "mt-2",
-
-                "text-[18px]",
-                "font-medium",
-
-                themeClasses.textPrimary,
-              )}
-            >
-              {label}
+            <h3 className="max-w-[300px] text-[28px] font-medium leading-[1.02] tracking-[-0.035em] xl:text-[32px]">
+              {section.imageLabel}
+            </h3>
+            <p className="mt-3 max-w-[310px] text-[10px] leading-5 text-white/62">
+              {section.subtitle}
             </p>
           </div>
+
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center border border-white/30 bg-white/10 backdrop-blur-md transition-[background-color,transform] duration-300 group-hover:-translate-y-1 group-hover:bg-white group-hover:text-black">
+            <ArrowIcon />
+          </span>
         </div>
-      )}
-    </div>
+      </div>
+    </Link>
   );
 }
 
-/* ==========================================================================
-   NAV ICON
-
-   Important:
-   White over page content, themed on readable navbar surfaces.
-============================================================================ */
-
-function NavIcon({
+function NavAction({
   href,
-
   label,
-
   badge,
-
-  onReadableSurface = false,
-
+  onReadableSurface,
   children,
 }: {
   href: string;
-
   label: string;
-
   badge?: number;
-
-  onReadableSurface?: boolean;
-
+  onReadableSurface: boolean;
   children: ReactNode;
 }) {
   return (
-    <Link
-      href={href}
-      aria-label={label}
-      className={cx(
-        "group",
-        "relative",
-        "flex h-12 w-10 items-center justify-center",
-        "transition-[color,filter,opacity]",
-        "duration-150",
-        "hover:opacity-65",
-        "md:w-11",
-        "lg:w-12",
-        onReadableSurface
-          ? NAVBAR_SURFACE_CHROME_CLASSES
-          : NAVBAR_OVERLAY_CHROME_CLASSES,
-      )}
-    >
-      <span
-        className="
-          block
-
-          size-[18px]
-
-          transition-transform
-          duration-200
-
-          group-hover:-translate-y-px
-
-          md:size-[19px]
-        "
-      >
-        {children}
-      </span>
+    <span className="relative inline-flex">
+      <Button
+        href={href}
+        aria-label={label}
+        variant="outline"
+        size="md"
+        icon={children}
+        iconOnly
+        className={cx(
+          "!h-11 !w-10 !min-h-0 !border-0 !bg-transparent !p-0 !text-current md:!w-11",
+          "hover:!border-0 hover:!bg-transparent hover:opacity-60",
+          onReadableSurface
+            ? NAVBAR_SURFACE_CHROME_CLASSES
+            : NAVBAR_OVERLAY_CHROME_CLASSES,
+        )}
+      />
 
       {!!badge && (
         <span
           className={cx(
-            "absolute right-0 top-1",
-            "flex min-h-[14px] min-w-[14px] items-center justify-center",
-            "px-[3px]",
-            "text-[7px] font-semibold leading-none",
+            "pointer-events-none absolute right-0 top-0 flex min-h-[15px] min-w-[15px] items-center justify-center px-[3px] text-[7px] font-semibold leading-none",
             onReadableSurface
               ? "bg-[#0B0B0B] text-white dark:bg-white dark:text-[#0B0B0B]"
               : "bg-white text-black",
@@ -2938,25 +1825,93 @@ function NavIcon({
           {badge}
         </span>
       )}
+    </span>
+  );
+}
+
+function TextNavAction({
+  href,
+  label,
+  onReadableSurface,
+  children,
+}: {
+  href: string;
+  label: string;
+  onReadableSurface: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      href={href}
+      aria-label={label}
+      variant="outline"
+      size="sm"
+      icon={children}
+      iconPosition="left"
+      align="left"
+      className={cx(
+        "!h-11 !min-h-0 !border-0 !bg-transparent !px-3 !text-current !tracking-[0.16em]",
+        "hover:!border-0 hover:!bg-transparent hover:opacity-60",
+        onReadableSurface
+          ? NAVBAR_SURFACE_CHROME_CLASSES
+          : NAVBAR_OVERLAY_CHROME_CLASSES,
+      )}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function QuickAccessLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      href={href}
+      onClick={onClick}
+      variant="outline"
+      size="sm"
+      className="!min-h-8 !px-3 !text-[7px] !tracking-[0.13em]"
+    >
+      {children}
+    </Button>
+  );
+}
+
+function DarkUtilityLink({
+  href,
+  onClick,
+  children,
+}: {
+  href: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClick}
+      className="group flex min-h-8 w-fit items-center gap-2 text-[10px] font-medium text-white/58 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
+    >
+      <span className="h-px w-0 bg-white/60 transition-[width] duration-300 group-hover:w-3" />
+      {children}
     </Link>
   );
 }
 
-/* ==========================================================================
-   UTILITY LINK
-============================================================================ */
-
-function UtilityLink({
+function LightUtilityLink({
   href,
-
   onClick,
-
   children,
 }: {
   href: string;
-
   onClick: () => void;
-
   children: ReactNode;
 }) {
   return (
@@ -2964,23 +1919,8 @@ function UtilityLink({
       href={href}
       onClick={onClick}
       className={cx(
-        "flex",
-
-        "min-h-9",
-
-        "w-fit",
-
-        "items-center",
-
-        "text-[10px]",
-        "font-medium",
-
-        "transition-opacity",
-
-        "hover:opacity-55",
-
+        "flex min-h-10 items-center text-[10px] font-medium transition-opacity hover:opacity-55",
         themeClasses.textSecondary,
-
         themeClasses.focusRing,
       )}
     >
@@ -2988,203 +1928,26 @@ function UtilityLink({
     </Link>
   );
 }
-
 /* ==========================================================================
-   QUICK ACCESS
-============================================================================ */
-
-function QuickAccessLink({
-  href,
-
-  icon,
-
-  onClick,
-
-  children,
-}: {
-  href: string;
-
-  icon: ReactNode;
-
-  onClick: () => void;
-
-  children: ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={cx(
-        "group",
-
-        "relative",
-
-        "flex",
-
-        "min-h-[64px]",
-
-        "items-center",
-        "gap-3",
-
-        "border-r",
-
-        "px-3",
-
-        "last:border-r-0",
-
-        "transition-colors",
-        "duration-200",
-
-        "hover:bg-[#F7F7F7]",
-
-        "dark:hover:bg-[#181818]",
-
-        themeClasses.border,
-
-        themeClasses.focusRing,
-      )}
-    >
-      <span
-        className={cx(
-          "flex",
-
-          "size-6",
-
-          "shrink-0",
-
-          "items-center",
-          "justify-center",
-
-          /*
-           * No copper icon.
-           */
-          themeClasses.textSecondary,
-
-          "transition-[color,transform]",
-
-          "duration-200",
-
-          "group-hover:-translate-y-px",
-
-          "group-hover:text-[#0B0B0B]",
-
-          "dark:group-hover:text-white",
-        )}
-      >
-        {icon}
-      </span>
-
-      <span
-        className={cx(
-          "min-w-0",
-
-          "text-nowrap",
-
-          "text-[8px]",
-          "font-semibold",
-
-          "uppercase",
-          "tracking-[0.12em]",
-
-          "leading-4",
-
-          themeClasses.textPrimary,
-        )}
-      >
-        {children}
-      </span>
-
-      <span
-        className={cx(
-          "ml-auto",
-
-          "shrink-0",
-
-          "-translate-x-1",
-          "opacity-0",
-
-          "transition-[opacity,transform]",
-
-          "duration-200",
-
-          "group-hover:translate-x-0",
-
-          "group-hover:opacity-100",
-
-          themeClasses.textSecondary,
-        )}
-      >
-        <ArrowIcon />
-      </span>
-    </Link>
-  );
-}
-
-/* ==========================================================================
-   MENU ICON
+   MENU ICONS — STRICTLY ANGULAR / NO CURVES
 ============================================================================ */
 
 function MenuIcon() {
   return (
-    <span
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.1"
+      strokeLinecap="square"
       aria-hidden="true"
-      className="
-        relative
-
-        block
-
-        h-[18px]
-        w-[22px]
-      "
     >
-      <span
-        className="
-          absolute
-
-          left-0
-          top-[3px]
-
-          h-px
-          w-[22px]
-
-          bg-current
-        "
-      />
-
-      <span
-        className="
-          absolute
-
-          left-0
-          top-[9px]
-
-          h-px
-          w-[14px]
-
-          bg-current
-        "
-      />
-
-      <span
-        className="
-          absolute
-
-          left-0
-          top-[15px]
-
-          h-px
-          w-[22px]
-
-          bg-current
-        "
-      />
-    </span>
+      <path d="M1.5 3.5H14.5" />
+      <path d="M1.5 8H10" />
+      <path d="M1.5 12.5H14.5" />
+    </svg>
   );
 }
-
-/* ==========================================================================
-   CLOSE
-============================================================================ */
 
 function CloseIcon() {
   return (
@@ -3195,19 +1958,15 @@ function CloseIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.15"
-      strokeLinecap="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
       <path d="M4 4 20 20" />
-
       <path d="M20 4 4 20" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   BAG
-============================================================================ */
 
 function BagIcon() {
   return (
@@ -3216,19 +1975,15 @@ function BagIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
     >
-      <path d="M5.5 8.5h13l-.8 11.5H6.3L5.5 8.5Z" />
-
-      <path d="M9 9V6.5C9 4.6 10.3 3 12 3s3 1.6 3 3.5V9" />
+      <path d="M5 8h14v12H5z" />
+      <path d="M9 8V4h6v4" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   HEART
-============================================================================ */
 
 function HeartIcon() {
   return (
@@ -3237,30 +1992,14 @@ function HeartIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
     >
-      <path
-        d="
-          M20.7 5.2
-          C18.8 3.2 15.7 3.2 13.8 5.2
-          L12 7
-          L10.2 5.2
-          C8.3 3.2 5.2 3.2 3.3 5.2
-          C1.4 7.2 1.4 10.4 3.3 12.4
-          L12 21
-          L20.7 12.4
-          C22.6 10.4 22.6 7.2 20.7 5.2
-          Z
-        "
-      />
+      <path d="M12 20 3 11V6l3-3h4l2 2 2-2h4l3 3v5Z" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   HISTORY
-============================================================================ */
 
 function HistoryIcon() {
   return (
@@ -3269,44 +2008,16 @@ function HistoryIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
     >
-      <path d="M4.4 7.3A8 8 0 1 1 4 14" />
-
-      <path d="M4 4v4.5h4.5" />
-
-      <path d="M12 7.5V12l3.1 1.8" />
+      <path d="M5 5h14v14H5z" />
+      <path d="M12 8v5l3 2" />
+      <path d="M8 2h8" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   SEARCH
-============================================================================ */
-
-function SearchIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      width="16"
-      height="16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.35"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <circle cx="11" cy="11" r="6.5" />
-
-      <path d="m16 16 4 4" />
-    </svg>
-  );
-}
-
-/* ==========================================================================
-   ARROW
-============================================================================ */
 
 function ArrowIcon() {
   return (
@@ -3317,19 +2028,15 @@ function ArrowIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
     >
       <path d="M5 12h14" />
-
       <path d="m14 7 5 5-5 5" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   PLUS
-============================================================================ */
 
 function PlusIcon() {
   return (
@@ -3340,18 +2047,15 @@ function PlusIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.3"
-      strokeLinecap="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
     >
       <path d="M12 5v14" />
-
       <path d="M5 12h14" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   JOURNAL
-============================================================================ */
 
 function JournalIcon() {
   return (
@@ -3362,20 +2066,16 @@ function JournalIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <path d="M3.5 5.5c3.5-1.5 6-.5 8.5 1.5v12c-2.5-2-5-3-8.5-1.5z" />
-
-      <path d="M20.5 5.5c-3.5-1.5-6-.5-8.5 1.5v12c2.5-2 5-3 8.5-1.5z" />
+      <path d="M4 5h7v14H4z" />
+      <path d="M13 5h7v14h-7z" />
+      <path d="M11 7h2" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   STORY
-============================================================================ */
 
 function StoryIcon() {
   return (
@@ -3386,26 +2086,18 @@ function StoryIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="8.5" />
-
-      <path d="M3.8 9h16.4" />
-
-      <path d="M3.8 15h16.4" />
-
-      <path d="M12 3.5c2 2.2 3 5 3 8.5s-1 6.3-3 8.5" />
-
-      <path d="M12 3.5c-2 2.2-3 5-3 8.5s1 6.3 3 8.5" />
+      <path d="M4 4h16v16H4z" />
+      <path d="M4 9h16" />
+      <path d="M4 15h16" />
+      <path d="M9 4v16" />
+      <path d="M15 4v16" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   ABOUT
-============================================================================ */
 
 function AboutIcon() {
   return (
@@ -3416,22 +2108,16 @@ function AboutIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <circle cx="12" cy="12" r="8.5" />
-
-      <path d="M12 10.5v6" />
-
-      <path d="M12 7.5h.01" />
+      <path d="M4 4h16v16H4z" />
+      <path d="M12 10v6" />
+      <path d="M11.5 7.5h1" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   CONTACT
-============================================================================ */
 
 function ContactIcon() {
   return (
@@ -3442,20 +2128,15 @@ function ContactIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <path d="M4 5.5h16v12H4z" />
-
+      <path d="M4 5h16v14H4z" />
       <path d="m4 7 8 6 8-6" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   SHOP
-============================================================================ */
 
 function ShopIcon() {
   return (
@@ -3466,20 +2147,15 @@ function ShopIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <path d="M5 9h14l-1 11H6L5 9Z" />
-
-      <path d="M9 9V6.5a3 3 0 0 1 6 0V9" />
+      <path d="M5 8h14v12H5z" />
+      <path d="M9 8V4h6v4" />
     </svg>
   );
 }
-
-/* ==========================================================================
-   PROFILE
-============================================================================ */
 
 function ProfileIcon() {
   return (
@@ -3490,13 +2166,12 @@ function ProfileIcon() {
       fill="none"
       stroke="currentColor"
       strokeWidth="1.25"
-      strokeLinecap="round"
-      strokeLinejoin="round"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <circle cx="12" cy="8" r="3.5" />
-
-      <path d="M5 20c.8-4.1 3.1-6.2 7-6.2s6.2 2.1 7 6.2" />
+      <path d="M9 4h6v6H9z" />
+      <path d="M5 20v-5l4-3h6l4 3v5" />
     </svg>
   );
 }

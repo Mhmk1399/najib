@@ -64,7 +64,7 @@ export function HeroSection() {
           around the Najibzadeh way of living.
         </p>
 
-        <div className="mt-8 grid w-full max-w-[430px] grid-cols-2 gap-2 sm:mt-9">
+        <div className="mt-8 grid w-full max-w-[230px] md:max-w-[430px]  md:grid-cols-2 gap-2 mt-12 sm:mt-9">
           <Button
             href="/clothing"
             variant="cream"
@@ -83,7 +83,7 @@ export function HeroSection() {
             fullWidth
             className="min-w-0 border-white/45 bg-black/15 text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
           >
-           Visit Our Shop
+            Visit Our Shop
           </Button>
         </div>
       </div>
