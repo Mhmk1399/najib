@@ -8,13 +8,33 @@ Run from the repository root:
 
 ```bash
 pnpm dev:admin
+pnpm dev:admin-stack
 pnpm build:admin
 pnpm typecheck:admin
 pnpm lint:admin
 pnpm test:admin-catalog-flow
+pnpm test:admin-content-flow
 ```
 
+Seed a reusable local demo catalog through the authenticated Admin API:
+
+```bash
+SEED_ADMIN_PASSWORD='your-local-admin-password' pnpm seed:admin-demo
+```
+
+The seed is idempotent: running it again updates the same `demo-` records
+instead of creating duplicates. Its image URLs use the local storefront at
+`http://localhost:3000` by default; override `SEED_ASSET_BASE_URL` when needed.
+
 The development server uses `http://localhost:3001`.
+
+The staff interface is Persian-only and RTL. Catalog editors store
+customer-facing copy in Persian, English, and Arabic; see
+`../../docs/CATALOG_LOCALIZATION.md` for the API contract and migration rules.
+
+For normal local Admin work, use `pnpm dev:admin-stack`. It keeps the Admin,
+Commerce API, and Customer Data authentication API together in one terminal.
+Use `pnpm dev:admin` only when those backend services are already running.
 
 Create the first staff account before signing in. Choose your own credentials;
 the project intentionally has no default administrator password:
@@ -47,8 +67,10 @@ The local ports above are the built-in defaults. If a service is stopped or unav
 KPI totals, charts, orders, inventory warnings, and activity entries are intentional demo data from `lib/demo-data.ts`. The dashboard labels this clearly. Service status is read live from the existing backend health endpoints.
 
 Staff authentication, rotating sessions, role-based navigation, the protected
-product ledger, and Commerce catalog writes are active. The product editor uses
-real category, subcategory, and collection records and never inserts demo
-products. Product imagery, variants, inventory, and aggregate reporting remain
-later phases. See `docs/STAFF_AUTHORIZATION.md` for the permission matrix and
-production requirements.
+product ledger, Page Composer, Image Stories, and Commerce catalog writes are
+active. These tools use real categories, subcategories, collections, products,
+variants, and image records and never insert demo catalog data. Image Stories
+currently manages URL-based image metadata; binary upload and media storage are
+not part of this phase. Product variant management, inventory, and aggregate
+reporting remain later phases. See `docs/STAFF_AUTHORIZATION.md` for the
+permission matrix and production requirements.

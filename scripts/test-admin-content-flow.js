@@ -7,6 +7,8 @@ const mongoUri = process.env.MONGODB_URI;
 const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 const email = `admin-content-test-${suffix}@example.com`;
 const password = "Admin-content-test-password-123!";
+const localized = (value) => ({ fa: value, en: value, ar: value });
+const localizedList = (values = []) => ({ fa: values, en: values, ar: values });
 
 if (!mongoUri) throw new Error("MONGODB_URI is required");
 
@@ -67,7 +69,7 @@ try {
     headers: { cookie: cookies },
     body: JSON.stringify({
       url: `/review-assets/primary-${suffix}.jpg`,
-      alt: `Primary tailoring campaign ${suffix}`,
+      alt: localized(`Primary tailoring campaign ${suffix}`),
       kind: "category_banner",
       focalPointX: 48,
       focalPointY: 42,
@@ -83,7 +85,7 @@ try {
     headers: { cookie: cookies },
     body: JSON.stringify({
       url: `https://images.example.com/secondary-${suffix}.jpg`,
-      alt: `Secondary evening campaign ${suffix}`,
+      alt: localized(`Secondary evening campaign ${suffix}`),
       kind: "editorial",
       width: 1600,
       height: 2000,
@@ -99,22 +101,22 @@ try {
   const unsafeImage = await request("/api/catalog/images", {
     method: "POST",
     headers: { cookie: cookies },
-    body: JSON.stringify({ url: "javascript:alert(1)", alt: "Unsafe", kind: "editorial" }),
+    body: JSON.stringify({ url: "javascript:alert(1)", alt: localized("Unsafe"), kind: "editorial" }),
   });
   check(unsafeImage.status === 400, "unsafe image URL schemes are rejected");
 
   const pageContent = {
-    primaryBanner: { imageId: firstImage.body._id, eyebrow: "Atelier study", heading: "Tailoring, composed", body: "A precise study in proportion." },
-    primaryDescription: { heading: "The line", body: "Built around an assured, architectural line." },
-    secondaryBanner: { imageId: secondImage.body._id, heading: "After-dark form", ctaLabel: "Explore the edit", ctaHref: "/collections/evening" },
-    secondaryDescription: { heading: "The finish", body: "Quiet details reward a closer view." },
-    seoTitle: "Tailoring | Najibzadeh",
-    seoDescription: "Discover tailored Najibzadeh pieces and campaign stories.",
+    primaryBanner: { imageId: firstImage.body._id, eyebrow: localized("Atelier study"), heading: localized("Tailoring, composed"), body: localized("A precise study in proportion.") },
+    primaryDescription: { heading: localized("The line"), body: localized("Built around an assured, architectural line.") },
+    secondaryBanner: { imageId: secondImage.body._id, heading: localized("After-dark form"), ctaLabel: localized("Explore the edit"), ctaHref: "/collections/evening" },
+    secondaryDescription: { heading: localized("The finish"), body: localized("Quiet details reward a closer view.") },
+    seoTitle: localized("Tailoring | Najibzadeh"),
+    seoDescription: localized("Discover tailored Najibzadeh pieces and campaign stories."),
   };
   const category = await request("/api/catalog/categories", {
     method: "POST",
     headers: { cookie: cookies },
-    body: JSON.stringify({ name: "Test tailoring", slug: `content-tailoring-${suffix}`, description: "Test category", pageContent, isActive: true, sortOrder: 1 }),
+    body: JSON.stringify({ name: localized("Test tailoring"), slug: `content-tailoring-${suffix}`, description: localized("Test category"), pageContent, isActive: true, sortOrder: 1 }),
   });
   check(category.status === 201 && category.body?._id, "page composer creates a category with two real banners and descriptions");
   createdIds.categories.push(category.body._id);
@@ -122,14 +124,14 @@ try {
   const missingParent = await request("/api/catalog/subcategories", {
     method: "POST",
     headers: { cookie: cookies },
-    body: JSON.stringify({ categoryId: new mongoose.Types.ObjectId().toString(), name: "Invalid child", slug: `invalid-child-${suffix}`, pageContent, isActive: true, sortOrder: 0 }),
+    body: JSON.stringify({ categoryId: new mongoose.Types.ObjectId().toString(), name: localized("Invalid child"), slug: `invalid-child-${suffix}`, pageContent, isActive: true, sortOrder: 0 }),
   });
   check(missingParent.status === 400, "subcategory creation rejects a missing parent category");
 
   const subcategory = await request("/api/catalog/subcategories", {
     method: "POST",
     headers: { cookie: cookies },
-    body: JSON.stringify({ categoryId: category.body._id, name: "Test suits", slug: `content-suits-${suffix}`, pageContent: { ...pageContent, primaryBanner: { ...pageContent.primaryBanner, imageId: secondImage.body._id } }, isActive: true, sortOrder: 1 }),
+    body: JSON.stringify({ categoryId: category.body._id, name: localized("Test suits"), slug: `content-suits-${suffix}`, pageContent: { ...pageContent, primaryBanner: { ...pageContent.primaryBanner, imageId: secondImage.body._id } }, isActive: true, sortOrder: 1 }),
   });
   check(subcategory.status === 201 && subcategory.body?._id, "page composer creates a subcategory under a real parent");
   createdIds.subcategories.push(subcategory.body._id);
@@ -138,19 +140,19 @@ try {
     method: "POST",
     headers: { cookie: cookies },
     body: JSON.stringify({
-      name: "Content Flow Suit",
+      name: localized("Content Flow Suit"),
       slug: `content-flow-suit-${suffix}`,
-      description: "Temporary product for shoppable-image validation.",
+      description: localized("Temporary product for shoppable-image validation."),
       categoryId: category.body._id,
       subcategoryId: subcategory.body._id,
       collectionIds: [],
       basePriceMinor: 175000,
       currency: "EUR",
       status: "draft",
-      material: ["wool"],
-      seasons: [],
-      occasions: [],
-      styleTags: [],
+      material: localizedList(["wool"]),
+      seasons: localizedList(),
+      occasions: localizedList(),
+      styleTags: localizedList(),
       imageIds: [],
     }),
   });
@@ -161,7 +163,7 @@ try {
     method: "PATCH",
     headers: { cookie: cookies },
     body: JSON.stringify({
-      linkedProducts: [{ productId: product.body._id, label: "Shop the suit", hotspotX: 37.5, hotspotY: 44, sortOrder: 0 }],
+      linkedProducts: [{ productId: product.body._id, label: localized("Shop the suit"), hotspotX: 37.5, hotspotY: 44, sortOrder: 0 }],
     }),
   });
   check(shoppable.status === 200 && shoppable.body?.linkedProducts?.length === 1, "image story saves a real product hotspot");
@@ -182,9 +184,9 @@ try {
   const categoryUpdate = await request(`/api/catalog/categories/${category.body._id}`, {
     method: "PATCH",
     headers: { cookie: cookies },
-    body: JSON.stringify({ pageContent: { ...pageContent, seoTitle: "Updated tailoring | Najibzadeh" } }),
+    body: JSON.stringify({ pageContent: { ...pageContent, seoTitle: localized("Updated tailoring | Najibzadeh") } }),
   });
-  check(categoryUpdate.status === 200 && categoryUpdate.body?.pageContent?.seoTitle.startsWith("Updated"), "page composer updates the complete nested page story safely");
+  check(categoryUpdate.status === 200 && categoryUpdate.body?.pageContent?.seoTitle?.en.startsWith("Updated"), "page composer updates the complete nested page story safely");
 } finally {
   if (mongoose.connection.readyState) await mongoose.disconnect();
   await mongoose.connect(mongoUri, { dbName: "najib_commerce" });

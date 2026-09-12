@@ -1,13 +1,14 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
-import { requiredNameField, requiredSlugField } from "./_catalog-fields.js";
+import { requiredSlugField } from "./_catalog-fields.js";
+import { createLocalizedTextSchema, requiredLocalizedNameField } from "./_localized-content.js";
 
 const collectionSchema = new Schema(
   {
-    name: requiredNameField,
+    name: requiredLocalizedNameField,
     slug: requiredSlugField,
-    description: { type: String, trim: true, maxlength: 4000 },
+    description: { type: createLocalizedTextSchema(4000, false) },
     heroImageId: { type: Schema.Types.ObjectId, ref: "ImageAsset" },
     isActive: { type: Boolean, default: true, index: true },
     startsAt: Date,

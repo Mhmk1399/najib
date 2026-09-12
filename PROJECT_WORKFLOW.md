@@ -44,6 +44,11 @@ For every task:
 - Customer history is stored as activity events, not an unlimited array inside
   the User document.
 - Personalization and marketing must respect recorded customer consent.
+- The Admin interface is Persian-only and uses right-to-left layout.
+- Customer-facing catalog text must include Persian (`fa`), English (`en`),
+  and Arabic (`ar`) values in every API response.
+- Slugs, IDs, SKU, currency, prices, statuses, URLs, and relationships remain
+  language-neutral.
 - Secrets must use server-only environment variables. Never use `NEXT_PUBLIC_`
   for database credentials.
 - Docker, Redis, and RabbitMQ are optional during the current development
@@ -75,6 +80,12 @@ pnpm dev:commerce
 pnpm dev:inventory
 pnpm dev:payment
 pnpm dev:customer-data
+```
+
+For Admin catalog work, start its required processes together in one terminal:
+
+```bash
+pnpm dev:admin-stack
 ```
 
 Run backend API checks:
@@ -169,6 +180,17 @@ pnpm test:vertical-slice
       browser code and enforces catalog read/write permissions.
 - [x] Aligned category/subcategory page-content API validation with MongoDB and
       added product taxonomy/reference integrity checks.
+- [x] Added the protected Admin Page Composer for category and subcategory
+      campaign pages, including two banners, two descriptions, thumbnails,
+      visibility, ordering, and SEO metadata.
+- [x] Added the protected Admin Image Stories workspace with real image
+      metadata, focal-point controls, product and variant links, and visual
+      hotspot placement.
+- [x] Added shared Catalog navigation between Products, Page Composer, and
+      Image Stories.
+- [x] Added an idempotent Admin API demo-data seed for visible catalog review.
+- [x] Added the trilingual catalog contract and migration for Persian, English,
+      and Arabic customer-facing content.
 
 ## Current Validation Status
 
@@ -183,7 +205,7 @@ pnpm test:vertical-slice
 - Live staff authentication flow: 11/11 checks passing.
 - Live Admin session-gateway flow: 5/5 checks passing.
 - Isolated Berlin / White / Large end-to-end purchase test: passing.
-- Commerce catalog tests: 22/22 passing on 2026-09-07.
+- Commerce catalog and service tests: 24/24 passing on 2026-09-08.
 - Live Admin catalog flow: anonymous rejection, sign-in, list, create, search,
   update, relation validation, and safe-query checks passing; temporary data is
   removed automatically.
@@ -192,6 +214,14 @@ pnpm test:vertical-slice
   mobile controls were refined to the required 44px minimum.
 - Admin browser checks completed at 1440x1000 and 390x844; mobile navigation,
   responsive tables, and horizontal overflow were verified.
+- Live Admin page-content and shoppable-image flow: 13/13 checks passing on
+  2026-09-08, including safe URLs, real banner references, nested page updates,
+  hotspot relations, filtering, searching, and automatic cleanup.
+- Page Composer and Image Stories browser checks completed at 1440x1000 and
+  390x844; the full editor, responsive layout, and explicit hotspot placement
+  were verified without horizontal overflow.
+- Demo catalog seed verified through the Admin API on 2026-09-09: 4 products,
+  2 categories, 3 subcategories, 2 collections, and 7 image records.
 - Existing Next.js production build currently stops at the unrelated missing
   `contexts/theme-context` storefront import.
 - Existing storefront full lint: has pre-existing React lint errors that still
@@ -199,15 +229,14 @@ pnpm test:vertical-slice
 
 ## Next Implementation Phases
 
-1. Add Admin category/subcategory page content and shoppable image management.
-2. Add product variants, colors, sizes, collections, then exact stock.
-3. Add admin reporting endpoints and replace dashboard demo data.
-4. Add staff management, invitations, password recovery, and MFA.
-5. Add promotions, returns, cancellations, and refunds.
-6. Add abandoned-checkout recovery and preference-profile processing.
-7. Add AI search, styling, and authenticated order support.
-8. Add business policy and accounting integration services.
-9. Add production infrastructure, observability, Redis, and RabbitMQ.
+1. Add product variants, colors, sizes, collections, then exact stock.
+2. Add admin reporting endpoints and replace dashboard demo data.
+3. Add staff management, invitations, password recovery, and MFA.
+4. Add promotions, returns, cancellations, and refunds.
+5. Add abandoned-checkout recovery and preference-profile processing.
+6. Add AI search, styling, and authenticated order support.
+7. Add business policy and accounting integration services.
+8. Add production infrastructure, observability, Redis, and RabbitMQ.
 
 ## Change Log
 
@@ -284,3 +313,24 @@ pnpm test:vertical-slice
   fields.
 - Added an isolated logged Admin catalog flow test and completed independent
   desktop/mobile visual evaluation.
+
+### 2026-09-08
+
+- Added the real-data Page Composer for category and subcategory landing-page
+  content, with its required two-banner story and SEO controls.
+- Added the Image Stories library and editor with URL-based image metadata,
+  focal points, product/variant relationships, and click-to-place hotspots.
+- Added backend reference validation so banners, parent categories, products,
+  and variants must exist and variants must belong to their selected product.
+- Corrected shoppable-image product filtering and alt-text/URL searching.
+- Added a 13-step live Admin content-flow test with automatic cleanup.
+- Verified 24 Commerce tests, Admin lint and type checks, and authenticated
+  desktop/mobile browser flows.
+
+### 2026-09-09
+
+- Added a reusable, idempotent demo catalog seed that signs in through the
+  Admin gateway and posts real records through the protected Commerce API.
+- Seeded visible tailoring, footwear, and leather-goods products, complete
+  category-page stories, two collections, local storefront imagery, and an
+  editorial image with four product hotspots.

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Najib Atelier Operations",
-  description: "Operations dashboard for the Najibzadeh boutique commerce platform.",
+  title: "داشبورد عملیات نجیب‌زاده",
+  description: "فضای مدیریت فروشگاه و کاتالوگ نجیب‌زاده",
 };
 
 const themeBootScript = `
@@ -16,7 +16,7 @@ const themeBootScript = `
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="fa" dir="rtl" suppressHydrationWarning>
       <head><script dangerouslySetInnerHTML={{ __html: themeBootScript }} /></head>
       <body>{children}</body>
     </html>

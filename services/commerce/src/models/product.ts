@@ -1,13 +1,18 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
-import { requiredNameField, requiredSlugField } from "./_catalog-fields.js";
+import { requiredSlugField } from "./_catalog-fields.js";
+import {
+  createLocalizedTextListSchema,
+  createLocalizedTextSchema,
+  requiredLocalizedNameField,
+} from "./_localized-content.js";
 
 const productSchema = new Schema(
   {
-    name: requiredNameField,
+    name: requiredLocalizedNameField,
     slug: requiredSlugField,
-    description: { type: String, required: true, trim: true, maxlength: 12000 },
+    description: { type: createLocalizedTextSchema(12000), required: true },
     categoryId: {
       type: Schema.Types.ObjectId,
       ref: "Category",
@@ -41,13 +46,13 @@ const productSchema = new Schema(
       default: "draft",
       index: true,
     },
-    material: [{ type: String, trim: true }],
-    fit: { type: String, trim: true },
-    silhouette: { type: String, trim: true },
-    pattern: { type: String, trim: true },
-    seasons: [{ type: String, trim: true }],
-    occasions: [{ type: String, trim: true }],
-    styleTags: [{ type: String, trim: true, lowercase: true }],
+    material: { type: createLocalizedTextListSchema(), default: () => ({ fa: [], en: [], ar: [] }) },
+    fit: { type: createLocalizedTextSchema(120, false) },
+    silhouette: { type: createLocalizedTextSchema(120, false) },
+    pattern: { type: createLocalizedTextSchema(120, false) },
+    seasons: { type: createLocalizedTextListSchema(), default: () => ({ fa: [], en: [], ar: [] }) },
+    occasions: { type: createLocalizedTextListSchema(), default: () => ({ fa: [], en: [], ar: [] }) },
+    styleTags: { type: createLocalizedTextListSchema(), default: () => ({ fa: [], en: [], ar: [] }) },
     primaryImageId: { type: Schema.Types.ObjectId, ref: "ImageAsset" },
     imageIds: {
       type: [{ type: Schema.Types.ObjectId, ref: "ImageAsset" }],
@@ -58,7 +63,14 @@ const productSchema = new Schema(
 );
 
 productSchema.index({ slug: 1 }, { unique: true });
-productSchema.index({ name: "text", description: "text", styleTags: "text" });
+productSchema.index({
+  "name.fa": "text",
+  "name.en": "text",
+  "name.ar": "text",
+  "description.fa": "text",
+  "description.en": "text",
+  "description.ar": "text",
+}, { name: "localized_catalog_text", default_language: "none" });
 
 export type ProductDocument = InferSchemaType<typeof productSchema>;
 export const Product = models.Product || model("Product", productSchema);

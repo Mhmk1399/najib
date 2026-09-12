@@ -41,7 +41,24 @@ export const listCatalogQuerySchema = z
   })
   .strict();
 
-const name = z.string().trim().min(1).max(160);
+export const localizedTextSchema = (maxLength: number, minimum = 1) =>
+  z
+    .object({
+      fa: z.string().trim().min(minimum).max(maxLength),
+      en: z.string().trim().min(minimum).max(maxLength),
+      ar: z.string().trim().min(minimum).max(maxLength),
+    })
+    .strict();
+
+export const localizedTextListSchema = z
+  .object({
+    fa: z.array(z.string().trim().min(1)),
+    en: z.array(z.string().trim().min(1)),
+    ar: z.array(z.string().trim().min(1)),
+  })
+  .strict();
+
+const name = localizedTextSchema(160);
 const slug = z
   .string()
   .trim()
@@ -55,10 +72,10 @@ const active = z.boolean().default(true);
 const pageBannerSchema = z
   .object({
     imageId: objectIdSchema,
-    eyebrow: z.string().trim().max(120).optional(),
-    heading: z.string().trim().min(1).max(200),
-    body: z.string().trim().max(1200).optional(),
-    ctaLabel: z.string().trim().max(80).optional(),
+    eyebrow: localizedTextSchema(120, 0).optional(),
+    heading: localizedTextSchema(200),
+    body: localizedTextSchema(1200, 0).optional(),
+    ctaLabel: localizedTextSchema(80, 0).optional(),
     ctaHref: z.string().trim().max(500).optional(),
   })
   .strict();
@@ -68,19 +85,19 @@ const pageContentSchema = z
     primaryBanner: pageBannerSchema,
     primaryDescription: z
       .object({
-        heading: z.string().trim().max(240).optional(),
-        body: z.string().trim().min(1).max(5000),
+        heading: localizedTextSchema(240, 0).optional(),
+        body: localizedTextSchema(5000),
       })
       .strict(),
     secondaryBanner: pageBannerSchema,
     secondaryDescription: z
       .object({
-        heading: z.string().trim().max(240).optional(),
-        body: z.string().trim().min(1).max(5000),
+        heading: localizedTextSchema(240, 0).optional(),
+        body: localizedTextSchema(5000),
       })
       .strict(),
-    seoTitle: z.string().trim().max(70).optional(),
-    seoDescription: z.string().trim().max(170).optional(),
+    seoTitle: localizedTextSchema(70, 0).optional(),
+    seoDescription: localizedTextSchema(170, 0).optional(),
   })
   .strict();
 
@@ -88,7 +105,7 @@ const categorySchema = z
   .object({
     name,
     slug,
-    description: z.string().trim().max(2000).nullable().optional(),
+    description: localizedTextSchema(2000, 0).nullable().optional(),
     thumbnailImageId: optionalObjectId,
     pageContent: pageContentSchema,
     isActive: active,
@@ -104,7 +121,7 @@ const collectionSchema = z
   .object({
     name,
     slug,
-    description: z.string().trim().max(4000).optional(),
+    description: localizedTextSchema(4000, 0).optional(),
     heroImageId: optionalObjectId,
     isActive: active,
     startsAt: z.coerce.date().optional(),
@@ -117,7 +134,7 @@ const colorSchema = z
   .object({
     name,
     slug,
-    family: z.string().trim().min(1).max(80),
+    family: localizedTextSchema(80),
     hex: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
     swatchImageUrl: z.string().trim().max(2000).optional(),
     isActive: active,
@@ -147,20 +164,20 @@ const productSchema = z
   .object({
     name,
     slug,
-    description: z.string().trim().min(1).max(12000),
+    description: localizedTextSchema(12000),
     categoryId: objectIdSchema,
     subcategoryId: objectIdSchema,
     collectionIds: z.array(objectIdSchema).default([]),
     basePriceMinor: z.number().int().nonnegative(),
     currency: z.string().trim().length(3),
     status: z.enum(["draft", "active", "archived"]).default("draft"),
-    material: z.array(z.string().trim().min(1)).default([]),
-    fit: z.string().trim().max(120).nullable().optional(),
-    silhouette: z.string().trim().max(120).nullable().optional(),
-    pattern: z.string().trim().max(120).nullable().optional(),
-    seasons: z.array(z.string().trim().min(1)).default([]),
-    occasions: z.array(z.string().trim().min(1)).default([]),
-    styleTags: z.array(z.string().trim().min(1)).default([]),
+    material: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+    fit: localizedTextSchema(120, 0).nullable().optional(),
+    silhouette: localizedTextSchema(120, 0).nullable().optional(),
+    pattern: localizedTextSchema(120, 0).nullable().optional(),
+    seasons: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+    occasions: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+    styleTags: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
     primaryImageId: optionalObjectId,
     imageIds: z.array(objectIdSchema).default([]),
   })
@@ -182,7 +199,7 @@ const productLinkSchema = z
   .object({
     productId: objectIdSchema,
     variantId: optionalObjectId,
-    label: z.string().trim().max(120).optional(),
+    label: localizedTextSchema(120, 0).optional(),
     hotspotX: z.number().min(0).max(100).optional(),
     hotspotY: z.number().min(0).max(100).optional(),
     sortOrder,
@@ -203,7 +220,7 @@ const imageSchema = z
         (value) => value.startsWith("/") || /^https?:\/\//i.test(value),
         "Use an HTTP(S) or root-relative image URL",
       ),
-    alt: z.string().trim().min(1).max(500),
+    alt: localizedTextSchema(500),
     kind: z.enum([
       "product",
       "category_banner",

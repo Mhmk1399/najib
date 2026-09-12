@@ -1,4 +1,5 @@
 import mongoose, { type InferSchemaType } from "mongoose";
+import { createLocalizedTextSchema } from "./_localized-content.js";
 
 const { Schema, model, models } = mongoose;
 
@@ -44,9 +45,9 @@ checkoutSessionSchema.index({ idempotencyKey: 1 }, { unique: true });
 const abandonedItemSchema = new Schema(
   {
     variantId: { type: String, required: true, trim: true },
-    productName: { type: String, required: true, trim: true },
-    colorName: { type: String, required: true, trim: true },
-    sizeName: { type: String, required: true, trim: true },
+    productName: { type: createLocalizedTextSchema(160), required: true },
+    colorName: { type: createLocalizedTextSchema(160), required: true },
+    sizeName: { type: createLocalizedTextSchema(160), required: true },
     quantity: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
     unitPriceMinor: {
       type: Number,

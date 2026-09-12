@@ -5,16 +5,16 @@ import { Images, LayoutTemplate, Package } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const destinations = [
-  { href: "/catalog/products", label: "Products", detail: "The ledger", icon: Package },
-  { href: "/catalog/content", label: "Page composer", detail: "Campaign pages", icon: LayoutTemplate },
-  { href: "/catalog/images", label: "Image stories", detail: "Assets & hotspots", icon: Images },
+  { href: "/catalog/products", label: "محصولات", detail: "دفتر محصولات", icon: Package },
+  { href: "/catalog/content", label: "صفحه‌ساز", detail: "صفحه‌های دسته‌بندی", icon: LayoutTemplate },
+  { href: "/catalog/images", label: "تصاویر خریدپذیر", detail: "تصویر و نقاط محصول", icon: Images },
 ];
 
 export function CatalogSectionNav() {
   const pathname = usePathname();
   return (
-    <nav className="catalog-section-nav" aria-label="Catalog workspaces">
-      <span className="catalog-section-nav__label">Catalog desk</span>
+    <nav className="catalog-section-nav" aria-label="بخش‌های کاتالوگ">
+      <span className="catalog-section-nav__label">میز کاتالوگ</span>
       <div>
         {destinations.map(({ href, label, detail, icon: Icon }) => {
           const active = pathname.startsWith(href);

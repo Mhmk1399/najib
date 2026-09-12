@@ -3,6 +3,8 @@ import { createHmac, randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import mongoose from "mongoose";
 
+const localized = (value) => ({ fa: value, en: value, ar: value });
+
 const api = { commerce: "http://127.0.0.1:4001/api/v1", inventory: "http://127.0.0.1:4002/api/v1", payment: "http://127.0.0.1:4003/api/v1" };
 const runId = randomUUID();
 const ids = Object.fromEntries(["category", "subcategory", "sizeGroup", "large", "small", "white", "black", "product", "whiteLarge", "whiteSmall", "blackLarge", "berlin", "dubai", "berlinPool", "dubaiPool", "berlinStore", "dubaiStore", "berlinLocation", "dubaiLocation"].map((key) => [key, new mongoose.Types.ObjectId()]));
@@ -43,18 +45,18 @@ let cartId; let orderId; let paymentId;
 try {
   await waitForServices();
   log("SETUP", "Creating isolated Berlin and Dubai catalog and inventory");
-  await commerce.collection("categories").insertOne({ _id: ids.category, name: "Test Suits", slug: `test-suits-${runId}`, isActive: true, createdAt: now, updatedAt: now });
-  await commerce.collection("subcategories").insertOne({ _id: ids.subcategory, categoryId: ids.category, name: "Test Tailoring", slug: `test-tailoring-${runId}`, isActive: true, createdAt: now, updatedAt: now });
-  await commerce.collection("sizegroups").insertOne({ _id: ids.sizeGroup, name: "Test Clothing", code: `T${runId.slice(0, 8)}`, isActive: true, createdAt: now, updatedAt: now });
+  await commerce.collection("categories").insertOne({ _id: ids.category, name: localized("Test Suits"), slug: `test-suits-${runId}`, isActive: true, createdAt: now, updatedAt: now });
+  await commerce.collection("subcategories").insertOne({ _id: ids.subcategory, categoryId: ids.category, name: localized("Test Tailoring"), slug: `test-tailoring-${runId}`, isActive: true, createdAt: now, updatedAt: now });
+  await commerce.collection("sizegroups").insertOne({ _id: ids.sizeGroup, name: localized("Test Clothing"), code: `T${runId.slice(0, 8)}`, isActive: true, createdAt: now, updatedAt: now });
   await commerce.collection("sizes").insertMany([
-    { _id: ids.large, sizeGroupId: ids.sizeGroup, name: "Large", code: `L${runId.slice(0, 6)}`, isActive: true, createdAt: now, updatedAt: now },
-    { _id: ids.small, sizeGroupId: ids.sizeGroup, name: "Small", code: `S${runId.slice(0, 6)}`, isActive: true, createdAt: now, updatedAt: now },
+    { _id: ids.large, sizeGroupId: ids.sizeGroup, name: localized("Large"), code: `L${runId.slice(0, 6)}`, isActive: true, createdAt: now, updatedAt: now },
+    { _id: ids.small, sizeGroupId: ids.sizeGroup, name: localized("Small"), code: `S${runId.slice(0, 6)}`, isActive: true, createdAt: now, updatedAt: now },
   ]);
   await commerce.collection("colors").insertMany([
-    { _id: ids.white, name: "White", slug: `white-${runId}`, family: "white", isActive: true, createdAt: now, updatedAt: now },
-    { _id: ids.black, name: "Black", slug: `black-${runId}`, family: "black", isActive: true, createdAt: now, updatedAt: now },
+    { _id: ids.white, name: localized("White"), slug: `white-${runId}`, family: localized("white"), isActive: true, createdAt: now, updatedAt: now },
+    { _id: ids.black, name: localized("Black"), slug: `black-${runId}`, family: localized("black"), isActive: true, createdAt: now, updatedAt: now },
   ]);
-  await commerce.collection("products").insertOne({ _id: ids.product, name: "Test Berlin Suit", slug: `berlin-suit-${runId}`, description: "Vertical slice suit", categoryId: ids.category, subcategoryId: ids.subcategory, collectionIds: [], basePriceMinor: 120000, currency: "EUR", status: "active", imageIds: [], createdAt: now, updatedAt: now });
+  await commerce.collection("products").insertOne({ _id: ids.product, name: localized("Test Berlin Suit"), slug: `berlin-suit-${runId}`, description: localized("Vertical slice suit"), categoryId: ids.category, subcategoryId: ids.subcategory, collectionIds: [], basePriceMinor: 120000, currency: "EUR", status: "active", imageIds: [], createdAt: now, updatedAt: now });
   await commerce.collection("productvariants").insertMany([
     { _id: ids.whiteLarge, productId: ids.product, colorId: ids.white, sizeId: ids.large, sku: `WL-${runId}`, isActive: true, createdAt: now, updatedAt: now },
     { _id: ids.whiteSmall, productId: ids.product, colorId: ids.white, sizeId: ids.small, sku: `WS-${runId}`, isActive: true, createdAt: now, updatedAt: now },

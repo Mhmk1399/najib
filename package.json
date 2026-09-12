@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "dev:admin": "pnpm --filter @najib/admin dev",
+    "dev:admin-stack": "pnpm --filter @najib/contracts build && pnpm --parallel --stream --filter @najib/admin --filter @najib/commerce-service --filter @najib/customer-data-service run dev",
     "build:admin": "pnpm --filter @najib/admin build",
     "typecheck:admin": "pnpm --filter @najib/admin typecheck",
     "lint:admin": "pnpm --filter @najib/admin lint",
@@ -24,6 +25,8 @@
     "test:admin-auth-flow": "node --env-file=.env scripts/test-admin-auth-flow.js",
     "test:admin-catalog-flow": "node --env-file=.env scripts/test-admin-catalog-flow.js",
     "test:admin-content-flow": "node --env-file=.env scripts/test-admin-content-flow.js",
+    "seed:admin-demo": "node --env-file=.env scripts/seed-admin-demo.js",
+    "migrate:catalog-locales": "node --env-file=.env scripts/migrate-catalog-locales.js",
     "contracts:build": "pnpm --filter @najib/contracts build",
     "contracts:typecheck": "pnpm --filter @najib/contracts typecheck",
     "contracts:test": "pnpm --filter @najib/contracts test",

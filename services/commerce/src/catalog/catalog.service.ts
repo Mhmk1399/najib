@@ -92,11 +92,15 @@ export class CatalogService {
       const escaped = query.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       filter.$or = resource === "images"
         ? [
-            { alt: { $regex: escaped, $options: "i" } },
+            { "alt.fa": { $regex: escaped, $options: "i" } },
+            { "alt.en": { $regex: escaped, $options: "i" } },
+            { "alt.ar": { $regex: escaped, $options: "i" } },
             { url: { $regex: escaped, $options: "i" } },
           ]
         : [
-            { name: { $regex: escaped, $options: "i" } },
+            { "name.fa": { $regex: escaped, $options: "i" } },
+            { "name.en": { $regex: escaped, $options: "i" } },
+            { "name.ar": { $regex: escaped, $options: "i" } },
             { slug: { $regex: escaped, $options: "i" } },
             { sku: { $regex: escaped, $options: "i" } },
           ];

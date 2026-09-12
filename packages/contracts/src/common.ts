@@ -9,6 +9,21 @@ export const idempotencyKeySchema = z.string().trim().min(8).max(200);
 export const correlationIdSchema = z.string().trim().min(1).max(200);
 export const currencySchema = z.string().trim().length(3).transform((value) => value.toUpperCase());
 export const dateTimeSchema = z.iso.datetime({ offset: true });
+export const catalogLocaleSchema = z.enum(["fa", "en", "ar"]);
+export const localizedTextSchema = z
+  .object({
+    fa: z.string(),
+    en: z.string(),
+    ar: z.string(),
+  })
+  .strict();
+export const localizedTextListSchema = z
+  .object({
+    fa: z.array(z.string()),
+    en: z.array(z.string()),
+    ar: z.array(z.string()),
+  })
+  .strict();
 
 export const moneySchema = z
   .object({
@@ -46,3 +61,6 @@ export const problemDetailsSchema = z
 export type Money = z.infer<typeof moneySchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
+export type CatalogLocale = z.infer<typeof catalogLocaleSchema>;
+export type LocalizedText = z.infer<typeof localizedTextSchema>;
+export type LocalizedTextList = z.infer<typeof localizedTextListSchema>;

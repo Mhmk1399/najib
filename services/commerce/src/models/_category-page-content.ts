@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { createLocalizedTextSchema } from "./_localized-content.js";
 
 const { Schema } = mongoose;
 
@@ -9,10 +10,10 @@ const pageBannerSchema = new Schema(
       ref: "ImageAsset",
       required: true,
     },
-    eyebrow: { type: String, trim: true, maxlength: 120 },
-    heading: { type: String, required: true, trim: true, maxlength: 240 },
-    body: { type: String, trim: true, maxlength: 1200 },
-    ctaLabel: { type: String, trim: true, maxlength: 80 },
+    eyebrow: { type: createLocalizedTextSchema(120, false) },
+    heading: { type: createLocalizedTextSchema(240), required: true },
+    body: { type: createLocalizedTextSchema(1200, false) },
+    ctaLabel: { type: createLocalizedTextSchema(80, false) },
     ctaHref: { type: String, trim: true, maxlength: 500 },
   },
   { _id: false },
@@ -20,8 +21,8 @@ const pageBannerSchema = new Schema(
 
 const pageDescriptionSchema = new Schema(
   {
-    heading: { type: String, trim: true, maxlength: 240 },
-    body: { type: String, required: true, trim: true, maxlength: 5000 },
+    heading: { type: createLocalizedTextSchema(240, false) },
+    body: { type: createLocalizedTextSchema(5000), required: true },
   },
   { _id: false },
 );
@@ -32,9 +33,8 @@ export const categoryPageContentSchema = new Schema(
     primaryDescription: { type: pageDescriptionSchema, required: true },
     secondaryBanner: { type: pageBannerSchema, required: true },
     secondaryDescription: { type: pageDescriptionSchema, required: true },
-    seoTitle: { type: String, trim: true, maxlength: 70 },
-    seoDescription: { type: String, trim: true, maxlength: 170 },
+    seoTitle: { type: createLocalizedTextSchema(70, false) },
+    seoDescription: { type: createLocalizedTextSchema(170, false) },
   },
   { _id: false },
 );
-

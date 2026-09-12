@@ -1,4 +1,5 @@
 import mongoose, { type InferSchemaType } from "mongoose";
+import { createLocalizedTextSchema } from "./_localized-content.js";
 
 const { Schema, model, models } = mongoose;
 
@@ -13,7 +14,7 @@ const productLinkSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "ProductVariant",
     },
-    label: { type: String, trim: true, maxlength: 120 },
+    label: { type: createLocalizedTextSchema(120, false) },
     hotspotX: { type: Number, min: 0, max: 100 },
     hotspotY: { type: Number, min: 0, max: 100 },
     sortOrder: { type: Number, default: 0 },
@@ -32,7 +33,7 @@ productLinkSchema.pre("validate", function validateHotspotCoordinates() {
 const imageAssetSchema = new Schema(
   {
     url: { type: String, required: true, trim: true, maxlength: 2000 },
-    alt: { type: String, required: true, trim: true, maxlength: 500 },
+    alt: { type: createLocalizedTextSchema(500), required: true },
     kind: {
       type: String,
       enum: [
@@ -61,4 +62,3 @@ imageAssetSchema.index({ "linkedProducts.productId": 1 });
 export type ImageAssetDocument = InferSchemaType<typeof imageAssetSchema>;
 export const ImageAsset =
   models.ImageAsset || model("ImageAsset", imageAssetSchema);
-

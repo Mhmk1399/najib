@@ -7,6 +7,8 @@ const mongoUri = process.env.MONGODB_URI;
 const email = `admin-catalog-test-${Date.now()}@example.com`;
 const password = "Admin-catalog-test-password-123!";
 const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+const localized = (value) => ({ fa: value, en: value, ar: value });
+const localizedList = (values = []) => ({ fa: values, en: values, ar: values });
 
 if (!mongoUri) throw new Error("MONGODB_URI is required");
 
@@ -57,14 +59,14 @@ try {
   await mongoose.connect(mongoUri, { dbName: "najib_commerce" });
   const imageId = new mongoose.Types.ObjectId();
   const pageContent = {
-    primaryBanner: { imageId, heading: "Primary edit" },
-    primaryDescription: { body: "Primary category story." },
-    secondaryBanner: { imageId, heading: "Secondary edit" },
-    secondaryDescription: { body: "Secondary category story." },
+    primaryBanner: { imageId, heading: localized("Primary edit") },
+    primaryDescription: { body: localized("Primary category story.") },
+    secondaryBanner: { imageId, heading: localized("Secondary edit") },
+    secondaryDescription: { body: localized("Secondary category story.") },
   };
-  category = await Category.create({ name: "Test tailoring", slug: `test-tailoring-${suffix}`, pageContent });
-  otherCategory = await Category.create({ name: "Test accessories", slug: `test-accessories-${suffix}`, pageContent });
-  subcategory = await Subcategory.create({ categoryId: category._id, name: "Test suits", slug: `test-suits-${suffix}`, pageContent });
+  category = await Category.create({ name: localized("Test tailoring"), slug: `test-tailoring-${suffix}`, pageContent });
+  otherCategory = await Category.create({ name: localized("Test accessories"), slug: `test-accessories-${suffix}`, pageContent });
+  subcategory = await Subcategory.create({ categoryId: category._id, name: localized("Test suits"), slug: `test-suits-${suffix}`, pageContent });
 
   const anonymous = await request("/api/catalog/products");
   check(anonymous.status === 401, "Admin catalog gateway rejects anonymous reads");
@@ -83,19 +85,19 @@ try {
     method: "POST",
     headers: { cookie: cookies },
     body: JSON.stringify({
-      name: "Gateway Test Suit",
+      name: localized("Gateway Test Suit"),
       slug: `gateway-test-suit-${suffix}`,
-      description: "Temporary product created by the isolated Admin catalog flow.",
+      description: localized("Temporary product created by the isolated Admin catalog flow."),
       categoryId: String(category._id),
       subcategoryId: String(subcategory._id),
       collectionIds: [],
       basePriceMinor: 245000,
       currency: "EUR",
       status: "draft",
-      material: ["wool"],
-      seasons: ["autumn"],
-      occasions: ["formal"],
-      styleTags: ["tailored"],
+      material: localizedList(["wool"]),
+      seasons: localizedList(["autumn"]),
+      occasions: localizedList(["formal"]),
+      styleTags: localizedList(["tailored"]),
       imageIds: [],
     }),
   });

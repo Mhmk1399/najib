@@ -8,58 +8,60 @@ import {
 import { useRouter } from "next/navigation";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CatalogSectionNav } from "@/components/catalog-section-nav";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { emptyLocalizedText, fa, type Locale, type LocalizedText, type LocalizedTextList, trimLocalized } from "@/lib/localization";
 
 type ProductStatus = "draft" | "active" | "archived";
 
 type Product = {
   _id: string;
-  name: string;
+  name: LocalizedText;
   slug: string;
-  description: string;
+  description: LocalizedText;
   categoryId: string;
   subcategoryId: string;
   collectionIds: string[];
   basePriceMinor: number;
   currency: string;
   status: ProductStatus;
-  material: string[];
-  fit?: string | null;
-  silhouette?: string | null;
-  pattern?: string | null;
-  seasons: string[];
-  occasions: string[];
-  styleTags: string[];
+  material: LocalizedTextList;
+  fit?: LocalizedText | null;
+  silhouette?: LocalizedText | null;
+  pattern?: LocalizedText | null;
+  seasons: LocalizedTextList;
+  occasions: LocalizedTextList;
+  styleTags: LocalizedTextList;
   updatedAt?: string;
 };
 
-type ReferenceItem = { _id: string; name: string; categoryId?: string };
+type ReferenceItem = { _id: string; name: LocalizedText; categoryId?: string };
 type Pagination = { page: number; limit: number; total: number; pages: number };
 type ListResponse<T> = { items: T[]; pagination: Pagination };
 type ApiError = { error?: string; message?: string; details?: unknown };
 
 type ProductForm = {
-  name: string;
+  name: LocalizedText;
   slug: string;
-  description: string;
+  description: LocalizedText;
   categoryId: string;
   subcategoryId: string;
   collectionIds: string[];
   price: string;
   currency: string;
   status: ProductStatus;
-  material: string;
-  fit: string;
-  silhouette: string;
-  pattern: string;
-  seasons: string;
-  occasions: string;
-  styleTags: string;
+  material: LocalizedText;
+  fit: LocalizedText;
+  silhouette: LocalizedText;
+  pattern: LocalizedText;
+  seasons: LocalizedText;
+  occasions: LocalizedText;
+  styleTags: LocalizedText;
 };
 
 const emptyForm: ProductForm = {
-  name: "", slug: "", description: "", categoryId: "", subcategoryId: "",
-  collectionIds: [], price: "", currency: "USD", status: "draft", material: "",
-  fit: "", silhouette: "", pattern: "", seasons: "", occasions: "", styleTags: "",
+  name: emptyLocalizedText(), slug: "", description: emptyLocalizedText(), categoryId: "", subcategoryId: "",
+  collectionIds: [], price: "", currency: "USD", status: "draft", material: emptyLocalizedText(),
+  fit: emptyLocalizedText(), silhouette: emptyLocalizedText(), pattern: emptyLocalizedText(), seasons: emptyLocalizedText(), occasions: emptyLocalizedText(), styleTags: emptyLocalizedText(),
 };
 
 function slugify(value: string) {
@@ -96,13 +98,11 @@ function productToForm(product: Product): ProductForm {
     price: (product.basePriceMinor / 100).toFixed(2),
     currency: product.currency,
     status: product.status,
-    material: (product.material || []).join(", "),
-    fit: product.fit || "",
-    silhouette: product.silhouette || "",
-    pattern: product.pattern || "",
-    seasons: (product.seasons || []).join(", "),
-    occasions: (product.occasions || []).join(", "),
-    styleTags: (product.styleTags || []).join(", "),
+    material: { fa: product.material?.fa?.join(", ") || "", en: product.material?.en?.join(", ") || "", ar: product.material?.ar?.join(", ") || "" },
+    fit: product.fit || emptyLocalizedText(), silhouette: product.silhouette || emptyLocalizedText(), pattern: product.pattern || emptyLocalizedText(),
+    seasons: { fa: product.seasons?.fa?.join(", ") || "", en: product.seasons?.en?.join(", ") || "", ar: product.seasons?.ar?.join(", ") || "" },
+    occasions: { fa: product.occasions?.fa?.join(", ") || "", en: product.occasions?.en?.join(", ") || "", ar: product.occasions?.ar?.join(", ") || "" },
+    styleTags: { fa: product.styleTags?.fa?.join(", ") || "", en: product.styleTags?.en?.join(", ") || "", ar: product.styleTags?.ar?.join(", ") || "" },
   };
 }
 
@@ -141,6 +141,7 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [locale, setLocale] = useState<Locale>("fa");
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const handleAuthFailure = useCallback((statusCode: number) => {
@@ -205,8 +206,8 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
     return () => controller.abort();
   }, [canRead, categoryId, handleAuthFailure, page, refreshKey, search, status]);
 
-  const categoryNames = useMemo(() => new Map(categories.map((item) => [item._id, item.name])), [categories]);
-  const subcategoryNames = useMemo(() => new Map(subcategories.map((item) => [item._id, item.name])), [subcategories]);
+  const categoryNames = useMemo(() => new Map(categories.map((item) => [item._id, fa(item.name)])), [categories]);
+  const subcategoryNames = useMemo(() => new Map(subcategories.map((item) => [item._id, fa(item.name)])), [subcategories]);
   const filteredSubcategories = useMemo(() => subcategories.filter((item) => !form.categoryId || item.categoryId === form.categoryId), [form.categoryId, subcategories]);
   const filtersActive = Boolean(searchDraft || status || categoryId);
   const dirty = editor !== null && JSON.stringify(form) !== JSON.stringify(initialForm);
@@ -216,7 +217,7 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
 
   const openCreate = () => {
     const next = { ...emptyForm, collectionIds: [] };
-    setForm(next); setInitialForm(next); setSlugTouched(false); setFieldErrors({}); setSaveError(null);
+    setForm(next); setInitialForm(next); setSlugTouched(false); setFieldErrors({}); setSaveError(null); setLocale("fa");
     setEditor({ mode: "create" });
   };
 
@@ -237,7 +238,7 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
   };
 
   const closeEditor = useCallback(() => {
-    if (dirty && !window.confirm("Discard the unsaved changes to this product?")) return;
+    if (dirty && !window.confirm("تغییرات ذخیره‌نشده این محصول حذف شود؟")) return;
     setEditor(null); setSaveError(null); setFieldErrors({});
   }, [dirty]);
 
@@ -256,20 +257,22 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
   };
 
   const updateName = (value: string) => {
-    setForm((current) => ({ ...current, name: value, slug: slugTouched ? current.slug : slugify(value) }));
+    setForm((current) => ({ ...current, name: { ...current.name, [locale]: value }, slug: slugTouched || locale !== "en" ? current.slug : slugify(value) }));
     setFieldErrors((current) => { const next = { ...current }; delete next.name; delete next.slug; return next; });
   };
 
   const validate = () => {
     const next: Record<string, string> = {};
-    if (!form.name.trim()) next.name = "Product name is required.";
-    if (!form.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) next.slug = "Use a lowercase, hyphenated URL slug.";
-    if (!form.description.trim()) next.description = "A product description is required.";
-    if (!form.categoryId) next.categoryId = "Choose a category.";
-    if (!form.subcategoryId) next.subcategoryId = "Choose a subcategory.";
+    (["fa", "en", "ar"] as Locale[]).forEach((lang) => {
+      if (!form.name[lang].trim()) next.name = "نام محصول در هر سه زبان الزامی است.";
+      if (!form.description[lang].trim()) next.description = "توضیحات محصول در هر سه زبان الزامی است.";
+    });
+    if (!form.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug)) next.slug = "شناسه URL باید انگلیسی، کوچک و خط‌تیره‌دار باشد.";
+    if (!form.categoryId) next.categoryId = "دسته‌بندی را انتخاب کنید.";
+    if (!form.subcategoryId) next.subcategoryId = "زیردسته را انتخاب کنید.";
     const price = Number(form.price);
-    if (!form.price || !Number.isFinite(price) || price < 0) next.price = "Enter a valid non-negative price.";
-    if (!/^[A-Za-z]{3}$/.test(form.currency)) next.currency = "Use a 3-letter currency code.";
+    if (!form.price || !Number.isFinite(price) || price < 0) next.price = "یک قیمت معتبر وارد کنید.";
+    if (!/^[A-Za-z]{3}$/.test(form.currency)) next.currency = "کد سه‌حرفی ارز را وارد کنید.";
     setFieldErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -279,12 +282,14 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
     if (saving || !validate() || !editor) return;
     setSaving(true); setSaveError(null);
     const payload = {
-      name: form.name.trim(), slug: form.slug.trim(), description: form.description.trim(),
+      name: trimLocalized(form.name), slug: form.slug.trim(), description: trimLocalized(form.description),
       categoryId: form.categoryId, subcategoryId: form.subcategoryId, collectionIds: form.collectionIds,
       basePriceMinor: Math.round(Number(form.price) * 100), currency: form.currency.toUpperCase(), status: form.status,
-      material: splitTags(form.material), fit: form.fit.trim() || null, silhouette: form.silhouette.trim() || null,
-      pattern: form.pattern.trim() || null, seasons: splitTags(form.seasons), occasions: splitTags(form.occasions),
-      styleTags: splitTags(form.styleTags).map((item) => item.toLowerCase()),
+      material: Object.fromEntries((["fa", "en", "ar"] as Locale[]).map((lang) => [lang, splitTags(form.material[lang])])) as LocalizedTextList,
+      fit: trimLocalized(form.fit), silhouette: trimLocalized(form.silhouette), pattern: trimLocalized(form.pattern),
+      seasons: Object.fromEntries((["fa", "en", "ar"] as Locale[]).map((lang) => [lang, splitTags(form.seasons[lang])])) as LocalizedTextList,
+      occasions: Object.fromEntries((["fa", "en", "ar"] as Locale[]).map((lang) => [lang, splitTags(form.occasions[lang])])) as LocalizedTextList,
+      styleTags: Object.fromEntries((["fa", "en", "ar"] as Locale[]).map((lang) => [lang, splitTags(form.styleTags[lang])])) as LocalizedTextList,
     };
     try {
       const endpoint = editor.mode === "create" ? "/api/catalog/products" : `/api/catalog/products/${editor.id}`;
@@ -299,11 +304,11 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
       setEditor(null);
       setPage(1);
       setRefreshKey((value) => value + 1);
-      announce(editor.mode === "create" ? "Product added to the atelier ledger." : "Product changes saved.");
+      announce(editor.mode === "create" ? "محصول به دفتر کاتالوگ افزوده شد." : "تغییرات محصول ذخیره شد.");
     } catch (cause) {
       const statusCode = (cause as Error & { status?: number }).status || 0;
       handleAuthFailure(statusCode);
-      if (statusCode !== 401) setSaveError(statusCode === 403 ? "You do not have permission to change catalog products." : (cause as Error).message);
+      if (statusCode !== 401) setSaveError(statusCode === 403 ? "اجازه تغییر محصولات کاتالوگ را ندارید." : (cause as Error).message);
     } finally {
       setSaving(false);
     }
@@ -314,43 +319,43 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
     <CatalogSectionNav />
     <header className="catalog-masthead">
       <div className="catalog-title-block">
-        <p><span>Commerce</span><i>/</i> Product ledger</p>
-        <h1>Catalog, composed<br />with intention.</h1>
-        <small>Shape every product story, price and placement from one working ledger.</small>
+        <p><span>فروش</span><i>/</i> دفتر محصولات</p>
+        <h1>کاتالوگی دقیق،<br />برای روایتی ماندگار.</h1>
+        <small>داستان، قیمت و جایگاه هر محصول را از یک دفتر کاری مدیریت کنید.</small>
       </div>
-      <div className="catalog-tally" aria-label={`${pagination.total} products`}><span>Registered pieces</span><strong>{String(pagination.total).padStart(2, "0")}</strong><small>Across all catalog states</small></div>
-      {canWrite && <button className="catalog-add" onClick={openCreate} disabled={refsLoading}><Plus size={17} /><span>Add product</span><small>New folio</small></button>}
+      <div className="catalog-tally" aria-label={`${pagination.total} محصول`}><span>محصول ثبت‌شده</span><strong>{String(pagination.total).padStart(2, "0")}</strong><small>در همه وضعیت‌ها</small></div>
+      {canWrite && <button className="catalog-add" onClick={openCreate} disabled={refsLoading}><Plus size={17} /><span>افزودن محصول</span><small>پرونده جدید</small></button>}
     </header>
 
     {!canRead || permissionDenied ? <PermissionState /> : <>
-      <section className="catalog-controls" aria-label="Product filters">
-        <label className="catalog-search"><Search size={17} /><span className="sr-only">Search products</span><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="Search name, slug or SKU" /></label>
-        <div className="status-tabs" aria-label="Product status">
-          {(["", "draft", "active", "archived"] as const).map((item) => <button key={item || "all"} className={status === item ? "active" : ""} onClick={() => { setStatus(item); setPage(1); }} aria-pressed={status === item}>{item || "All"}</button>)}
+      <section className="catalog-controls" aria-label="فیلتر محصولات">
+        <label className="catalog-search"><Search size={17} /><span className="sr-only">جست‌وجوی محصولات</span><input value={searchDraft} onChange={(event) => setSearchDraft(event.target.value)} placeholder="جست‌وجوی نام، شناسه یا SKU" /></label>
+        <div className="status-tabs" aria-label="وضعیت محصول">
+          {(["", "draft", "active", "archived"] as const).map((item) => <button key={item || "all"} className={status === item ? "active" : ""} onClick={() => { setStatus(item); setPage(1); }} aria-pressed={status === item}>{({ "": "همه", draft: "پیش‌نویس", active: "فعال", archived: "بایگانی" } as const)[item]}</button>)}
         </div>
-        <label className="catalog-select"><Layers3 size={15} /><span className="sr-only">Filter by category</span><select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">Every category</option>{categories.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</select><ChevronDown size={14} /></label>
-        {filtersActive && <button className="clear-filter" onClick={clearFilters}><X size={14} />Clear</button>}
-        <button className="catalog-refresh" onClick={() => setRefreshKey((value) => value + 1)} aria-label="Refresh products" disabled={loading}><RefreshCw className={loading ? "spin" : ""} size={16} /></button>
+        <label className="catalog-select"><Layers3 size={15} /><span className="sr-only">فیلتر دسته‌بندی</span><select value={categoryId} onChange={(event) => { setCategoryId(event.target.value); setPage(1); }}><option value="">همه دسته‌بندی‌ها</option>{categories.map((item) => <option value={item._id} key={item._id}>{fa(item.name)}</option>)}</select><ChevronDown size={14} /></label>
+        {filtersActive && <button className="clear-filter" onClick={clearFilters}><X size={14} />پاک کردن</button>}
+        <button className="catalog-refresh" onClick={() => setRefreshKey((value) => value + 1)} aria-label="تازه‌سازی محصولات" disabled={loading}><RefreshCw className={loading ? "spin" : ""} size={16} /></button>
       </section>
 
       <section className="ledger" aria-live="polite" aria-busy={loading}>
-        <header className="ledger-head"><p><SlidersHorizontal size={14} />{filtersActive ? "Filtered register" : "Complete register"}</p><span>{pagination.total} {pagination.total === 1 ? "entry" : "entries"}</span></header>
+        <header className="ledger-head"><p><SlidersHorizontal size={14} />{filtersActive ? "نتایج فیلترشده" : "فهرست کامل"}</p><span>{pagination.total} محصول</span></header>
         {loading ? <LedgerSkeleton /> : error ? <ErrorState message={error} onRetry={() => setRefreshKey((value) => value + 1)} /> : products.length === 0 ? <EmptyState filtered={filtersActive} canWrite={canWrite} onClear={clearFilters} onAdd={openCreate} /> : <>
-          <div className="ledger-table-wrap"><table className="ledger-table"><thead><tr><th>Piece / identity</th><th>Taxonomy</th><th>Price</th><th>Status</th><th>Last revision</th>{canWrite && <th><span className="sr-only">Edit</span></th>}</tr></thead><tbody>{products.map((product) => <tr key={product._id}>
-            <td><div className="product-identity"><span className="product-monogram" aria-hidden="true">{product.name.trim().slice(0, 2).toUpperCase() || "NZ"}</span><div><strong>{product.name}</strong><small>/{product.slug}</small></div></div></td>
-            <td><strong className="taxonomy-name">{categoryNames.get(product.categoryId) || "Unmapped category"}</strong><small className="taxonomy-sub">{subcategoryNames.get(product.subcategoryId) || "Unmapped subcategory"}</small></td>
+          <div className="ledger-table-wrap"><table className="ledger-table"><thead><tr><th>محصول / شناسه</th><th>دسته‌بندی</th><th>قیمت</th><th>وضعیت</th><th>آخرین ویرایش</th>{canWrite && <th><span className="sr-only">ویرایش</span></th>}</tr></thead><tbody>{products.map((product) => <tr key={product._id}>
+            <td><div className="product-identity"><span className="product-monogram" aria-hidden="true">{fa(product.name).trim().slice(0, 2) || "ن"}</span><div><strong>{fa(product.name)}</strong><small dir="ltr">/{product.slug}</small></div></div></td>
+            <td><strong className="taxonomy-name">{categoryNames.get(product.categoryId) || "بدون دسته"}</strong><small className="taxonomy-sub">{subcategoryNames.get(product.subcategoryId) || "بدون زیردسته"}</small></td>
             <td><strong className="price-cell">{formatPrice(product.basePriceMinor, product.currency)}</strong><small>{product.currency}</small></td>
-            <td><span className={`catalog-status catalog-status--${product.status}`}>{product.status}</span></td>
+            <td><span className={`catalog-status catalog-status--${product.status}`}>{({ draft: "پیش‌نویس", active: "فعال", archived: "بایگانی" } as const)[product.status]}</span></td>
             <td><span className="revision-date">{formatDate(product.updatedAt)}</span></td>
-            {canWrite && <td><button className="edit-product" onClick={() => openEdit(product)} aria-label={`Edit ${product.name}`}><Edit3 size={15} /><span>Edit</span></button></td>}
+            {canWrite && <td><button className="edit-product" onClick={() => openEdit(product)} aria-label={`ویرایش ${fa(product.name)}`}><Edit3 size={15} /><span>ویرایش</span></button></td>}
           </tr>)}</tbody></table></div>
           <div className="ledger-mobile-list">{products.map((product) => <article className="product-card" key={product._id}>
-            <header><span className="product-monogram" aria-hidden="true">{product.name.trim().slice(0, 2).toUpperCase() || "NZ"}</span><div><strong>{product.name}</strong><small>/{product.slug}</small></div><span className={`catalog-status catalog-status--${product.status}`}>{product.status}</span></header>
-            <dl><div><dt>Collection path</dt><dd>{categoryNames.get(product.categoryId) || "Unmapped"} / {subcategoryNames.get(product.subcategoryId) || "Unmapped"}</dd></div><div><dt>Price</dt><dd>{formatPrice(product.basePriceMinor, product.currency)}</dd></div><div><dt>Revised</dt><dd>{formatDate(product.updatedAt)}</dd></div></dl>
-            {canWrite && <button onClick={() => openEdit(product)}><Edit3 size={15} />Edit product</button>}
+            <header><span className="product-monogram" aria-hidden="true">{fa(product.name).trim().slice(0, 2) || "ن"}</span><div><strong>{fa(product.name)}</strong><small dir="ltr">/{product.slug}</small></div><span className={`catalog-status catalog-status--${product.status}`}>{({ draft: "پیش‌نویس", active: "فعال", archived: "بایگانی" } as const)[product.status]}</span></header>
+            <dl><div><dt>مسیر دسته‌بندی</dt><dd>{categoryNames.get(product.categoryId) || "نامشخص"} / {subcategoryNames.get(product.subcategoryId) || "نامشخص"}</dd></div><div><dt>قیمت</dt><dd>{formatPrice(product.basePriceMinor, product.currency)}</dd></div><div><dt>ویرایش</dt><dd>{formatDate(product.updatedAt)}</dd></div></dl>
+            {canWrite && <button onClick={() => openEdit(product)}><Edit3 size={15} />ویرایش محصول</button>}
           </article>)}</div>
         </>}
-        {!loading && !error && products.length > 0 && <footer className="ledger-pagination"><p>Page <strong>{pagination.page}</strong> of <strong>{Math.max(pagination.pages, 1)}</strong><span>·</span>{pagination.total} products</p><div><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={pagination.page <= 1}><ArrowLeft size={15} />Previous</button><button onClick={() => setPage((value) => Math.min(pagination.pages, value + 1))} disabled={pagination.page >= pagination.pages}>Next<ArrowRight size={15} /></button></div></footer>}
+        {!loading && !error && products.length > 0 && <footer className="ledger-pagination"><p>صفحه <strong>{pagination.page}</strong> از <strong>{Math.max(pagination.pages, 1)}</strong><span>·</span>{pagination.total} محصول</p><div><button onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={pagination.page <= 1}><ArrowRight size={15} />قبلی</button><button onClick={() => setPage((value) => Math.min(pagination.pages, value + 1))} disabled={pagination.page >= pagination.pages}>بعدی<ArrowLeft size={15} /></button></div></footer>}
       </section>
     </>}
 
@@ -358,25 +363,25 @@ export function ProductManager({ canRead, canWrite }: { canRead: boolean; canWri
       editor={editor} form={form} categories={categories} subcategories={filteredSubcategories} collections={collections}
       fieldErrors={fieldErrors} saveError={saveError} loading={editorLoading} saving={saving} dirty={dirty}
       nameInputRef={nameInputRef} onClose={closeEditor} onSubmit={saveProduct} onName={updateName}
-      onField={updateField} onSlugTouched={() => setSlugTouched(true)}
+      onField={updateField} onSlugTouched={() => setSlugTouched(true)} locale={locale} onLocale={setLocale}
     />}
   </div>;
 }
 
 function PermissionState() {
-  return <section className="catalog-state catalog-state--permission"><AlertTriangle size={22} /><p>Catalog access</p><h2>This ledger is outside your current role.</h2><span>Ask an administrator to add catalog viewing permission to your staff account.</span></section>;
+  return <section className="catalog-state catalog-state--permission"><AlertTriangle size={22} /><p>دسترسی کاتالوگ</p><h2>این بخش در سطح دسترسی شما نیست.</h2><span>از مدیر سیستم بخواهید مجوز مشاهده کاتالوگ را به حساب شما اضافه کند.</span></section>;
 }
 
 function LedgerSkeleton() {
-  return <div className="ledger-skeleton" role="status"><span className="sr-only">Loading products</span>{Array.from({ length: 6 }).map((_, index) => <div key={index}><i /><p><b /><small /></p><em /><em /><em /></div>)}</div>;
+  return <div className="ledger-skeleton" role="status"><span className="sr-only">در حال بارگذاری محصولات</span>{Array.from({ length: 6 }).map((_, index) => <div key={index}><i /><p><b /><small /></p><em /><em /><em /></div>)}</div>;
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return <div className="catalog-state"><AlertTriangle size={22} /><p>Ledger unavailable</p><h2>We couldn’t retrieve the products.</h2><span>{message}</span><button onClick={onRetry}><RefreshCw size={15} />Try again</button></div>;
+  return <div className="catalog-state"><AlertTriangle size={22} /><p>فهرست در دسترس نیست</p><h2>دریافت محصولات انجام نشد.</h2><span>{message}</span><button onClick={onRetry}><RefreshCw size={15} />تلاش دوباره</button></div>;
 }
 
 function EmptyState({ filtered, canWrite, onClear, onAdd }: { filtered: boolean; canWrite: boolean; onClear: () => void; onAdd: () => void }) {
-  return <div className="catalog-state"><PackageOpen size={24} /><p>{filtered ? "No matching pieces" : "An empty register"}</p><h2>{filtered ? "Refine the search." : "The first product begins here."}</h2><span>{filtered ? "No real catalog records match these filters." : "Create a product once your category references are ready."}</span>{filtered ? <button onClick={onClear}><X size={15} />Clear filters</button> : canWrite && <button onClick={onAdd}><Plus size={15} />Add first product</button>}</div>;
+  return <div className="catalog-state"><PackageOpen size={24} /><p>{filtered ? "نتیجه‌ای پیدا نشد" : "فهرست خالی"}</p><h2>{filtered ? "جست‌وجو را تغییر دهید." : "اولین محصول را بسازید."}</h2><span>{filtered ? "محصولی با این فیلترها وجود ندارد." : "پس از آماده شدن دسته‌بندی‌ها، محصول جدید بسازید."}</span>{filtered ? <button onClick={onClear}><X size={15} />پاک کردن فیلترها</button> : canWrite && <button onClick={onAdd}><Plus size={15} />افزودن اولین محصول</button>}</div>;
 }
 
 type EditorProps = {
@@ -396,10 +401,14 @@ type EditorProps = {
   onName: (value: string) => void;
   onField: <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => void;
   onSlugTouched: () => void;
+  locale: Locale;
+  onLocale: (locale: Locale) => void;
 };
 
-function Editor({ editor, form, categories, subcategories, collections, fieldErrors, saveError, loading, saving, dirty, nameInputRef, onClose, onSubmit, onName, onField, onSlugTouched }: EditorProps) {
+function Editor({ editor, form, categories, subcategories, collections, fieldErrors, saveError, loading, saving, dirty, nameInputRef, onClose, onSubmit, onName, onField, onSlugTouched, locale, onLocale }: EditorProps) {
   const noTaxonomy = !categories.length || !subcategories.length;
+  const localized = (key: "description" | "material" | "fit" | "silhouette" | "pattern" | "seasons" | "occasions" | "styleTags", value: string) => onField(key, { ...form[key], [locale]: value });
+  const complete = { fa: Boolean(form.name.fa.trim() && form.description.fa.trim()), en: Boolean(form.name.en.trim() && form.description.en.trim()), ar: Boolean(form.name.ar.trim() && form.description.ar.trim()) };
   return <div className="editor-layer" role="presentation" onMouseDown={(event) => { if (event.currentTarget === event.target) onClose(); }}>
     <aside
       className="product-editor"
@@ -415,53 +424,53 @@ function Editor({ editor, form, categories, subcategories, collections, fieldErr
         if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
       }}
     >
-      <header className="editor-header"><div><p>{editor.mode === "create" ? "New catalog folio" : "Product revision"}</p><h2 id="editor-title">{editor.mode === "create" ? "Compose a product" : "Refine the product"}</h2></div><button onClick={onClose} aria-label="Close product editor"><X size={20} /></button></header>
-      {loading ? <div className="editor-loading"><LoaderCircle className="spin" size={23} /><strong>Opening the product folio…</strong><span>Retrieving the latest catalog record.</span></div> : <form onSubmit={onSubmit} noValidate>
+      <header className="editor-header"><div><p>{editor.mode === "create" ? "پرونده جدید کاتالوگ" : "ویرایش محصول"}</p><h2 id="editor-title">{editor.mode === "create" ? "ساخت محصول" : "تکمیل محصول"}</h2></div><LanguageSwitcher locale={locale} onChange={onLocale} complete={complete} /><button onClick={onClose} aria-label="بستن ویرایشگر"><X size={20} /></button></header>
+      {loading ? <div className="editor-loading"><LoaderCircle className="spin" size={23} /><strong>در حال باز کردن محصول…</strong><span>آخرین اطلاعات کاتالوگ دریافت می‌شود.</span></div> : <form onSubmit={onSubmit} noValidate>
         <div className="editor-scroll">
-          <section className="product-folio" aria-label="Live product summary"><span className="folio-monogram">{form.name.trim().slice(0, 2).toUpperCase() || "NZ"}</span><div><small>Live identity folio</small><strong>{form.name || "Untitled piece"}</strong><p>/{form.slug || "product-slug"}</p></div><span className={`catalog-status catalog-status--${form.status}`}>{form.status}</span><footer><b>{form.price ? `${form.currency.toUpperCase()} ${form.price}` : "Price pending"}</b><i>{dirty ? "Unsaved revision" : "Folio current"}</i></footer></section>
+          <section className="product-folio" aria-label="پیش‌نمایش فارسی محصول"><span className="folio-monogram">{form.name.fa.trim().slice(0, 2) || "ن"}</span><div><small>پیش‌نمایش فارسی</small><strong>{form.name.fa || "محصول بدون عنوان"}</strong><p dir="ltr">/{form.slug || "product-slug"}</p></div><span className={`catalog-status catalog-status--${form.status}`}>{({ draft: "پیش‌نویس", active: "فعال", archived: "بایگانی" } as const)[form.status]}</span><footer><b dir="ltr">{form.price ? `${form.currency.toUpperCase()} ${form.price}` : "قیمت ثبت نشده"}</b><i>{dirty ? "تغییرات ذخیره‌نشده" : "اطلاعات به‌روز"}</i></footer></section>
 
           {saveError && <div className="editor-error" role="alert"><AlertTriangle size={16} /><span>{saveError}</span></div>}
-          {noTaxonomy && <div className="reference-warning"><Layers3 size={17} /><p><strong>Category references are required.</strong><span>Create a category and subcategory before this product can be saved. No placeholder references will be invented.</span></p></div>}
+          {noTaxonomy && <div className="reference-warning"><Layers3 size={17} /><p><strong>دسته‌بندی و زیردسته لازم است.</strong><span>پیش از ذخیره محصول، دسته‌بندی و زیردسته را بسازید.</span></p></div>}
 
-          <EditorSection index="01" label="Identity" title="Name the piece">
+          <EditorSection index="۰۱" label="هویت" title="نام‌گذاری محصول">
             <div className="editor-grid">
-              <Field label="Product name" required error={fieldErrors.name} className="editor-span-2"><input ref={nameInputRef} required value={form.name} onChange={(event) => onName(event.target.value)} placeholder="e.g. Atelier wool overcoat" aria-invalid={Boolean(fieldErrors.name)} aria-describedby={fieldErrors.name ? "error-product-name" : undefined} /></Field>
-              <Field label="URL slug" required error={fieldErrors.slug} className="editor-span-2" hint="Auto-suggested, always editable"><div className="slug-input"><span>/</span><input required value={form.slug} onChange={(event) => { onSlugTouched(); onField("slug", slugify(event.target.value)); }} placeholder="atelier-wool-overcoat" aria-invalid={Boolean(fieldErrors.slug)} aria-describedby={fieldErrors.slug ? "error-url-slug" : undefined} /></div></Field>
-              <Field label="Description" required error={fieldErrors.description} className="editor-span-2"><textarea required value={form.description} onChange={(event) => onField("description", event.target.value)} placeholder="Describe the construction, character and intended wear…" rows={5} aria-invalid={Boolean(fieldErrors.description)} aria-describedby={fieldErrors.description ? "error-description" : undefined} /></Field>
-              <Field label="Catalog status"><select value={form.status} onChange={(event) => onField("status", event.target.value as ProductStatus)}><option value="draft">Draft</option><option value="active">Active</option><option value="archived">Archived</option></select></Field>
+              <Field label="نام محصول" required error={fieldErrors.name} className="editor-span-2"><input ref={nameInputRef} required dir={locale === "en" ? "ltr" : "rtl"} value={form.name[locale]} onChange={(event) => onName(event.target.value)} placeholder="نام محصول در زبان انتخاب‌شده" aria-invalid={Boolean(fieldErrors.name)} /></Field>
+              <Field label="شناسه URL" required error={fieldErrors.slug} className="editor-span-2" hint="فنی و انگلیسی"><div className="slug-input" dir="ltr"><span>/</span><input required value={form.slug} onChange={(event) => { onSlugTouched(); onField("slug", slugify(event.target.value)); }} placeholder="atelier-wool-overcoat" aria-invalid={Boolean(fieldErrors.slug)} /></div></Field>
+              <Field label="توضیحات" required error={fieldErrors.description} className="editor-span-2"><textarea required dir={locale === "en" ? "ltr" : "rtl"} value={form.description[locale]} onChange={(event) => localized("description", event.target.value)} placeholder="توضیحات محصول در زبان انتخاب‌شده…" rows={5} aria-invalid={Boolean(fieldErrors.description)} /></Field>
+              <Field label="وضعیت کاتالوگ"><select value={form.status} onChange={(event) => onField("status", event.target.value as ProductStatus)}><option value="draft">پیش‌نویس</option><option value="active">فعال</option><option value="archived">بایگانی</option></select></Field>
             </div>
           </EditorSection>
 
-          <EditorSection index="02" label="Merchandising" title="Place the piece">
+          <EditorSection index="۰۲" label="جایگاه" title="دسته‌بندی محصول">
             <div className="editor-grid">
-              <Field label="Category" required error={fieldErrors.categoryId}><select required value={form.categoryId} onChange={(event) => { onField("categoryId", event.target.value); onField("subcategoryId", ""); }} aria-invalid={Boolean(fieldErrors.categoryId)} aria-describedby={fieldErrors.categoryId ? "error-category" : undefined}><option value="">Choose category</option>{categories.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</select></Field>
-              <Field label="Subcategory" required error={fieldErrors.subcategoryId}><select required value={form.subcategoryId} onChange={(event) => onField("subcategoryId", event.target.value)} disabled={!form.categoryId} aria-invalid={Boolean(fieldErrors.subcategoryId)} aria-describedby={fieldErrors.subcategoryId ? "error-subcategory" : undefined}><option value="">{form.categoryId ? "Choose subcategory" : "Choose category first"}</option>{subcategories.map((item) => <option value={item._id} key={item._id}>{item.name}</option>)}</select></Field>
-              <fieldset className="collection-field editor-span-2"><legend>Collections <span>Optional</span></legend>{collections.length ? <div>{collections.map((item) => <label key={item._id}><input type="checkbox" checked={form.collectionIds.includes(item._id)} onChange={(event) => onField("collectionIds", event.target.checked ? [...form.collectionIds, item._id] : form.collectionIds.filter((id) => id !== item._id))} /><span><Check size={12} />{item.name}</span></label>)}</div> : <p>No collections are available yet.</p>}</fieldset>
+              <Field label="دسته‌بندی" required error={fieldErrors.categoryId}><select required value={form.categoryId} onChange={(event) => { onField("categoryId", event.target.value); onField("subcategoryId", ""); }} aria-invalid={Boolean(fieldErrors.categoryId)}><option value="">انتخاب دسته‌بندی</option>{categories.map((item) => <option value={item._id} key={item._id}>{fa(item.name)}</option>)}</select></Field>
+              <Field label="زیردسته" required error={fieldErrors.subcategoryId}><select required value={form.subcategoryId} onChange={(event) => onField("subcategoryId", event.target.value)} disabled={!form.categoryId} aria-invalid={Boolean(fieldErrors.subcategoryId)}><option value="">{form.categoryId ? "انتخاب زیردسته" : "ابتدا دسته را انتخاب کنید"}</option>{subcategories.map((item) => <option value={item._id} key={item._id}>{fa(item.name)}</option>)}</select></Field>
+              <fieldset className="collection-field editor-span-2"><legend>کالکشن‌ها <span>اختیاری</span></legend>{collections.length ? <div>{collections.map((item) => <label key={item._id}><input type="checkbox" checked={form.collectionIds.includes(item._id)} onChange={(event) => onField("collectionIds", event.target.checked ? [...form.collectionIds, item._id] : form.collectionIds.filter((id) => id !== item._id))} /><span><Check size={12} />{fa(item.name)}</span></label>)}</div> : <p>هنوز کالکشنی ثبت نشده است.</p>}</fieldset>
             </div>
           </EditorSection>
 
-          <EditorSection index="03" label="Pricing" title="Set the value">
+          <EditorSection index="۰۳" label="قیمت‌گذاری" title="تعیین ارزش">
             <div className="editor-grid editor-grid--pricing">
-              <Field label="Display price" required error={fieldErrors.price} hint="Major units"><input required type="number" min="0" step="0.01" inputMode="decimal" value={form.price} onChange={(event) => onField("price", event.target.value)} placeholder="0.00" aria-invalid={Boolean(fieldErrors.price)} aria-describedby={fieldErrors.price ? "error-display-price" : undefined} /></Field>
-              <Field label="Currency" required error={fieldErrors.currency} hint="ISO code"><input required value={form.currency} maxLength={3} onChange={(event) => onField("currency", event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} placeholder="USD" aria-invalid={Boolean(fieldErrors.currency)} aria-describedby={fieldErrors.currency ? "error-currency" : undefined} /></Field>
+              <Field label="قیمت نمایش" required error={fieldErrors.price} hint="واحد اصلی"><input dir="ltr" required type="number" min="0" step="0.01" inputMode="decimal" value={form.price} onChange={(event) => onField("price", event.target.value)} placeholder="0.00" aria-invalid={Boolean(fieldErrors.price)} /></Field>
+              <Field label="ارز" required error={fieldErrors.currency} hint="کد ISO"><input dir="ltr" required value={form.currency} maxLength={3} onChange={(event) => onField("currency", event.target.value.toUpperCase().replace(/[^A-Z]/g, ""))} placeholder="USD" aria-invalid={Boolean(fieldErrors.currency)} /></Field>
             </div>
           </EditorSection>
 
-          <EditorSection index="04" label="Product story" title="Define its character">
+          <EditorSection index="۰۴" label="داستان محصول" title="تعریف شخصیت محصول">
             <div className="editor-grid">
-              <Field label="Materials" className="editor-span-2" hint="Comma separated"><input value={form.material} onChange={(event) => onField("material", event.target.value)} placeholder="Wool, cashmere, cupro" /></Field>
-              <Field label="Fit"><input value={form.fit} onChange={(event) => onField("fit", event.target.value)} placeholder="Relaxed" /></Field>
-              <Field label="Silhouette"><input value={form.silhouette} onChange={(event) => onField("silhouette", event.target.value)} placeholder="Longline" /></Field>
-              <Field label="Pattern"><input value={form.pattern} onChange={(event) => onField("pattern", event.target.value)} placeholder="Solid" /></Field>
-              <Field label="Seasons" hint="Comma separated"><input value={form.seasons} onChange={(event) => onField("seasons", event.target.value)} placeholder="Autumn, winter" /></Field>
-              <Field label="Occasions" className="editor-span-2" hint="Comma separated"><input value={form.occasions} onChange={(event) => onField("occasions", event.target.value)} placeholder="Evening, formal, travel" /></Field>
-              <Field label="Style tags" className="editor-span-2" hint="Comma separated"><input value={form.styleTags} onChange={(event) => onField("styleTags", event.target.value)} placeholder="Tailored, minimal, heritage" /></Field>
+              <Field label="جنس‌ها" className="editor-span-2" hint="با ویرگول جدا کنید"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.material[locale]} onChange={(event) => localized("material", event.target.value)} /></Field>
+              <Field label="فرم"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.fit[locale]} onChange={(event) => localized("fit", event.target.value)} /></Field>
+              <Field label="سیلوئت"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.silhouette[locale]} onChange={(event) => localized("silhouette", event.target.value)} /></Field>
+              <Field label="طرح"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.pattern[locale]} onChange={(event) => localized("pattern", event.target.value)} /></Field>
+              <Field label="فصل‌ها" hint="با ویرگول جدا کنید"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.seasons[locale]} onChange={(event) => localized("seasons", event.target.value)} /></Field>
+              <Field label="موقعیت‌ها" className="editor-span-2" hint="با ویرگول جدا کنید"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.occasions[locale]} onChange={(event) => localized("occasions", event.target.value)} /></Field>
+              <Field label="برچسب‌های سبک" className="editor-span-2" hint="با ویرگول جدا کنید"><input dir={locale === "en" ? "ltr" : "rtl"} value={form.styleTags[locale]} onChange={(event) => localized("styleTags", event.target.value)} /></Field>
             </div>
           </EditorSection>
 
-          <div className="next-phase-note"><FileText size={17} /><p><strong>Imagery &amp; variants come next.</strong><span>This folio saves product details only. Image stories, colors, sizes and stock are managed in the next catalog phase.</span></p></div>
+          <div className="next-phase-note"><FileText size={17} /><p><strong>تصاویر و تنوع‌ها در بخش‌های بعدی مدیریت می‌شوند.</strong><span>این پرونده اطلاعات اصلی محصول را در سه زبان ذخیره می‌کند.</span></p></div>
         </div>
-        <footer className="editor-actions"><span>{dirty ? "Unsaved changes" : "No pending changes"}</span><button type="button" onClick={onClose}>Cancel</button><button className="editor-save" type="submit" disabled={saving || noTaxonomy || !dirty}>{saving ? <><LoaderCircle className="spin" size={15} />Saving folio…</> : <><Check size={15} />{editor.mode === "create" ? "Add product" : "Save revision"}</>}</button></footer>
+        <footer className="editor-actions"><span>{dirty ? "تغییرات ذخیره‌نشده" : "بدون تغییر"}</span><button type="button" onClick={onClose}>انصراف</button><button className="editor-save" type="submit" disabled={saving || noTaxonomy || !dirty}>{saving ? <><LoaderCircle className="spin" size={15} />در حال ذخیره…</> : <><Check size={15} />{editor.mode === "create" ? "افزودن محصول" : "ذخیره تغییرات"}</>}</button></footer>
       </form>}
     </aside>
   </div>;

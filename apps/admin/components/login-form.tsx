@@ -67,9 +67,9 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
     const password = String(form.get("password") ?? "");
     const localErrors: FieldErrors = {};
 
-    if (!email) localErrors.email = "Enter your staff email address.";
-    else if (!/^\S+@\S+\.\S+$/.test(email)) localErrors.email = "Enter a valid email address.";
-    if (!password) localErrors.password = "Enter your password.";
+    if (!email) localErrors.email = "ایمیل کاری خود را وارد کنید.";
+    else if (!/^\S+@\S+\.\S+$/.test(email)) localErrors.email = "یک ایمیل معتبر وارد کنید.";
+    if (!password) localErrors.password = "رمز عبور را وارد کنید.";
 
     setFieldErrors(localErrors);
     setGeneralError("");
@@ -92,9 +92,9 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
       }
 
       setFieldErrors(result.fieldErrors ?? {});
-      setGeneralError(result.error || "We could not sign you in. Check your details and try again.");
+      setGeneralError(result.error || "ورود انجام نشد. اطلاعات خود را بررسی و دوباره تلاش کنید.");
     } catch {
-      setGeneralError("The secure sign-in service is unavailable. Please try again shortly.");
+      setGeneralError("سرویس ورود موقتاً در دسترس نیست. کمی بعد دوباره تلاش کنید.");
     } finally {
       setSubmitting(false);
     }
@@ -108,42 +108,42 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
 
   return (
     <main className="login-page">
-      <section className="login-identity" aria-label="Najibzadeh Atelier Operations">
+      <section className="login-identity" aria-label="عملیات آتلیه نجیب‌زاده">
         <div className="login-brand">
           <Image src="/brand/logo.png" alt="Najibzadeh" width={58} height={58} priority />
-          <div><strong>NAJIBZADEH</strong><span>Atelier operations</span></div>
+          <div><strong>NAJIBZADEH</strong><span>عملیات آتلیه</span></div>
         </div>
         <div className="login-statement">
-          <span className="login-index">Private workspace &nbsp; / &nbsp; 01</span>
-          <h1>The quiet side of every precise operation.</h1>
-          <p>One secure workspace for the people who shape the collection, fulfill each order, and protect the customer experience.</p>
+          <span className="login-index">فضای خصوصی &nbsp; / &nbsp; ۰۱</span>
+          <h1>پشت صحنه‌ی آرام هر عملیات دقیق.</h1>
+          <p>فضایی امن برای افرادی که کالکشن را می‌سازند، سفارش‌ها را آماده می‌کنند و از تجربه‌ی مشتری مراقبت می‌کنند.</p>
         </div>
-        <footer><span>STAFF ACCESS</span><i aria-hidden="true" /><span>TEHRAN</span></footer>
+        <footer><span>ورود همکاران</span><i aria-hidden="true" /><span>تهران</span></footer>
       </section>
 
       <section className="login-workspace">
-        <button className="login-theme" type="button" onClick={toggleTheme} aria-label={`Switch to ${darkTheme ? "light" : "dark"} theme`}>
+        <button className="login-theme" type="button" onClick={toggleTheme} aria-label={darkTheme ? "پوسته روشن" : "پوسته تیره"}>
           <Moon className="theme-dark-icon" size={17} /><Sun className="theme-light-icon" size={17} />
         </button>
         <div className="login-form-wrap">
           <header className="login-heading">
-            <p>Atelier operations</p>
-            <h2>Staff sign in</h2>
-            <span>Use your assigned account to continue to the operations floor.</span>
+            <p>عملیات آتلیه</p>
+            <h2>ورود همکاران</h2>
+            <span>برای ورود به داشبورد از حساب کاری خود استفاده کنید.</span>
           </header>
 
           {checkingSession ? (
             <div className="session-check" role="status" aria-live="polite">
               <LoaderCircle size={24} aria-hidden="true" />
-              <strong>Restoring your session</strong>
-              <span>Confirming your secure access…</span>
+              <strong>بازیابی نشست شما</strong>
+              <span>در حال بررسی دسترسی امن…</span>
             </div>
           ) : (
             <form className="login-form" onSubmit={submit} noValidate>
               {generalError && <div className="login-error" role="alert"><ShieldCheck size={17} aria-hidden="true" /><span>{generalError}</span></div>}
 
               <div className="field-group">
-                <label htmlFor="staff-email">Email address</label>
+                <label htmlFor="staff-email">ایمیل</label>
                 <input
                   id="staff-email"
                   name="email"
@@ -154,12 +154,13 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                   aria-describedby={fieldErrors.email ? "staff-email-error" : undefined}
                   onChange={() => fieldErrors.email && setFieldErrors((errors) => ({ ...errors, email: undefined }))}
                   placeholder="name@company.com"
+                  dir="ltr"
                 />
                 {fieldErrors.email && <span className="field-error" id="staff-email-error">{fieldErrors.email}</span>}
               </div>
 
               <div className="field-group">
-                <div className="field-label-row"><label htmlFor="staff-password">Password</label><span>Secure entry</span></div>
+                <div className="field-label-row"><label htmlFor="staff-password">رمز عبور</label><span>ورود امن</span></div>
                 <div className="password-field">
                   <input
                     id="staff-password"
@@ -169,9 +170,9 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                     aria-invalid={Boolean(fieldErrors.password)}
                     aria-describedby={fieldErrors.password ? "staff-password-error" : undefined}
                     onChange={() => fieldErrors.password && setFieldErrors((errors) => ({ ...errors, password: undefined }))}
-                    placeholder="Enter your password"
+                    placeholder="رمز عبور خود را وارد کنید"
                   />
-                  <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>
+                  <button type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "پنهان کردن رمز" : "نمایش رمز"}>
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
                 </div>
@@ -180,17 +181,17 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
 
               <button className="login-submit" type="submit" disabled={submitting}>
                 {submitting ? <LoaderCircle className="spin" size={17} aria-hidden="true" /> : <LockKeyhole size={17} aria-hidden="true" />}
-                <span>{submitting ? "Verifying access…" : "Enter operations"}</span>
+                <span>{submitting ? "در حال بررسی…" : "ورود به داشبورد"}</span>
               </button>
             </form>
           )}
 
           <aside className="login-security">
             <ShieldCheck size={17} aria-hidden="true" />
-            <p><strong>Protected staff workspace</strong><span>If you cannot access your account, contact your store owner or system administrator.</span></p>
+            <p><strong>فضای محافظت‌شده همکاران</strong><span>اگر به حساب خود دسترسی ندارید، با مدیر فروشگاه یا مدیر سیستم تماس بگیرید.</span></p>
           </aside>
         </div>
-        <p className="login-legal">Authorized personnel only <i aria-hidden="true">·</i> Activity may be recorded for security</p>
+        <p className="login-legal">ویژه افراد مجاز <i aria-hidden="true">·</i> فعالیت‌ها ممکن است برای امنیت ثبت شوند</p>
       </section>
     </main>
   );

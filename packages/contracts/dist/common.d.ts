@@ -5,6 +5,21 @@ export declare const idempotencyKeySchema: z.ZodString;
 export declare const correlationIdSchema: z.ZodString;
 export declare const currencySchema: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
 export declare const dateTimeSchema: z.ZodISODateTime;
+export declare const catalogLocaleSchema: z.ZodEnum<{
+    fa: "fa";
+    en: "en";
+    ar: "ar";
+}>;
+export declare const localizedTextSchema: z.ZodObject<{
+    fa: z.ZodString;
+    en: z.ZodString;
+    ar: z.ZodString;
+}, z.core.$strict>;
+export declare const localizedTextListSchema: z.ZodObject<{
+    fa: z.ZodArray<z.ZodString>;
+    en: z.ZodArray<z.ZodString>;
+    ar: z.ZodArray<z.ZodString>;
+}, z.core.$strict>;
 export declare const moneySchema: z.ZodObject<{
     amountMinor: z.ZodNumber;
     currency: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
@@ -29,3 +44,6 @@ export declare const problemDetailsSchema: z.ZodObject<{
 export type Money = z.infer<typeof moneySchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type ProblemDetails = z.infer<typeof problemDetailsSchema>;
+export type CatalogLocale = z.infer<typeof catalogLocaleSchema>;
+export type LocalizedText = z.infer<typeof localizedTextSchema>;
+export type LocalizedTextList = z.infer<typeof localizedTextListSchema>;

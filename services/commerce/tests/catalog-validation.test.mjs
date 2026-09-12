@@ -6,6 +6,9 @@ import {
   updateSchemas,
 } from "../dist/catalog/catalog.schemas.js";
 
+const text = (value) => ({ fa: value, en: value, ar: value });
+const list = (values = []) => ({ fa: values, en: values, ar: values });
+
 test("catalog list query applies safe pagination defaults", () => {
   const query = listCatalogQuerySchema.parse({});
   assert.deepEqual(query, { page: 1, limit: 20 });
@@ -13,9 +16,9 @@ test("catalog list query applies safe pagination defaults", () => {
 
 test("product input requires exact Mongo references and integer money", () => {
   const result = createSchemas.products.safeParse({
-    name: "Wool Suit",
+    name: text("Wool Suit"),
     slug: "wool-suit",
-    description: "A tailored wool suit.",
+    description: text("A tailored wool suit."),
     categoryId: "not-an-object-id",
     subcategoryId: "not-an-object-id",
     basePriceMinor: 199.99,
@@ -27,7 +30,7 @@ test("product input requires exact Mongo references and integer money", () => {
 test("shoppable image hotspots require both coordinates", () => {
   const result = createSchemas.images.safeParse({
     url: "/images/lookbook.jpg",
-    alt: "Model wearing a suit",
+    alt: text("Model wearing a suit"),
     kind: "lookbook",
     linkedProducts: [
       {
@@ -46,26 +49,51 @@ test("catalog updates reject fields outside the model contract", () => {
 
 test("category page content matches the Mongo category model", () => {
   const result = createSchemas.categories.safeParse({
-    name: "Tailoring",
+    name: text("Tailoring"),
     slug: "tailoring",
     pageContent: {
       primaryBanner: {
         imageId: "507f1f77bcf86cd799439011",
-        heading: "The tailoring edit",
+        heading: text("The tailoring edit"),
       },
-      primaryDescription: { heading: "Cut", body: "Built with a precise line." },
+      primaryDescription: { heading: text("Cut"), body: text("Built with a precise line.") },
       secondaryBanner: {
         imageId: "507f1f77bcf86cd799439012",
-        heading: "Evening form",
+        heading: text("Evening form"),
       },
-      secondaryDescription: { body: "Made for an assured entrance." },
-      seoTitle: "Tailoring | Najibzadeh",
-      seoDescription: "Discover the Najibzadeh tailoring collection.",
+      secondaryDescription: { body: text("Made for an assured entrance.") },
+      seoTitle: text("Tailoring | Najibzadeh"),
+      seoDescription: text("Discover the Najibzadeh tailoring collection."),
     },
   });
 
   assert.equal(result.success, true);
-  assert.equal(result.data.pageContent.primaryDescription.body, "Built with a precise line.");
+  assert.equal(result.data.pageContent.primaryDescription.body.en, "Built with a precise line.");
+});
+
+test("catalog copy requires Persian, English, and Arabic values", () => {
+  const complete = createSchemas.products.safeParse({
+    name: { fa: "کت و شلوار", en: "Suit", ar: "بدلة" },
+    slug: "trilingual-suit",
+    description: text("Description"),
+    categoryId: "507f1f77bcf86cd799439011",
+    subcategoryId: "507f1f77bcf86cd799439012",
+    basePriceMinor: 100000,
+    currency: "EUR",
+    material: list(["wool"]),
+  });
+  const missingArabic = createSchemas.products.safeParse({
+    name: { fa: "کت و شلوار", en: "Suit" },
+    slug: "incomplete-suit",
+    description: text("Description"),
+    categoryId: "507f1f77bcf86cd799439011",
+    subcategoryId: "507f1f77bcf86cd799439012",
+    basePriceMinor: 100000,
+    currency: "EUR",
+  });
+
+  assert.equal(complete.success, true);
+  assert.equal(missingArabic.success, false);
 });
 
 test("product optional story fields can be cleared explicitly", () => {
@@ -76,12 +104,12 @@ test("product optional story fields can be cleared explicitly", () => {
 test("image URLs must be HTTP(S) or root-relative", () => {
   const unsafe = createSchemas.images.safeParse({
     url: "javascript:alert(1)",
-    alt: "Unsafe image",
+    alt: text("Unsafe image"),
     kind: "editorial",
   });
   const safe = createSchemas.images.safeParse({
     url: "/images/editorial/lookbook.jpg",
-    alt: "Model wearing a tailored suit",
+    alt: text("Model wearing a tailored suit"),
     kind: "editorial",
   });
   assert.equal(unsafe.success, false);

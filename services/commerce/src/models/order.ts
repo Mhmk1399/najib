@@ -1,4 +1,5 @@
 import mongoose, { type InferSchemaType } from "mongoose";
+import { createLocalizedTextSchema } from "./_localized-content.js";
 
 const { Schema, model, models } = mongoose;
 
@@ -18,10 +19,10 @@ const orderItemSchema = new Schema(
   {
     variantId: { type: String, required: true, trim: true },
     productId: { type: String, required: true, trim: true },
-    productName: { type: String, required: true, trim: true },
+    productName: { type: createLocalizedTextSchema(160), required: true },
     sku: { type: String, required: true, trim: true, uppercase: true },
-    colorName: { type: String, required: true, trim: true },
-    sizeName: { type: String, required: true, trim: true },
+    colorName: { type: createLocalizedTextSchema(160), required: true },
+    sizeName: { type: createLocalizedTextSchema(160), required: true },
     unitPriceMinor: {
       type: Number,
       required: true,

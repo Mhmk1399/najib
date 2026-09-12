@@ -1,8 +1,9 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
-import { requiredNameField, requiredSlugField } from "./_catalog-fields.js";
+import { requiredSlugField } from "./_catalog-fields.js";
 import { categoryPageContentSchema } from "./_category-page-content.js";
+import { createLocalizedTextSchema, requiredLocalizedNameField } from "./_localized-content.js";
 
 const subcategorySchema = new Schema(
   {
@@ -12,9 +13,9 @@ const subcategorySchema = new Schema(
       required: true,
       index: true,
     },
-    name: requiredNameField,
+    name: requiredLocalizedNameField,
     slug: requiredSlugField,
-    description: { type: String, trim: true, maxlength: 2000 },
+    description: { type: createLocalizedTextSchema(2000, false) },
     thumbnailImageId: { type: Schema.Types.ObjectId, ref: "ImageAsset" },
     pageContent: { type: categoryPageContentSchema, required: true },
     isActive: { type: Boolean, default: true, index: true },

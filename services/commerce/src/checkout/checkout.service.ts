@@ -8,6 +8,7 @@ import {
   startCheckoutRequestSchema,
   type PaymentCallback,
   type StartCheckoutRequest,
+  type LocalizedText,
 } from "@najib/contracts";
 import mongoose from "mongoose";
 import { type Types } from "mongoose";
@@ -24,9 +25,9 @@ import { Size } from "../models/size.js";
 type DependencyResponse = { _id?: string; [key: string]: unknown };
 type CartRecord = { _id: Types.ObjectId; status: string; storeId: string; cityId: string; currency: string; items: Array<{ variantId: Types.ObjectId; quantity: number }> };
 type VariantRecord = { _id: Types.ObjectId; productId: Types.ObjectId; colorId: Types.ObjectId; sizeId: Types.ObjectId; sku: string; priceOverrideMinor?: number };
-type NamedRecord = { _id: Types.ObjectId; name: string };
+type NamedRecord = { _id: Types.ObjectId; name: LocalizedText };
 type ProductRecord = NamedRecord & { basePriceMinor: number };
-type OrderSnapshot = { variantId: string; productId: string; productName: string; sku: string; colorName: string; sizeName: string; unitPriceMinor: number; taxMinor: number; discountMinor: number; quantity: number; lineTotalMinor: number };
+type OrderSnapshot = { variantId: string; productId: string; productName: LocalizedText; sku: string; colorName: LocalizedText; sizeName: LocalizedText; unitPriceMinor: number; taxMinor: number; discountMinor: number; quantity: number; lineTotalMinor: number };
 type CreatedRecord = { _id: Types.ObjectId };
 
 @Injectable()

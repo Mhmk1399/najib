@@ -1,11 +1,11 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
-import { requiredNameField } from "./_catalog-fields.js";
+import { requiredLocalizedNameField } from "./_localized-content.js";
 
 const sizeGroupSchema = new Schema(
   {
-    name: requiredNameField,
+    name: requiredLocalizedNameField,
     code: {
       type: String,
       required: true,

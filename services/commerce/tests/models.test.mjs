@@ -5,22 +5,23 @@ import * as commerceModels from "../dist/index.js";
 
 const { Types } = mongoose;
 const { AbandonedCheckout, Cart, Category, ImageAsset, ProductVariant } = commerceModels;
+const text = (value) => ({ fa: value, en: value, ar: value });
 
 function pageContent(imageId) {
   return {
     primaryBanner: {
       imageId,
-      heading: "Primary category story",
+      heading: text("Primary category story"),
     },
     primaryDescription: {
-      body: "The opening description for this category page.",
+      body: text("The opening description for this category page."),
     },
     secondaryBanner: {
       imageId,
-      heading: "Secondary category story",
+      heading: text("Secondary category story"),
     },
     secondaryDescription: {
-      body: "The closing description for this category page.",
+      body: text("The closing description for this category page."),
     },
   };
 }
@@ -79,33 +80,33 @@ test("one checkout session can create only one abandonment record", () => {
 
 test("category pages contain two banners and two descriptions", async () => {
   const category = new Category({
-    name: "Suits",
+    name: text("Suits"),
     slug: "suits",
     pageContent: pageContent(new Types.ObjectId()),
   });
 
   await category.validate();
-  assert.equal(category.pageContent.primaryBanner.heading, "Primary category story");
-  assert.match(category.pageContent.secondaryDescription.body, /closing/);
+  assert.equal(category.pageContent.primaryBanner.heading.en, "Primary category story");
+  assert.match(category.pageContent.secondaryDescription.body.en, /closing/);
 });
 
 test("shoppable images can link multiple product hotspots", async () => {
   const image = new ImageAsset({
     url: "/assets/editorial/suit-look.webp",
-    alt: "A man wearing a suit, shoes, and trousers",
+    alt: text("A man wearing a suit, shoes, and trousers"),
     kind: "editorial",
     linkedProducts: [
       {
         productId: new Types.ObjectId(),
         hotspotX: 44,
         hotspotY: 30,
-        label: "Suit jacket",
+        label: text("Suit jacket"),
       },
       {
         productId: new Types.ObjectId(),
         hotspotX: 48,
         hotspotY: 88,
-        label: "Shoes",
+        label: text("Shoes"),
       },
     ],
   });
@@ -117,7 +118,7 @@ test("shoppable images can link multiple product hotspots", async () => {
 test("shoppable image hotspot coordinates must be paired", async () => {
   const image = new ImageAsset({
     url: "/assets/editorial/suit-look.webp",
-    alt: "A complete formal outfit",
+    alt: text("A complete formal outfit"),
     kind: "lookbook",
     linkedProducts: [
       {

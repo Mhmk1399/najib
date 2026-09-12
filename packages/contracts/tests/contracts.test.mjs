@@ -8,11 +8,17 @@ import {
   recordCustomerActivitySchema,
   serviceEventV1Schema,
   startCheckoutRequestSchema,
+  localizedTextSchema,
 } from "../dist/index.js";
 
 test("money accepts only non-negative integer minor units", () => {
   assert.equal(moneySchema.safeParse({ amountMinor: 12900, currency: "eur" }).success, true);
   assert.equal(moneySchema.safeParse({ amountMinor: 129.99, currency: "EUR" }).success, false);
+});
+
+test("localized catalog text requires Persian, English, and Arabic", () => {
+  assert.equal(localizedTextSchema.safeParse({ fa: "کت", en: "Jacket", ar: "سترة" }).success, true);
+  assert.equal(localizedTextSchema.safeParse({ fa: "کت", en: "Jacket" }).success, false);
 });
 
 test("inventory request rejects duplicate variants", () => {

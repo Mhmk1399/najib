@@ -1,13 +1,14 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 
 const { Schema, model, models } = mongoose;
-import { requiredNameField, requiredSlugField } from "./_catalog-fields.js";
+import { requiredSlugField } from "./_catalog-fields.js";
+import { createLocalizedTextSchema, requiredLocalizedNameField } from "./_localized-content.js";
 
 const colorSchema = new Schema(
   {
-    name: requiredNameField,
+    name: requiredLocalizedNameField,
     slug: requiredSlugField,
-    family: { type: String, required: true, trim: true, lowercase: true },
+    family: { type: createLocalizedTextSchema(80), required: true },
     hex: {
       type: String,
       trim: true,
