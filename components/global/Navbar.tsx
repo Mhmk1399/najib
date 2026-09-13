@@ -987,7 +987,7 @@ export default function Navbar({
 
   const readableNavbar = menuMounted || scrolled;
   const overlayBreadcrumbClass =
-    overlayTone === "dark" ? "text-white" : "text-[#0B0B0B]";
+    overlayTone === "dark" ? "text-white" : "text-white";
 
   return (
     <>
@@ -1108,7 +1108,7 @@ export default function Navbar({
           style={{ fontFamily: fontTokens.english }}
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
-            scrolled ? themeClasses.textPrimary : overlayBreadcrumbClass,
+            scrolled ? themeClasses.textAccent : overlayBreadcrumbClass,
           )}
         >
           <div className="mx-auto max-w-[1920px] overflow-x-auto px-4 py-3 sm:px-6 lg:px-10">

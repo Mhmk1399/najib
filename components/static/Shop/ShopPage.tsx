@@ -1,4 +1,3 @@
- 
 "use client";
 
 import Image from "next/image";
@@ -35,6 +34,7 @@ import {
    ──────────────────────────────────────────────────────────── */
 
 type SortOption = "new-arrivals" | "price-low" | "price-high" | "featured";
+type CollectionOption = "all" | "new-season";
 
 type ShopBanner = {
   id: string;
@@ -95,9 +95,11 @@ const CATEGORIES: { value: ProductCategory; label: string }[] = [
   { value: "fragrance", label: "Fragrance" },
 ];
 
-const BANNER_INSERTION_POINTS = [
-  { afterIndex: 6, bannerId: "banner-aw-collection" },
-];
+const PRODUCTS_PER_BANNER = 6;
+
+const SHOP_HERO_IMAGE = "/assets/images/p2.webp";
+const SHOP_HERO_IMAGE_ALT = "Najibzadeh menswear collection";
+const SHOP_HERO_IMAGE_POSITION = "center 34%";
 
 const SORT_MENU_OPTIONS: {
   value: SortOption;
@@ -142,6 +144,7 @@ function activeFilterCount(
   selectedColors: string[],
   selectedMaterials: string[],
   maxPrice: number,
+  collection: CollectionOption,
 ) {
   let count = 0;
   if (category !== "all") count += 1;
@@ -149,6 +152,7 @@ function activeFilterCount(
   count += selectedColors.length;
   count += selectedMaterials.length;
   if (maxPrice < 5000) count += 1;
+  if (collection !== "all") count += 1;
   return count;
 }
 
@@ -194,6 +198,7 @@ export function ShopPage() {
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState(5000);
+  const [collection, setCollection] = useState<CollectionOption>("all");
   const [desktopFilterOpen, setDesktopFilterOpen] = useState(false);
   const [desktopFilterPinned, setDesktopFilterPinned] = useState(false);
 
@@ -235,6 +240,7 @@ export function ShopPage() {
         p.materials?.some((m) => selectedMaterials.includes(m.toLowerCase())),
       );
     r = r.filter((p) => p.price <= maxPrice);
+    if (collection === "new-season") r = r.filter((p) => p.isNew);
     if (sort === "price-low") r.sort((a, b) => a.price - b.price);
     if (sort === "price-high") r.sort((a, b) => b.price - a.price);
     if (sort === "new-arrivals")
@@ -247,19 +253,34 @@ export function ShopPage() {
     selectedColors,
     selectedMaterials,
     maxPrice,
+    collection,
   ]);
 
   const interleavedContent = useMemo(() => {
     const items: InterleavedItem[] = [];
+
     products.forEach((product, index) => {
       items.push({ type: "product", product, index });
-      const ins = BANNER_INSERTION_POINTS.find(
-        (p) => p.afterIndex === index + 1,
-      );
-      if (!ins) return;
-      const banner = SHOP_BANNERS.find((b) => b.id === ins.bannerId);
-      if (banner) items.push({ type: "banner", banner });
+
+      const productNumber = index + 1;
+      if (productNumber % PRODUCTS_PER_BANNER !== 0) return;
+
+      const baseBanner =
+        SHOP_BANNERS[
+          (productNumber / PRODUCTS_PER_BANNER - 1) % SHOP_BANNERS.length
+        ];
+
+      if (!baseBanner) return;
+
+      items.push({
+        type: "banner",
+        banner: {
+          ...baseBanner,
+          id: `${baseBanner.id}-${productNumber}`,
+        },
+      });
     });
+
     return items;
   }, [products]);
 
@@ -269,6 +290,7 @@ export function ShopPage() {
     setSelectedColors([]);
     setSelectedMaterials([]);
     setMaxPrice(5000);
+    setCollection("all");
   }, []);
 
   const filterCount = activeFilterCount(
@@ -277,6 +299,7 @@ export function ShopPage() {
     selectedColors,
     selectedMaterials,
     maxPrice,
+    collection,
   );
 
   const desktopFilterExpanded = desktopFilterOpen || desktopFilterPinned;
@@ -286,49 +309,21 @@ export function ShopPage() {
       style={themeVars}
       className="min-h-screen bg-[var(--shop-bg)] text-[var(--shop-text)]"
     >
-      {/* Navbar spacer */}
-      <div
-        aria-hidden="true"
-        className="h-[72px] bg-[var(--shop-black)] md:h-[76px]"
+      {/* The shop hero starts at page top so the existing transparent navbar can sit over it. */}
+      <ShopHero
+        image={SHOP_HERO_IMAGE}
+        alt={SHOP_HERO_IMAGE_ALT}
+        position={SHOP_HERO_IMAGE_POSITION}
       />
 
-      {/* Mobile page header */}
-      <div className="border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-5 pb-4 pt-7 lg:hidden">
-        <div className="flex flex-col items-center justify-center">
-          <p className="text-[6px] font-semibold uppercase tracking-[0.2em] text-[var(--shop-copper)]">
-            Najibzadeh Collection
-          </p>
-          <h1 className="mt-2 font-serif text-[32px] font-normal leading-none tracking-[0.06em]">
-            SHOP
-          </h1>
-          <span className="mt-2 pb-1 text-[9px] font-medium tracking-[0.08em] text-black/42">
-            {products.length} {products.length === 1 ? "Item" : "Items"}
-          </span>
-        </div>
-      </div>
-
       {/* Desktop */}
-      <section className="relative mx-auto hidden min-h-[calc(100svh-76px)] max-w-[1920px] lg:block">
+      <section className="relative mx-auto hidden max-w-[1920px] lg:block">
         <div className="w-full">
-          <div className="px-8 pb-16 pt-8 xl:px-10">
-            {/* Sticky command rail */}
-            <div className="sticky top-[66px] z-[90] -mx-3 mb-6 px-3 py-2">
-              <div className="relative flex min-h-[58px] items-center justify-between gap-4 border border-white/65 bg-transparent px-3 py-2 shadow-[0_14px_40px_-24px_rgba(11,11,11,0.34),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-inset ring-black/[0.025]">
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-0 z-0"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgba(255,255,255,0.50) 0%, rgba(246,242,235,0.40) 52%, rgba(255,255,255,0.30) 100%)",
-                    backdropFilter: "blur(24px) saturate(145%)",
-                    WebkitBackdropFilter: "blur(24px) saturate(145%)",
-                  }}
-                />
-                <div className="relative z-10 flex min-w-0 items-center gap-3">
-                  <span className="shrink-0 pl-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--shop-black)]">
-                    Shop All
-                  </span>
-                  <span aria-hidden="true" className="h-5 w-px bg-black/10" />
+          <div className="px-8 pb-16 pt-0 xl:px-10">
+            {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
+            <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[rgba(246,242,235,0.97)] px-8 py-3 backdrop-blur-[14px] xl:-mx-10 xl:px-10">
+              <div className="relative flex min-h-[52px] items-center justify-between gap-3">
+                <div className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
                   <DesktopFilterIsland
                     expanded={desktopFilterExpanded}
                     pinned={desktopFilterPinned}
@@ -348,38 +343,168 @@ export function ShopPage() {
                     filterCount={filterCount}
                     resetFilters={resetFilters}
                   />
+
+                  <DesktopToolbarPopover
+                    label="Category"
+                    active={category !== "all"}
+                    widthClass="w-[220px]"
+                  >
+                    <div className="p-1.5">
+                      {CATEGORIES.filter(
+                        (item) => item.value !== "new-arrivals",
+                      ).map((item) => {
+                        const active = category === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setCategory(item.value)}
+                            className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                              active
+                                ? "bg-black text-white"
+                                : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+                            }`}
+                          >
+                            {item.label}
+                            {active ? <CheckIcon className="size-2.5" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </DesktopToolbarPopover>
+
+                  <DesktopToolbarPopover
+                    label="Size"
+                    active={selectedSizes.length > 0}
+                    widthClass="w-[250px]"
+                  >
+                    <div className="p-4">
+                      <SizeSelector
+                        values={selectedSizes}
+                        onChange={setSelectedSizes}
+                      />
+                    </div>
+                  </DesktopToolbarPopover>
+
+                  <DesktopToolbarPopover
+                    label="Color"
+                    active={selectedColors.length > 0}
+                    widthClass="w-[290px]"
+                  >
+                    <div className="p-4">
+                      <ColorSelector
+                        values={selectedColors}
+                        onChange={setSelectedColors}
+                      />
+                    </div>
+                  </DesktopToolbarPopover>
+
+                  <DesktopToolbarPopover
+                    label="Price"
+                    active={maxPrice < 5000}
+                    widthClass="w-[270px]"
+                  >
+                    <div className="p-4">
+                      <PriceSelector value={maxPrice} onChange={setMaxPrice} />
+                    </div>
+                  </DesktopToolbarPopover>
+
+                  <DesktopToolbarPopover
+                    label="Material"
+                    active={selectedMaterials.length > 0}
+                    widthClass="w-[230px]"
+                  >
+                    <div className="p-4">
+                      <MaterialSelector
+                        values={selectedMaterials}
+                        onChange={setSelectedMaterials}
+                      />
+                    </div>
+                  </DesktopToolbarPopover>
+
+                  <DesktopToolbarPopover
+                    label="Collection"
+                    active={collection !== "all"}
+                    widthClass="w-[210px]"
+                  >
+                    <div className="p-1.5">
+                      {[
+                        { value: "all" as const, label: "All Collections" },
+                        { value: "new-season" as const, label: "New Season" },
+                      ].map((item) => {
+                        const active = collection === item.value;
+                        return (
+                          <button
+                            key={item.value}
+                            type="button"
+                            onClick={() => setCollection(item.value)}
+                            className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                              active
+                                ? "bg-black text-white"
+                                : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+                            }`}
+                          >
+                            {item.label}
+                            {active ? <CheckIcon className="size-2.5" /> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </DesktopToolbarPopover>
                 </div>
-                <div className="relative z-10">
+
+                <div className="relative z-10 flex shrink-0 items-center gap-2">
+                  <span className="hidden text-[5.5px] font-semibold uppercase tracking-[0.12em] text-black/38 xl:block">
+                    Sort by
+                  </span>
                   <DesktopSortControl value={sort} onChange={setSort} />
+                  <div className="flex items-center border-l border-black/10 pl-2">
+                    <button
+                      type="button"
+                      aria-label="Grid view"
+                      aria-pressed="true"
+                      className="grid size-9 place-items-center border border-black bg-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                    >
+                      <GridViewIcon />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="List view"
+                      aria-pressed="false"
+                      className="grid size-9 place-items-center border-y border-r border-black/12 bg-white/44 text-black/42 transition-colors hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                    >
+                      <ListViewIcon />
+                    </button>
+                  </div>
                 </div>
-                <span
-                  aria-hidden="true"
-                  className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-black/8 to-transparent"
-                />
               </div>
             </div>
 
-            {products.length ? (
-              <DesktopInterleavedGrid content={interleavedContent} />
-            ) : (
-              <EmptyProducts resetFilters={resetFilters} />
-            )}
+            <div className="flex min-h-[54px] items-center justify-between border-b border-[var(--shop-border)] px-1">
+              <span className="text-[6.5px] font-semibold uppercase tracking-[0.18em] text-black/62">
+                {products.length} products
+              </span>
+              <div className="flex items-center gap-4">
+                <span className="text-[5.5px] font-semibold uppercase tracking-[0.2em] text-black/28">
+                  A more considered wardrobe
+                </span>
+                <span className="h-px w-16 bg-black/14" />
+              </div>
+            </div>
+
+            <div className="pt-4">
+              {products.length ? (
+                <DesktopInterleavedGrid content={interleavedContent} />
+              ) : (
+                <EmptyProducts resetFilters={resetFilters} />
+              )}
+            </div>
           </div>
         </div>
       </section>
 
       {/* Mobile sticky toolbar */}
-      <div className="sticky top-[72px] z-[90] border-y border-white/55 bg-transparent px-3 py-2 shadow-[0_12px_28px_-24px_rgba(11,11,11,0.42)] lg:hidden">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-0"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(255,255,255,0.54) 0%, rgba(246,242,235,0.42) 100%)",
-            backdropFilter: "blur(22px) saturate(145%)",
-            WebkitBackdropFilter: "blur(22px) saturate(145%)",
-          }}
-        />
+      <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[rgba(246,242,235,0.96)] px-3 py-2 backdrop-blur-[16px] lg:hidden">
         <div className="relative z-10 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -408,7 +533,16 @@ export function ShopPage() {
         </div>
       </div>
 
-      {/* Mobile grid */}
+      <div className="flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden">
+        <span className="text-[6px] font-semibold uppercase tracking-[0.18em] text-black/62">
+          {products.length} products
+        </span>
+        <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-black/28">
+          Najibzadeh selection
+        </span>
+      </div>
+
+      {/* Mobile grid — ProductCard itself is intentionally untouched. */}
       <div className="pb-6 lg:hidden">
         {products.length ? (
           <MobileInterleavedGrid content={interleavedContent} />
@@ -437,6 +571,152 @@ export function ShopPage() {
         resultCount={products.length}
       />
     </main>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SHOP HERO — transparent navbar sits over this image
+   ═══════════════════════════════════════════════════════════ */
+
+function ShopHero({
+  image,
+  alt,
+  position,
+}: {
+  image: string;
+  alt: string;
+  position: string;
+}) {
+  return (
+    <section className="relative isolate h-[340px] w-full overflow-hidden bg-black text-white sm:h-[370px] lg:h-[410px]">
+      <Image
+        src={image}
+        alt={alt}
+        fill
+        priority
+        sizes="100vw"
+        draggable={false}
+        style={{ objectPosition: position }}
+        className="-z-30 object-top object-cover"
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(90deg,rgba(11,11,11,0.76)_0%,rgba(11,11,11,0.46)_34%,rgba(11,11,11,0.08)_68%,rgba(11,11,11,0.24)_100%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(11,11,11,0.30)_0%,transparent_48%,rgba(11,11,11,0.18)_100%)]"
+      />
+
+      <div className="mx-auto flex h-full max-w-[1920px] items-end justify-between px-5 pb-7 pt-[94px] sm:px-7 sm:pb-8 lg:px-10 lg:pb-10 lg:pt-[108px] xl:px-12">
+        <div>
+          <h1 className="font-serif text-[44px] font-normal leading-[0.9] tracking-[-0.045em] sm:text-[52px] lg:text-[62px]">
+            Shop
+          </h1>
+          <p className="mt-2 font-serif text-[15px] italic leading-[1.2] text-white/80 sm:text-[17px] lg:text-[19px]">
+            Refined selections for a considered life.
+          </p>
+        </div>
+
+        <div className="mb-1 hidden border-l border-white/20 pl-5 lg:block">
+          <span className="block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
+            Quality
+          </span>
+          <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
+            Craftsmanship
+          </span>
+          <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
+            Character
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DESKTOP FILTER TOOLBAR POPOVER
+   ═══════════════════════════════════════════════════════════ */
+
+function DesktopToolbarPopover({
+  label,
+  active = false,
+  widthClass = "w-[240px]",
+  children,
+}: {
+  label: string;
+  active?: boolean;
+  widthClass?: string;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative shrink-0">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((value) => !value)}
+        className={`group/filter-chip relative flex h-9 items-center gap-2 border px-3 text-[7px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+          open
+            ? "border-black bg-black text-white"
+            : active
+              ? "border-black/28 bg-white text-black"
+              : "border-black/12 bg-white/44 text-black/68 hover:border-black/28 hover:bg-white hover:text-black"
+        }`}
+      >
+        <span>{label}</span>
+        {active ? (
+          <span
+            aria-hidden="true"
+            className={`size-1.5 ${open ? "bg-[var(--shop-copper)]" : "bg-[var(--shop-copper)]"}`}
+          />
+        ) : null}
+        <ChevronDownIcon
+          className={`size-2.5 transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+        />
+      </button>
+
+      <div
+        id={menuId}
+        aria-hidden={!open}
+        className={`absolute left-0 top-[calc(100%_+_7px)] z-[130] ${widthClass} border border-black/10 bg-[#F8F5EF] shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+          open ? "pointer-events-auto visible" : "pointer-events-none invisible"
+        }`}
+      >
+        <div className="border-b border-black/[0.07] px-4 py-2.5">
+          <p className="text-[5.5px] font-semibold uppercase tracking-[0.18em] text-black/34">
+            {label}
+          </p>
+        </div>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -572,30 +852,28 @@ function DesktopFilterIsland({
         aria-controls={popoverId}
         onClick={togglePinned}
         onFocus={scheduleOpen}
-        className={`group/filter relative flex h-10 items-center gap-2.5 overflow-hidden border px-3.5 text-left shadow-[0_9px_24px_-18px_rgba(11,11,11,0.34),inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-inset ring-black/[0.025] backdrop-blur-[18px] backdrop-saturate-150 transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--shop-bg)] ${
+        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 text-left transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           expanded
-            ? "border-white/20 bg-black/72 text-white shadow-[0_14px_34px_-18px_rgba(11,11,11,0.58),inset_0_1px_0_rgba(255,255,255,0.15)]"
-            : "border-white/70 bg-white/28 text-black hover:-translate-y-px hover:border-white/90 hover:bg-white/46 hover:shadow-[0_14px_30px_-18px_rgba(11,11,11,0.30),inset_0_1px_0_rgba(255,255,255,0.92)]"
+            ? "border-black bg-black text-white"
+            : "border-black/12 bg-white/44 text-black/72 hover:border-black/28 hover:bg-white hover:text-black"
         }`}
       >
         <span
-          className={`grid size-6 shrink-0 place-items-center border transition-colors ${
-            expanded
-              ? "border-white/10 bg-white/10 text-white"
-              : "border-white/55 bg-white/34 text-black/72"
+          className={`grid size-5 shrink-0 place-items-center transition-colors ${
+            expanded ? "text-white" : "text-black/58"
           }`}
         >
           <FilterIcon />
         </span>
-        <span className="text-[8px] font-semibold uppercase tracking-[0.14em]">
+        <span className="text-[7px] font-semibold uppercase tracking-[0.08em]">
           Filters
         </span>
         {filterCount > 0 && (
           <span
-            className={`grid size-[18px] shrink-0 place-items-center text-[7px] font-bold tabular-nums ${
+            className={`grid size-[16px] shrink-0 place-items-center text-[6px] font-bold tabular-nums ${
               expanded
                 ? "bg-[var(--shop-copper)] text-white"
-                : "bg-black/88 text-white"
+                : "bg-black text-white"
             }`}
           >
             {filterCount}
@@ -965,7 +1243,87 @@ function DesktopSortControl({
   value: SortOption;
   onChange: (v: SortOption) => void;
 }) {
-  return <GlassSortControl value={value} onChange={onChange} align="right" />;
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const menuId = useId();
+  const current =
+    SORT_MENU_OPTIONS.find((option) => option.value === value) ??
+    SORT_MENU_OPTIONS[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      const root = rootRef.current;
+      if (!root || root.contains(event.target as Node)) return;
+      setOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div ref={rootRef} className="relative w-[150px] xl:w-[164px]">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => setOpen((state) => !state)}
+        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+          open
+            ? "border-black bg-black text-white"
+            : "border-black/12 bg-white/44 text-black hover:border-black/28 hover:bg-white"
+        }`}
+      >
+        <span className="truncate text-[7px] font-semibold tracking-[0.02em]">
+          {current.label}
+        </span>
+        <ChevronDownIcon
+          className={`size-2.5 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+        />
+      </button>
+
+      <div
+        id={menuId}
+        role="listbox"
+        aria-label="Sort products"
+        aria-hidden={!open}
+        className={`absolute right-0 top-[calc(100%_+_7px)] z-[140] w-[210px] border border-black/10 bg-[#F8F5EF] p-1.5 shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+          open ? "pointer-events-auto visible" : "pointer-events-none invisible"
+        }`}
+      >
+        {SORT_MENU_OPTIONS.map((option) => {
+          const active = option.value === value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="option"
+              aria-selected={active}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold tracking-[0.02em] transition-colors ${
+                active
+                  ? "bg-black text-white"
+                  : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+              }`}
+            >
+              {option.label}
+              {active ? <CheckIcon className="size-2.5" /> : null}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1414,9 +1772,7 @@ function ProductCard({
     const rr = rail.getBoundingClientRect();
     const or = el.getBoundingClientRect();
     const t =
-      rail.scrollLeft +
-      (or.left - rr.left) -
-      (rail.clientWidth - or.width) / 2;
+      rail.scrollLeft + (or.left - rr.left) - (rail.clientWidth - or.width) / 2;
     rail.scrollTo({
       left: Math.max(0, t),
       behavior: rm ? "auto" : "smooth",
@@ -1613,9 +1969,10 @@ function ProductCard({
             backdropFilter: "blur(22px) saturate(146%)",
             WebkitBackdropFilter: "blur(22px) saturate(146%)",
             /* ▸ Layered depth shadow */
-            boxShadow: panelLifted || open
-              ? "0 38px 92px -26px rgba(0,0,0,.94), 0 16px 36px -16px rgba(0,0,0,.84), inset 0 1px 0 rgba(255,255,255,.16)"
-              : "0 36px 90px -26px rgba(0,0,0,.90), 0 14px 34px -16px rgba(0,0,0,.78), inset 0 1px 0 rgba(255,255,255,.12)",
+            boxShadow:
+              panelLifted || open
+                ? "0 38px 92px -26px rgba(0,0,0,.94), 0 16px 36px -16px rgba(0,0,0,.84), inset 0 1px 0 rgba(255,255,255,.16)"
+                : "0 36px 90px -26px rgba(0,0,0,.90), 0 14px 34px -16px rgba(0,0,0,.78), inset 0 1px 0 rgba(255,255,255,.12)",
             /* ▸ Structural 1px border, brighter on hover intent */
             border: panelLifted
               ? "1px solid rgba(255,255,255,0.20)"
@@ -1897,7 +2254,9 @@ function ProductCard({
                       >
                         <span
                           style={{ background: color.value }}
-                          className={compact ? "block size-[20px]" : "block size-4"}
+                          className={
+                            compact ? "block size-[20px]" : "block size-4"
+                          }
                         />
                         {active && (
                           <span className="absolute -bottom-[4px] left-1/2 h-[1.5px] w-3 -translate-x-1/2 bg-[var(--shop-copper)]" />
@@ -2561,7 +2920,9 @@ function MaterialSelector({
           >
             <span
               className={`grid size-[16px] flex-none place-items-center border transition-colors ${
-                dark ? "border-white/20 group-hover:border-white/40" : "border-black/20"
+                dark
+                  ? "border-white/20 group-hover:border-white/40"
+                  : "border-black/20"
               } ${sel ? (dark ? "border-white bg-white" : "bg-black") : ""}`}
             >
               {sel && (
@@ -2810,6 +3171,67 @@ function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
    ICONS
    ═══════════════════════════════════════════════════════════ */
 
+function GridViewIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="size-3.5"
+    >
+      <rect
+        x="2"
+        y="2"
+        width="4"
+        height="4"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      <rect
+        x="10"
+        y="2"
+        width="4"
+        height="4"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      <rect
+        x="2"
+        y="10"
+        width="4"
+        height="4"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+      <rect
+        x="10"
+        y="10"
+        width="4"
+        height="4"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+    </svg>
+  );
+}
+
+function ListViewIcon() {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+      className="size-3.5"
+    >
+      <path
+        d="M2 4H4M6 4H14M2 8H4M6 8H14M2 12H4M6 12H14"
+        stroke="currentColor"
+        strokeWidth="1"
+      />
+    </svg>
+  );
+}
+
 function SortIcon() {
   return (
     <svg viewBox="0 0 18 18" fill="none" aria-hidden="true" className="size-4">
@@ -2956,4 +3378,3 @@ function AddedCheckIcon() {
     </svg>
   );
 }
- 
