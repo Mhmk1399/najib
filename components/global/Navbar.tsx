@@ -988,7 +988,13 @@ export default function Navbar({
   const readableNavbar = menuMounted || scrolled;
   const overlayBreadcrumbClass =
     overlayTone === "dark" ? "text-white" : "text-white";
-
+  if (
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/admin")
+  ) {
+    return null;
+  }
   return (
     <>
       <header

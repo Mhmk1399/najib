@@ -1,13 +1,10 @@
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Dashboard } from "@/components/admin/dashboard";
-import { getServiceHealth } from "@/lib/admin/service-health";
 import { displayRole, requireStaff } from "@/lib/admin/auth";
 
-export default async function OverviewPage() {
-  const [services, staff] = await Promise.all([
-    getServiceHealth(),
-    requireStaff(),
-  ]);
+export default async function AdminPage() {
+  const staff = await requireStaff();
+
   return (
     <AdminShell
       staff={{
@@ -18,7 +15,7 @@ export default async function OverviewPage() {
         permissions: staff.permissions,
       }}
     >
-      <Dashboard services={services} />
+      <Dashboard />
     </AdminShell>
   );
 }

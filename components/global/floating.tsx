@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { brandColors, fontTokens } from "@/theme/theme-colors";
+import { usePathname } from "next/dist/client/components/navigation";
 
 type FloatingContactDockProps = {
   phone: string;
@@ -28,6 +29,7 @@ export default function FloatingContactDock({
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const reactId = useId();
+  const pathName = usePathname();
 
   const panelId = `${reactId.replace(/:/g, "")}-contact-dock`;
   const telHref = `tel:${normalizePhone(phone)}`;
@@ -66,7 +68,13 @@ export default function FloatingContactDock({
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
-
+  if (
+    pathName === "/login" ||
+    pathName === "/signup" ||
+    pathName.startsWith("/admin")
+  ) {
+    return null;
+  }
   return (
     <div
       ref={rootRef}

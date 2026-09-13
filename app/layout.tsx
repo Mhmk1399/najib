@@ -24,10 +24,8 @@ import "./admin/admin.css";
 import { LenisProvider } from "@/components/providers/lenis-provider";
 
 import { Dana } from "@/next-persian-fonts/dana";
-import Navbar from "@/components/global/Navbar";
-import Footer from "@/components/global/Footer";
 import { ToastProvider } from "@/components/ui/CustomToast";
-import FloatingContactDock from "@/components/global/floating";
+import { SiteShell } from "@/components/global/site-shell";
 // ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
@@ -103,20 +101,14 @@ export default function RootLayout({
 
       <body dir="ltr" className={`antialiased ${Dana.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
-          <FloatingContactDock
-            phone="+98 21 0000 0000"
-            whatsapp="+98 912 000 0000"
-            location="https://maps.google.com/?q=35.6892,51.3890"
-          />
-          <Navbar />
           <LenisProvider>
-            <div className="flex-1">
-              {" "}
-              <ToastProvider position="top-right" maxToasts={5}>
-                {children}
-              </ToastProvider>
-            </div>
-            <Footer />
+            <SiteShell>
+              <div className="flex-1">
+                <ToastProvider position="top-right" maxToasts={5}>
+                  {children}
+                </ToastProvider>
+              </div>
+            </SiteShell>
           </LenisProvider>
         </div>
       </body>

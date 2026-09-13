@@ -22,7 +22,8 @@ export async function POST(request: Request) {
     }
 
     const session = authSessionSchema.parse(await loginStaff(parsed.data, metadata(request)));
-    const response = NextResponse.json({ ok: true });
+    const destination = session.staff.permissions.includes("admin.access") ? "/admin" : "/";
+    const response = NextResponse.json({ ok: true, destination });
     response.cookies.set(ACCESS_COOKIE, session.accessToken, cookieOptions(session.accessTokenExpiresInSeconds));
     response.cookies.set(REFRESH_COOKIE, session.refreshToken, cookieOptions(Math.max(1, Math.floor((new Date(session.refreshTokenExpiresAt).getTime() - Date.now()) / 1_000))));
     return response;

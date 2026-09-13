@@ -6,6 +6,7 @@ export const ACCESS_TOKEN_ISSUER = "najib-next";
 export const ACCESS_TOKEN_AUDIENCE = "najib-admin";
 
 export const ROLE_PERMISSIONS: Readonly<Record<StaffRole, readonly StaffPermission[]>> = {
+  customer: [],
   owner: ["admin.access", "catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.write", "customers.read", "customers.write", "payments.read", "payments.refund", "collections.read", "collections.write", "insights.read", "settings.manage", "staff.manage"],
   administrator: ["admin.access", "catalog.read", "catalog.write", "inventory.read", "inventory.write", "orders.read", "orders.write", "customers.read", "customers.write", "payments.read", "payments.refund", "collections.read", "collections.write", "insights.read", "settings.manage", "staff.manage"],
   catalog_manager: ["admin.access", "catalog.read", "catalog.write", "collections.read", "collections.write", "inventory.read", "insights.read"],

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const staffRoleSchema = z.enum([
+  "customer",
   "owner",
   "administrator",
   "catalog_manager",
@@ -35,6 +36,16 @@ export const staffLoginSchema = z.object({
   password: z.string().min(12).max(128),
 });
 
+export const customerSignupSchema = z.object({
+  email: z.email().trim().toLowerCase(),
+  password: z.string().min(12).max(128),
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
+  phone: z.string().trim().max(32).optional(),
+  preferredLocale: z.enum(["fa", "en", "ar"]).default("fa"),
+  preferredCityId: z.string().trim().max(100).optional(),
+});
+
 export const staffRefreshSchema = z.object({
   refreshToken: z.string().min(32).max(256),
 });
@@ -61,3 +72,4 @@ export type StaffRole = z.infer<typeof staffRoleSchema>;
 export type StaffPermission = z.infer<typeof staffPermissionSchema>;
 export type StaffProfile = z.infer<typeof staffProfileSchema>;
 export type StaffSessionResponse = z.infer<typeof staffSessionResponseSchema>;
+export type CustomerSignupInput = z.infer<typeof customerSignupSchema>;

@@ -6,6 +6,7 @@ import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { brandColors, fontTokens, lightTokens } from "@/theme/theme-colors";
+import { usePathname } from "next/navigation";
 
 /* ==========================================================================
    TYPES
@@ -114,6 +115,7 @@ function cx(...classes: Array<string | false | null | undefined>) {
 
 export default function Footer() {
   const year = new Date().getFullYear();
+  const pathName = usePathname()
 
   const themeVars = {
     "--footer-black": brandColors.black.hex,
@@ -135,7 +137,9 @@ export default function Footer() {
       behavior: reducedMotion ? "auto" : "smooth",
     });
   }
-
+if(pathName === "/login" || pathName === "/signup" || pathName.startsWith("/admin")) {
+  return null
+}
   return (
     <footer
       dir="ltr"

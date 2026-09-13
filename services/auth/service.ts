@@ -1,8 +1,9 @@
 import "server-only";
 import { createHash, randomBytes } from "node:crypto";
 import { connectToDatabase } from "@/lib/server/db";
-import { badRequest, unauthorized } from "@/lib/server/errors";
+import { badRequest, conflict, unauthorized } from "@/lib/server/errors";
 import {
+  customerSignupSchema,
   staffLoginSchema,
   staffPermissionSchema,
   staffRefreshSchema,
@@ -16,7 +17,7 @@ import { createStaffAccessToken, resolveStaffPermissions, verifyStaffAccessToken
 import { StaffAudit } from "@/models/auth/staff-audit";
 import { StaffSession } from "@/models/auth/staff-session";
 import { User } from "@/models/auth/user";
-import { verifyPassword } from "@/services/auth/password";
+import { hashPassword, verifyPassword } from "@/services/auth/password";
 
 export type RequestMetadata = { ipAddress?: string; userAgent?: string };
 
@@ -72,6 +73,32 @@ export async function loginStaff(value: unknown, requestMetadata: RequestMetadat
 
   const response = await createSession(user, roles, metadata);
   await audit({ userId: user._id, email: user.email, action: "login", outcome: "success", sessionId: response.sessionId, ...metadata });
+  return response.body;
+}
+
+export async function signupCustomer(value: unknown, requestMetadata: RequestMetadata): Promise<StaffSessionResponse> {
+  const input = customerSignupSchema.safeParse(value);
+  if (!input.success) badRequest("Invalid sign-up payload.", input.error.issues);
+  await connectToDatabase();
+
+  const existing = await User.exists({ email: input.data.email });
+  if (existing) conflict("An account with this email already exists.");
+
+  const metadata = normalizeMetadata(requestMetadata);
+  const user = await User.create({
+    email: input.data.email,
+    passwordHash: await hashPassword(input.data.password),
+    firstName: input.data.firstName,
+    lastName: input.data.lastName,
+    phone: input.data.phone,
+    preferredLocale: input.data.preferredLocale,
+    preferredCityId: input.data.preferredCityId,
+    roles: ["customer"],
+    status: "active",
+  });
+
+  const response = await createSession(user, ["customer"], metadata);
+  await audit({ userId: user._id, email: user.email, action: "signup", outcome: "success", sessionId: response.sessionId, ...metadata });
   return response.body;
 }
 

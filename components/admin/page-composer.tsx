@@ -899,7 +899,7 @@ function ComposerEditor({
                   {resource === "subcategories" && (
                     <Field label="دسته مادر" error={errors.categoryId} wide>
                       <AdminSelect
-                        value={form.categoryId}
+                        value={form.categoryId || ""}
                         onChange={(value) => set("categoryId", value)}
                         placeholder="انتخاب دسته مادر"
                         options={categories.map((category) => ({
@@ -1030,7 +1030,9 @@ function ComposerEditor({
                         >
                           <AdminSelect
                             value={current.imageId}
-                            onChange={(value) => banner(bKey, { imageId: value })}
+                            onChange={(value) =>
+                              banner(bKey, { imageId: value })
+                            }
                             placeholder="انتخاب تصویر"
                             options={availableImages.map((image) => ({
                               value: image._id,
