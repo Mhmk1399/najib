@@ -1,14 +1,14 @@
-# ADR 0001: Monorepo and service-owned MongoDB databases
+# ADR 0001: Legacy monorepo and service-owned MongoDB databases
 
 ## Status
 
-Accepted for the first vertical slice.
+Superseded by `docs/NEXT_CONSOLIDATION.md`.
 
 ## Decision
 
-Najib is one pnpm/Turborepo repository containing the storefront, future admin
-application, independently deployable backend services, shared contracts, and
-infrastructure.
+Najib originally used one workspace repository containing the storefront, future
+admin application, independently deployable backend services, shared contracts,
+and infrastructure.
 
 MongoDB with Mongoose replaces the original PostgreSQL/Prisma proposal. Each
 service owns a separate logical database and its own Mongoose schemas. Services

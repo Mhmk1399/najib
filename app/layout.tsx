@@ -20,13 +20,13 @@
 
 import type { Metadata } from "next";
 import "./globals.css";
+import "./admin/admin.css";
 import { LenisProvider } from "@/components/providers/lenis-provider";
 
 import { Dana } from "@/next-persian-fonts/dana";
 import Navbar from "@/components/global/Navbar";
 import Footer from "@/components/global/Footer";
 import { ToastProvider } from "@/components/ui/CustomToast";
-import FloatingClientConcierge from "@/components/global/floating";
 import FloatingContactDock from "@/components/global/floating";
 // ---------------------------------------------------------------------------
 // Metadata

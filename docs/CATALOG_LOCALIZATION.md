@@ -61,7 +61,7 @@ coordinates, sort order, and relationships are language-neutral.
 Run the idempotent migration after deploying the localized model change:
 
 ```bash
-pnpm migrate:catalog-locales
+npm run migrate:catalog-locales
 ```
 
 Legacy text is copied into all three language keys so no data is lost. Staff can
