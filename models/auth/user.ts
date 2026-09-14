@@ -70,6 +70,7 @@ const userSchema = new Schema(
     firstName: { type: String, required: true, trim: true, maxlength: 100 },
     lastName: { type: String, required: true, trim: true, maxlength: 100 },
     phone: { type: String, trim: true },
+    avatarUrl: { type: String, trim: true, maxlength: 2048 },
     roles: {
       type: [{ type: String, enum: USER_ROLES }],
       default: ["customer"],

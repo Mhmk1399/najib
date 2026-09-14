@@ -15,5 +15,8 @@ export function jsonError(error: unknown) {
   if (error instanceof Error && error.message === "MONGODB_URI is not configured.") {
     return NextResponse.json({ error: "Database is not configured." }, { status: 503 });
   }
+  if (error instanceof Error && error.message === "S3 upload storage is not configured.") {
+    return NextResponse.json({ error: "Upload storage is not configured." }, { status: 503 });
+  }
   return NextResponse.json({ error: "Internal server error." }, { status: 500 });
 }

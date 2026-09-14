@@ -206,6 +206,21 @@ export type DynamicDateRangeField<TValues extends DynamicFormValues> =
         clearable?: boolean;
     };
 
+export type DynamicFileField<TValues extends DynamicFormValues> =
+    DynamicFormFieldBase<TValues> & {
+        kind: "file";
+        accept?: string;
+        maxSizeBytes?: number;
+        uploadUrl: string | ((values: TValues) => string);
+        uploadFieldName?: string;
+        preview?: "image" | "none";
+        buttonLabel?: string;
+        removeLabel?: string;
+        cancelLabel?: string;
+        format?: (value: unknown, values: TValues) => string | null;
+        parseUploadResponse?: (response: unknown, values: TValues) => unknown;
+    };
+
 export type DynamicCustomField<TValues extends DynamicFormValues> =
     DynamicFormFieldBase<TValues> & {
         kind: "custom";
@@ -226,6 +241,7 @@ export type DynamicFormField<TValues extends DynamicFormValues> =
     | DynamicBooleanField<TValues>
     | DynamicDateField<TValues>
     | DynamicDateRangeField<TValues>
+    | DynamicFileField<TValues>
     | DynamicCustomField<TValues>;
 
 export type DynamicFormSection<TValues extends DynamicFormValues> = {

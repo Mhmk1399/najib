@@ -27,6 +27,7 @@ type AdminUser = {
   firstName: string;
   lastName: string;
   phone: string;
+  avatarUrl: string;
   roles: string[];
   permissions: string[];
   allowedStoreIds: string[];
@@ -43,6 +44,7 @@ type UserFormValues = {
   firstName: string;
   lastName: string;
   phone: string;
+  avatarUrl: string;
   roles: string[];
   permissions: string[];
   allowedStoreIdsText: string;
@@ -155,6 +157,7 @@ function formPayload(values: UserFormValues, includePassword: boolean) {
     firstName: values.firstName,
     lastName: values.lastName,
     phone: values.phone,
+    avatarUrl: values.avatarUrl,
     roles: values.roles,
     permissions: values.permissions,
     allowedStoreIds: splitStoreIds(values.allowedStoreIdsText),
@@ -172,6 +175,7 @@ function emptyUserForm(): UserFormValues {
     firstName: "",
     lastName: "",
     phone: "",
+    avatarUrl: "",
     roles: ["customer"],
     permissions: [],
     allowedStoreIdsText: "",
@@ -187,6 +191,7 @@ function userToForm(user: AdminUser): UserFormValues {
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,
+    avatarUrl: user.avatarUrl,
     roles: user.roles,
     permissions: user.permissions,
     allowedStoreIdsText: user.allowedStoreIds.join(", "),
@@ -230,6 +235,18 @@ function buildUserSchema(edit: boolean): DynamicFormSchema<UserFormValues> {
           if (edit && text && text.length < 12) return "رمز عبور جدید باید حداقل ۱۲ کاراکتر باشد.";
           return null;
         },
+      },
+      {
+        kind: "file",
+        name: "avatarUrl",
+        label: "تصویر پروفایل",
+        uploadUrl: "/api/admin/uploads/avatar",
+        accept: "image/jpeg,image/png,image/webp",
+        maxSizeBytes: 2 * 1024 * 1024,
+        preview: "image",
+        colSpan: "full",
+        buttonLabel: "انتخاب و آپلود تصویر",
+        helperText: "فایل JPG، PNG یا WebP تا ۲ مگابایت قابل آپلود است.",
       },
       {
         kind: "input",
@@ -299,7 +316,14 @@ function buildUserSchema(edit: boolean): DynamicFormSchema<UserFormValues> {
       {
         id: "identity",
         title: "هویت کاربر",
-        fieldNames: ["email", "password", "firstName", "lastName", "phone"],
+        fieldNames: [
+          "email",
+          "password",
+          "avatarUrl",
+          "firstName",
+          "lastName",
+          "phone",
+        ],
       },
       {
         id: "access",
@@ -325,6 +349,31 @@ function StatusBadge({ status }: { status: UserStatusValue }) {
   );
 }
 
+function AvatarPreview({ user }: { user: Pick<AdminUser, "avatarUrl" | "firstName" | "lastName" | "email"> }) {
+  const label = `${user.firstName} ${user.lastName}`.trim() || user.email;
+  const initials =
+    `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`.trim() ||
+    user.email.charAt(0).toUpperCase();
+
+  return (
+    <span
+      aria-label={`تصویر ${label}`}
+      className="grid size-9 shrink-0 place-items-center overflow-hidden rounded-[7px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[9px] font-bold text-[var(--adt-accent-strong)]"
+      style={
+        user.avatarUrl
+          ? {
+              backgroundImage: `url("${user.avatarUrl}")`,
+              backgroundPosition: "center",
+              backgroundSize: "cover",
+            }
+          : undefined
+      }
+    >
+      {user.avatarUrl ? null : initials || <UserRound size={16} />}
+    </span>
+  );
+}
+
 export function UserManager() {
   const toast = useToast();
 
@@ -340,9 +389,7 @@ export function UserManager() {
         sortKey: "firstName",
         cell: ({ record }) => (
           <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-accent-strong)]">
-              <UserRound size={16} />
-            </span>
+            <AvatarPreview user={record} />
             <span className="min-w-0">
               <strong className="block truncate text-[10px] font-bold">
                 {fullName(record)}
@@ -547,6 +594,21 @@ export function UserManager() {
               { id: "email", label: "ایمیل", accessor: "email" },
               { id: "name", label: "نام", render: ({ record }) => fullName(record) },
               {
+                id: "avatarUrl",
+                label: "تصویر پروفایل",
+                render: ({ record }) =>
+                  record.avatarUrl ? (
+                    <span className="inline-flex items-center gap-3">
+                      <AvatarPreview user={record} />
+                      <span dir="ltr" className="text-left text-[9px]">
+                        {record.avatarUrl}
+                      </span>
+                    </span>
+                  ) : (
+                    "—"
+                  ),
+              },
+              {
                 id: "status",
                 label: "وضعیت",
                 render: ({ record }) => <StatusBadge status={record.status} />,
@@ -589,7 +651,7 @@ export function UserManager() {
               {
                 id: "identity",
                 title: "هویت",
-                fieldIds: ["email", "name", "status"],
+                fieldIds: ["email", "name", "avatarUrl", "status"],
               },
               {
                 id: "access",

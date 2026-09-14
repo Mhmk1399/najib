@@ -63,6 +63,25 @@ AUTH_ACCESS_TOKEN_TTL_SECONDS=900
 STAFF_SESSION_TTL_DAYS=7
 ```
 
+S3-compatible uploads, including Liara Object Storage buckets:
+
+```bash
+S3_ENDPOINT=https://your-s3-compatible-endpoint
+S3_REGION=default
+S3_BUCKET=your-bucket-name
+S3_ACCESS_KEY_ID=your-access-key
+S3_SECRET_ACCESS_KEY=your-secret-key
+S3_PUBLIC_BASE_URL=https://your-public-bucket-domain
+S3_FORCE_PATH_STYLE=true
+S3_UPLOAD_PREFIX=uploads
+# Optional, only if the provider supports object ACLs:
+# S3_OBJECT_ACL=public-read
+```
+
+`S3_PUBLIC_BASE_URL` should be the public URL/domain for the bucket. If it is
+not set, uploaded file URLs are built as `S3_ENDPOINT/S3_BUCKET/key`, which is
+fine for some S3-compatible providers but not all custom domains.
+
 ## API Behavior
 
 Auth routes set HTTP-only cookies:

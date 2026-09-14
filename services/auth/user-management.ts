@@ -21,6 +21,7 @@ const userCreateSchema = z.object({
   firstName: z.string().trim().min(1).max(100),
   lastName: z.string().trim().min(1).max(100),
   phone: z.string().trim().max(32).optional().default(""),
+  avatarUrl: z.string().trim().max(2048).optional().default(""),
   roles: z.array(staffRoleSchema).min(1).default(["customer"]),
   permissions: z.array(staffPermissionSchema).default([]),
   allowedStoreIds: z.array(z.string().trim().min(1).max(100)).default([]),
@@ -57,6 +58,7 @@ export type AdminUserRecord = {
   firstName: string;
   lastName: string;
   phone: string;
+  avatarUrl: string;
   roles: StaffRole[];
   permissions: StaffPermission[];
   allowedStoreIds: string[];
@@ -83,6 +85,7 @@ function serializeUser(user: Record<string, unknown>): AdminUserRecord {
     firstName: String(user.firstName ?? ""),
     lastName: String(user.lastName ?? ""),
     phone: String(user.phone ?? ""),
+    avatarUrl: String(user.avatarUrl ?? ""),
     roles: Array.isArray(user.roles) ? (user.roles as StaffRole[]) : [],
     permissions: Array.isArray(user.permissions)
       ? (user.permissions as StaffPermission[])

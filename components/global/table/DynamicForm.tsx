@@ -1,10 +1,26 @@
 "use client";
 
-import { AlertTriangle, CalendarDays, Check } from "lucide-react";
-import { type FormEvent, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  CalendarDays,
+  Check,
+  ImageIcon,
+  LoaderCircle,
+  Upload,
+  X,
+} from "lucide-react";
+import {
+  type ChangeEvent,
+  type FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   DynamicFormErrorMapper,
   DynamicFormField,
+  DynamicFileField,
   DynamicFormSchema,
   DynamicFormValues,
   PersianDateRangeValue,
@@ -455,6 +471,23 @@ function DynamicField<TValues extends DynamicFormValues>({
     );
   }
 
+  if (field.kind === "file") {
+    const formatted =
+      field.format?.(value, values) ??
+      (typeof value === "string" && value ? value : null);
+
+    return (
+      <FileUploadField
+        field={field}
+        values={values}
+        value={formatted}
+        error={error}
+        disabled={disabled || readOnly}
+        setValue={setValue}
+      />
+    );
+  }
+
   if (field.kind === "custom") {
     return (
       <div>
@@ -478,6 +511,278 @@ function DynamicField<TValues extends DynamicFormValues>({
   }
 
   return null;
+}
+
+function FileUploadField<TValues extends DynamicFormValues>({
+  field,
+  values,
+  value,
+  error,
+  disabled,
+  setValue,
+}: {
+  field: DynamicFileField<TValues>;
+  values: TValues;
+  value: string | null;
+  error?: string;
+  disabled: boolean;
+  setValue: (value: unknown) => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const xhrRef = useRef<XMLHttpRequest | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [localPreview, setLocalPreview] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      xhrRef.current?.abort();
+      if (localPreview) URL.revokeObjectURL(localPreview);
+    };
+  }, [localPreview]);
+
+  const previewUrl = localPreview ?? value;
+  const isImagePreview = field.preview !== "none";
+
+  function chooseFile() {
+    if (disabled || uploading) return;
+    inputRef.current?.click();
+  }
+
+  function clearValue() {
+    if (disabled || uploading) return;
+    setValue("");
+    setLocalError(null);
+    if (inputRef.current) inputRef.current.value = "";
+  }
+
+  function cancelUpload() {
+    xhrRef.current?.abort();
+    xhrRef.current = null;
+    setUploading(false);
+    setProgress(0);
+    setLocalError("آپلود لغو شد.");
+  }
+
+  function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setLocalError(null);
+    if (field.maxSizeBytes && file.size > field.maxSizeBytes) {
+      setLocalError(
+        `حجم فایل باید کمتر از ${new Intl.NumberFormat("fa-IR").format(
+          Math.ceil(field.maxSizeBytes / 1024 / 1024),
+        )} مگابایت باشد.`,
+      );
+      event.target.value = "";
+      return;
+    }
+
+    if (field.accept && file.type && !acceptsFile(field.accept, file)) {
+      setLocalError("فرمت فایل انتخاب‌شده مجاز نیست.");
+      event.target.value = "";
+      return;
+    }
+
+    if (isImagePreview) {
+      if (localPreview) URL.revokeObjectURL(localPreview);
+      setLocalPreview(URL.createObjectURL(file));
+    }
+
+    const formData = new FormData();
+    formData.append(field.uploadFieldName ?? "file", file);
+    const uploadUrl =
+      typeof field.uploadUrl === "function"
+        ? field.uploadUrl(values)
+        : field.uploadUrl;
+
+    const xhr = new XMLHttpRequest();
+    xhrRef.current = xhr;
+    setUploading(true);
+    setProgress(0);
+
+    xhr.upload.onprogress = (progressEvent) => {
+      if (!progressEvent.lengthComputable) return;
+      setProgress(
+        Math.max(
+          1,
+          Math.min(99, Math.round((progressEvent.loaded / progressEvent.total) * 100)),
+        ),
+      );
+    };
+
+    xhr.onload = () => {
+      xhrRef.current = null;
+      setUploading(false);
+      if (xhr.status < 200 || xhr.status >= 300) {
+        setProgress(0);
+        setLocalError(readUploadError(xhr.responseText));
+        return;
+      }
+      try {
+        const response = xhr.responseText
+          ? (JSON.parse(xhr.responseText) as unknown)
+          : {};
+        const nextValue = field.parseUploadResponse
+          ? field.parseUploadResponse(response, values)
+          : (response as { url?: string }).url;
+        if (!nextValue || typeof nextValue !== "string") {
+          setLocalError("پاسخ آپلود معتبر نیست.");
+          setProgress(0);
+          return;
+        }
+        setValue(nextValue);
+        setProgress(100);
+        window.setTimeout(() => setProgress(0), 700);
+      } catch {
+        setLocalError("پاسخ آپلود خوانده نشد.");
+        setProgress(0);
+      }
+    };
+
+    xhr.onerror = () => {
+      xhrRef.current = null;
+      setUploading(false);
+      setProgress(0);
+      setLocalError("آپلود انجام نشد. اتصال را بررسی کنید.");
+    };
+
+    xhr.onabort = () => {
+      xhrRef.current = null;
+      setUploading(false);
+      setProgress(0);
+    };
+
+    xhr.open("POST", uploadUrl);
+    xhr.send(formData);
+  }
+
+  return (
+    <div>
+      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-semibold text-[var(--adt-text)]">
+        <span>{field.label}</span>
+        {field.required ? (
+          <span className="text-[var(--adt-danger)]">*</span>
+        ) : null}
+      </div>
+
+      <div
+        className={cx(
+          "grid min-w-0 gap-3 rounded-[5px] border bg-[var(--adt-surface)] p-3",
+          error || localError
+            ? "border-[var(--adt-danger)]"
+            : "border-[var(--adt-border)]",
+        )}
+      >
+        <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
+          <div
+            aria-label="پیش‌نمایش فایل"
+            className="grid aspect-square place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]"
+            style={
+              previewUrl && isImagePreview
+                ? {
+                    backgroundImage: `url("${previewUrl}")`,
+                    backgroundPosition: "center",
+                    backgroundSize: "cover",
+                  }
+                : undefined
+            }
+          >
+            {!previewUrl || !isImagePreview ? <ImageIcon size={22} /> : null}
+          </div>
+
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-semibold text-[var(--adt-text)]">
+              {value ? value.split("/").pop() : "فایلی انتخاب نشده"}
+            </p>
+            {(field.description ?? field.helperText) ? (
+              <p className="mt-1 text-[9px] leading-5 text-[var(--adt-muted)]">
+                {field.description ?? field.helperText}
+              </p>
+            ) : null}
+
+            {uploading || progress > 0 ? (
+              <div className="mt-3">
+                <div className="mb-1 flex items-center justify-between text-[8px] text-[var(--adt-muted)]">
+                  <span>در حال آپلود</span>
+                  <span>{new Intl.NumberFormat("fa-IR").format(progress)}٪</span>
+                </div>
+                <div className="h-1.5 overflow-hidden rounded-full bg-[var(--adt-border)]">
+                  <span
+                    className="block h-full rounded-full bg-[var(--adt-accent)] transition-[width]"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+              <DataButton
+                tone="secondary"
+                size="sm"
+                icon={uploading ? <LoaderCircle size={14} /> : <Upload size={14} />}
+                loading={uploading}
+                disabled={disabled}
+                onClick={chooseFile}
+              >
+                {field.buttonLabel ?? "انتخاب و آپلود"}
+              </DataButton>
+              {uploading ? (
+                <DataButton tone="warning" size="sm" onClick={cancelUpload}>
+                  {field.cancelLabel ?? "لغو آپلود"}
+                </DataButton>
+              ) : value ? (
+                <DataButton
+                  tone="ghost"
+                  size="sm"
+                  icon={<X size={13} />}
+                  disabled={disabled}
+                  onClick={clearValue}
+                >
+                  {field.removeLabel ?? "حذف فایل"}
+                </DataButton>
+              ) : null}
+            </div>
+          </div>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept={field.accept}
+          className="sr-only"
+          disabled={disabled || uploading}
+          onChange={handleFileChange}
+        />
+      </div>
+
+      {error || localError ? (
+        <p className="mt-1.5 text-[9px] leading-4 text-[var(--adt-danger)]">
+          {error ?? localError}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function acceptsFile(accept: string, file: File) {
+  const rules = accept.split(",").map((item) => item.trim()).filter(Boolean);
+  return rules.some((rule) => {
+    if (rule.endsWith("/*")) return file.type.startsWith(rule.slice(0, -1));
+    if (rule.startsWith(".")) return file.name.toLowerCase().endsWith(rule.toLowerCase());
+    return file.type === rule;
+  });
+}
+
+function readUploadError(responseText: string) {
+  try {
+    const parsed = JSON.parse(responseText) as { error?: string };
+    return parsed.error ?? "آپلود فایل انجام نشد.";
+  } catch {
+    return "آپلود فایل انجام نشد.";
+  }
 }
 
 function PersianDateField({
