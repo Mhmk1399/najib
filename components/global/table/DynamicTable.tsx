@@ -712,9 +712,9 @@ function DesktopTable<
         data-lenis-prevent-wheel
         className="min-w-0 overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable] [scrollbar-width:thin]"
       >
-        <table className="w-full min-w-[860px] border-collapse text-right">
+        <table className="w-full min-w-[860px] border-collapse">
           <caption className="sr-only">جدول اطلاعات مدیریت</caption>
-          <thead>
+          <thead className="bg-[var(--adt-surface-muted)] text-[var(--adt-muted)] text-base  text-right">
             <tr className="bg-[var(--adt-surface-muted)] ">
               {columns.map((column) => {
                 const activeSort = sort.find((rule) => rule.id === column.id);
@@ -734,7 +734,7 @@ function DesktopTable<
                     }
                     style={columnStyle(column)}
                     className={cx(
-                      "h-12 border-b text-right border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-3 text-[10px] font-bold text-[var(--adt-muted)] last:border-l-0",
+                      "h-12 border-b text-right border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-3 text-[14px]! text-right! font-bold text-[var(--adt-muted)] last:border-l-0",
                       alignClass(column.align),
                       stickyColumnClass(column.sticky, true),
                       column.headerClassName,
@@ -744,7 +744,7 @@ function DesktopTable<
                       <button
                         type="button"
                         onClick={(event) => onSort(column, event)}
-                        className="inline-flex text-right min-h-8 cursor-pointer items-center gap-1.5 outline-none hover:text-[var(--adt-text)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25"
+                        className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 outline-none hover:text-[var(--adt-text)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25"
                       >
                         <span>{column.header ?? column.label}</span>
                         {activeSort ? (
@@ -771,7 +771,7 @@ function DesktopTable<
               {hasRowActions ? (
                 <th
                   scope="col"
-                  className="sticky left-0 z-20 h-12 w-[72px] border-b border-r border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-center text-[8px] font-bold text-[var(--adt-muted)]"
+                  className="sticky left-0 z-20 h-12 w-[72px] border-b border-r border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-right text-[14px]! font-bold text-[var(--adt-muted)]"
                 >
                   {labels.actions}
                 </th>
@@ -796,7 +796,7 @@ function DesktopTable<
                         key={column.id}
                         style={columnStyle(column)}
                         className={cx(
-                          "h-[58px] border-l border-[var(--adt-border)] bg-inherit px-3 text-[10px] leading-5 text-[var(--adt-text)] group-hover:bg-[var(--adt-surface-muted)]/65 last:border-l-0",
+                          "h-[58px] border-l border-[var(--adt-border)] bg-inherit px-3 text-[10px]! text-right! leading-5 text-[var(--adt-text)] group-hover:bg-[var(--adt-surface-muted)]/65 last:border-l-0",
                           alignClass(column.align),
                           stickyColumnClass(column.sticky, false),
                           column.cellClassName,
