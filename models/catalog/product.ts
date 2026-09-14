@@ -79,6 +79,10 @@ const productSchema = new Schema(
 );
 
 productSchema.index({ slug: 1 }, { unique: true });
+productSchema.index({ status: 1, _id: -1 });
+productSchema.index({ status: 1, categoryId: 1, _id: -1 });
+productSchema.index({ status: 1, subcategoryId: 1, _id: -1 });
+productSchema.index({ status: 1, collectionIds: 1, _id: -1 });
 productSchema.index({
   "name.fa": "text",
   "name.en": "text",

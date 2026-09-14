@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json",
+    "test:api": "node scripts/test-backend-api.js",
     "seed:admin-demo": "node --env-file=.env scripts/seed-admin-demo.js",
     "migrate:catalog-locales": "node --env-file=.env scripts/migrate-catalog-locales.js"
   },
