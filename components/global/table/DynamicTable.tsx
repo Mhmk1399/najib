@@ -421,7 +421,7 @@ export function DynamicDataTable<
             </DataButton>
             {canCreate ? (
               <DataButton
-                tone="warning"
+                tone="secondary"
                 size="md"
                 icon={<Plus size={15} />}
                 onClick={() => setDialog({ type: "create" })}
@@ -1650,7 +1650,7 @@ function EmptyTableState({
             </DataButton>
           ) : canCreate ? (
             <DataButton
-              tone="primary"
+              tone="secondary"
               size="sm"
               icon={<Plus size={14} />}
               onClick={onCreate}

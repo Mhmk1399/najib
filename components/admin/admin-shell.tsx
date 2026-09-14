@@ -51,7 +51,7 @@ type AdminShellProps = {
 
 const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
-  { label: "محصولات", href: "/admin/catalog/content", icon: Package },
+  { label: "محصولات", href: "/admin/catalog/products", icon: Package },
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
   { label: "سفارشات", href: "/admin/orders", icon: ShoppingCart },
   { label: "مشتریان", href: "/admin/customers", icon: Users },
@@ -105,25 +105,21 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const pathname = usePathname();
   const clock = useTehranClock();
   const staffProfile = staff ?? FALLBACK_STAFF;
-  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [theme, setTheme] = useState<ThemeMode>(() => {
+    if (typeof window === "undefined") return "dark";
+    try {
+      const saved = localStorage.getItem("najib-admin-theme");
+      if (saved === "light" || saved === "dark") return saved;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+    } catch {
+      return "dark";
+    }
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("najib-admin-theme");
-      const next: ThemeMode =
-        saved === "light" || saved === "dark"
-          ? saved
-          : window.matchMedia("(prefers-color-scheme: dark)").matches
-            ? "dark"
-            : "light";
-      setTheme(next);
-    } catch {
-      setTheme("dark");
-    }
-  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;

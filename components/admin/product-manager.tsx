@@ -1,51 +1,29 @@
 "use client";
 
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  ChevronDown,
-  Edit3,
-  ImageOff,
-  Layers3,
-  LoaderCircle,
-  PackageOpen,
-  Plus,
-  RefreshCw,
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import {
-  FormEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { AdminSelect } from "@/components/admin/admin-select";
+import { useCallback, useMemo } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, ImageIcon, PackageOpen } from "lucide-react";
 import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
+import { DynamicDataTable } from "@/components/global/table/DynamicTable";
+import type {
+  DataSelectOption,
+  DynamicColumn,
+  DynamicFilterDefinition,
+  DynamicFormSchema,
+  DynamicTableResult,
+} from "@/components/global/table/types";
+import { useToast } from "@/components/ui/CustomToast";
 import {
-  ImageFitSelect,
-  ImagePositionSelect,
-  imageStyleFor,
-} from "@/components/admin/image-presentation-controls";
-import { LanguageSwitcher } from "@/components/admin/language-switcher";
+  emptyLocalizedText,
+  fa,
+  trimLocalized,
+  type LocalizedText,
+  type LocalizedTextList,
+} from "@/lib/admin/localization";
 import type {
   ImageObjectFit,
   ImageObjectPosition,
 } from "@/lib/catalog/image-presentation";
-import {
-  emptyLocalizedText,
-  fa,
-  type Locale,
-  type LocalizedText,
-  type LocalizedTextList,
-  trimLocalized,
-} from "@/lib/admin/localization";
 
 type ProductStatus = "draft" | "active" | "archived";
 
@@ -71,10 +49,17 @@ type Product = {
   primaryImageObjectFit?: ImageObjectFit;
   primaryImageObjectPosition?: ImageObjectPosition;
   imageIds?: string[];
+  createdAt?: string;
   updatedAt?: string;
 };
 
-type ReferenceItem = { _id: string; name: LocalizedText; categoryId?: string };
+type ReferenceItem = {
+  _id: string;
+  name: LocalizedText;
+  slug?: string;
+  categoryId?: string;
+};
+
 type ImageReference = {
   _id: string;
   url: string;
@@ -82,21 +67,35 @@ type ImageReference = {
   kind: string;
   objectFit?: ImageObjectFit;
   objectPosition?: ImageObjectPosition;
-  focalPointX?: number;
-  focalPointY?: number;
+  isActive: boolean;
 };
-type Pagination = { page: number; limit: number; total: number; pages: number };
-type ListResponse<T> = { items: T[]; pagination: Pagination };
-type ApiError = { error?: string; message?: string; details?: unknown };
 
-type ProductForm = {
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+type ListResponse<T> = {
+  items: T[];
+  pagination: Pagination;
+};
+
+type ProductFilters = Record<string, unknown> & {
+  status?: string | null;
+  categoryId?: string | null;
+  subcategoryId?: string | null;
+};
+
+type ProductFormValues = {
   name: LocalizedText;
   slug: string;
   description: LocalizedText;
   categoryId: string;
   subcategoryId: string;
   collectionIds: string[];
-  price: string;
+  price: number | null;
   currency: string;
   status: ProductStatus;
   material: LocalizedText;
@@ -110,30 +109,72 @@ type ProductForm = {
   primaryImageObjectFit: ImageObjectFit;
   primaryImageObjectPosition: ImageObjectPosition;
   imageIds: string[];
+  galleryUploadOne: string;
+  galleryUploadTwo: string;
+  galleryUploadThree: string;
 };
 
-const emptyForm: ProductForm = {
-  name: emptyLocalizedText(),
-  slug: "",
-  description: emptyLocalizedText(),
-  categoryId: "",
-  subcategoryId: "",
-  collectionIds: [],
-  price: "",
-  currency: "USD",
-  status: "draft",
-  material: emptyLocalizedText(),
-  fit: emptyLocalizedText(),
-  silhouette: emptyLocalizedText(),
-  pattern: emptyLocalizedText(),
-  seasons: emptyLocalizedText(),
-  occasions: emptyLocalizedText(),
-  styleTags: emptyLocalizedText(),
-  primaryImageId: "",
-  primaryImageObjectFit: "cover",
-  primaryImageObjectPosition: "center",
-  imageIds: [],
+type ApiError = Error & {
+  fieldErrors?: Record<string, string>;
 };
+
+const statusOptions: DataSelectOption[] = [
+  { value: "draft", label: "پیش‌نویس" },
+  { value: "active", label: "فعال" },
+  { value: "archived", label: "آرشیو" },
+];
+
+const objectFitOptions: DataSelectOption[] = [
+  { value: "cover", label: "پوشش کامل" },
+  { value: "contain", label: "نمایش کامل تصویر" },
+  { value: "fill", label: "کشیده داخل قاب" },
+  { value: "none", label: "اندازه اصلی" },
+  { value: "scale-down", label: "کوچک‌سازی در صورت نیاز" },
+];
+
+const objectPositionOptions: DataSelectOption[] = [
+  { value: "center", label: "وسط" },
+  { value: "top", label: "بالا" },
+  { value: "bottom", label: "پایین" },
+  { value: "left", label: "چپ" },
+  { value: "right", label: "راست" },
+  { value: "left top", label: "چپ بالا" },
+  { value: "right top", label: "راست بالا" },
+  { value: "left bottom", label: "چپ پایین" },
+  { value: "right bottom", label: "راست پایین" },
+];
+
+const numberFormatter = new Intl.NumberFormat("fa-IR");
+const emptyReferenceItems: ReferenceItem[] = [];
+const emptyImageReferences: ImageReference[] = [];
+
+function emptyForm(): ProductFormValues {
+  return {
+    name: emptyLocalizedText(),
+    slug: "",
+    description: emptyLocalizedText(),
+    categoryId: "",
+    subcategoryId: "",
+    collectionIds: [],
+    price: null,
+    currency: "USD",
+    status: "draft",
+    material: emptyLocalizedText(),
+    fit: emptyLocalizedText(),
+    silhouette: emptyLocalizedText(),
+    pattern: emptyLocalizedText(),
+    seasons: emptyLocalizedText(),
+    occasions: emptyLocalizedText(),
+    styleTags: emptyLocalizedText(),
+    primaryImageId: "",
+    primaryImageObjectFit: "cover",
+    primaryImageObjectPosition: "center",
+    imageIds: [],
+    galleryUploadOne: "",
+    galleryUploadTwo: "",
+    galleryUploadThree: "",
+  };
+}
 
 function slugify(value: string) {
   return value
@@ -144,86 +185,534 @@ function slugify(value: string) {
     .slice(0, 180);
 }
 
-function splitTags(value: string) {
+function splitList(value: string) {
   return value
-    .split(",")
+    .split(/[,،\n]/)
     .map((item) => item.trim())
     .filter(Boolean);
 }
 
+function textToList(value: LocalizedText): LocalizedTextList {
+  return {
+    fa: splitList(value.fa),
+    en: splitList(value.en),
+    ar: splitList(value.ar),
+  };
+}
+
+function listToText(value?: LocalizedTextList | null): LocalizedText {
+  return {
+    fa: value?.fa?.join("، ") ?? "",
+    en: value?.en?.join(", ") ?? "",
+    ar: value?.ar?.join("، ") ?? "",
+  };
+}
+
+function statusLabel(value: ProductStatus) {
+  return statusOptions.find((option) => option.value === value)?.label ?? value;
+}
+
+function formatDigits(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value).replace(/\d/g, (digit) =>
+    new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(Number(digit)),
+  );
+}
+
 function formatPrice(minor: number, currency: string) {
+  const amount = minor / 100;
   try {
-    return new Intl.NumberFormat("en", {
+    return new Intl.NumberFormat("fa-IR", {
       style: "currency",
       currency: currency || "USD",
-    }).format(minor / 100);
+    }).format(amount);
   } catch {
-    return `${(minor / 100).toFixed(2)} ${currency}`;
+    return `${numberFormatter.format(amount)} ${currency}`;
   }
 }
 
 function formatDate(value?: string) {
   if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) return "—";
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  }).format(date);
+  return new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
 }
 
-function productToForm(product: Product): ProductForm {
+function uploadedImageId(response: unknown) {
+  const payload = response as {
+    imageId?: string;
+    image?: { _id?: string; id?: string };
+  };
+  return payload.imageId ?? payload.image?._id ?? payload.image?.id ?? "";
+}
+
+function coerceImageId(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    const payload = value as { id?: string; _id?: string; imageId?: string };
+    return payload.imageId ?? payload.id ?? payload._id ?? "";
+  }
+  return "";
+}
+
+function uniqueImageIds(values: ProductFormValues) {
+  return Array.from(
+    new Set(
+      [
+        ...values.imageIds,
+        values.galleryUploadOne,
+        values.galleryUploadTwo,
+        values.galleryUploadThree,
+      ]
+        .map(coerceImageId)
+        .filter(Boolean),
+    ),
+  );
+}
+
+function productToForm(product: Product): ProductFormValues {
   return {
     name: product.name,
     slug: product.slug,
     description: product.description,
     categoryId: product.categoryId,
     subcategoryId: product.subcategoryId,
-    collectionIds: product.collectionIds || [],
-    price: (product.basePriceMinor / 100).toFixed(2),
+    collectionIds: product.collectionIds ?? [],
+    price: product.basePriceMinor / 100,
     currency: product.currency,
     status: product.status,
-    material: {
-      fa: product.material?.fa?.join(", ") || "",
-      en: product.material?.en?.join(", ") || "",
-      ar: product.material?.ar?.join(", ") || "",
-    },
-    fit: product.fit || emptyLocalizedText(),
-    silhouette: product.silhouette || emptyLocalizedText(),
-    pattern: product.pattern || emptyLocalizedText(),
-    seasons: {
-      fa: product.seasons?.fa?.join(", ") || "",
-      en: product.seasons?.en?.join(", ") || "",
-      ar: product.seasons?.ar?.join(", ") || "",
-    },
-    occasions: {
-      fa: product.occasions?.fa?.join(", ") || "",
-      en: product.occasions?.en?.join(", ") || "",
-      ar: product.occasions?.ar?.join(", ") || "",
-    },
-    styleTags: {
-      fa: product.styleTags?.fa?.join(", ") || "",
-      en: product.styleTags?.en?.join(", ") || "",
-      ar: product.styleTags?.ar?.join(", ") || "",
-    },
-    primaryImageId: product.primaryImageId || "",
-    primaryImageObjectFit: product.primaryImageObjectFit || "cover",
-    primaryImageObjectPosition: product.primaryImageObjectPosition || "center",
-    imageIds: product.imageIds || [],
+    material: listToText(product.material),
+    fit: product.fit ?? emptyLocalizedText(),
+    silhouette: product.silhouette ?? emptyLocalizedText(),
+    pattern: product.pattern ?? emptyLocalizedText(),
+    seasons: listToText(product.seasons),
+    occasions: listToText(product.occasions),
+    styleTags: listToText(product.styleTags),
+    primaryImageId: product.primaryImageId ?? "",
+    primaryImageObjectFit: product.primaryImageObjectFit ?? "cover",
+    primaryImageObjectPosition:
+      product.primaryImageObjectPosition ?? "center",
+    imageIds: product.imageIds ?? [],
+    galleryUploadOne: "",
+    galleryUploadTwo: "",
+    galleryUploadThree: "",
   };
 }
 
-async function readJson<T>(response: Response): Promise<T> {
-  const body = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const message =
-      (body as ApiError).error ||
-      (body as ApiError).message ||
-      "The request could not be completed.";
-    throw Object.assign(new Error(message), { status: response.status });
+function cleanLocalized(value?: LocalizedText | null) {
+  return trimLocalized(value ?? emptyLocalizedText());
+}
+
+function formPayload(values: ProductFormValues) {
+  return {
+    name: cleanLocalized(values.name),
+    slug: slugify(values.slug),
+    description: cleanLocalized(values.description),
+    categoryId: values.categoryId,
+    subcategoryId: values.subcategoryId,
+    collectionIds: values.collectionIds,
+    basePriceMinor: Math.round(Number(values.price ?? 0) * 100),
+    currency: values.currency.trim().toUpperCase(),
+    status: values.status,
+    material: textToList(values.material),
+    fit: cleanLocalized(values.fit),
+    silhouette: cleanLocalized(values.silhouette),
+    pattern: cleanLocalized(values.pattern),
+    seasons: textToList(values.seasons),
+    occasions: textToList(values.occasions),
+    styleTags: textToList(values.styleTags),
+    primaryImageId: coerceImageId(values.primaryImageId) || null,
+    primaryImageObjectFit: values.primaryImageObjectFit,
+    primaryImageObjectPosition: values.primaryImageObjectPosition,
+    imageIds: uniqueImageIds(values),
+  };
+}
+
+function toTableResult<T>(data: ListResponse<T>): DynamicTableResult<T> {
+  return {
+    items: data.items,
+    total: data.pagination.total,
+    page: data.pagination.page,
+    pageSize: data.pagination.limit,
+    pageCount: data.pagination.pages,
+  };
+}
+
+function fieldErrorPath(path: Array<string | number> | undefined) {
+  return path?.map(String).join(".");
+}
+
+async function readApiError(response: Response): Promise<ApiError> {
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
   }
-  return body as T;
+
+  const body = payload as {
+    error?: string;
+    message?: string;
+    details?: Array<{ path?: Array<string | number>; message?: string }>;
+  } | null;
+
+  const error = new Error(
+    body?.error ?? body?.message ?? "درخواست انجام نشد. دوباره تلاش کنید.",
+  ) as ApiError;
+
+  if (Array.isArray(body?.details)) {
+    error.fieldErrors = Object.fromEntries(
+      body.details
+        .map((issue) => [fieldErrorPath(issue.path), issue.message] as const)
+        .filter(
+          (issue): issue is readonly [string, string] =>
+            Boolean(issue[0]) && Boolean(issue[1]),
+        ),
+    );
+  }
+
+  return error;
+}
+
+async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!response.ok) throw await readApiError(response);
+  return (await response.json()) as T;
+}
+
+function mapFormError(error: unknown) {
+  const typed = error as ApiError;
+  return {
+    message: typed?.message ?? "ذخیره محصول انجام نشد.",
+    fieldErrors: typed?.fieldErrors,
+  };
+}
+
+function requiredLocalized(value: LocalizedText | undefined, label: string) {
+  if (!value?.fa.trim() || !value.en.trim() || !value.ar.trim()) {
+    return `${label} باید برای فارسی، انگلیسی و عربی تکمیل شود.`;
+  }
+  return null;
+}
+
+function validateProduct(values: ProductFormValues) {
+  const errors: Record<string, string> = {};
+
+  const nameError = requiredLocalized(values.name, "نام محصول");
+  if (nameError) errors["name.fa"] = nameError;
+
+  const descriptionError = requiredLocalized(
+    values.description,
+    "توضیحات محصول",
+  );
+  if (descriptionError) errors["description.fa"] = descriptionError;
+
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(values.slug)) {
+    errors.slug = "شناسه URL باید انگلیسی، کوچک و با خط تیره باشد.";
+  }
+  if (!values.categoryId) errors.categoryId = "دسته‌بندی را انتخاب کنید.";
+  if (!values.subcategoryId) errors.subcategoryId = "زیردسته را انتخاب کنید.";
+  if (
+    values.price === null ||
+    !Number.isFinite(Number(values.price)) ||
+    Number(values.price) < 0
+  ) {
+    errors.price = "قیمت معتبر وارد کنید.";
+  }
+  if (!/^[A-Za-z]{3}$/.test(values.currency.trim())) {
+    errors.currency = "کد ارز باید سه حرف انگلیسی باشد.";
+  }
+
+  return errors;
+}
+
+function localizedFields(
+  prefix: string,
+  label: string,
+  kind: "input" | "textarea",
+) {
+  return (["fa", "en", "ar"] as const).map((locale) => ({
+    kind,
+    name: `${prefix}.${locale}`,
+    label: `${label} ${
+      locale === "fa" ? "فارسی" : locale === "en" ? "انگلیسی" : "عربی"
+    }`,
+    dir: locale === "en" ? ("ltr" as const) : ("rtl" as const),
+    ...(kind === "textarea" ? { rows: 5 } : {}),
+  }));
+}
+
+function imageUploadField(
+  name: string,
+  label: string,
+  imageMap: Map<string, ImageReference>,
+  required = false,
+) {
+  return {
+    kind: "file" as const,
+    name,
+    label,
+    required,
+    uploadUrl: "/api/admin/uploads/catalog-image?kind=product",
+    uploadFieldName: "file",
+    accept: "image/jpeg,image/png,image/webp",
+    maxSizeBytes: 5 * 1024 * 1024,
+    preview: "image" as const,
+    buttonLabel: "انتخاب و آپلود تصویر",
+    removeLabel: "حذف تصویر",
+    cancelLabel: "لغو آپلود",
+    helperText: "فایل JPG، PNG یا WebP تا ۵ مگابایت قابل آپلود است.",
+    parseUploadResponse: uploadedImageId,
+    format: (value: unknown) => {
+      const imageId = coerceImageId(value);
+      return imageMap.get(imageId)?.url ?? imageId;
+    },
+  };
+}
+
+function buildSchema({
+  categoryOptions,
+  subcategoryOptions,
+  collectionOptions,
+  imageOptions,
+  imageMap,
+}: {
+  categoryOptions: DataSelectOption[];
+  subcategoryOptions: DataSelectOption[];
+  collectionOptions: DataSelectOption[];
+  imageOptions: DataSelectOption[];
+  imageMap: Map<string, ImageReference>;
+}): DynamicFormSchema<ProductFormValues> {
+  return {
+    validate: validateProduct,
+    fields: [
+      {
+        kind: "input",
+        name: "slug",
+        label: "شناسه URL",
+        required: true,
+        dir: "ltr",
+        placeholder: "signature-cashmere-jacket",
+        parse: (value) => slugify(value),
+      },
+      ...localizedFields("name", "نام محصول", "input").map((field) => ({
+        ...field,
+        required: true,
+      })),
+      ...localizedFields("description", "توضیحات محصول", "textarea").map(
+        (field) => ({
+          ...field,
+          required: true,
+          rows: 6,
+        }),
+      ),
+      {
+        kind: "select",
+        name: "categoryId",
+        label: "دسته‌بندی",
+        options: categoryOptions,
+        required: true,
+        searchable: true,
+        placeholder: "انتخاب دسته",
+      },
+      {
+        kind: "select",
+        name: "subcategoryId",
+        label: "زیردسته",
+        options: subcategoryOptions,
+        required: true,
+        searchable: true,
+        placeholder: "انتخاب زیردسته",
+      },
+      {
+        kind: "multi-select",
+        name: "collectionIds",
+        label: "کالکشن‌ها",
+        options: collectionOptions,
+        searchable: true,
+        allowSelectAll: true,
+        helperText: "محصول می‌تواند در چند کالکشن نمایش داده شود.",
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "price",
+        label: "قیمت",
+        required: true,
+        min: 0,
+        step: 0.01,
+        inputMode: "decimal",
+        suffixText: "واحد اصلی ارز",
+      },
+      {
+        kind: "input",
+        name: "currency",
+        label: "کد ارز",
+        required: true,
+        dir: "ltr",
+        maxLength: 3,
+        placeholder: "USD",
+        parse: (value) => value.toUpperCase(),
+      },
+      {
+        kind: "select",
+        name: "status",
+        label: "وضعیت محصول",
+        options: statusOptions,
+        required: true,
+      },
+      imageUploadField("primaryImageId", "تصویر اصلی محصول", imageMap, false),
+      {
+        kind: "select",
+        name: "primaryImageObjectFit",
+        label: "پوشش تصویر اصلی",
+        options: objectFitOptions,
+        required: true,
+      },
+      {
+        kind: "select",
+        name: "primaryImageObjectPosition",
+        label: "موقعیت تصویر اصلی",
+        options: objectPositionOptions,
+        required: true,
+      },
+      {
+        kind: "multi-select",
+        name: "imageIds",
+        label: "گالری تصاویر موجود",
+        options: imageOptions,
+        searchable: true,
+        helperText: "تصاویر آپلودشده قبلی را به گالری محصول اضافه کنید.",
+      },
+      imageUploadField("galleryUploadOne", "آپلود تصویر گالری ۱", imageMap),
+      imageUploadField("galleryUploadTwo", "آپلود تصویر گالری ۲", imageMap),
+      imageUploadField("galleryUploadThree", "آپلود تصویر گالری ۳", imageMap),
+      ...localizedFields("material", "متریال‌ها", "textarea"),
+      ...localizedFields("fit", "فیت", "input"),
+      ...localizedFields("silhouette", "سیلوئت", "input"),
+      ...localizedFields("pattern", "الگو", "input"),
+      ...localizedFields("seasons", "فصل‌ها", "textarea"),
+      ...localizedFields("occasions", "موقعیت استفاده", "textarea"),
+      ...localizedFields("styleTags", "تگ‌های استایل", "textarea"),
+    ],
+    sections: [
+      {
+        id: "identity",
+        title: "هویت محصول",
+        description: "نام، شناسه URL و متن اصلی محصول برای هر سه زبان سایت.",
+        fieldNames: [
+          "slug",
+          "name.fa",
+          "name.en",
+          "name.ar",
+          "description.fa",
+          "description.en",
+          "description.ar",
+        ],
+      },
+      {
+        id: "catalog",
+        title: "جایگاه در کاتالوگ",
+        description: "دسته، زیردسته، کالکشن، قیمت و وضعیت انتشار محصول.",
+        fieldNames: [
+          "categoryId",
+          "subcategoryId",
+          "collectionIds",
+          "price",
+          "currency",
+          "status",
+        ],
+      },
+      {
+        id: "media",
+        title: "تصاویر محصول",
+        description: "تصویر اصلی و گالری از همین فرم قابل آپلود یا انتخاب است.",
+        fieldNames: [
+          "primaryImageId",
+          "primaryImageObjectFit",
+          "primaryImageObjectPosition",
+          "imageIds",
+          "galleryUploadOne",
+          "galleryUploadTwo",
+          "galleryUploadThree",
+        ],
+      },
+      {
+        id: "attributes",
+        title: "ویژگی‌ها و تگ‌ها",
+        description:
+          "برای لیست‌ها هر مقدار را با ویرگول، ویرگول فارسی یا خط جدید جدا کنید.",
+        fieldNames: [
+          "material.fa",
+          "material.en",
+          "material.ar",
+          "fit.fa",
+          "fit.en",
+          "fit.ar",
+          "silhouette.fa",
+          "silhouette.en",
+          "silhouette.ar",
+          "pattern.fa",
+          "pattern.en",
+          "pattern.ar",
+          "seasons.fa",
+          "seasons.en",
+          "seasons.ar",
+          "occasions.fa",
+          "occasions.en",
+          "occasions.ar",
+          "styleTags.fa",
+          "styleTags.en",
+          "styleTags.ar",
+        ],
+      },
+    ],
+  };
+}
+
+function StatusBadge({ status }: { status: ProductStatus }) {
+  const tone =
+    status === "active"
+      ? "border-[var(--adt-success)]/30 bg-[var(--adt-success)]/[0.06] text-[var(--adt-success)]"
+      : status === "archived"
+        ? "border-[var(--adt-danger)]/30 bg-[var(--adt-danger)]/[0.06] text-[var(--adt-danger)]"
+        : "border-[var(--adt-warning)]/30 bg-[var(--adt-warning)]/[0.06] text-[var(--adt-warning)]";
+
+  return (
+    <span
+      className={`inline-flex border px-2 py-1 text-[8px] font-semibold ${tone}`}
+    >
+      {statusLabel(status)}
+    </span>
+  );
+}
+
+function ImagePreview({ image }: { image?: ImageReference }) {
+  return (
+    <span
+      className="grid size-11 shrink-0 place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]"
+      style={
+        image
+          ? {
+              backgroundImage: `url("${image.url}")`,
+              backgroundPosition: image.objectPosition ?? "center",
+              backgroundSize:
+                image.objectFit === "contain" ? "contain" : "cover",
+              backgroundRepeat: "no-repeat",
+            }
+          : undefined
+      }
+    >
+      {image ? null : <ImageIcon size={18} />}
+    </span>
+  );
 }
 
 export function ProductManager({
@@ -233,138 +722,49 @@ export function ProductManager({
   canRead: boolean;
   canWrite: boolean;
 }) {
-  const router = useRouter();
-  const [products, setProducts] = useState<Product[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 20,
-    total: 0,
-    pages: 1,
+  const toast = useToast();
+  const queryClient = useQueryClient();
+
+  const categoriesQuery = useQuery({
+    queryKey: ["catalog", "categories", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ReferenceItem>>(
+        "/api/catalog/categories?limit=100&isActive=true",
+      ),
+    enabled: canRead,
   });
-  const [categories, setCategories] = useState<ReferenceItem[]>([]);
-  const [subcategories, setSubcategories] = useState<ReferenceItem[]>([]);
-  const [collections, setCollections] = useState<ReferenceItem[]>([]);
-  const [images, setImages] = useState<ImageReference[]>([]);
-  const [loading, setLoading] = useState(canRead);
-  const [refsLoading, setRefsLoading] = useState(canRead);
-  const [error, setError] = useState<string | null>(null);
-  const [permissionDenied, setPermissionDenied] = useState(!canRead);
-  const [searchDraft, setSearchDraft] = useState("");
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"" | ProductStatus>("");
-  const [categoryId, setCategoryId] = useState("");
-  const [page, setPage] = useState(1);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [editor, setEditor] = useState<{
-    mode: "create" | "edit";
-    id?: string;
-  } | null>(null);
-  const [form, setForm] = useState<ProductForm>(emptyForm);
-  const [initialForm, setInitialForm] = useState<ProductForm>(emptyForm);
-  const [slugTouched, setSlugTouched] = useState(false);
-  const [editorLoading, setEditorLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [locale, setLocale] = useState<Locale>("fa");
-  const nameInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAuthFailure = useCallback(
-    (statusCode: number) => {
-      if (statusCode === 401) router.replace("/login?reason=session");
-      if (statusCode === 403) setPermissionDenied(true);
-    },
-    [router],
-  );
+  const subcategoriesQuery = useQuery({
+    queryKey: ["catalog", "subcategories", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ReferenceItem>>(
+        "/api/catalog/subcategories?limit=100&isActive=true",
+      ),
+    enabled: canRead,
+  });
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSearch(searchDraft.trim());
-      setPage(1);
-    }, 320);
-    return () => window.clearTimeout(timer);
-  }, [searchDraft]);
+  const collectionsQuery = useQuery({
+    queryKey: ["catalog", "collections", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ReferenceItem>>(
+        "/api/catalog/collections?limit=100&isActive=true",
+      ),
+    enabled: canRead,
+  });
 
-  useEffect(() => {
-    if (!canRead) return;
-    const controller = new AbortController();
-    const loadReferences = async () => {
-      setRefsLoading(true);
-      try {
-        const [categoryData, subcategoryData, collectionData, imageData] =
-          await Promise.all([
-            fetch("/api/catalog/categories?limit=100", {
-              credentials: "same-origin",
-              signal: controller.signal,
-            }).then(readJson<ListResponse<ReferenceItem>>),
-            fetch("/api/catalog/subcategories?limit=100", {
-              credentials: "same-origin",
-              signal: controller.signal,
-            }).then(readJson<ListResponse<ReferenceItem>>),
-            fetch("/api/catalog/collections?limit=100", {
-              credentials: "same-origin",
-              signal: controller.signal,
-            }).then(readJson<ListResponse<ReferenceItem>>),
-            fetch("/api/catalog/images?limit=100&isActive=true", {
-              credentials: "same-origin",
-              signal: controller.signal,
-            }).then(readJson<ListResponse<ImageReference>>),
-          ]);
-        setCategories(categoryData.items);
-        setSubcategories(subcategoryData.items);
-        setCollections(collectionData.items);
-        setImages(imageData.items);
-      } catch (cause) {
-        if ((cause as Error).name !== "AbortError")
-          handleAuthFailure((cause as Error & { status?: number }).status || 0);
-      } finally {
-        if (!controller.signal.aborted) setRefsLoading(false);
-      }
-    };
-    loadReferences();
-    return () => controller.abort();
-  }, [canRead, handleAuthFailure, refreshKey]);
+  const imagesQuery = useQuery({
+    queryKey: ["catalog", "product-images", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ImageReference>>(
+        "/api/catalog/images?limit=100&isActive=true&kind=product",
+      ),
+    enabled: canRead,
+  });
 
-  useEffect(() => {
-    if (!canRead) return;
-    const controller = new AbortController();
-    const loadProducts = async () => {
-      setLoading(true);
-      setError(null);
-      const params = new URLSearchParams({ page: String(page), limit: "20" });
-      if (search) params.set("search", search);
-      if (status) params.set("status", status);
-      if (categoryId) params.set("categoryId", categoryId);
-      try {
-        const response = await fetch(`/api/catalog/products?${params}`, {
-          credentials: "same-origin",
-          signal: controller.signal,
-        });
-        const data = await readJson<ListResponse<Product>>(response);
-        setProducts(data.items);
-        setPagination(data.pagination);
-      } catch (cause) {
-        if ((cause as Error).name === "AbortError") return;
-        const statusCode = (cause as Error & { status?: number }).status || 0;
-        handleAuthFailure(statusCode);
-        if (statusCode !== 401 && statusCode !== 403)
-          setError((cause as Error).message);
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-    loadProducts();
-    return () => controller.abort();
-  }, [
-    canRead,
-    categoryId,
-    handleAuthFailure,
-    page,
-    refreshKey,
-    search,
-    status,
-  ]);
+  const categories = categoriesQuery.data?.items ?? emptyReferenceItems;
+  const subcategories = subcategoriesQuery.data?.items ?? emptyReferenceItems;
+  const collections = collectionsQuery.data?.items ?? emptyReferenceItems;
+  const images = imagesQuery.data?.items ?? emptyImageReferences;
 
   const categoryNames = useMemo(
     () => new Map(categories.map((item) => [item._id, fa(item.name)])),
@@ -374,1296 +774,493 @@ export function ProductManager({
     () => new Map(subcategories.map((item) => [item._id, fa(item.name)])),
     [subcategories],
   );
-  const filteredSubcategories = useMemo(
-    () =>
-      subcategories.filter(
-        (item) => !form.categoryId || item.categoryId === form.categoryId,
-      ),
-    [form.categoryId, subcategories],
+  const collectionNames = useMemo(
+    () => new Map(collections.map((item) => [item._id, fa(item.name)])),
+    [collections],
   );
-  const filtersActive = Boolean(searchDraft || status || categoryId);
-  const dirty =
-    editor !== null && JSON.stringify(form) !== JSON.stringify(initialForm);
-
-  const clearFilters = () => {
-    setSearchDraft("");
-    setSearch("");
-    setStatus("");
-    setCategoryId("");
-    setPage(1);
-  };
-  const announce = (message: string) => {
-    setNotice(message);
-    window.setTimeout(() => setNotice(null), 2800);
-  };
-
-  const openCreate = () => {
-    const next = { ...emptyForm, collectionIds: [] };
-    setForm(next);
-    setInitialForm(next);
-    setSlugTouched(false);
-    setFieldErrors({});
-    setSaveError(null);
-    setLocale("fa");
-    setEditor({ mode: "create" });
-  };
-
-  const openEdit = async (product: Product) => {
-    setEditor({ mode: "edit", id: product._id });
-    setEditorLoading(true);
-    setFieldErrors({});
-    setSaveError(null);
-    setSlugTouched(true);
-    try {
-      const response = await fetch(`/api/catalog/products/${product._id}`, {
-        credentials: "same-origin",
-      });
-      const detailed = await readJson<Product>(response);
-      const next = productToForm(detailed);
-      setForm(next);
-      setInitialForm(next);
-    } catch (cause) {
-      handleAuthFailure((cause as Error & { status?: number }).status || 0);
-      setSaveError((cause as Error).message);
-    } finally {
-      setEditorLoading(false);
-    }
-  };
-
-  const closeEditor = useCallback(() => {
-    if (dirty && !window.confirm("تغییرات ذخیره‌نشده این محصول حذف شود؟"))
-      return;
-    setEditor(null);
-    setSaveError(null);
-    setFieldErrors({});
-  }, [dirty]);
-
-  useEffect(() => {
-    if (!editor) return;
-    document.body.classList.add("editor-open");
-    const timer = window.setTimeout(() => nameInputRef.current?.focus(), 120);
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeEditor();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.clearTimeout(timer);
-      window.removeEventListener("keydown", onKeyDown);
-      document.body.classList.remove("editor-open");
-    };
-  }, [closeEditor, editor]);
-
-  const updateField = <K extends keyof ProductForm>(
-    key: K,
-    value: ProductForm[K],
-  ) => {
-    setForm((current) => ({ ...current, [key]: value }));
-    setFieldErrors((current) => {
-      const next = { ...current };
-      delete next[key];
-      return next;
-    });
-  };
-
-  const updateName = (value: string) => {
-    setForm((current) => ({
-      ...current,
-      name: { ...current.name, [locale]: value },
-      slug: slugTouched || locale !== "en" ? current.slug : slugify(value),
-    }));
-    setFieldErrors((current) => {
-      const next = { ...current };
-      delete next.name;
-      delete next.slug;
-      return next;
-    });
-  };
-
-  const validate = () => {
-    const next: Record<string, string> = {};
-    (["fa", "en", "ar"] as Locale[]).forEach((lang) => {
-      if (!form.name[lang].trim())
-        next.name = "نام محصول در هر سه زبان الزامی است.";
-      if (!form.description[lang].trim())
-        next.description = "توضیحات محصول در هر سه زبان الزامی است.";
-    });
-    if (!form.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.slug))
-      next.slug = "شناسه URL باید انگلیسی، کوچک و خط‌تیره‌دار باشد.";
-    if (!form.categoryId) next.categoryId = "دسته‌بندی را انتخاب کنید.";
-    if (!form.subcategoryId) next.subcategoryId = "زیردسته را انتخاب کنید.";
-    const price = Number(form.price);
-    if (!form.price || !Number.isFinite(price) || price < 0)
-      next.price = "یک قیمت معتبر وارد کنید.";
-    if (!/^[A-Za-z]{3}$/.test(form.currency))
-      next.currency = "کد سه‌حرفی ارز را وارد کنید.";
-    setFieldErrors(next);
-    return Object.keys(next).length === 0;
-  };
-
-  const saveProduct = async (event: FormEvent) => {
-    event.preventDefault();
-    if (saving || !validate() || !editor) return;
-    setSaving(true);
-    setSaveError(null);
-    const payload = {
-      name: trimLocalized(form.name),
-      slug: form.slug.trim(),
-      description: trimLocalized(form.description),
-      categoryId: form.categoryId,
-      subcategoryId: form.subcategoryId,
-      collectionIds: form.collectionIds,
-      basePriceMinor: Math.round(Number(form.price) * 100),
-      currency: form.currency.toUpperCase(),
-      status: form.status,
-      material: Object.fromEntries(
-        (["fa", "en", "ar"] as Locale[]).map((lang) => [
-          lang,
-          splitTags(form.material[lang]),
-        ]),
-      ) as LocalizedTextList,
-      fit: trimLocalized(form.fit),
-      silhouette: trimLocalized(form.silhouette),
-      pattern: trimLocalized(form.pattern),
-      seasons: Object.fromEntries(
-        (["fa", "en", "ar"] as Locale[]).map((lang) => [
-          lang,
-          splitTags(form.seasons[lang]),
-        ]),
-      ) as LocalizedTextList,
-      occasions: Object.fromEntries(
-        (["fa", "en", "ar"] as Locale[]).map((lang) => [
-          lang,
-          splitTags(form.occasions[lang]),
-        ]),
-      ) as LocalizedTextList,
-      styleTags: Object.fromEntries(
-        (["fa", "en", "ar"] as Locale[]).map((lang) => [
-          lang,
-          splitTags(form.styleTags[lang]),
-        ]),
-      ) as LocalizedTextList,
-      primaryImageId: form.primaryImageId || null,
-      primaryImageObjectFit: form.primaryImageObjectFit,
-      primaryImageObjectPosition: form.primaryImageObjectPosition,
-      imageIds: form.imageIds,
-    };
-    try {
-      const endpoint =
-        editor.mode === "create"
-          ? "/api/catalog/products"
-          : `/api/catalog/products/${editor.id}`;
-      const response = await fetch(endpoint, {
-        method: editor.mode === "create" ? "POST" : "PATCH",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      await readJson<Product>(response);
-      setInitialForm(form);
-      setEditor(null);
-      setPage(1);
-      setRefreshKey((value) => value + 1);
-      announce(
-        editor.mode === "create"
-          ? "محصول به دفتر کاتالوگ افزوده شد."
-          : "تغییرات محصول ذخیره شد.",
-      );
-    } catch (cause) {
-      const statusCode = (cause as Error & { status?: number }).status || 0;
-      handleAuthFailure(statusCode);
-      if (statusCode !== 401)
-        setSaveError(
-          statusCode === 403
-            ? "اجازه تغییر محصولات کاتالوگ را ندارید."
-            : (cause as Error).message,
-        );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="catalog-workspace">
-      {notice && (
-        <div className="toast" role="status">
-          <Check size={14} />
-          {notice}
-        </div>
-      )}
-      <CatalogSectionNav />
-      <header className="catalog-masthead">
-        <div className="catalog-title-block">
-          <p>
-            <span>فروش</span>
-            <i>/</i> دفتر محصولات
-          </p>
-          <h1>
-            کاتالوگی دقیق،
-            <br />
-            برای روایتی ماندگار.
-          </h1>
-          <small>
-            داستان، قیمت و جایگاه هر محصول را از یک دفتر کاری مدیریت کنید.
-          </small>
-        </div>
-        <div className="catalog-tally" aria-label={`${pagination.total} محصول`}>
-          <span>محصول ثبت‌شده</span>
-          <strong>{String(pagination.total).padStart(2, "0")}</strong>
-          <small>در همه وضعیت‌ها</small>
-        </div>
-        {canWrite && (
-          <button
-            className="catalog-add"
-            onClick={openCreate}
-            disabled={refsLoading}
-          >
-            <Plus size={17} />
-            <span>افزودن محصول</span>
-            <small>پرونده جدید</small>
-          </button>
-        )}
-      </header>
-
-      {!canRead || permissionDenied ? (
-        <PermissionState />
-      ) : (
-        <>
-          <section className="catalog-controls" aria-label="فیلتر محصولات">
-            <label className="catalog-search">
-              <Search size={17} />
-              <span className="sr-only">جست‌وجوی محصولات</span>
-              <input
-                value={searchDraft}
-                onChange={(event) => setSearchDraft(event.target.value)}
-                placeholder="جست‌وجوی نام، شناسه یا SKU"
-              />
-            </label>
-            <div className="status-tabs" aria-label="وضعیت محصول">
-              {(["", "draft", "active", "archived"] as const).map((item) => (
-                <button
-                  key={item || "all"}
-                  className={status === item ? "active" : ""}
-                  onClick={() => {
-                    setStatus(item);
-                    setPage(1);
-                  }}
-                  aria-pressed={status === item}
-                >
-                  {
-                    (
-                      {
-                        "": "همه",
-                        draft: "پیش‌نویس",
-                        active: "فعال",
-                        archived: "بایگانی",
-                      } as const
-                    )[item]
-                  }
-                </button>
-              ))}
-            </div>
-            <label className="catalog-select">
-              <Layers3 size={15} />
-              <span className="sr-only">فیلتر دسته‌بندی</span>
-              <select
-                value={categoryId}
-                onChange={(event) => {
-                  setCategoryId(event.target.value);
-                  setPage(1);
-                }}
-              >
-                <option value="">همه دسته‌بندی‌ها</option>
-                {categories.map((item) => (
-                  <option value={item._id} key={item._id}>
-                    {fa(item.name)}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={14} />
-            </label>
-            {filtersActive && (
-              <button className="clear-filter" onClick={clearFilters}>
-                <X size={14} />
-                پاک کردن
-              </button>
-            )}
-            <button
-              className="catalog-refresh"
-              onClick={() => setRefreshKey((value) => value + 1)}
-              aria-label="تازه‌سازی محصولات"
-              disabled={loading}
-            >
-              <RefreshCw className={loading ? "spin" : ""} size={16} />
-            </button>
-          </section>
-
-          <section className="ledger" aria-live="polite" aria-busy={loading}>
-            <header className="ledger-head">
-              <p>
-                <SlidersHorizontal size={14} />
-                {filtersActive ? "نتایج فیلترشده" : "فهرست کامل"}
-              </p>
-              <span>{pagination.total} محصول</span>
-            </header>
-            {loading ? (
-              <LedgerSkeleton />
-            ) : error ? (
-              <ErrorState
-                message={error}
-                onRetry={() => setRefreshKey((value) => value + 1)}
-              />
-            ) : products.length === 0 ? (
-              <EmptyState
-                filtered={filtersActive}
-                canWrite={canWrite}
-                onClear={clearFilters}
-                onAdd={openCreate}
-              />
-            ) : (
-              <>
-                <div className="ledger-table-wrap">
-                  <table className="ledger-table">
-                    <thead>
-                      <tr>
-                        <th>محصول / شناسه</th>
-                        <th>دسته‌بندی</th>
-                        <th>قیمت</th>
-                        <th>وضعیت</th>
-                        <th>آخرین ویرایش</th>
-                        {canWrite && (
-                          <th>
-                            <span className="sr-only">ویرایش</span>
-                          </th>
-                        )}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {products.map((product) => (
-                        <tr key={product._id}>
-                          <td>
-                            <div className="product-identity">
-                              <span
-                                className="product-monogram"
-                                aria-hidden="true"
-                              >
-                                {fa(product.name).trim().slice(0, 2) || "ن"}
-                              </span>
-                              <div>
-                                <strong>{fa(product.name)}</strong>
-                                <small dir="ltr">/{product.slug}</small>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <strong className="taxonomy-name">
-                              {categoryNames.get(product.categoryId) ||
-                                "بدون دسته"}
-                            </strong>
-                            <small className="taxonomy-sub">
-                              {subcategoryNames.get(product.subcategoryId) ||
-                                "بدون زیردسته"}
-                            </small>
-                          </td>
-                          <td>
-                            <strong className="price-cell">
-                              {formatPrice(
-                                product.basePriceMinor,
-                                product.currency,
-                              )}
-                            </strong>
-                            <small>{product.currency}</small>
-                          </td>
-                          <td>
-                            <span
-                              className={`catalog-status catalog-status--${product.status}`}
-                            >
-                              {
-                                (
-                                  {
-                                    draft: "پیش‌نویس",
-                                    active: "فعال",
-                                    archived: "بایگانی",
-                                  } as const
-                                )[product.status]
-                              }
-                            </span>
-                          </td>
-                          <td>
-                            <span className="revision-date">
-                              {formatDate(product.updatedAt)}
-                            </span>
-                          </td>
-                          {canWrite && (
-                            <td>
-                              <button
-                                className="edit-product"
-                                onClick={() => openEdit(product)}
-                                aria-label={`ویرایش ${fa(product.name)}`}
-                              >
-                                <Edit3 size={15} />
-                                <span>ویرایش</span>
-                              </button>
-                            </td>
-                          )}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="ledger-mobile-list">
-                  {products.map((product) => (
-                    <article className="product-card" key={product._id}>
-                      <header>
-                        <span className="product-monogram" aria-hidden="true">
-                          {fa(product.name).trim().slice(0, 2) || "ن"}
-                        </span>
-                        <div>
-                          <strong>{fa(product.name)}</strong>
-                          <small dir="ltr">/{product.slug}</small>
-                        </div>
-                        <span
-                          className={`catalog-status catalog-status--${product.status}`}
-                        >
-                          {
-                            (
-                              {
-                                draft: "پیش‌نویس",
-                                active: "فعال",
-                                archived: "بایگانی",
-                              } as const
-                            )[product.status]
-                          }
-                        </span>
-                      </header>
-                      <dl>
-                        <div>
-                          <dt>مسیر دسته‌بندی</dt>
-                          <dd>
-                            {categoryNames.get(product.categoryId) || "نامشخص"}{" "}
-                            /{" "}
-                            {subcategoryNames.get(product.subcategoryId) ||
-                              "نامشخص"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>قیمت</dt>
-                          <dd>
-                            {formatPrice(
-                              product.basePriceMinor,
-                              product.currency,
-                            )}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>ویرایش</dt>
-                          <dd>{formatDate(product.updatedAt)}</dd>
-                        </div>
-                      </dl>
-                      {canWrite && (
-                        <button onClick={() => openEdit(product)}>
-                          <Edit3 size={15} />
-                          ویرایش محصول
-                        </button>
-                      )}
-                    </article>
-                  ))}
-                </div>
-              </>
-            )}
-            {!loading && !error && products.length > 0 && (
-              <footer className="ledger-pagination">
-                <p>
-                  صفحه <strong>{pagination.page}</strong> از{" "}
-                  <strong>{Math.max(pagination.pages, 1)}</strong>
-                  <span>·</span>
-                  {pagination.total} محصول
-                </p>
-                <div>
-                  <button
-                    onClick={() => setPage((value) => Math.max(1, value - 1))}
-                    disabled={pagination.page <= 1}
-                  >
-                    <ArrowRight size={15} />
-                    قبلی
-                  </button>
-                  <button
-                    onClick={() =>
-                      setPage((value) => Math.min(pagination.pages, value + 1))
-                    }
-                    disabled={pagination.page >= pagination.pages}
-                  >
-                    بعدی
-                    <ArrowLeft size={15} />
-                  </button>
-                </div>
-              </footer>
-            )}
-          </section>
-        </>
-      )}
-
-      {editor && (
-        <Editor
-          editor={editor}
-          form={form}
-          categories={categories}
-          subcategories={filteredSubcategories}
-          collections={collections}
-          images={images}
-          fieldErrors={fieldErrors}
-          saveError={saveError}
-          loading={editorLoading}
-          saving={saving}
-          dirty={dirty}
-          nameInputRef={nameInputRef}
-          onClose={closeEditor}
-          onSubmit={saveProduct}
-          onName={updateName}
-          onField={updateField}
-          onSlugTouched={() => setSlugTouched(true)}
-          locale={locale}
-          onLocale={setLocale}
-        />
-      )}
-    </div>
-  );
-}
-
-function PermissionState() {
-  return (
-    <section className="catalog-state catalog-state--permission">
-      <AlertTriangle size={22} />
-      <p>دسترسی کاتالوگ</p>
-      <h2>این بخش در سطح دسترسی شما نیست.</h2>
-      <span>
-        از مدیر سیستم بخواهید مجوز مشاهده کاتالوگ را به حساب شما اضافه کند.
-      </span>
-    </section>
-  );
-}
-
-function LedgerSkeleton() {
-  return (
-    <div className="ledger-skeleton" role="status">
-      <span className="sr-only">در حال بارگذاری محصولات</span>
-      {Array.from({ length: 6 }).map((_, index) => (
-        <div key={index}>
-          <i />
-          <p>
-            <b />
-            <small />
-          </p>
-          <em />
-          <em />
-          <em />
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ErrorState({
-  message,
-  onRetry,
-}: {
-  message: string;
-  onRetry: () => void;
-}) {
-  return (
-    <div className="catalog-state">
-      <AlertTriangle size={22} />
-      <p>فهرست در دسترس نیست</p>
-      <h2>دریافت محصولات انجام نشد.</h2>
-      <span>{message}</span>
-      <button onClick={onRetry}>
-        <RefreshCw size={15} />
-        تلاش دوباره
-      </button>
-    </div>
-  );
-}
-
-function EmptyState({
-  filtered,
-  canWrite,
-  onClear,
-  onAdd,
-}: {
-  filtered: boolean;
-  canWrite: boolean;
-  onClear: () => void;
-  onAdd: () => void;
-}) {
-  return (
-    <div className="catalog-state">
-      <PackageOpen size={24} />
-      <p>{filtered ? "نتیجه‌ای پیدا نشد" : "فهرست خالی"}</p>
-      <h2>{filtered ? "جست‌وجو را تغییر دهید." : "اولین محصول را بسازید."}</h2>
-      <span>
-        {filtered
-          ? "محصولی با این فیلترها وجود ندارد."
-          : "پس از آماده شدن دسته‌بندی‌ها، محصول جدید بسازید."}
-      </span>
-      {filtered ? (
-        <button onClick={onClear}>
-          <X size={15} />
-          پاک کردن فیلترها
-        </button>
-      ) : (
-        canWrite && (
-          <button onClick={onAdd}>
-            <Plus size={15} />
-            افزودن اولین محصول
-          </button>
-        )
-      )}
-    </div>
-  );
-}
-
-type EditorProps = {
-  editor: { mode: "create" | "edit"; id?: string };
-  form: ProductForm;
-  categories: ReferenceItem[];
-  subcategories: ReferenceItem[];
-  collections: ReferenceItem[];
-  images: ImageReference[];
-  fieldErrors: Record<string, string>;
-  saveError: string | null;
-  loading: boolean;
-  saving: boolean;
-  dirty: boolean;
-  nameInputRef: React.RefObject<HTMLInputElement | null>;
-  onClose: () => void;
-  onSubmit: (event: FormEvent) => void;
-  onName: (value: string) => void;
-  onField: <K extends keyof ProductForm>(key: K, value: ProductForm[K]) => void;
-  onSlugTouched: () => void;
-  locale: Locale;
-  onLocale: (locale: Locale) => void;
-};
-
-function Editor({
-  editor,
-  form,
-  categories,
-  subcategories,
-  collections,
-  images,
-  fieldErrors,
-  saveError,
-  loading,
-  saving,
-  dirty,
-  nameInputRef,
-  onClose,
-  onSubmit,
-  onName,
-  onField,
-  onSlugTouched,
-  locale,
-  onLocale,
-}: EditorProps) {
-  const noTaxonomy = !categories.length || !subcategories.length;
-  const localized = (
-    key:
-      | "description"
-      | "material"
-      | "fit"
-      | "silhouette"
-      | "pattern"
-      | "seasons"
-      | "occasions"
-      | "styleTags",
-    value: string,
-  ) => onField(key, { ...form[key], [locale]: value });
-  const complete = {
-    fa: Boolean(form.name.fa.trim() && form.description.fa.trim()),
-    en: Boolean(form.name.en.trim() && form.description.en.trim()),
-    ar: Boolean(form.name.ar.trim() && form.description.ar.trim()),
-  };
   const imageMap = useMemo(
     () => new Map(images.map((image) => [image._id, image])),
     [images],
   );
-  const selectedPrimaryImage = imageMap.get(form.primaryImageId);
+
+  const categoryOptions = useMemo<DataSelectOption[]>(
+    () =>
+      categories.map((category) => ({
+        value: category._id,
+        label: fa(category.name),
+        description: category.slug,
+      })),
+    [categories],
+  );
+
+  const subcategoryOptions = useMemo<DataSelectOption[]>(
+    () =>
+      subcategories.map((subcategory) => ({
+        value: subcategory._id,
+        label: fa(subcategory.name),
+        description: subcategory.categoryId
+          ? categoryNames.get(subcategory.categoryId)
+          : subcategory.slug,
+      })),
+    [categoryNames, subcategories],
+  );
+
+  const collectionOptions = useMemo<DataSelectOption[]>(
+    () =>
+      collections.map((collection) => ({
+        value: collection._id,
+        label: fa(collection.name),
+        description: collection.slug,
+      })),
+    [collections],
+  );
+
+  const imageOptions = useMemo<DataSelectOption[]>(
+    () =>
+      images.map((image) => ({
+        value: image._id,
+        label: fa(image.alt),
+        description: image.url,
+      })),
+    [images],
+  );
+
+  const reloadReferences = useCallback(() => {
+    void queryClient.invalidateQueries({
+      queryKey: ["catalog", "product-images"],
+    });
+    void queryClient.invalidateQueries({ queryKey: ["catalog", "categories"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["catalog", "subcategories"],
+    });
+    void queryClient.invalidateQueries({ queryKey: ["catalog", "collections"] });
+  }, [queryClient]);
+
+  const schema = useMemo(
+    () =>
+      buildSchema({
+        categoryOptions,
+        subcategoryOptions,
+        collectionOptions,
+        imageOptions,
+        imageMap,
+      }),
+    [
+      categoryOptions,
+      collectionOptions,
+      imageMap,
+      imageOptions,
+      subcategoryOptions,
+    ],
+  );
+
+  const columns = useMemo<DynamicColumn<Product>[]>(
+    () => [
+      {
+        id: "name",
+        label: "محصول",
+        minWidth: 290,
+        sticky: "start",
+        lockVisibility: true,
+        cell: ({ record }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <ImagePreview
+              image={
+                record.primaryImageId
+                  ? imageMap.get(record.primaryImageId)
+                  : undefined
+              }
+            />
+            <span className="min-w-0">
+              <strong className="block truncate text-[10px] font-bold">
+                {fa(record.name)}
+              </strong>
+              <span className="mt-0.5 block truncate text-[8px] text-[var(--adt-muted)]">
+                {record.slug}
+              </span>
+            </span>
+          </div>
+        ),
+        mobile: { priority: 1, showLabel: false },
+      },
+      {
+        id: "categoryId",
+        label: "دسته",
+        accessor: "categoryId",
+        minWidth: 150,
+        cell: ({ record }) => categoryNames.get(record.categoryId) ?? "—",
+        mobile: { priority: 2 },
+      },
+      {
+        id: "subcategoryId",
+        label: "زیردسته",
+        accessor: "subcategoryId",
+        minWidth: 150,
+        cell: ({ record }) => subcategoryNames.get(record.subcategoryId) ?? "—",
+        mobile: { priority: 3 },
+      },
+      {
+        id: "price",
+        label: "قیمت",
+        minWidth: 130,
+        cell: ({ record }) =>
+          formatPrice(record.basePriceMinor, record.currency),
+        mobile: { priority: 4 },
+      },
+      {
+        id: "status",
+        label: "وضعیت",
+        accessor: "status",
+        minWidth: 110,
+        cell: ({ record }) => <StatusBadge status={record.status} />,
+        mobile: { priority: 5 },
+      },
+      {
+        id: "collections",
+        label: "کالکشن‌ها",
+        minWidth: 220,
+        defaultHidden: true,
+        cell: ({ record }) =>
+          record.collectionIds?.length
+            ? record.collectionIds
+                .map((id) => collectionNames.get(id) ?? id)
+                .join("، ")
+            : "—",
+        mobile: { hidden: true },
+      },
+      {
+        id: "updatedAt",
+        label: "آخرین ویرایش",
+        accessor: "updatedAt",
+        minWidth: 160,
+        defaultHidden: true,
+        cell: ({ record }) => formatDate(record.updatedAt),
+        mobile: { hidden: true },
+      },
+    ],
+    [categoryNames, collectionNames, imageMap, subcategoryNames],
+  );
+
+  const filters = useMemo<DynamicFilterDefinition<ProductFilters, Product>[]>(
+    () => [
+      {
+        id: "status",
+        kind: "select",
+        label: "وضعیت",
+        options: statusOptions,
+        defaultValue: null,
+        badge: (value) =>
+          typeof value === "string"
+            ? statusLabel(value as ProductStatus)
+            : null,
+      },
+      {
+        id: "categoryId",
+        kind: "select",
+        label: "دسته",
+        options: categoryOptions,
+        defaultValue: null,
+        searchable: true,
+        badge: (value) =>
+          typeof value === "string" ? categoryNames.get(value) ?? null : null,
+      },
+      {
+        id: "subcategoryId",
+        kind: "select",
+        label: "زیردسته",
+        options: subcategoryOptions,
+        defaultValue: null,
+        searchable: true,
+        badge: (value) =>
+          typeof value === "string" ? subcategoryNames.get(value) ?? null : null,
+      },
+    ],
+    [categoryNames, categoryOptions, subcategoryNames, subcategoryOptions],
+  );
+
+  if (!canRead) {
+    return (
+      <div className="min-w-0 p-3 sm:p-4 lg:p-5">
+        <CatalogSectionNav />
+        <section className="mt-3 border border-[var(--adt-border)] bg-[var(--adt-surface)] p-6 text-right text-[var(--adt-text)]">
+          <PackageOpen className="mb-3 text-[var(--adt-warning)]" size={22} />
+          <h1 className="text-[16px] font-bold">دسترسی محصولات فعال نیست</h1>
+          <p className="mt-2 text-[10px] leading-6 text-[var(--adt-muted)]">
+            برای دیدن و مدیریت محصولات، دسترسی catalog.read لازم است.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <div
-      className="editor-layer"
-      role="presentation"
-      onMouseDown={(event) => {
-        if (event.currentTarget === event.target) onClose();
-      }}
-    >
-      <aside
-        className="product-editor"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="editor-title"
-        onKeyDown={(event) => {
-          if (event.key !== "Tab") return;
-          const controls = Array.from(
-            event.currentTarget.querySelectorAll<HTMLElement>(
-              'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-            ),
-          );
-          const first = controls[0];
-          const last = controls[controls.length - 1];
-          if (event.shiftKey && document.activeElement === first) {
-            event.preventDefault();
-            last?.focus();
-          }
-          if (!event.shiftKey && document.activeElement === last) {
-            event.preventDefault();
-            first?.focus();
-          }
-        }}
+    <div className="min-w-0 space-y-3 p-3 sm:p-4 lg:p-5">
+      <CatalogSectionNav />
+
+      <DynamicDataTable<
+        Product,
+        ProductFormValues,
+        ProductFormValues,
+        ProductFilters
       >
-        <header className="editor-header">
-          <div>
-            <p>
-              {editor.mode === "create"
-                ? "پرونده جدید کاتالوگ"
-                : "ویرایش محصول"}
-            </p>
-            <h2 id="editor-title">
-              {editor.mode === "create" ? "ساخت محصول" : "تکمیل محصول"}
-            </h2>
-          </div>
-          <LanguageSwitcher
-            locale={locale}
-            onChange={onLocale}
-            complete={complete}
-          />
-          <button onClick={onClose} aria-label="بستن ویرایشگر">
-            <X size={20} />
-          </button>
-        </header>
-        {loading ? (
-          <div className="editor-loading">
-            <LoaderCircle className="spin" size={23} />
-            <strong>در حال باز کردن محصول…</strong>
-            <span>آخرین اطلاعات کاتالوگ دریافت می‌شود.</span>
-          </div>
-        ) : (
-          <form onSubmit={onSubmit} noValidate>
-            <div className="editor-scroll">
-              <section
-                className="product-folio"
-                aria-label="پیش‌نمایش فارسی محصول"
-              >
-                <span className="folio-monogram">
-                  {form.name.fa.trim().slice(0, 2) || "ن"}
-                </span>
-                <div>
-                  <small>پیش‌نمایش فارسی</small>
-                  <strong>{form.name.fa || "محصول بدون عنوان"}</strong>
-                  <p dir="ltr">/{form.slug || "product-slug"}</p>
-                </div>
-                <span
-                  className={`catalog-status catalog-status--${form.status}`}
-                >
-                  {
-                    (
-                      {
-                        draft: "پیش‌نویس",
-                        active: "فعال",
-                        archived: "بایگانی",
-                      } as const
-                    )[form.status]
-                  }
-                </span>
-                <footer>
-                  <b dir="ltr">
-                    {form.price
-                      ? `${form.currency.toUpperCase()} ${form.price}`
-                      : "قیمت ثبت نشده"}
-                  </b>
-                  <i>{dirty ? "تغییرات ذخیره‌نشده" : "اطلاعات به‌روز"}</i>
-                </footer>
-              </section>
-
-              {saveError && (
-                <div className="editor-error" role="alert">
-                  <AlertTriangle size={16} />
-                  <span>{saveError}</span>
-                </div>
-              )}
-              {noTaxonomy && (
-                <div className="reference-warning">
-                  <Layers3 size={17} />
-                  <p>
-                    <strong>دسته‌بندی و زیردسته لازم است.</strong>
+        tableId="admin-products"
+        eyebrow="PRODUCT CATALOG"
+        title="مدیریت محصولات"
+        description="محصول را از صفر بسازید: متن چندزبانه، جایگاه کاتالوگ، قیمت، وضعیت، تصویر اصلی و گالری."
+        source={{
+          queryKey: ["catalog", "products"],
+          fetchPage: async ({
+            page,
+            pageSize,
+            search,
+            filters: activeFilters,
+            signal,
+          }) => {
+            const params = new URLSearchParams({
+              page: String(page),
+              limit: String(pageSize),
+            });
+            if (search) params.set("search", search);
+            if (activeFilters.status) {
+              params.set("status", String(activeFilters.status));
+            }
+            if (activeFilters.categoryId) {
+              params.set("categoryId", String(activeFilters.categoryId));
+            }
+            if (activeFilters.subcategoryId) {
+              params.set("subcategoryId", String(activeFilters.subcategoryId));
+            }
+            return toTableResult(
+              await fetchJson<ListResponse<Product>>(
+                `/api/catalog/products?${params.toString()}`,
+                { signal },
+              ),
+            );
+          },
+          fetchOne: async ({ id, signal }) =>
+            fetchJson<Product>(`/api/catalog/products/${id}`, { signal }),
+        }}
+        columns={columns}
+        getRowId={(record) => record._id}
+        getRowLabel={(record) => fa(record.name)}
+        search={{
+          placeholder: "جستجو با نام، شناسه URL یا SKU...",
+          debounceMs: 320,
+        }}
+        filters={filters}
+        initialFilters={{ status: null, categoryId: null, subcategoryId: null }}
+        pagination={{
+          initialPageSize: 15,
+          pageSizeOptions: [10, 15, 25, 50],
+          showPageNumbers: true,
+        }}
+        columnVisibility={{
+          enabled: true,
+          persist: true,
+          storageKey: "admin-products-columns",
+        }}
+        mobile={{
+          title: (record) => fa(record.name),
+          subtitle: (record) => record.slug,
+          badge: (record) => <StatusBadge status={record.status} />,
+          fieldIds: ["categoryId", "subcategoryId", "price", "status"],
+          maxFields: 4,
+        }}
+        crud={{
+          create: {
+            enabled: canWrite,
+            label: "محصول جدید",
+            title: "ساخت محصول",
+            description:
+              "فیلدهای ضروری محصول را کامل کنید؛ تصاویر آپلودی مستقیم به کتابخانه محصول اضافه می‌شوند.",
+            schema,
+            initialValues: emptyForm,
+            mutationFn: async ({ values }) =>
+              fetchJson<Product>("/api/catalog/products", {
+                method: "POST",
+                body: JSON.stringify(formPayload(values)),
+              }),
+            mapError: mapFormError,
+            onSuccess: (record) => {
+              reloadReferences();
+              toast.success("محصول ساخته شد", {
+                description:
+                  record && "_id" in record
+                    ? `${fa(record.name)} به کاتالوگ اضافه شد.`
+                    : undefined,
+              });
+            },
+          },
+          edit: {
+            enabled: canWrite,
+            title: (record) => `ویرایش ${fa(record.name)}`,
+            description:
+              "تغییرات محصول، تصاویر و ویژگی‌ها بعد از ذخیره روی کاتالوگ اعمال می‌شود.",
+            schema,
+            toInitialValues: productToForm,
+            mutationFn: async ({ id, values }) =>
+              fetchJson<Product>(`/api/catalog/products/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify(formPayload(values)),
+              }),
+            mapError: mapFormError,
+            onSuccess: (record) => {
+              reloadReferences();
+              toast.success("تغییرات محصول ذخیره شد", {
+                description:
+                  record && "_id" in record
+                    ? `${fa(record.name)} به‌روزرسانی شد.`
+                    : undefined,
+              });
+            },
+          },
+          view: {
+            title: (record) => `مشاهده ${fa(record.name)}`,
+            fields: [
+              {
+                id: "name",
+                label: "نام فارسی",
+                render: ({ record }) => fa(record.name),
+              },
+              { id: "slug", label: "شناسه URL", accessor: "slug" },
+              {
+                id: "category",
+                label: "دسته",
+                render: ({ record }) => categoryNames.get(record.categoryId) ?? "—",
+              },
+              {
+                id: "subcategory",
+                label: "زیردسته",
+                render: ({ record }) =>
+                  subcategoryNames.get(record.subcategoryId) ?? "—",
+              },
+              {
+                id: "price",
+                label: "قیمت",
+                render: ({ record }) =>
+                  formatPrice(record.basePriceMinor, record.currency),
+              },
+              {
+                id: "status",
+                label: "وضعیت",
+                render: ({ record }) => <StatusBadge status={record.status} />,
+              },
+              {
+                id: "primaryImage",
+                label: "تصویر اصلی",
+                render: ({ record }) => (
+                  <span className="inline-flex items-center gap-3">
+                    <ImagePreview
+                      image={
+                        record.primaryImageId
+                          ? imageMap.get(record.primaryImageId)
+                          : undefined
+                      }
+                    />
                     <span>
-                      پیش از ذخیره محصول، دسته‌بندی و زیردسته را بسازید.
+                      {record.primaryImageId
+                        ? imageMap.get(record.primaryImageId)?.url ??
+                          record.primaryImageId
+                        : "—"}
                     </span>
-                  </p>
-                </div>
-              )}
-
-              <EditorSection index="۰۱" label="هویت" title="نام‌گذاری محصول">
-                <div className="editor-grid">
-                  <Field
-                    label="نام محصول"
-                    required
-                    error={fieldErrors.name}
-                    className="editor-span-2"
-                  >
-                    <input
-                      ref={nameInputRef}
-                      required
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.name[locale]}
-                      onChange={(event) => onName(event.target.value)}
-                      placeholder="نام محصول در زبان انتخاب‌شده"
-                      aria-invalid={Boolean(fieldErrors.name)}
-                    />
-                  </Field>
-                  <Field
-                    label="شناسه URL"
-                    required
-                    error={fieldErrors.slug}
-                    className="editor-span-2"
-                    hint="فنی و انگلیسی"
-                  >
-                    <div className="slug-input" dir="ltr">
-                      <span>/</span>
-                      <input
-                        required
-                        value={form.slug}
-                        onChange={(event) => {
-                          onSlugTouched();
-                          onField("slug", slugify(event.target.value));
-                        }}
-                        placeholder="atelier-wool-overcoat"
-                        aria-invalid={Boolean(fieldErrors.slug)}
-                      />
-                    </div>
-                  </Field>
-                  <Field
-                    label="توضیحات"
-                    required
-                    error={fieldErrors.description}
-                    className="editor-span-2"
-                  >
-                    <textarea
-                      required
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.description[locale]}
-                      onChange={(event) =>
-                        localized("description", event.target.value)
-                      }
-                      placeholder="توضیحات محصول در زبان انتخاب‌شده…"
-                      rows={5}
-                      aria-invalid={Boolean(fieldErrors.description)}
-                    />
-                  </Field>
-                  <Field label="وضعیت کاتالوگ">
-                    <AdminSelect
-                      value={form.status}
-                      onChange={(value) =>
-                        onField("status", value as ProductStatus)
-                      }
-                      options={[
-                        { value: "draft", label: "پیش‌نویس" },
-                        { value: "active", label: "فعال" },
-                        { value: "archived", label: "بایگانی" },
-                      ]}
-                    />
-                  </Field>
-                </div>
-              </EditorSection>
-
-              <EditorSection index="۰۲" label="جایگاه" title="دسته‌بندی محصول">
-                <div className="editor-grid">
-                  <Field
-                    label="دسته‌بندی"
-                    required
-                    error={fieldErrors.categoryId}
-                  >
-                    <AdminSelect
-                      required
-                      value={form.categoryId}
-                      onChange={(value) => {
-                        onField("categoryId", value);
-                        onField("subcategoryId", "");
-                      }}
-                      placeholder="انتخاب دسته‌بندی"
-                      options={categories.map((item) => ({
-                        value: item._id,
-                        label: fa(item.name),
-                      }))}
-                      invalid={Boolean(fieldErrors.categoryId)}
-                    />
-                  </Field>
-                  <Field
-                    label="زیردسته"
-                    required
-                    error={fieldErrors.subcategoryId}
-                  >
-                    <AdminSelect
-                      required
-                      value={form.subcategoryId}
-                      onChange={(value) => onField("subcategoryId", value)}
-                      disabled={!form.categoryId}
-                      placeholder={
-                        form.categoryId
-                          ? "انتخاب زیردسته"
-                          : "ابتدا دسته را انتخاب کنید"
-                      }
-                      options={subcategories.map((item) => ({
-                        value: item._id,
-                        label: fa(item.name),
-                      }))}
-                      invalid={Boolean(fieldErrors.subcategoryId)}
-                    />
-                  </Field>
-                  <fieldset className="collection-field editor-span-2">
-                    <legend>
-                      کالکشن‌ها <span>اختیاری</span>
-                    </legend>
-                    {collections.length ? (
-                      <div>
-                        {collections.map((item) => (
-                          <label key={item._id}>
-                            <input
-                              type="checkbox"
-                              checked={form.collectionIds.includes(item._id)}
-                              onChange={(event) =>
-                                onField(
-                                  "collectionIds",
-                                  event.target.checked
-                                    ? [...form.collectionIds, item._id]
-                                    : form.collectionIds.filter(
-                                        (id) => id !== item._id,
-                                      ),
-                                )
-                              }
-                            />
-                            <span>
-                              <Check size={12} />
-                              {fa(item.name)}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>هنوز کالکشنی ثبت نشده است.</p>
-                    )}
-                  </fieldset>
-                </div>
-              </EditorSection>
-
-              <EditorSection index="۰۳" label="قیمت‌گذاری" title="تعیین ارزش">
-                <div className="editor-grid editor-grid--pricing">
-                  <Field
-                    label="قیمت نمایش"
-                    required
-                    error={fieldErrors.price}
-                    hint="واحد اصلی"
-                  >
-                    <input
-                      dir="ltr"
-                      required
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={form.price}
-                      onChange={(event) => onField("price", event.target.value)}
-                      placeholder="0.00"
-                      aria-invalid={Boolean(fieldErrors.price)}
-                    />
-                  </Field>
-                  <Field
-                    label="ارز"
-                    required
-                    error={fieldErrors.currency}
-                    hint="کد ISO"
-                  >
-                    <input
-                      dir="ltr"
-                      required
-                      value={form.currency}
-                      maxLength={3}
-                      onChange={(event) =>
-                        onField(
-                          "currency",
-                          event.target.value
-                            .toUpperCase()
-                            .replace(/[^A-Z]/g, ""),
-                        )
-                      }
-                      placeholder="USD"
-                      aria-invalid={Boolean(fieldErrors.currency)}
-                    />
-                  </Field>
-                </div>
-              </EditorSection>
-
-              <EditorSection
-                index="۰۴"
-                label="داستان محصول"
-                title="تعریف شخصیت محصول"
-              >
-                <div className="editor-grid">
-                  <Field
-                    label="جنس‌ها"
-                    className="editor-span-2"
-                    hint="با ویرگول جدا کنید"
-                  >
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.material[locale]}
-                      onChange={(event) =>
-                        localized("material", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="فرم">
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.fit[locale]}
-                      onChange={(event) => localized("fit", event.target.value)}
-                    />
-                  </Field>
-                  <Field label="سیلوئت">
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.silhouette[locale]}
-                      onChange={(event) =>
-                        localized("silhouette", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="طرح">
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.pattern[locale]}
-                      onChange={(event) =>
-                        localized("pattern", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field label="فصل‌ها" hint="با ویرگول جدا کنید">
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.seasons[locale]}
-                      onChange={(event) =>
-                        localized("seasons", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label="موقعیت‌ها"
-                    className="editor-span-2"
-                    hint="با ویرگول جدا کنید"
-                  >
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.occasions[locale]}
-                      onChange={(event) =>
-                        localized("occasions", event.target.value)
-                      }
-                    />
-                  </Field>
-                  <Field
-                    label="برچسب‌های سبک"
-                    className="editor-span-2"
-                    hint="با ویرگول جدا کنید"
-                  >
-                    <input
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.styleTags[locale]}
-                      onChange={(event) =>
-                        localized("styleTags", event.target.value)
-                      }
-                    />
-                  </Field>
-                </div>
-              </EditorSection>
-
-              <EditorSection
-                index="۰۵"
-                label="تصویر محصول"
-                title="کنترل قاب و پوشش تصویر"
-              >
-                <div className="editor-grid">
-                  <Field label="تصویر اصلی" className="editor-span-2">
-                    <AdminSelect
-                      value={form.primaryImageId}
-                      onChange={(value) => {
-                        onField("primaryImageId", value);
-                        onField(
-                          "imageIds",
-                          value
-                            ? Array.from(new Set([value, ...form.imageIds]))
-                            : form.imageIds,
-                        );
-                      }}
-                      placeholder="بدون تصویر اصلی"
-                      options={images.map((image) => ({
-                        value: image._id,
-                        label: `${fa(image.alt)} / ${image.kind.replaceAll("_", " ")}`,
-                      }))}
-                    />
-                  </Field>
-                  <Field label="پوشش تصویر اصلی">
-                    <ImageFitSelect
-                      value={form.primaryImageObjectFit}
-                      onChange={(value) =>
-                        onField("primaryImageObjectFit", value)
-                      }
-                    />
-                  </Field>
-                  <Field label="موقعیت تصویر اصلی">
-                    <ImagePositionSelect
-                      value={form.primaryImageObjectPosition}
-                      onChange={(value) =>
-                        onField("primaryImageObjectPosition", value)
-                      }
-                    />
-                  </Field>
-                  <fieldset className="collection-field editor-span-2">
-                    <legend>
-                      گالری محصول <span>اختیاری</span>
-                    </legend>
-                    {images.length ? (
-                      <div>
-                        {images.map((image) => (
-                          <label key={image._id}>
-                            <input
-                              type="checkbox"
-                              checked={form.imageIds.includes(image._id)}
-                              onChange={(event) =>
-                                onField(
-                                  "imageIds",
-                                  event.target.checked
-                                    ? Array.from(
-                                        new Set([...form.imageIds, image._id]),
-                                      )
-                                    : form.imageIds.filter(
-                                        (id) => id !== image._id,
-                                      ),
-                                )
-                              }
-                            />
-                            <span>
-                              <Check size={12} />
-                              {fa(image.alt)}
-                            </span>
-                          </label>
-                        ))}
-                      </div>
-                    ) : (
-                      <p>هنوز تصویری در کتابخانه ثبت نشده است.</p>
-                    )}
-                  </fieldset>
-                  <div className="product-image-preview editor-span-2">
-                    {selectedPrimaryImage ? (
-                      <img
-                        src={selectedPrimaryImage.url}
-                        alt={fa(selectedPrimaryImage.alt)}
-                        style={imageStyleFor({
-                          ...selectedPrimaryImage,
-                          objectFit: form.primaryImageObjectFit,
-                          objectPosition: form.primaryImageObjectPosition,
-                        })}
-                      />
-                    ) : (
-                      <div>
-                        <ImageOff size={20} />
-                        <span>تصویر اصلی انتخاب نشده است</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </EditorSection>
-            </div>
-            <footer className="editor-actions">
-              <span>{dirty ? "تغییرات ذخیره‌نشده" : "بدون تغییر"}</span>
-              <button type="button" onClick={onClose}>
-                انصراف
-              </button>
-              <button
-                className="editor-save"
-                type="submit"
-                disabled={saving || noTaxonomy || !dirty}
-              >
-                {saving ? (
-                  <>
-                    <LoaderCircle className="spin" size={15} />
-                    در حال ذخیره…
-                  </>
-                ) : (
-                  <>
-                    <Check size={15} />
-                    {editor.mode === "create"
-                      ? "افزودن محصول"
-                      : "ذخیره تغییرات"}
-                  </>
-                )}
-              </button>
-            </footer>
-          </form>
-        )}
-      </aside>
+                  </span>
+                ),
+              },
+              {
+                id: "description",
+                label: "توضیحات فارسی",
+                colSpan: "full",
+                render: ({ record }) => fa(record.description),
+              },
+              {
+                id: "gallery",
+                label: "تعداد تصاویر گالری",
+                render: ({ record }) => formatDigits(record.imageIds?.length ?? 0),
+              },
+              {
+                id: "updatedAt",
+                label: "آخرین ویرایش",
+                render: ({ record }) => formatDate(record.updatedAt),
+              },
+            ],
+            sections: [
+              {
+                id: "identity",
+                title: "هویت",
+                fieldIds: ["name", "slug", "category", "subcategory"],
+              },
+              {
+                id: "commerce",
+                title: "فروش",
+                fieldIds: ["price", "status", "primaryImage", "gallery"],
+              },
+              {
+                id: "content",
+                title: "محتوا",
+                fieldIds: ["description", "updatedAt"],
+              },
+            ],
+          },
+          delete: {
+            enabled: canWrite,
+            title: (record) => `آرشیو کردن ${fa(record.name)}`,
+            description: (record) => (
+              <>
+                محصول <strong>{fa(record.name)}</strong> حذف فیزیکی نمی‌شود؛
+                وضعیت آن به آرشیو تغییر می‌کند.
+              </>
+            ),
+            dangerLevel: "soft",
+            confirmLabel: "آرشیو کردن",
+            mutationFn: async ({ id }) => {
+              await fetchJson(`/api/catalog/products/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status: "archived" }),
+              });
+            },
+            mapError: (error) =>
+              error instanceof Error
+                ? error.message
+                : "آرشیو محصول انجام نشد. دوباره تلاش کنید.",
+            onSuccess: (record) => {
+              toast.warning("محصول آرشیو شد", {
+                description: `${fa(record.name)} از لیست محصولات فعال خارج شد.`,
+              });
+            },
+          },
+          extraRowActions: [
+            {
+              id: "copy-slug",
+              label: "کپی شناسه URL",
+              icon: <Copy size={14} />,
+              onClick: async (record) => {
+                await navigator.clipboard.writeText(record.slug);
+                toast.info("شناسه URL کپی شد", { description: record.slug });
+              },
+            },
+          ],
+        }}
+        labels={{
+          filters: "فیلتر محصولات",
+          clearFilters: "پاک کردن فیلترها",
+          applyFilters: "اعمال فیلترها",
+          pendingFilters: "فیلتر فعال",
+          columns: "ستون‌ها",
+          create: "محصول جدید",
+          view: "مشاهده",
+          edit: "ویرایش",
+          delete: "آرشیو",
+          actions: "عملیات",
+          rowsPerPage: "تعداد در صفحه",
+        }}
+        emptyState={{
+          title: "هنوز محصولی ساخته نشده",
+          description: "اولین محصول را با متن، قیمت، دسته و تصاویر بسازید.",
+          filteredTitle: "محصولی با این شرایط پیدا نشد",
+          filteredDescription:
+            "عبارت جستجو یا فیلترهای انتخاب‌شده را تغییر دهید.",
+        }}
+      />
     </div>
-  );
-}
-
-function EditorSection({
-  index,
-  label,
-  title,
-  children,
-}: {
-  index: string;
-  label: string;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="editor-section">
-      <header>
-        <span>{index}</span>
-        <div>
-          <p>{label}</p>
-          <h3>{title}</h3>
-        </div>
-      </header>
-      {children}
-    </section>
-  );
-}
-
-function Field({
-  label,
-  required,
-  error,
-  hint,
-  className = "",
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  error?: string;
-  hint?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const errorId = error
-    ? `error-${label.toLowerCase().replace(/\s/g, "-")}`
-    : undefined;
-  return (
-    <label className={`editor-field ${className}`}>
-      <span>
-        {label}
-        {required && <b>*</b>}
-        {hint && <small>{hint}</small>}
-      </span>
-      {children}
-      {error && <em id={errorId}>{error}</em>}
-    </label>
   );
 }

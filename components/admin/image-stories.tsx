@@ -1,50 +1,41 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
-import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
-import { AdminSelect } from "@/components/admin/admin-select";
+import { useMemo, useState, type MouseEvent } from "react";
 import {
-  ImageFitSelect,
-  ImagePositionSelect,
-  imageStyleFor,
-} from "@/components/admin/image-presentation-controls";
-import { LanguageSwitcher } from "@/components/admin/language-switcher";
+  Copy,
+  Crosshair,
+  ImageOff,
+  Images,
+  PackageOpen,
+  Plus,
+  Trash2,
+} from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
+import { DynamicDataTable } from "@/components/global/table/DynamicTable";
+import {
+  DataButton,
+  DataInput,
+  DataSelect,
+} from "@/components/global/table/primitives";
+import type {
+  DataSelectOption,
+  DynamicColumn,
+  DynamicFilterDefinition,
+  DynamicFormSchema,
+  DynamicTableResult,
+} from "@/components/global/table/types";
+import { useToast } from "@/components/ui/CustomToast";
+import {
+  emptyLocalizedText,
+  fa,
+  trimLocalized,
+  type LocalizedText,
+} from "@/lib/admin/localization";
 import type {
   ImageObjectFit,
   ImageObjectPosition,
 } from "@/lib/catalog/image-presentation";
-import {
-  emptyLocalizedText,
-  fa,
-  type Locale,
-  type LocalizedText,
-  trimLocalized,
-} from "@/lib/admin/localization";
-import {
-  AlertTriangle,
-  ArrowLeft,
-  ArrowRight,
-  Check,
-  Crosshair,
-  Edit3,
-  ImageOff,
-  Images,
-  LoaderCircle,
-  Plus,
-  RefreshCw,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react";
-import { useRouter } from "next/navigation";
-import {
-  FormEvent,
-  MouseEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
 
 type Kind =
   | "product"
@@ -53,14 +44,16 @@ type Kind =
   | "collection_banner"
   | "editorial"
   | "lookbook";
+
 type ProductLink = {
   productId: string;
-  variantId?: string;
+  variantId?: string | null;
   label?: LocalizedText;
   hotspotX?: number;
   hotspotY?: number;
   sortOrder: number;
 };
+
 type ImageAsset = {
   _id: string;
   url: string;
@@ -74,12 +67,56 @@ type ImageAsset = {
   focalPointY: number;
   linkedProducts: ProductLink[];
   isActive: boolean;
+  createdAt?: string;
   updatedAt?: string;
 };
-type Product = { _id: string; name: LocalizedText; slug: string };
-type Variant = { _id: string; sku: string; productId: string };
-type Pagination = { page: number; limit: number; total: number; pages: number };
-type List<T> = { items: T[]; pagination: Pagination };
+
+type ImageFormValues = {
+  url: string;
+  alt: LocalizedText;
+  kind: Kind;
+  width?: number | null;
+  height?: number | null;
+  objectFit: ImageObjectFit;
+  objectPosition: ImageObjectPosition;
+  focalPointX: number;
+  focalPointY: number;
+  linkedProducts: ProductLink[];
+  isActive: boolean;
+};
+
+type Product = {
+  _id: string;
+  name: LocalizedText;
+  slug: string;
+};
+
+type Variant = {
+  _id: string;
+  sku: string;
+  productId: string;
+};
+
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  pages: number;
+};
+
+type List<T> = {
+  items: T[];
+  pagination: Pagination;
+};
+
+type ImageFilters = Record<string, unknown> & {
+  kind?: string | null;
+  isActive?: string | null;
+};
+
+type ApiError = Error & {
+  fieldErrors?: Record<string, string>;
+};
 
 const kinds: Kind[] = [
   "product",
@@ -89,45 +126,769 @@ const kinds: Kind[] = [
   "editorial",
   "lookbook",
 ];
-const emptyAsset: Omit<ImageAsset, "_id"> = {
-  url: "",
-  alt: emptyLocalizedText(),
-  kind: "editorial",
-  objectFit: "cover",
-  objectPosition: "center",
-  focalPointX: 50,
-  focalPointY: 50,
-  linkedProducts: [],
-  isActive: true,
-};
 
-async function json<T>(response: Response): Promise<T> {
-  const body = (await response.json().catch(() => ({}))) as {
+const kindOptions: DataSelectOption[] = kinds.map((kind) => ({
+  value: kind,
+  label: labelKind(kind),
+}));
+
+const activeOptions: DataSelectOption[] = [
+  { value: "true", label: "فعال" },
+  { value: "false", label: "غیرفعال" },
+];
+
+const objectFitOptions: DataSelectOption[] = [
+  { value: "cover", label: "پوشش کامل" },
+  { value: "contain", label: "نمایش کامل تصویر" },
+  { value: "fill", label: "کشیده داخل قاب" },
+  { value: "none", label: "اندازه اصلی" },
+  { value: "scale-down", label: "کوچک‌سازی در صورت نیاز" },
+];
+
+const objectPositionOptions: DataSelectOption[] = [
+  { value: "center", label: "وسط" },
+  { value: "top", label: "بالا" },
+  { value: "bottom", label: "پایین" },
+  { value: "left", label: "چپ" },
+  { value: "right", label: "راست" },
+  { value: "left top", label: "چپ بالا" },
+  { value: "right top", label: "راست بالا" },
+  { value: "left bottom", label: "چپ پایین" },
+  { value: "right bottom", label: "راست پایین" },
+];
+
+const emptyProducts: Product[] = [];
+const emptyVariants: Variant[] = [];
+const numberFormatter = new Intl.NumberFormat("fa-IR", {
+  useGrouping: false,
+});
+
+function labelKind(kind: Kind) {
+  return {
+    product: "محصول",
+    category_banner: "بنر دسته",
+    subcategory_banner: "بنر زیردسته",
+    collection_banner: "بنر کالکشن",
+    editorial: "ادیتوریال",
+    lookbook: "لوک‌بوک",
+  }[kind];
+}
+
+function emptyForm(): ImageFormValues {
+  return {
+    url: "",
+    alt: emptyLocalizedText(),
+    kind: "editorial",
+    width: null,
+    height: null,
+    objectFit: "cover",
+    objectPosition: "center",
+    focalPointX: 50,
+    focalPointY: 50,
+    linkedProducts: [],
+    isActive: true,
+  };
+}
+
+function imageToForm(asset: ImageAsset): ImageFormValues {
+  return {
+    url: asset.url,
+    alt: asset.alt,
+    kind: asset.kind,
+    width: asset.width ?? null,
+    height: asset.height ?? null,
+    objectFit: asset.objectFit ?? "cover",
+    objectPosition: asset.objectPosition ?? "center",
+    focalPointX: asset.focalPointX ?? 50,
+    focalPointY: asset.focalPointY ?? 50,
+    linkedProducts: asset.linkedProducts ?? [],
+    isActive: asset.isActive,
+  };
+}
+
+function validImageUrl(value: string) {
+  return value.startsWith("/") || /^https?:\/\/[^\s]+$/i.test(value);
+}
+
+function cleanLinkedProducts(links: ProductLink[]) {
+  return links
+    .filter((link) => link.productId)
+    .map((link, index) => ({
+      productId: link.productId,
+      ...(link.variantId ? { variantId: link.variantId } : {}),
+      label: link.label ? trimLocalized(link.label) : undefined,
+      hotspotX: link.hotspotX,
+      hotspotY: link.hotspotY,
+      sortOrder: Number.isFinite(Number(link.sortOrder))
+        ? Number(link.sortOrder)
+        : index,
+    }));
+}
+
+function formPayload(values: ImageFormValues) {
+  return {
+    url: values.url.trim(),
+    alt: trimLocalized(values.alt),
+    kind: values.kind,
+    width: values.width ? Number(values.width) : null,
+    height: values.height ? Number(values.height) : null,
+    objectFit: values.objectFit,
+    objectPosition: values.objectPosition,
+    focalPointX: Math.max(0, Math.min(100, Number(values.focalPointX) || 50)),
+    focalPointY: Math.max(0, Math.min(100, Number(values.focalPointY) || 50)),
+    linkedProducts: cleanLinkedProducts(values.linkedProducts),
+    isActive: values.isActive,
+  };
+}
+
+function formatDigits(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value).replace(/\d/g, (digit) =>
+    numberFormatter.format(Number(digit)),
+  );
+}
+
+function formatDate(value?: string) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("fa-IR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function toTableResult<T>(data: List<T>): DynamicTableResult<T> {
+  return {
+    items: data.items,
+    total: data.pagination.total,
+    page: data.pagination.page,
+    pageSize: data.pagination.limit,
+    pageCount: data.pagination.pages,
+  };
+}
+
+function fieldErrorPath(path: Array<string | number> | undefined) {
+  return path?.map(String).join(".");
+}
+
+async function readApiError(response: Response): Promise<ApiError> {
+  let payload: unknown = null;
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  const body = payload as {
     error?: string;
     message?: string;
-  };
-  if (!response.ok)
-    throw Object.assign(
-      new Error(
-        body.error || body.message || "The request could not be completed.",
-      ),
-      { status: response.status },
+    details?: Array<{ path?: Array<string | number>; message?: string }>;
+  } | null;
+
+  const error = new Error(
+    body?.error ?? body?.message ?? "درخواست انجام نشد. دوباره تلاش کنید.",
+  ) as ApiError;
+
+  if (Array.isArray(body?.details)) {
+    error.fieldErrors = Object.fromEntries(
+      body.details
+        .map((issue) => [fieldErrorPath(issue.path), issue.message] as const)
+        .filter(
+          (issue): issue is readonly [string, string] =>
+            Boolean(issue[0]) && Boolean(issue[1]),
+        ),
     );
-  return body as T;
+  }
+
+  return error;
 }
-const labelKind = (kind: Kind) =>
-  (
-    ({
-      product: "محصول",
-      category_banner: "بنر دسته",
-      subcategory_banner: "بنر زیردسته",
-      collection_banner: "بنر کالکشن",
-      editorial: "ادیتوریال",
-      lookbook: "لوک‌بوک",
-    }) as const
-  )[kind];
-const validImageUrl = (value: string) =>
-  value.startsWith("/") || /^https?:\/\/[^\s]+$/i.test(value);
+
+async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!response.ok) throw await readApiError(response);
+  return (await response.json()) as T;
+}
+
+function mapFormError(error: unknown) {
+  const typed = error as ApiError;
+  return {
+    message: typed?.message ?? "ذخیره تصویر انجام نشد.",
+    fieldErrors: typed?.fieldErrors,
+  };
+}
+
+function validateImage(values: ImageFormValues) {
+  const errors: Record<string, string> = {};
+  if (!validImageUrl(values.url)) {
+    errors.url = "آدرس تصویر باید با http، https یا / شروع شود.";
+  }
+  if (!values.alt.fa.trim() || !values.alt.en.trim() || !values.alt.ar.trim()) {
+    errors["alt.fa"] = "متن جایگزین باید برای فارسی، انگلیسی و عربی تکمیل شود.";
+  }
+  if (
+    values.width !== null &&
+    values.width !== undefined &&
+    Number(values.width) < 1
+  ) {
+    errors.width = "عرض باید عددی بزرگ‌تر از صفر باشد.";
+  }
+  if (
+    values.height !== null &&
+    values.height !== undefined &&
+    Number(values.height) < 1
+  ) {
+    errors.height = "ارتفاع باید عددی بزرگ‌تر از صفر باشد.";
+  }
+  values.linkedProducts.forEach((link, index) => {
+    if (!link.productId) return;
+    const hasX = link.hotspotX !== undefined && link.hotspotX !== null;
+    const hasY = link.hotspotY !== undefined && link.hotspotY !== null;
+    if (hasX !== hasY) {
+      errors.linkedProducts = `برای پیوند ${formatDigits(index + 1)} هر دو مختصات افقی و عمودی لازم است.`;
+    }
+    if (hasX && (Number(link.hotspotX) < 0 || Number(link.hotspotX) > 100)) {
+      errors.linkedProducts = "مختصات افقی باید بین ۰ تا ۱۰۰ باشد.";
+    }
+    if (hasY && (Number(link.hotspotY) < 0 || Number(link.hotspotY) > 100)) {
+      errors.linkedProducts = "مختصات عمودی باید بین ۰ تا ۱۰۰ باشد.";
+    }
+  });
+  return errors;
+}
+
+function buildSchema({
+  products,
+  variants,
+}: {
+  products: Product[];
+  variants: Variant[];
+}): DynamicFormSchema<ImageFormValues> {
+  return {
+    validate: validateImage,
+    fields: [
+      {
+        kind: "input",
+        name: "url",
+        label: "آدرس تصویر",
+        required: true,
+        dir: "ltr",
+        inputType: "url",
+        placeholder: "https://... یا /uploads/...",
+      },
+      {
+        kind: "textarea",
+        name: "alt.fa",
+        label: "متن جایگزین فارسی",
+        required: true,
+        rows: 3,
+      },
+      {
+        kind: "textarea",
+        name: "alt.en",
+        label: "متن جایگزین انگلیسی",
+        required: true,
+        dir: "ltr",
+        rows: 3,
+      },
+      {
+        kind: "textarea",
+        name: "alt.ar",
+        label: "متن جایگزین عربی",
+        required: true,
+        rows: 3,
+      },
+      {
+        kind: "select",
+        name: "kind",
+        label: "نوع تصویر",
+        options: kindOptions,
+        required: true,
+      },
+      {
+        kind: "boolean",
+        name: "isActive",
+        label: "وضعیت نمایش",
+        onLabel: "فعال",
+        offLabel: "غیرفعال",
+      },
+      {
+        kind: "select",
+        name: "objectFit",
+        label: "پوشش تصویر",
+        options: objectFitOptions,
+        required: true,
+      },
+      {
+        kind: "select",
+        name: "objectPosition",
+        label: "موقعیت تصویر",
+        options: objectPositionOptions,
+        required: true,
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "width",
+        label: "عرض",
+        min: 1,
+        step: 1,
+        inputMode: "numeric",
+        helperText: "اختیاری",
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "height",
+        label: "ارتفاع",
+        min: 1,
+        step: 1,
+        inputMode: "numeric",
+        helperText: "اختیاری",
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "focalPointX",
+        label: "نقطه تمرکز افقی",
+        min: 0,
+        max: 100,
+        step: 1,
+        suffixText: "%",
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "focalPointY",
+        label: "نقطه تمرکز عمودی",
+        min: 0,
+        max: 100,
+        step: 1,
+        suffixText: "%",
+      },
+      {
+        kind: "custom",
+        name: "linkedProducts",
+        label: "پیوند محصول و نقاط خرید",
+        colSpan: "full",
+        render: ({ value, values, setValue, error, disabled, readOnly }) => (
+          <HotspotComposer
+            image={values}
+            links={Array.isArray(value) ? (value as ProductLink[]) : []}
+            products={products}
+            variants={variants}
+            error={error}
+            disabled={disabled || readOnly}
+            onChange={(next) => setValue(next)}
+          />
+        ),
+      },
+    ],
+    sections: [
+      {
+        id: "source",
+        title: "منبع و دسترس‌پذیری",
+        description:
+          "تصویر با URL ذخیره می‌شود و متن جایگزین برای هر سه زبان لازم است.",
+        fieldNames: ["url", "alt.fa", "alt.en", "alt.ar", "kind", "isActive"],
+      },
+      {
+        id: "presentation",
+        title: "نمایش تصویر",
+        description:
+          "پوشش، موقعیت، ابعاد و نقطه تمرکز برای استفاده در صفحات مختلف.",
+        fieldNames: [
+          "objectFit",
+          "objectPosition",
+          "width",
+          "height",
+          "focalPointX",
+          "focalPointY",
+        ],
+      },
+      {
+        id: "links",
+        title: "تصویر خریدپذیر",
+        description:
+          "محصول‌ها را به تصویر وصل کنید و نقطه دقیق هر محصول را روی تصویر بگذارید.",
+        fieldNames: ["linkedProducts"],
+      },
+    ],
+  };
+}
+
+function statusBadge(active: boolean) {
+  return (
+    <span
+      className={`inline-flex border px-2 py-1 text-[8px] font-semibold ${
+        active
+          ? "border-[var(--adt-success)]/30 bg-[var(--adt-success)]/[0.06] text-[var(--adt-success)]"
+          : "border-[var(--adt-danger)]/30 bg-[var(--adt-danger)]/[0.06] text-[var(--adt-danger)]"
+      }`}
+    >
+      {active ? "فعال" : "غیرفعال"}
+    </span>
+  );
+}
+
+function assetBackground(
+  asset: Pick<ImageAsset, "url" | "objectFit" | "objectPosition">,
+) {
+  return {
+    backgroundImage: `url("${asset.url}")`,
+    backgroundPosition: asset.objectPosition ?? "center",
+    backgroundSize: asset.objectFit === "contain" ? "contain" : "cover",
+    backgroundRepeat: "no-repeat",
+  };
+}
+
+function ImageThumb({
+  asset,
+}: {
+  asset?: Pick<ImageAsset, "url" | "objectFit" | "objectPosition">;
+}) {
+  return (
+    <span
+      className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]"
+      style={asset?.url ? assetBackground(asset) : undefined}
+    >
+      {asset?.url ? null : <ImageOff size={18} />}
+    </span>
+  );
+}
+
+function HotspotComposer({
+  image,
+  links,
+  products,
+  variants,
+  error,
+  disabled,
+  onChange,
+}: {
+  image: ImageFormValues;
+  links: ProductLink[];
+  products: Product[];
+  variants: Variant[];
+  error?: string;
+  disabled: boolean;
+  onChange: (links: ProductLink[]) => void;
+}) {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [placing, setPlacing] = useState(false);
+
+  const productOptions = useMemo<DataSelectOption[]>(
+    () =>
+      products.map((product) => ({
+        value: product._id,
+        label: fa(product.name),
+        description: product.slug,
+      })),
+    [products],
+  );
+
+  function updateLink(index: number, patch: Partial<ProductLink>) {
+    onChange(
+      links.map((link, itemIndex) =>
+        itemIndex === index ? { ...link, ...patch } : link,
+      ),
+    );
+  }
+
+  function addLink() {
+    const next = [...links, { productId: "", sortOrder: links.length }];
+    onChange(next);
+    setSelectedIndex(next.length - 1);
+  }
+
+  function removeLink(index: number) {
+    onChange(links.filter((_, itemIndex) => itemIndex !== index));
+    setSelectedIndex(Math.max(0, index - 1));
+  }
+
+  function placeHotspot(event: MouseEvent<HTMLDivElement>) {
+    if (!placing || disabled || !links[selectedIndex]) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = Math.round(((event.clientX - bounds.left) / bounds.width) * 100);
+    const y = Math.round(((event.clientY - bounds.top) / bounds.height) * 100);
+    updateLink(selectedIndex, {
+      hotspotX: Math.max(0, Math.min(100, x)),
+      hotspotY: Math.max(0, Math.min(100, y)),
+    });
+    setPlacing(false);
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+      <div className="min-w-0">
+        <div
+          role="button"
+          tabIndex={placing ? 0 : -1}
+          aria-label="بوم جای‌گذاری نقطه محصول"
+          onClick={placeHotspot}
+          onKeyDown={(event) => {
+            if (
+              (event.key === "Enter" || event.key === " ") &&
+              links[selectedIndex]
+            ) {
+              updateLink(selectedIndex, { hotspotX: 50, hotspotY: 50 });
+              setPlacing(false);
+            }
+          }}
+          className={`relative aspect-[4/5] min-h-[320px] overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] ${
+            placing ? "cursor-crosshair ring-2 ring-[var(--adt-accent)]/30" : ""
+          }`}
+          style={
+            image.url && validImageUrl(image.url)
+              ? assetBackground(image)
+              : undefined
+          }
+        >
+          {!image.url || !validImageUrl(image.url) ? (
+            <div className="grid h-full place-items-center text-center text-[10px] text-[var(--adt-muted)]">
+              <span>
+                <Images className="mx-auto mb-2" size={24} />
+                آدرس معتبر تصویر را وارد کنید
+              </span>
+            </div>
+          ) : null}
+
+          {links.map((link, index) =>
+            link.hotspotX !== undefined && link.hotspotY !== undefined ? (
+              <button
+                key={`${link.productId || "draft"}-${index}`}
+                type="button"
+                disabled={disabled}
+                aria-label={`انتخاب نقطه ${formatDigits(index + 1)}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setSelectedIndex(index);
+                  setPlacing(false);
+                }}
+                className={`absolute grid size-7 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border text-[9px] font-bold shadow-[0_8px_24px_rgba(0,0,0,0.25)] ${
+                  selectedIndex === index
+                    ? "border-[var(--adt-accent)] bg-[var(--adt-accent)] text-white"
+                    : "border-white/80 bg-black/70 text-white"
+                }`}
+                style={{
+                  left: `${link.hotspotX}%`,
+                  top: `${link.hotspotY}%`,
+                }}
+              >
+                {formatDigits(index + 1)}
+              </button>
+            ) : null,
+          )}
+        </div>
+        <p className="mt-2 text-[9px] leading-5 text-[var(--adt-muted)]">
+          {placing
+            ? "روی تصویر کلیک کنید تا مختصات همین پیوند ثبت شود."
+            : "برای جای‌گذاری دقیق، اول یک پیوند را انتخاب کنید و دکمه نقطه‌گذاری را بزنید."}
+        </p>
+      </div>
+
+      <div className="min-w-0 space-y-3">
+        {links.length === 0 ? (
+          <div className="border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-4 py-8 text-center text-[10px] text-[var(--adt-muted)]">
+            هنوز محصولی به این تصویر وصل نشده است.
+          </div>
+        ) : null}
+
+        {links.map((link, index) => {
+          const variantOptions = variants
+            .filter((variant) => variant.productId === link.productId)
+            .map((variant) => ({ value: variant._id, label: variant.sku }));
+
+          return (
+            <article
+              key={index}
+              className={`min-w-0 border p-3 ${
+                selectedIndex === index
+                  ? "border-[var(--adt-accent)] bg-[var(--adt-accent)]/[0.05]"
+                  : "border-[var(--adt-border)] bg-[var(--adt-surface)]"
+              }`}
+            >
+              <header className="mb-3 flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => setSelectedIndex(index)}
+                  className="cursor-pointer text-[10px] font-bold text-[var(--adt-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/30"
+                >
+                  پیوند {formatDigits(index + 1)}
+                </button>
+                <DataButton
+                  tone="ghost"
+                  size="sm"
+                  icon={<Trash2 size={13} />}
+                  disabled={disabled}
+                  onClick={() => removeLink(index)}
+                >
+                  حذف
+                </DataButton>
+              </header>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <DataSelect
+                  label="محصول"
+                  value={link.productId || null}
+                  options={productOptions}
+                  searchable
+                  clearable
+                  disabled={disabled}
+                  onChange={(value) =>
+                    updateLink(index, {
+                      productId: String(value ?? ""),
+                      variantId: null,
+                    })
+                  }
+                />
+                <DataSelect
+                  label="تنوع"
+                  value={link.variantId || null}
+                  options={variantOptions}
+                  searchable
+                  clearable
+                  disabled={disabled || !link.productId}
+                  placeholder={
+                    link.productId ? "همه تنوع‌ها" : "اول محصول را انتخاب کنید"
+                  }
+                  onChange={(value) =>
+                    updateLink(index, {
+                      variantId: value ? String(value) : null,
+                    })
+                  }
+                />
+                <DataInput
+                  label="برچسب فارسی"
+                  value={link.label?.fa ?? ""}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateLink(index, {
+                      label: {
+                        ...(link.label ?? emptyLocalizedText()),
+                        fa: event.target.value,
+                      },
+                    })
+                  }
+                />
+                <DataInput
+                  label="برچسب انگلیسی"
+                  dir="ltr"
+                  value={link.label?.en ?? ""}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateLink(index, {
+                      label: {
+                        ...(link.label ?? emptyLocalizedText()),
+                        en: event.target.value,
+                      },
+                    })
+                  }
+                />
+                <DataInput
+                  label="مختصات افقی"
+                  type="number"
+                  min={0}
+                  max={100}
+                  suffixText="%"
+                  value={link.hotspotX ?? ""}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateLink(index, {
+                      hotspotX:
+                        event.target.value === ""
+                          ? undefined
+                          : Number(event.target.value),
+                    })
+                  }
+                />
+                <DataInput
+                  label="مختصات عمودی"
+                  type="number"
+                  min={0}
+                  max={100}
+                  suffixText="%"
+                  value={link.hotspotY ?? ""}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateLink(index, {
+                      hotspotY:
+                        event.target.value === ""
+                          ? undefined
+                          : Number(event.target.value),
+                    })
+                  }
+                />
+                <DataInput
+                  label="ترتیب"
+                  type="number"
+                  value={link.sortOrder}
+                  disabled={disabled}
+                  onChange={(event) =>
+                    updateLink(index, { sortOrder: Number(event.target.value) })
+                  }
+                />
+                <br />
+                <div className="flex items-end gap-2">
+                  <DataButton
+                    tone={
+                      placing && selectedIndex === index
+                        ? "warning"
+                        : "secondary"
+                    }
+                    size="md"
+                    icon={<Crosshair size={14} />}
+                    disabled={disabled}
+                    onClick={() => {
+                      setSelectedIndex(index);
+                      setPlacing(true);
+                    }}
+                  >
+                    نقطه‌گذاری
+                  </DataButton>
+                  <DataButton
+                    tone="ghost"
+                    size="md"
+                    disabled={disabled}
+                    onClick={() =>
+                      updateLink(index, {
+                        hotspotX: undefined,
+                        hotspotY: undefined,
+                      })
+                    }
+                  >
+                    پاک کردن نقطه
+                  </DataButton>
+                </div>
+              </div>
+            </article>
+          );
+        })}
+
+        {error ? (
+          <p className="text-[9px] leading-5 text-[var(--adt-danger)]">
+            {error}
+          </p>
+        ) : null}
+
+        <DataButton
+          tone="secondary"
+          size="md"
+          icon={<Plus size={14} />}
+          disabled={disabled}
+          onClick={addLink}
+        >
+          افزودن پیوند محصول
+        </DataButton>
+      </div>
+    </div>
+  );
+}
 
 export function ImageStories({
   canRead,
@@ -136,1111 +897,381 @@ export function ImageStories({
   canRead: boolean;
   canWrite: boolean;
 }) {
-  const router = useRouter();
-  const [items, setItems] = useState<ImageAsset[]>([]);
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 12,
-    total: 0,
-    pages: 1,
+  const toast = useToast();
+
+  const productsQuery = useQuery({
+    queryKey: ["catalog", "products", "image-story-options"],
+    queryFn: () =>
+      fetchJson<List<Product>>("/api/catalog/products?limit=100&status=active"),
+    enabled: canRead,
   });
-  const [page, setPage] = useState(1);
-  const [draftSearch, setDraftSearch] = useState("");
-  const [search, setSearch] = useState("");
-  const [kind, setKind] = useState<"" | Kind>("");
-  const [active, setActive] = useState("");
-  const [loading, setLoading] = useState(canRead);
-  const [error, setError] = useState("");
-  const [refresh, setRefresh] = useState(0);
-  const [editor, setEditor] = useState<{
-    mode: "create" | "edit";
-    id?: string;
-  } | null>(null);
-  const [notice, setNotice] = useState("");
 
-  const auth = useCallback(
-    (status: number) => {
-      if (status === 401) router.replace("/login?reason=session");
-    },
-    [router],
+  const variantsQuery = useQuery({
+    queryKey: ["catalog", "variants", "image-story-options"],
+    queryFn: () => fetchJson<List<Variant>>("/api/catalog/variants?limit=100"),
+    enabled: canRead,
+  });
+
+  const products = productsQuery.data?.items ?? emptyProducts;
+  const variants = variantsQuery.data?.items ?? emptyVariants;
+  const schema = useMemo(
+    () => buildSchema({ products, variants }),
+    [products, variants],
   );
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(draftSearch.trim());
-      setPage(1);
-    }, 320);
-    return () => clearTimeout(timer);
-  }, [draftSearch]);
-  useEffect(() => {
-    if (!canRead) return;
-    const controller = new AbortController();
-    const load = async () => {
-      setLoading(true);
-      setError("");
-      const params = new URLSearchParams({ page: String(page), limit: "12" });
-      if (search) params.set("search", search);
-      if (kind) params.set("kind", kind);
-      if (active) params.set("isActive", active);
-      try {
-        const data = await fetch(`/api/catalog/images?${params}`, {
-          signal: controller.signal,
-        }).then(json<List<ImageAsset>>);
-        setItems(data.items);
-        setPagination(data.pagination);
-      } catch (cause) {
-        const problem = cause as Error & { status?: number };
-        if (problem.name !== "AbortError") {
-          auth(problem.status || 0);
-          setError(problem.message);
-        }
-      } finally {
-        if (!controller.signal.aborted) setLoading(false);
-      }
-    };
-    void load();
-    return () => controller.abort();
-  }, [active, auth, canRead, kind, page, refresh, search]);
 
-  const clear = () => {
-    setDraftSearch("");
-    setSearch("");
-    setKind("");
-    setActive("");
-    setPage(1);
-  };
-  const filtered = Boolean(search || kind || active);
-  const saved = (message: string) => {
-    setEditor(null);
-    setPage(1);
-    setRefresh((n) => n + 1);
-    setNotice(message);
-    setTimeout(() => setNotice(""), 2600);
-  };
-
-  return (
-    <div className="catalog-workspace studio-workspace">
-      {notice && (
-        <div className="toast" role="status">
-          <Check size={14} />
-          {notice}
-        </div>
-      )}
-      <CatalogSectionNav />
-      <header className="studio-masthead">
-        <div>
-          <p>
-            برگه تصاویر ادیتوریال <i>/</i> کتابخانه
-          </p>
-          <h1>تصاویر خریدپذیر.</h1>
-          <small>محصول را در دل کمپین به مشتری نشان دهید.</small>
-        </div>
-        <div className="studio-count">
-          <span>تصاویر ثبت‌شده</span>
-          <strong>{String(pagination.total).padStart(2, "0")}</strong>
-          <small>اطلاعات تصویری مبتنی بر URL</small>
-        </div>
-        {canWrite && (
-          <button
-            className="studio-primary"
-            onClick={() => setEditor({ mode: "create" })}
-          >
-            <Plus size={16} />
-            <span>افزودن تصویر</span>
-          </button>
-        )}
-      </header>
-
-      {!canRead ? (
-        <Permission />
-      ) : (
-        <>
-          <section className="studio-controls" aria-label="فیلتر تصاویر">
-            <label className="studio-search">
-              <Search size={16} />
-              <span className="sr-only">جست‌وجوی تصاویر</span>
-              <input
-                value={draftSearch}
-                onChange={(e) => setDraftSearch(e.target.value)}
-                placeholder="جست‌وجوی متن جایگزین یا URL"
-              />
-            </label>
-            <label>
-              <span className="sr-only">نوع تصویر</span>
-              <AdminSelect
-                value={kind}
-                onChange={(value) => {
-                  setKind(value as "" | Kind);
-                  setPage(1);
-                }}
-                placeholder="همه انواع تصویر"
-                options={kinds.map((value) => ({
-                  value,
-                  label: labelKind(value),
-                }))}
-              />
-            </label>
-            <label>
-              <span className="sr-only">وضعیت</span>
-              <AdminSelect
-                value={active}
-                onChange={(value) => {
-                  setActive(value);
-                  setPage(1);
-                }}
-                placeholder="فعال و غیرفعال"
-                options={[
-                  { value: "true", label: "فعال" },
-                  { value: "false", label: "غیرفعال" },
-                ]}
-              />
-            </label>
-            {filtered && (
-              <button className="studio-text-button" onClick={clear}>
-                <X size={14} />
-                پاک کردن
-              </button>
-            )}
-            <button
-              className="catalog-refresh"
-              onClick={() => setRefresh((n) => n + 1)}
-              disabled={loading}
-              aria-label="Refresh images"
-            >
-              <RefreshCw className={loading ? "spin" : ""} size={16} />
-            </button>
-          </section>
-
-          <section
-            className="contact-sheet"
-            aria-live="polite"
-            aria-busy={loading}
-          >
-            <header>
-              <span>برگه تصاویر / {filtered ? "انتخاب" : "آرشیو کامل"}</span>
-              <b>{pagination.total} تصویر</b>
-            </header>
-            {loading ? (
-              <ImageSkeleton />
-            ) : error ? (
-              <StudioState
-                icon="error"
-                title="The contact sheet is unavailable."
-                detail={error}
-                action="Try again"
-                onAction={() => setRefresh((n) => n + 1)}
-              />
-            ) : items.length === 0 ? (
-              <StudioState
-                title={
-                  filtered
-                    ? "No frames match this edit."
-                    : "Your image story begins here."
-                }
-                detail={
-                  filtered
-                    ? "Clear or adjust the filters to widen the contact sheet."
-                    : "Add a real image URL before composing category banners or shoppable moments."
-                }
-                action={
-                  filtered
-                    ? "Clear filters"
-                    : canWrite
-                      ? "Create first image"
-                      : undefined
-                }
-                onAction={
-                  filtered ? clear : () => setEditor({ mode: "create" })
-                }
-              />
-            ) : (
-              <div className="image-grid">
-                {items.map((asset, index) => (
-                  <article className="image-card" key={asset._id}>
-                    <div className="image-card__frame">
-                      <AssetImage asset={asset} />
-                      <span className="frame-number">
-                        {String((page - 1) * 12 + index + 1).padStart(2, "0")}
-                      </span>
-                      <span
-                        className={
-                          asset.isActive
-                            ? "frame-state"
-                            : "frame-state inactive"
-                        }
-                      >
-                        {asset.isActive ? "فعال" : "غیرفعال"}
-                      </span>
-                    </div>
-                    <div className="image-card__copy">
-                      <p>{labelKind(asset.kind)}</p>
-                      <h2>{fa(asset.alt)}</h2>
-                      <dl>
-                        <div>
-                          <dt>ابعاد</dt>
-                          <dd>
-                            {asset.width && asset.height
-                              ? `${asset.width} × ${asset.height}`
-                              : "ثبت نشده"}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>تمرکز</dt>
-                          <dd>
-                            {asset.focalPointX ?? 50} /{" "}
-                            {asset.focalPointY ?? 50}
-                          </dd>
-                        </div>
-                        <div>
-                          <dt>اتصال</dt>
-                          <dd>{asset.linkedProducts?.length || 0} محصول</dd>
-                        </div>
-                      </dl>
-                      {canWrite && (
-                        <button
-                          onClick={() =>
-                            setEditor({ mode: "edit", id: asset._id })
-                          }
-                        >
-                          <Edit3 size={14} />
-                          ویرایش تصویر
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
-            {!loading && !error && items.length > 0 && (
-              <footer className="studio-pagination">
-                <span>
-                  صفحه {pagination.page} از {Math.max(1, pagination.pages)}
-                </span>
-                <div>
-                  <button
-                    disabled={page <= 1}
-                    onClick={() => setPage((n) => n - 1)}
-                  >
-                    <ArrowRight size={14} />
-                    قبلی
-                  </button>
-                  <button
-                    disabled={page >= pagination.pages}
-                    onClick={() => setPage((n) => n + 1)}
-                  >
-                    بعدی
-                    <ArrowLeft size={14} />
-                  </button>
-                </div>
-              </footer>
-            )}
-          </section>
-        </>
-      )}
-      {editor && (
-        <ImageEditor
-          descriptor={editor}
-          canWrite={canWrite}
-          onClose={() => setEditor(null)}
-          onSaved={saved}
-          auth={auth}
-        />
-      )}
-    </div>
-  );
-}
-
-function AssetImage({
-  asset,
-  className = "",
-}: {
-  asset: Pick<
-    ImageAsset,
-    | "url"
-    | "alt"
-    | "objectFit"
-    | "objectPosition"
-    | "focalPointX"
-    | "focalPointY"
-  >;
-  className?: string;
-}) {
-  const [broken, setBroken] = useState(false);
-  if (!asset.url || broken)
-    return (
-      <div className={`broken-image ${className}`}>
-        <ImageOff size={21} />
-        <span>پیش‌نمایش در دسترس نیست</span>
-      </div>
-    );
-  return (
-    <img
-      className={className}
-      src={asset.url}
-      alt={fa(asset.alt)}
-      onError={() => setBroken(true)}
-      style={imageStyleFor(asset)}
-    />
-  );
-}
-
-function ImageEditor({
-  descriptor,
-  canWrite,
-  onClose,
-  onSaved,
-  auth,
-}: {
-  descriptor: { mode: "create" | "edit"; id?: string };
-  canWrite: boolean;
-  onClose: () => void;
-  onSaved: (m: string) => void;
-  auth: (s: number) => void;
-}) {
-  const [form, setForm] = useState<
-    Omit<ImageAsset, "_id"> & { width?: number | null; height?: number | null }
-  >(emptyAsset);
-  const [initial, setInitial] = useState(JSON.stringify(emptyAsset));
-  const [loading, setLoading] = useState(descriptor.mode === "edit");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [locale, setLocale] = useState<Locale>("fa");
-  const [productSearch, setProductSearch] = useState("");
-  const [products, setProducts] = useState<Product[]>([]);
-  const [productLoading, setProductLoading] = useState(false);
-  const [variants, setVariants] = useState<Record<number, Variant[]>>({});
-  const [selectedLink, setSelectedLink] = useState(0);
-  const [placing, setPlacing] = useState(false);
-  const [natural, setNatural] = useState({ width: 0, height: 0 });
-  const panelRef = useRef<HTMLElement>(null);
-  const urlRef = useRef<HTMLInputElement>(null);
-  const dirty = JSON.stringify(form) !== initial;
-
-  const close = useCallback(() => {
-    if (!dirty || window.confirm("تغییرات ذخیره‌نشده تصویر حذف شود؟"))
-      onClose();
-  }, [dirty, onClose]);
-  useEffect(() => {
-    document.body.classList.add("editor-open");
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
-        close();
-      }
-    };
-    window.addEventListener("keydown", key);
-    setTimeout(() => urlRef.current?.focus(), 80);
-    return () => {
-      document.body.classList.remove("editor-open");
-      window.removeEventListener("keydown", key);
-    };
-  }, [close]);
-  useEffect(() => {
-    if (!descriptor.id) return;
-    fetch(`/api/catalog/images/${descriptor.id}`)
-      .then(json<ImageAsset>)
-      .then((asset) => {
-        const next = { ...asset };
-        setForm(next);
-        setInitial(JSON.stringify(next));
-      })
-      .catch((cause) => {
-        auth(cause.status || 0);
-        setError(cause.message);
-      })
-      .finally(() => setLoading(false));
-  }, [auth, descriptor.id]);
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setProductLoading(true);
-      const params = new URLSearchParams({ limit: "20" });
-      if (productSearch.trim()) params.set("search", productSearch.trim());
-      fetch(`/api/catalog/products?${params}`, { signal: controller.signal })
-        .then(json<List<Product>>)
-        .then((data) => setProducts(data.items))
-        .catch(() => {})
-        .finally(() => setProductLoading(false));
-    }, 280);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [productSearch]);
-
-  const set = <K extends keyof typeof form>(
-    key: K,
-    value: (typeof form)[K],
-  ) => {
-    setForm((f) => ({ ...f, [key]: value }));
-    setErrors((e) => ({ ...e, [key]: "" }));
-  };
-  const setLink = (index: number, patch: Partial<ProductLink>) =>
-    setForm((f) => ({
-      ...f,
-      linkedProducts: f.linkedProducts.map((link, i) =>
-        i === index ? { ...link, ...patch } : link,
-      ),
-    }));
-  const loadVariants = async (index: number, productId: string) => {
-    setLink(index, { productId, variantId: undefined });
-    if (!productId) return;
-    const data = await fetch(
-      `/api/catalog/variants?productId=${productId}&limit=100`,
-    )
-      .then(json<List<Variant>>)
-      .catch(() => null);
-    if (data) setVariants((current) => ({ ...current, [index]: data.items }));
-  };
-  const place = (event: MouseEvent<HTMLDivElement>) => {
-    if (!placing || !form.linkedProducts[selectedLink]) return;
-    const bounds = event.currentTarget.getBoundingClientRect();
-    const sourceW = natural.width || form.width || bounds.width,
-      sourceH = natural.height || form.height || bounds.height;
-    const scale = Math.min(bounds.width / sourceW, bounds.height / sourceH),
-      drawW = sourceW * scale,
-      drawH = sourceH * scale;
-    const left = (bounds.width - drawW) / 2,
-      top = (bounds.height - drawH) / 2;
-    const x = Math.round(
-      Math.max(
-        0,
-        Math.min(100, ((event.clientX - bounds.left - left) / drawW) * 100),
-      ),
-    );
-    const y = Math.round(
-      Math.max(
-        0,
-        Math.min(100, ((event.clientY - bounds.top - top) / drawH) * 100),
-      ),
-    );
-    setLink(selectedLink, { hotspotX: x, hotspotY: y });
-    setPlacing(false);
-  };
-  const validate = () => {
-    const next: Record<string, string> = {};
-    if (!validImageUrl(form.url))
-      next.url = "Use an HTTP(S) or root-relative image URL.";
-    (["fa", "en", "ar"] as Locale[]).forEach((lang) => {
-      if (!form.alt[lang].trim())
-        next.alt = "متن جایگزین تصویر در هر سه زبان لازم است.";
-    });
-    if (
-      form.width != null &&
-      (!Number.isInteger(form.width) || form.width <= 0)
-    )
-      next.width = "Use a positive whole number.";
-    if (
-      form.height != null &&
-      (!Number.isInteger(form.height) || form.height <= 0)
-    )
-      next.height = "Use a positive whole number.";
-    form.linkedProducts.forEach((link, index) => {
-      if (!link.productId) next[`link-${index}`] = "Choose a product.";
-      if ((link.hotspotX === undefined) !== (link.hotspotY === undefined))
-        next[`hotspot-${index}`] =
-          "Set both hotspot coordinates or clear both.";
-    });
-    setErrors(next);
-    return !Object.keys(next).length;
-  };
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
-    if (!canWrite || saving || !validate()) return;
-    setSaving(true);
-    setError("");
-    const payload = {
-      ...form,
-      url: form.url.trim(),
-      alt: trimLocalized(form.alt),
-      width: form.width ?? null,
-      height: form.height ?? null,
-      linkedProducts: form.linkedProducts.map((link) => ({
-        ...link,
-        label: link.label ? trimLocalized(link.label) : undefined,
-        variantId: link.variantId || undefined,
-      })),
-    };
-    const endpoint = descriptor.id
-      ? `/api/catalog/images/${descriptor.id}`
-      : "/api/catalog/images";
-    try {
-      await fetch(endpoint, {
-        method: descriptor.id ? "PATCH" : "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      }).then(json);
-      onSaved(
-        descriptor.id ? "تصویر ویرایش شد." : "تصویر به کتابخانه افزوده شد.",
-      );
-    } catch (cause) {
-      const problem = cause as Error & { status?: number };
-      auth(problem.status || 0);
-      setError(
-        problem.status === 403
-          ? "Your role cannot change image stories."
-          : problem.message,
-      );
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const complete = {
-    fa: Boolean(form.alt.fa.trim()),
-    en: Boolean(form.alt.en.trim()),
-    ar: Boolean(form.alt.ar.trim()),
-  };
-  return (
-    <div
-      className="editor-layer"
-      onMouseDown={(e) => {
-        if (e.currentTarget === e.target) close();
-      }}
-    >
-      <aside
-        ref={panelRef}
-        className="story-editor"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="image-editor-title"
-        onKeyDown={(e) => trapFocus(e, panelRef.current)}
-      >
-        <header className="editor-header">
-          <div>
-            <p>
-              تصویر خریدپذیر /{" "}
-              {descriptor.mode === "create" ? "جدید" : "ویرایش"}
-            </p>
-            <h2 id="image-editor-title">
-              {descriptor.mode === "create" ? "ثبت تصویر" : "ویرایش تصویر"}
-            </h2>
-          </div>
-          <LanguageSwitcher
-            locale={locale}
-            onChange={setLocale}
-            complete={complete}
-          />
-          <button onClick={close} aria-label="بستن ویرایشگر تصویر">
-            <X size={20} />
-          </button>
-        </header>
-        {loading ? (
-          <div className="editor-loading">
-            <LoaderCircle className="spin" />
-            <strong>در حال باز کردن تصویر…</strong>
-          </div>
-        ) : (
-          <form onSubmit={save} noValidate>
-            <div className="story-editor__body">
-              {error && (
-                <div className="editor-error" role="alert">
-                  <AlertTriangle size={16} />
-                  {error}
-                </div>
-              )}
-              <section className="story-preview-panel">
-                <div
-                  className={`hotspot-preview ${placing ? "is-placing" : ""}`}
-                  onClick={place}
-                  aria-label={
-                    placing
-                      ? "برای قرار دادن نقطه روی تصویر کلیک کنید"
-                      : "پیش‌نمایش تصویر"
-                  }
-                >
-                  {form.url && validImageUrl(form.url) ? (
-                    <img
-                      src={form.url}
-                      alt={form.alt.fa || "پیش‌نمایش تصویر"}
-                      onLoad={(e) =>
-                        setNatural({
-                          width: e.currentTarget.naturalWidth,
-                          height: e.currentTarget.naturalHeight,
-                        })
-                      }
-                      style={imageStyleFor(form)}
-                    />
-                  ) : (
-                    <div className="broken-image">
-                      <Images size={24} />
-                      <span>یک URL معتبر وارد کنید</span>
-                    </div>
-                  )}
-                  {form.linkedProducts.map(
-                    (link, index) =>
-                      link.hotspotX !== undefined &&
-                      link.hotspotY !== undefined && (
-                        <button
-                          type="button"
-                          key={index}
-                          className={
-                            selectedLink === index
-                              ? "hotspot active"
-                              : "hotspot"
-                          }
-                          style={{
-                            left: `${link.hotspotX}%`,
-                            top: `${link.hotspotY}%`,
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedLink(index);
-                            setPlacing(false);
-                          }}
-                          aria-label={`Select hotspot ${index + 1}`}
-                        >
-                          {index + 1}
-                        </button>
-                      ),
-                  )}
-                </div>
-                <div className="preview-caption">
-                  <span>
-                    {placing
-                      ? "حالت جای‌گذاری فعال است — نقطه دقیق را انتخاب کنید"
-                      : "بوم نقاط محصول"}
-                  </span>
-                  <small>کلیک عادی نقطه را جابه‌جا نمی‌کند</small>
-                </div>
-              </section>
-
-              <section className="story-form-panel">
-                <EditorHeading
-                  index="۰۱"
-                  eyebrow="منبع"
-                  title="تصویر و نقطه تمرکز"
-                />
-                <div className="editor-grid">
-                  <Field label="آدرس تصویر" error={errors.url} wide>
-                    <input
-                      dir="ltr"
-                      ref={urlRef}
-                      value={form.url}
-                      onChange={(e) => set("url", e.target.value)}
-                      placeholder="https://… یا /media/…"
-                    />
-                  </Field>
-                  <Field label="متن جایگزین دسترس‌پذیر" error={errors.alt} wide>
-                    <textarea
-                      dir={locale === "en" ? "ltr" : "rtl"}
-                      value={form.alt[locale]}
-                      onChange={(e) =>
-                        set("alt", { ...form.alt, [locale]: e.target.value })
-                      }
-                      rows={3}
-                    />
-                  </Field>
-                  <Field label="نوع تصویر">
-                    <AdminSelect
-                      value={form.kind}
-                      onChange={(value) => set("kind", value as Kind)}
-                      options={kinds.map((value) => ({
-                        value,
-                        label: labelKind(value),
-                      }))}
-                    />
-                  </Field>
-                  <Field label="نمایش">
-                    <AdminSelect
-                      value={String(form.isActive)}
-                      onChange={(value) => set("isActive", value === "true")}
-                      options={[
-                        { value: "true", label: "فعال" },
-                        { value: "false", label: "غیرفعال" },
-                      ]}
-                    />
-                  </Field>
-                  <Field label="پوشش تصویر">
-                    <ImageFitSelect
-                      value={form.objectFit}
-                      onChange={(value) => set("objectFit", value)}
-                    />
-                  </Field>
-                  <Field label="موقعیت تصویر">
-                    <ImagePositionSelect
-                      value={form.objectPosition}
-                      onChange={(value) => set("objectPosition", value)}
-                    />
-                  </Field>
-                  <Field label="عرض" hint="اختیاری" error={errors.width}>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={form.width ?? ""}
-                      onChange={(e) =>
-                        set(
-                          "width",
-                          e.target.value ? Number(e.target.value) : undefined,
-                        )
-                      }
-                    />
-                  </Field>
-                  <Field label="ارتفاع" hint="اختیاری" error={errors.height}>
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={form.height ?? ""}
-                      onChange={(e) =>
-                        set(
-                          "height",
-                          e.target.value ? Number(e.target.value) : undefined,
-                        )
-                      }
-                    />
-                  </Field>
-                  <Field label={`Focal X — ${form.focalPointX}%`}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={form.focalPointX}
-                      onChange={(e) =>
-                        set("focalPointX", Number(e.target.value))
-                      }
-                    />
-                  </Field>
-                  <Field label={`Focal Y — ${form.focalPointY}%`}>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={form.focalPointY}
-                      onChange={(e) =>
-                        set("focalPointY", Number(e.target.value))
-                      }
-                    />
-                  </Field>
-                </div>
-                <p className="metadata-note">
-                  این کتابخانه اطلاعات تصویر را با URL نگه می‌دارد؛ بارگذاری
-                  فایل در این مرحله فعال نیست.
-                </p>
-
-                <EditorHeading
-                  index="۰۲"
-                  eyebrow="پیوند فروش"
-                  title="تصویر را خریدپذیر کنید"
-                />
-                <label className="product-lookup">
-                  <Search size={14} />
-                  <input
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    placeholder="جست‌وجوی محصول برای اتصال…"
-                  />
-                  <span>
-                    {productLoading
-                      ? "در حال جست‌وجو"
-                      : `${products.length} نتیجه`}
-                  </span>
-                </label>
-                <div className="hotspot-links">
-                  {form.linkedProducts.map((link, index) => (
-                    <article
-                      className={
-                        selectedLink === index
-                          ? "hotspot-link active"
-                          : "hotspot-link"
-                      }
-                      key={index}
-                      onClick={() => setSelectedLink(index)}
-                    >
-                      <header>
-                        <span>{String(index + 1).padStart(2, "0")}</span>
-                        <strong>پیوند محصول</strong>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setForm((f) => ({
-                              ...f,
-                              linkedProducts: f.linkedProducts.filter(
-                                (_, i) => i !== index,
-                              ),
-                            }));
-                            setSelectedLink(0);
-                          }}
-                          aria-label={`حذف پیوند ${index + 1}`}
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </header>
-                      {errors[`link-${index}`] && (
-                        <em>{errors[`link-${index}`]}</em>
-                      )}
-                      <div className="editor-grid">
-                        <Field label="محصول" wide>
-                          <select
-                            value={link.productId}
-                            onChange={(e) =>
-                              loadVariants(index, e.target.value)
-                            }
-                          >
-                            <option value="">انتخاب محصول</option>
-                            {products.map((p) => (
-                              <option key={p._id} value={p._id}>
-                                {fa(p.name)} / {p.slug}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="تنوع" hint="اختیاری">
-                          <select
-                            value={link.variantId || ""}
-                            disabled={!link.productId}
-                            onChange={(e) =>
-                              setLink(index, {
-                                variantId: e.target.value || undefined,
-                              })
-                            }
-                          >
-                            <option value="">همه تنوع‌ها</option>
-                            {(variants[index] || []).map((v) => (
-                              <option value={v._id} key={v._id}>
-                                {v.sku}
-                              </option>
-                            ))}
-                          </select>
-                        </Field>
-                        <Field label="برچسب" hint="اختیاری">
-                          <input
-                            dir={locale === "en" ? "ltr" : "rtl"}
-                            value={link.label?.[locale] || ""}
-                            onChange={(e) =>
-                              setLink(index, {
-                                label: {
-                                  ...(link.label || emptyLocalizedText()),
-                                  [locale]: e.target.value,
-                                },
-                              })
-                            }
-                            maxLength={120}
-                          />
-                        </Field>
-                        <Field label="ترتیب">
-                          <input
-                            type="number"
-                            step="1"
-                            value={link.sortOrder}
-                            onChange={(e) =>
-                              setLink(index, {
-                                sortOrder: Number(e.target.value),
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label="مختصات افقی" hint="0–100">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={link.hotspotX ?? ""}
-                            onChange={(e) =>
-                              setLink(index, {
-                                hotspotX:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </Field>
-                        <Field label="مختصات عمودی" hint="0–100">
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={link.hotspotY ?? ""}
-                            onChange={(e) =>
-                              setLink(index, {
-                                hotspotY:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              })
-                            }
-                          />
-                        </Field>
-                      </div>
-                      {errors[`hotspot-${index}`] && (
-                        <em>{errors[`hotspot-${index}`]}</em>
-                      )}
-                      <footer>
-                        <button
-                          type="button"
-                          className={
-                            placing && selectedLink === index ? "placing" : ""
-                          }
-                          onClick={() => {
-                            setSelectedLink(index);
-                            setPlacing(true);
-                          }}
-                        >
-                          <Crosshair size={14} />
-                          {placing && selectedLink === index
-                            ? "نقطه را بالا انتخاب کنید"
-                            : "جای‌گذاری نقطه"}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setLink(index, {
-                              hotspotX: undefined,
-                              hotspotY: undefined,
-                            })
-                          }
-                        >
-                          پاک کردن نقطه
-                        </button>
-                      </footer>
-                    </article>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="add-link"
-                  onClick={() => {
-                    const index = form.linkedProducts.length;
-                    setForm((f) => ({
-                      ...f,
-                      linkedProducts: [
-                        ...f.linkedProducts,
-                        { productId: "", sortOrder: index },
-                      ],
-                    }));
-                    setSelectedLink(index);
-                  }}
-                >
-                  <Plus size={14} />
-                  Add product link
-                </button>
-              </section>
-            </div>
-            <footer className="editor-actions">
-              <span>
-                {dirty ? "Unsaved composition" : "Composition current"}
+  const columns = useMemo<DynamicColumn<ImageAsset>[]>(
+    () => [
+      {
+        id: "image",
+        label: "تصویر",
+        minWidth: 280,
+        sticky: "start",
+        lockVisibility: true,
+        cell: ({ record }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <ImageThumb asset={record} />
+            <span className="min-w-0">
+              <strong className="block truncate text-[10px] font-bold">
+                {fa(record.alt)}
+              </strong>
+              <span className="mt-0.5 block truncate text-[8px] text-[var(--adt-muted)]">
+                {record.url}
               </span>
-              <button type="button" onClick={close}>
-                Cancel
-              </button>
-              <button className="editor-save" disabled={saving || !canWrite}>
-                {saving ? (
-                  <LoaderCircle className="spin" size={15} />
-                ) : (
-                  <Check size={15} />
-                )}
-                {saving ? "Saving…" : "Save image story"}
-              </button>
-            </footer>
-          </form>
-        )}
-      </aside>
-    </div>
+            </span>
+          </div>
+        ),
+        mobile: { priority: 1, showLabel: false },
+      },
+      {
+        id: "kind",
+        label: "نوع",
+        accessor: "kind",
+        minWidth: 140,
+        cell: ({ record }) => labelKind(record.kind),
+        mobile: { priority: 2 },
+      },
+      {
+        id: "isActive",
+        label: "وضعیت",
+        accessor: "isActive",
+        minWidth: 110,
+        cell: ({ record }) => statusBadge(record.isActive),
+        mobile: { priority: 3 },
+      },
+      {
+        id: "linkedProducts",
+        label: "پیوند محصول",
+        minWidth: 130,
+        cell: ({ record }) => formatDigits(record.linkedProducts?.length ?? 0),
+        mobile: { priority: 4 },
+      },
+      {
+        id: "focal",
+        label: "تمرکز",
+        minWidth: 110,
+        cell: ({ record }) =>
+          `${formatDigits(record.focalPointX ?? 50)} / ${formatDigits(record.focalPointY ?? 50)}`,
+        mobile: { priority: 5 },
+      },
+      {
+        id: "size",
+        label: "ابعاد",
+        minWidth: 130,
+        defaultHidden: true,
+        cell: ({ record }) =>
+          record.width && record.height
+            ? `${formatDigits(record.width)} × ${formatDigits(record.height)}`
+            : "—",
+        mobile: { hidden: true },
+      },
+      {
+        id: "updatedAt",
+        label: "آخرین ویرایش",
+        accessor: "updatedAt",
+        minWidth: 160,
+        defaultHidden: true,
+        cell: ({ record }) => formatDate(record.updatedAt),
+        mobile: { hidden: true },
+      },
+    ],
+    [],
   );
-}
 
-function Field({
-  label,
-  hint,
-  error,
-  wide,
-  children,
-}: {
-  label: string;
-  hint?: string;
-  error?: string;
-  wide?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className={`editor-field ${wide ? "editor-span-2" : ""}`}>
-      <span>
-        {label}
-        {hint && <small>{hint}</small>}
-      </span>
-      {children}
-      {error && <em>{error}</em>}
-    </label>
+  const filters = useMemo<DynamicFilterDefinition<ImageFilters, ImageAsset>[]>(
+    () => [
+      {
+        id: "kind",
+        kind: "select",
+        label: "نوع تصویر",
+        options: kindOptions,
+        defaultValue: null,
+        badge: (value) =>
+          typeof value === "string" ? labelKind(value as Kind) : null,
+      },
+      {
+        id: "isActive",
+        kind: "select",
+        label: "وضعیت",
+        options: activeOptions,
+        defaultValue: null,
+        badge: (value) =>
+          value === "true" ? "فعال" : value === "false" ? "غیرفعال" : null,
+      },
+    ],
+    [],
   );
-}
-function EditorHeading({
-  index,
-  eyebrow,
-  title,
-}: {
-  index: string;
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <header className="editor-subheading">
-      <span>{index}</span>
-      <div>
-        <p>{eyebrow}</p>
-        <h3>{title}</h3>
+
+  if (!canRead) {
+    return (
+      <div className="min-w-0 p-3 sm:p-4 lg:p-5">
+        <CatalogSectionNav />
+        <section className="mt-3 border border-[var(--adt-border)] bg-[var(--adt-surface)] p-6 text-right text-[var(--adt-text)]">
+          <PackageOpen className="mb-3 text-[var(--adt-warning)]" size={22} />
+          <h1 className="text-[16px] font-bold">دسترسی تصاویر فعال نیست</h1>
+          <p className="mt-2 text-[10px] leading-6 text-[var(--adt-muted)]">
+            برای دیدن و مدیریت تصویرها، دسترسی catalog.read لازم است.
+          </p>
+        </section>
       </div>
-    </header>
-  );
-}
-function trapFocus(event: React.KeyboardEvent, panel: HTMLElement | null) {
-  if (event.key !== "Tab" || !panel) return;
-  const nodes = Array.from(
-    panel.querySelectorAll<HTMLElement>(
-      "button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),a[href]",
-    ),
-  );
-  if (!nodes.length) return;
-  const first = nodes[0],
-    last = nodes[nodes.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
+    );
   }
-}
-function Permission() {
+
   return (
-    <section className="catalog-state catalog-state--permission">
-      <AlertTriangle size={22} />
-      <p>Catalog access</p>
-      <h2>Image stories are outside your current role.</h2>
-      <span>Ask an administrator for catalog viewing permission.</span>
-    </section>
-  );
-}
-function StudioState({
-  icon,
-  title,
-  detail,
-  action,
-  onAction,
-}: {
-  icon?: string;
-  title: string;
-  detail: string;
-  action?: string;
-  onAction: () => void;
-}) {
-  return (
-    <div className="catalog-state">
-      {icon === "error" ? <AlertTriangle size={22} /> : <ImageOff size={22} />}
-      <p>Image library</p>
-      <h2>{title}</h2>
-      <span>{detail}</span>
-      {action && <button onClick={onAction}>{action}</button>}
-    </div>
-  );
-}
-function ImageSkeleton() {
-  return (
-    <div className="image-skeleton">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <i key={i} />
-      ))}
+    <div className="min-w-0 space-y-3 p-3 sm:p-4 lg:p-5">
+      <CatalogSectionNav />
+
+      <DynamicDataTable<
+        ImageAsset,
+        ImageFormValues,
+        ImageFormValues,
+        ImageFilters
+      >
+        tableId="admin-image-stories"
+        eyebrow="IMAGE STORIES"
+        title="مدیریت تصاویر خریدپذیر"
+        description="کتابخانه تصویر، نوع تصویر، متن جایگزین، نقطه تمرکز و اتصال محصول‌ها را از یک جدول واحد مدیریت کنید."
+        source={{
+          queryKey: ["catalog", "images"],
+          fetchPage: async ({
+            page,
+            pageSize,
+            search,
+            filters: activeFilters,
+            signal,
+          }) => {
+            const params = new URLSearchParams({
+              page: String(page),
+              limit: String(pageSize),
+            });
+            if (search) params.set("search", search);
+            if (activeFilters.kind)
+              params.set("kind", String(activeFilters.kind));
+            if (activeFilters.isActive) {
+              params.set("isActive", String(activeFilters.isActive));
+            }
+            return toTableResult(
+              await fetchJson<List<ImageAsset>>(
+                `/api/catalog/images?${params.toString()}`,
+                { signal },
+              ),
+            );
+          },
+          fetchOne: async ({ id, signal }) =>
+            fetchJson<ImageAsset>(`/api/catalog/images/${id}`, { signal }),
+        }}
+        columns={columns}
+        getRowId={(record) => record._id}
+        getRowLabel={(record) => fa(record.alt)}
+        search={{
+          placeholder: "جستجو با متن جایگزین یا آدرس تصویر...",
+          debounceMs: 320,
+        }}
+        filters={filters}
+        initialFilters={{ kind: null, isActive: null }}
+        pagination={{
+          initialPageSize: 12,
+          pageSizeOptions: [12, 24, 48, 96],
+          showPageNumbers: true,
+        }}
+        columnVisibility={{
+          enabled: true,
+          persist: true,
+          storageKey: "admin-image-stories-columns",
+        }}
+        mobile={{
+          title: (record) => fa(record.alt),
+          subtitle: (record) => record.url,
+          badge: (record) => statusBadge(record.isActive),
+          fieldIds: ["kind", "linkedProducts", "focal", "isActive"],
+          maxFields: 4,
+        }}
+        crud={{
+          create: {
+            enabled: canWrite,
+            label: "تصویر جدید",
+            title: "افزودن تصویر",
+            description:
+              "تصویر با URL ذخیره می‌شود؛ برای نقاط خریدپذیر، محصول را در بخش پیوند محصول وصل کنید.",
+            schema,
+            initialValues: emptyForm,
+            mutationFn: async ({ values }) =>
+              fetchJson<ImageAsset>("/api/catalog/images", {
+                method: "POST",
+                body: JSON.stringify(formPayload(values)),
+              }),
+            mapError: mapFormError,
+            onSuccess: (record) => {
+              toast.success("تصویر ساخته شد", {
+                description:
+                  record && "_id" in record
+                    ? `${fa(record.alt)} به کتابخانه اضافه شد.`
+                    : undefined,
+              });
+            },
+          },
+          edit: {
+            enabled: canWrite,
+            title: (record) => `ویرایش ${fa(record.alt)}`,
+            description:
+              "متن جایگزین، نوع تصویر، نحوه نمایش و نقاط خریدپذیر را ویرایش کنید.",
+            schema,
+            toInitialValues: imageToForm,
+            mutationFn: async ({ id, values }) =>
+              fetchJson<ImageAsset>(`/api/catalog/images/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify(formPayload(values)),
+              }),
+            mapError: mapFormError,
+            onSuccess: (record) => {
+              toast.success("تغییرات تصویر ذخیره شد", {
+                description:
+                  record && "_id" in record
+                    ? `${fa(record.alt)} به‌روزرسانی شد.`
+                    : undefined,
+              });
+            },
+          },
+          view: {
+            title: (record) => `مشاهده ${fa(record.alt)}`,
+            fields: [
+              {
+                id: "preview",
+                label: "پیش‌نمایش",
+                render: ({ record }) => <ImageThumb asset={record} />,
+              },
+              {
+                id: "url",
+                label: "آدرس تصویر",
+                accessor: "url",
+                colSpan: "full",
+              },
+              {
+                id: "alt",
+                label: "متن جایگزین فارسی",
+                render: ({ record }) => fa(record.alt),
+              },
+              {
+                id: "kind",
+                label: "نوع",
+                render: ({ record }) => labelKind(record.kind),
+              },
+              {
+                id: "status",
+                label: "وضعیت",
+                render: ({ record }) => statusBadge(record.isActive),
+              },
+              {
+                id: "links",
+                label: "پیوند محصول",
+                render: ({ record }) =>
+                  formatDigits(record.linkedProducts?.length ?? 0),
+              },
+              {
+                id: "focal",
+                label: "نقطه تمرکز",
+                render: ({ record }) =>
+                  `${formatDigits(record.focalPointX)} / ${formatDigits(record.focalPointY)}`,
+              },
+              {
+                id: "updatedAt",
+                label: "آخرین ویرایش",
+                render: ({ record }) => formatDate(record.updatedAt),
+              },
+            ],
+            sections: [
+              {
+                id: "identity",
+                title: "تصویر",
+                fieldIds: ["preview", "url", "alt", "kind", "status"],
+              },
+              {
+                id: "behavior",
+                title: "نمایش و اتصال",
+                fieldIds: ["links", "focal", "updatedAt"],
+              },
+            ],
+          },
+          delete: {
+            enabled: canWrite,
+            title: (record) => `غیرفعال کردن ${fa(record.alt)}`,
+            description: (record) => (
+              <>
+                تصویر <strong>{fa(record.alt)}</strong> حذف فیزیکی نمی‌شود؛ فقط
+                از استفاده فعال خارج می‌شود.
+              </>
+            ),
+            dangerLevel: "soft",
+            confirmLabel: "غیرفعال کردن",
+            mutationFn: async ({ id }) => {
+              await fetchJson(`/api/catalog/images/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ isActive: false }),
+              });
+            },
+            mapError: (error) =>
+              error instanceof Error
+                ? error.message
+                : "غیرفعال‌سازی تصویر انجام نشد. دوباره تلاش کنید.",
+            onSuccess: (record) => {
+              toast.warning("تصویر غیرفعال شد", {
+                description: `${fa(record.alt)} دیگر به عنوان تصویر فعال نمایش داده نمی‌شود.`,
+              });
+            },
+          },
+          extraRowActions: [
+            {
+              id: "copy-url",
+              label: "کپی آدرس",
+              icon: <Copy size={14} />,
+              onClick: async (record) => {
+                await navigator.clipboard.writeText(record.url);
+                toast.info("آدرس تصویر کپی شد", { description: record.url });
+              },
+            },
+          ],
+        }}
+        labels={{
+          filters: "فیلتر تصاویر",
+          clearFilters: "پاک کردن فیلترها",
+          applyFilters: "اعمال فیلترها",
+          pendingFilters: "فیلتر فعال",
+          columns: "ستون‌ها",
+          create: "تصویر جدید",
+          view: "مشاهده",
+          edit: "ویرایش",
+          delete: "غیرفعال‌سازی",
+          actions: "عملیات",
+          rowsPerPage: "تعداد در صفحه",
+        }}
+        emptyState={{
+          title: "هنوز تصویری ثبت نشده",
+          description:
+            "اولین تصویر را بسازید تا برای محصول، بنر یا ادیتوریال قابل استفاده باشد.",
+          filteredTitle: "تصویری با این شرایط پیدا نشد",
+          filteredDescription:
+            "عبارت جستجو یا فیلترهای انتخاب‌شده را تغییر دهید.",
+        }}
+      />
     </div>
   );
 }

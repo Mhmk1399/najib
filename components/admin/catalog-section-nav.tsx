@@ -11,12 +11,7 @@ const destinations = [
     detail: "دفتر محصولات",
     icon: Package,
   },
-  {
-    href: "/admin/catalog/content",
-    label: "صفحه‌ساز",
-    detail: "صفحه‌های دسته‌بندی",
-    icon: LayoutTemplate,
-  },
+ 
   {
     href: "/admin/catalog/images",
     label: "تصاویر خریدپذیر",
