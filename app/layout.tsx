@@ -22,8 +22,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./admin/admin.css";
 import { LenisProvider } from "@/components/providers/lenis-provider";
+import { QueryProvider } from "@/components/providers/query-provider";
 
-import { Dana } from "@/next-persian-fonts/dana";
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
 import { Vazirmatn } from "next/font/google";
@@ -36,10 +36,9 @@ const vazir = Vazirmatn({
   display: "swap",
 });
 export const metadata: Metadata = {
-  title: {
-    default: "Najibzadeh — Luxury Menswear & Tailoring",
-    template: "%s | Najibzadeh",
-  },
+  title: 
+    "Najibzadeh — Luxury Menswear & Tailoring",
+   
   description:
     "Dignity in silence. Najibzadeh is a luxury menswear and tailoring house.",
   metadataBase: new URL("https://najibzadeh.com"),
@@ -107,13 +106,15 @@ export default function RootLayout({
       <body dir="ltr" className={`antialiased  ${vazir.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
-            <SiteShell>
-              <div className="flex-1">
-                <ToastProvider position="top-right" maxToasts={5}>
-                  {children}
-                </ToastProvider>
-              </div>
-            </SiteShell>
+            <QueryProvider>
+              <SiteShell>
+                <div className="flex-1">
+                  <ToastProvider position="top-right" maxToasts={5}>
+                    {children}
+                  </ToastProvider>
+                </div>
+              </SiteShell>
+            </QueryProvider>
           </LenisProvider>
         </div>
       </body>

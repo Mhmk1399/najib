@@ -18,5 +18,32 @@ export function jsonError(error: unknown) {
   if (error instanceof Error && error.message === "S3 upload storage is not configured.") {
     return NextResponse.json({ error: "Upload storage is not configured." }, { status: 503 });
   }
+  if (isStorageProviderError(error)) {
+    return NextResponse.json(
+      {
+        error:
+          "Upload storage rejected the file. Check S3 endpoint, bucket, credentials, ACL, and public URL settings.",
+      },
+      { status: 502 },
+    );
+  }
   return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+}
+
+function isStorageProviderError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  const withMetadata = error as Error & {
+    $metadata?: { httpStatusCode?: number };
+    Code?: string;
+    code?: string;
+  };
+  if (withMetadata.$metadata?.httpStatusCode) return true;
+  const code = withMetadata.Code ?? withMetadata.code ?? error.name;
+  return [
+    "AccessDenied",
+    "CredentialsProviderError",
+    "InvalidAccessKeyId",
+    "NoSuchBucket",
+    "SignatureDoesNotMatch",
+  ].includes(code);
 }

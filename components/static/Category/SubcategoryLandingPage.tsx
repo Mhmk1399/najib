@@ -427,12 +427,11 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
               text-black
             "
           >
-            Products
+            محصولات
           </h2>
 
           <p className="mt-2 text-[9px] text-black/40">
-            {data.products.length}{" "}
-            {data.products.length === 1 ? "piece" : "pieces"}
+            {new Intl.NumberFormat("fa-IR").format(data.products.length)} محصول
           </p>
         </div>
 
@@ -461,7 +460,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
             sm:flex
           "
         >
-          View All
+          مشاهده همه
           <span className="transition-transform group-hover:translate-x-1">
             -&gt;
           </span>
@@ -510,11 +509,10 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
           >
             <div>
               <p className="font-serif text-[42px] tracking-[-0.05em]">
-                Products are ready for your data.
+                هنوز محصولی برای این زیردسته ثبت نشده است.
               </p>
               <p className="mx-auto mt-4 max-w-[420px] text-[10px] leading-[1.8] text-black/45">
-                Add products for this subcategory in the fake data file or
-                replace the helper with a database query.
+                محصول فعال بسازید و این زیردسته را انتخاب کنید تا همین‌جا نمایش داده شود.
               </p>
             </div>
           </div>
@@ -529,7 +527,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
           icon={<ArrowRightIcon />}
           fullWidth
         >
-          View All {data.name}
+          مشاهده همه {data.name}
         </Button>
       </div>
     </section>

@@ -77,6 +77,7 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   const [pendingUploads, setPendingUploads] = useState<Set<string>>(
     () => new Set(),
   );
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const fieldsByName = useMemo(
@@ -103,6 +104,12 @@ export function DynamicForm<TValues extends DynamicFormValues>({
       delete next[name];
       return next;
     });
+    setUploadErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
     setFormError(null);
   }
 
@@ -114,17 +121,29 @@ export function DynamicForm<TValues extends DynamicFormValues>({
       return next;
     });
     if (pending) {
-      setErrors((current) => {
+      setUploadErrors((current) => {
         if (current[name]) return current;
         return { ...current, [name]: "آپلود تصویر هنوز کامل نشده است." };
       });
       return;
     }
-    setErrors((current) => {
+    setUploadErrors((current) => {
       if (!current[name]) return current;
       const next = { ...current };
       delete next[name];
       return next;
+    });
+  }
+
+  function setUploadError(name: string, message: string | null) {
+    setUploadErrors((current) => {
+      if (!message) {
+        if (!current[name]) return current;
+        const next = { ...current };
+        delete next[name];
+        return next;
+      }
+      return { ...current, [name]: message };
     });
   }
 
@@ -183,6 +202,13 @@ export function DynamicForm<TValues extends DynamicFormValues>({
       );
       setErrors((current) => ({ ...current, ...uploadErrors }));
       setFormError("آپلود تصویر هنوز کامل نشده است. بعد از پایان آپلود دوباره ذخیره کنید.");
+      focusFirstError(uploadErrors);
+      return;
+    }
+
+    if (Object.keys(uploadErrors).length > 0) {
+      setErrors((current) => ({ ...current, ...uploadErrors }));
+      setFormError("آپلود تصویر انجام نشده است. خطای فیلد تصویر را برطرف کنید و دوباره ذخیره کنید.");
       focusFirstError(uploadErrors);
       return;
     }
@@ -277,12 +303,15 @@ export function DynamicForm<TValues extends DynamicFormValues>({
                     <DynamicField
                       field={field}
                       values={values}
-                      error={errors[field.name]}
+                      error={uploadErrors[field.name] ?? errors[field.name]}
                       setValue={(nextValue) =>
                         changeValue(field.name, nextValue)
                       }
                       setUploadPending={(pending) =>
                         setUploadPending(field.name, pending)
+                      }
+                      setUploadError={(message) =>
+                        setUploadError(field.name, message)
                       }
                     />
                   </div>
@@ -334,12 +363,14 @@ function DynamicField<TValues extends DynamicFormValues>({
   error,
   setValue,
   setUploadPending,
+  setUploadError,
 }: {
   field: DynamicFormField<TValues>;
   values: TValues;
   error?: string;
   setValue: (value: unknown) => void;
   setUploadPending: (pending: boolean) => void;
+  setUploadError: (message: string | null) => void;
 }) {
   const value = getPathValue(values, field.name);
   const disabled = isFieldFlag(field.disabled, values, false);
@@ -528,6 +559,7 @@ function DynamicField<TValues extends DynamicFormValues>({
         disabled={disabled || readOnly}
         setValue={setValue}
         setUploadPending={setUploadPending}
+        setUploadError={setUploadError}
       />
     );
   }
@@ -565,6 +597,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
   disabled,
   setValue,
   setUploadPending,
+  setUploadError,
 }: {
   field: DynamicFileField<TValues>;
   values: TValues;
@@ -573,6 +606,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
   disabled: boolean;
   setValue: (value: unknown) => void;
   setUploadPending: (pending: boolean) => void;
+  setUploadError: (message: string | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -584,6 +618,11 @@ function FileUploadField<TValues extends DynamicFormValues>({
   useEffect(() => {
     return () => {
       xhrRef.current?.abort();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
       if (localPreview) URL.revokeObjectURL(localPreview);
     };
   }, [localPreview]);
@@ -600,6 +639,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     if (disabled || uploading) return;
     setValue("");
     setUploadPending(false);
+    setUploadError(null);
     setLocalError(null);
     if (localPreview) {
       URL.revokeObjectURL(localPreview);
@@ -614,7 +654,9 @@ function FileUploadField<TValues extends DynamicFormValues>({
     setUploading(false);
     setUploadPending(false);
     setProgress(0);
-    setLocalError("آپلود لغو شد.");
+    const message = "آپلود لغو شد. برای ذخیره، تصویر را دوباره آپلود کنید.";
+    setLocalError(message);
+    setUploadError(message);
   }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -622,18 +664,21 @@ function FileUploadField<TValues extends DynamicFormValues>({
     if (!file) return;
 
     setLocalError(null);
+    setUploadError(null);
     if (field.maxSizeBytes && file.size > field.maxSizeBytes) {
-      setLocalError(
-        `حجم فایل باید کمتر از ${new Intl.NumberFormat("fa-IR").format(
+      const message = `حجم فایل باید کمتر از ${new Intl.NumberFormat("fa-IR").format(
           Math.ceil(field.maxSizeBytes / 1024 / 1024),
-        )} مگابایت باشد.`,
-      );
+        )} مگابایت باشد.`;
+      setLocalError(message);
+      setUploadError(message);
       event.target.value = "";
       return;
     }
 
     if (field.accept && file.type && !acceptsFile(field.accept, file)) {
-      setLocalError("فرمت فایل انتخاب‌شده مجاز نیست.");
+      const message = "فرمت فایل انتخاب‌شده مجاز نیست.";
+      setLocalError(message);
+      setUploadError(message);
       event.target.value = "";
       return;
     }
@@ -672,7 +717,9 @@ function FileUploadField<TValues extends DynamicFormValues>({
       setUploadPending(false);
       if (xhr.status < 200 || xhr.status >= 300) {
         setProgress(0);
-        setLocalError(readUploadError(xhr.responseText));
+        const message = readUploadError(xhr.responseText);
+        setLocalError(message);
+        setUploadError(message);
         return;
       }
       try {
@@ -683,15 +730,21 @@ function FileUploadField<TValues extends DynamicFormValues>({
           ? field.parseUploadResponse(response, values)
           : (response as { url?: string }).url;
         if (!nextValue || typeof nextValue !== "string") {
-          setLocalError("پاسخ آپلود معتبر نیست.");
+          const message = "پاسخ آپلود معتبر نیست.";
+          setLocalError(message);
+          setUploadError(message);
           setProgress(0);
           return;
         }
+        setLocalError(null);
+        setUploadError(null);
         setValue(nextValue);
         setProgress(100);
         window.setTimeout(() => setProgress(0), 700);
       } catch {
-        setLocalError("پاسخ آپلود خوانده نشد.");
+        const message = "پاسخ آپلود خوانده نشد.";
+        setLocalError(message);
+        setUploadError(message);
         setProgress(0);
       }
     };
@@ -701,7 +754,9 @@ function FileUploadField<TValues extends DynamicFormValues>({
       setUploading(false);
       setUploadPending(false);
       setProgress(0);
-      setLocalError("آپلود انجام نشد. اتصال را بررسی کنید.");
+      const message = "آپلود انجام نشد. اتصال را بررسی کنید.";
+      setLocalError(message);
+      setUploadError(message);
     };
 
     xhr.onabort = () => {
@@ -814,9 +869,9 @@ function FileUploadField<TValues extends DynamicFormValues>({
         />
       </div>
 
-      {error || localError ? (
+      {localError || error ? (
         <p className="mt-1.5 text-[9px] leading-4 text-[var(--adt-danger)]">
-          {error ?? localError}
+          {localError ?? error}
         </p>
       ) : null}
     </div>

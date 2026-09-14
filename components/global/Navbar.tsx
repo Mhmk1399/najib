@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
 import { fontTokens, themeClasses } from "@/theme/theme-colors";
 
 /* ==========================================================================
@@ -52,6 +53,21 @@ type MenuSection = {
   image: string;
 
   imageLabel: string;
+};
+
+const EMPTY_MENU_SECTION: MenuSection = {
+  id: "catalog",
+  title: "دسته‌بندی‌ها",
+  subtitle: "دسته‌بندی‌های فعال فروشگاه اینجا نمایش داده می‌شوند.",
+  href: "/shop",
+  groups: [
+    {
+      title: "فروشگاه",
+      items: [{ label: "همه محصولات", href: "/shop" }],
+    },
+  ],
+  image: "/assets/images/banner.webp",
+  imageLabel: "کاتالوگ نجیب‌زاده",
 };
 
 type LenisScrollController = {
@@ -158,6 +174,7 @@ const QUICK_LINKS: QuickLink[] = [
    MENU DATA
 ============================================================================ */
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const MENU: MenuSection[] = [
   {
     id: "new",
@@ -781,13 +798,16 @@ export default function Navbar({
   overlayTone?: "light" | "dark";
 }) {
   const pathname = usePathname();
+  const menuSections = useStorefrontMenuSections();
 
   const [open, setOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [activeId, setActiveId] = useState(MENU[0].id);
-  const [mobileOpen, setMobileOpen] = useState<string | null>(MENU[0].id);
+  const [activeId, setActiveId] = useState(EMPTY_MENU_SECTION.id);
+  const [mobileOpen, setMobileOpen] = useState<string | null>(
+    EMPTY_MENU_SECTION.id,
+  );
   const [hoveredSubcategory, setHoveredSubcategory] = useState<string | null>(
     null,
   );
@@ -797,9 +817,18 @@ export default function Navbar({
   const savedScrollPosition = useRef(0);
 
   const active = useMemo(
-    () => MENU.find((section) => section.id === activeId) ?? MENU[0],
-    [activeId],
+    () =>
+      menuSections.find((section) => section.id === activeId) ??
+      menuSections[0] ??
+      EMPTY_MENU_SECTION,
+    [activeId, menuSections],
   );
+
+  const resolvedActiveId = active.id;
+  const resolvedMobileOpen =
+    mobileOpen && menuSections.some((section) => section.id === mobileOpen)
+      ? mobileOpen
+      : (menuSections[0]?.id ?? EMPTY_MENU_SECTION.id);
 
   const breadcrumbs = useMemo(() => {
     if (!pathname || pathname === "/") {
@@ -1197,13 +1226,13 @@ export default function Navbar({
                     Collections
                   </p>
                   <span className="text-[8px] font-medium tabular-nums text-white/35">
-                    {String(MENU.length).padStart(2, "0")}
+                    {String(menuSections.length).padStart(2, "0")}
                   </span>
                 </div>
 
                 <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 xl:px-4">
-                  {MENU.map((section, index) => {
-                    const selected = activeId === section.id;
+                  {menuSections.map((section, index) => {
+                    const selected = resolvedActiveId === section.id;
 
                     return (
                       <button
@@ -1418,8 +1447,8 @@ export default function Navbar({
               </div>
 
               <div className="mt-3 overflow-hidden border border-black/[0.08] dark:border-white/10">
-                {MENU.map((section, index) => {
-                  const expanded = mobileOpen === section.id;
+                {menuSections.map((section, index) => {
+                  const expanded = resolvedMobileOpen === section.id;
 
                   return (
                     <section

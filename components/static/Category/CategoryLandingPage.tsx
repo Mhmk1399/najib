@@ -548,7 +548,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
             text-black
           "
         >
-          Shop by Category
+          زیردسته‌ها
         </h2>
 
         <Link
@@ -576,7 +576,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
             sm:flex
           "
         >
-          View All
+          مشاهده همه
           <span
             className="
               transition-transform
@@ -635,7 +635,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
           icon={<ArrowRightIcon />}
           fullWidth
         >
-          View All {data.name}
+          مشاهده همه {data.name}
         </Button>
       </div>
     </section>
@@ -796,7 +796,7 @@ function CategoryCard({
               text-white/55
             "
           >
-            View Collection
+            مشاهده مجموعه
             <span>→</span>
           </span>
         </div>

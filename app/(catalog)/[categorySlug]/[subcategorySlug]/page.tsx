@@ -1,12 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 
-import { SubcategoryLandingPage } from "@/components/static/Category/SubcategoryLandingPage";
-
-import {
-  getSubcategoryLandingPageBySlug,
-  getSubcategoryLandingStaticParams,
-} from "@/data/fake-subcategory-pages";
+import { SubcategoryPageClient } from "@/components/static/Category/CategoryPageClient";
 
 type SubcategoryPageProps = {
   params: Promise<{
@@ -16,30 +10,21 @@ type SubcategoryPageProps = {
 };
 
 export const dynamicParams = true;
-export const revalidate = 300;
 
 export async function generateStaticParams() {
-  return getSubcategoryLandingStaticParams();
+  return [];
 }
 
 export async function generateMetadata({
   params,
 }: SubcategoryPageProps): Promise<Metadata> {
   const { categorySlug, subcategorySlug } = await params;
-  const data = await getSubcategoryLandingPageBySlug(
-    categorySlug,
-    subcategorySlug,
-  );
-
-  if (!data) {
-    return {
-      title: "Subcategory not found | Najibzadeh",
-    };
-  }
 
   return {
-    title: `${data.name} | ${data.categoryName} | Najibzadeh`,
-    description: data.hero.description,
+    title: `${decodeURIComponent(subcategorySlug)} | ${decodeURIComponent(
+      categorySlug,
+    )} | Najibzadeh`,
+    description: "زیردسته‌های فعال فروشگاه نجیب‌زاده.",
   };
 }
 
@@ -47,14 +32,11 @@ export default async function SubcategoryPage({
   params,
 }: SubcategoryPageProps) {
   const { categorySlug, subcategorySlug } = await params;
-  const data = await getSubcategoryLandingPageBySlug(
-    categorySlug,
-    subcategorySlug,
+
+  return (
+    <SubcategoryPageClient
+      categorySlug={categorySlug}
+      subcategorySlug={subcategorySlug}
+    />
   );
-
-  if (!data) {
-    notFound();
-  }
-
-  return <SubcategoryLandingPage data={data} />;
 }
