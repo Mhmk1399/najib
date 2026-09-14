@@ -418,6 +418,7 @@ function makeImageField(
   name: string,
   label: string,
   resource: Resource,
+  imageMap: Map<string, ImageAsset>,
   required = false,
 ) {
   return {
@@ -435,6 +436,10 @@ function makeImageField(
     cancelLabel: "لغو آپلود",
     helperText: "بعد از آپلود، تصویر به کتابخانه کاتالوگ اضافه می‌شود.",
     parseUploadResponse: uploadedImageId,
+    format: (value: unknown) => {
+      const imageId = coerceImageId(value);
+      return imageMap.get(imageId)?.url ?? imageId;
+    },
   };
 }
 
@@ -483,6 +488,7 @@ function descriptionFieldNames(key: "primaryDescription" | "secondaryDescription
 function buildSchema(
   resource: Resource,
   categoryOptions: DataSelectOption[],
+  imageMap: Map<string, ImageAsset>,
 ): DynamicFormSchema<TaxonomyFormValues> {
   const isSubcategory = resource === "subcategories";
 
@@ -532,6 +538,7 @@ function buildSchema(
         "thumbnailImageId",
         "تصویر بندانگشتی",
         resource,
+        imageMap,
         false,
       ),
       {
@@ -552,6 +559,7 @@ function buildSchema(
         "pageContent.primaryBanner.imageId",
         "تصویر بنر اول",
         resource,
+        imageMap,
         true,
       ),
       {
@@ -592,6 +600,7 @@ function buildSchema(
         "pageContent.secondaryBanner.imageId",
         "تصویر بنر دوم",
         resource,
+        imageMap,
         true,
       ),
       {
@@ -904,8 +913,8 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
   );
 
   const schema = useMemo(
-    () => buildSchema(resource, categoryOptions),
-    [categoryOptions, resource],
+    () => buildSchema(resource, categoryOptions, imageMap),
+    [categoryOptions, imageMap, resource],
   );
 
   const source = useMemo(

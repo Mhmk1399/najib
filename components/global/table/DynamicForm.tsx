@@ -74,6 +74,9 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState<Set<string>>(
+    () => new Set(),
+  );
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const fieldsByName = useMemo(
@@ -101,6 +104,28 @@ export function DynamicForm<TValues extends DynamicFormValues>({
       return next;
     });
     setFormError(null);
+  }
+
+  function setUploadPending(name: string, pending: boolean) {
+    setPendingUploads((current) => {
+      const next = new Set(current);
+      if (pending) next.add(name);
+      else next.delete(name);
+      return next;
+    });
+    if (pending) {
+      setErrors((current) => {
+        if (current[name]) return current;
+        return { ...current, [name]: "آپلود تصویر هنوز کامل نشده است." };
+      });
+      return;
+    }
+    setErrors((current) => {
+      if (!current[name]) return current;
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
   }
 
   function validateClient(current: TValues) {
@@ -148,6 +173,19 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting || disabled) return;
+
+    if (pendingUploads.size > 0) {
+      const uploadErrors = Object.fromEntries(
+        [...pendingUploads].map((name) => [
+          name,
+          "لطفا تا پایان آپلود تصویر صبر کنید.",
+        ]),
+      );
+      setErrors((current) => ({ ...current, ...uploadErrors }));
+      setFormError("آپلود تصویر هنوز کامل نشده است. بعد از پایان آپلود دوباره ذخیره کنید.");
+      focusFirstError(uploadErrors);
+      return;
+    }
 
     let nextErrors = validateClient(values);
     if (!Object.keys(nextErrors).length && schema.validate) {
@@ -243,6 +281,9 @@ export function DynamicForm<TValues extends DynamicFormValues>({
                       setValue={(nextValue) =>
                         changeValue(field.name, nextValue)
                       }
+                      setUploadPending={(pending) =>
+                        setUploadPending(field.name, pending)
+                      }
                     />
                   </div>
                 );
@@ -292,11 +333,13 @@ function DynamicField<TValues extends DynamicFormValues>({
   values,
   error,
   setValue,
+  setUploadPending,
 }: {
   field: DynamicFormField<TValues>;
   values: TValues;
   error?: string;
   setValue: (value: unknown) => void;
+  setUploadPending: (pending: boolean) => void;
 }) {
   const value = getPathValue(values, field.name);
   const disabled = isFieldFlag(field.disabled, values, false);
@@ -484,6 +527,7 @@ function DynamicField<TValues extends DynamicFormValues>({
         error={error}
         disabled={disabled || readOnly}
         setValue={setValue}
+        setUploadPending={setUploadPending}
       />
     );
   }
@@ -520,6 +564,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
   error,
   disabled,
   setValue,
+  setUploadPending,
 }: {
   field: DynamicFileField<TValues>;
   values: TValues;
@@ -527,6 +572,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
   error?: string;
   disabled: boolean;
   setValue: (value: unknown) => void;
+  setUploadPending: (pending: boolean) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const xhrRef = useRef<XMLHttpRequest | null>(null);
@@ -553,7 +599,12 @@ function FileUploadField<TValues extends DynamicFormValues>({
   function clearValue() {
     if (disabled || uploading) return;
     setValue("");
+    setUploadPending(false);
     setLocalError(null);
+    if (localPreview) {
+      URL.revokeObjectURL(localPreview);
+      setLocalPreview(null);
+    }
     if (inputRef.current) inputRef.current.value = "";
   }
 
@@ -561,6 +612,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     xhrRef.current?.abort();
     xhrRef.current = null;
     setUploading(false);
+    setUploadPending(false);
     setProgress(0);
     setLocalError("آپلود لغو شد.");
   }
@@ -601,6 +653,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     const xhr = new XMLHttpRequest();
     xhrRef.current = xhr;
     setUploading(true);
+    setUploadPending(true);
     setProgress(0);
 
     xhr.upload.onprogress = (progressEvent) => {
@@ -616,6 +669,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     xhr.onload = () => {
       xhrRef.current = null;
       setUploading(false);
+      setUploadPending(false);
       if (xhr.status < 200 || xhr.status >= 300) {
         setProgress(0);
         setLocalError(readUploadError(xhr.responseText));
@@ -645,6 +699,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     xhr.onerror = () => {
       xhrRef.current = null;
       setUploading(false);
+      setUploadPending(false);
       setProgress(0);
       setLocalError("آپلود انجام نشد. اتصال را بررسی کنید.");
     };
@@ -652,6 +707,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
     xhr.onabort = () => {
       xhrRef.current = null;
       setUploading(false);
+      setUploadPending(false);
       setProgress(0);
     };
 
