@@ -550,7 +550,7 @@ export function UserManager() {
           create: {
             label: "کاربر جدید",
             title: "ساخت کاربر",
-            description: "برای مشتری‌ها نقش Customer کافی است؛ برای ورود به پنل ادمین باید نقش یا permission مدیریتی داده شود.",
+            description: "برای مشتری‌ها نقش «مشتری» کافی است؛ ورود به پنل فقط با نقش یا دسترسی مدیریتی ممکن است.",
             schema: createSchema,
             initialValues: emptyUserForm,
             mutationFn: async ({ values }) =>
@@ -670,7 +670,7 @@ export function UserManager() {
             description: (record) => (
               <>
                 حساب <strong>{record.email}</strong> از لیست فعال خارج می‌شود و وضعیت آن
-                به Deleted تغییر می‌کند. این عملیات برای حساب خودتان مجاز نیست.
+                به «حذف‌شده» تغییر می‌کند. این عملیات برای حساب خودتان مجاز نیست.
               </>
             ),
             dangerLevel: "soft",

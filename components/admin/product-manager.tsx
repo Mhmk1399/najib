@@ -1004,7 +1004,7 @@ export function ProductManager({
         ProductFilters
       >
         tableId="admin-products"
-        eyebrow="PRODUCT CATALOG"
+        eyebrow="کاتالوگ محصول"
         title="مدیریت محصولات"
         description="محصول را از صفر بسازید: متن چندزبانه، جایگاه کاتالوگ، قیمت، وضعیت، تصویر اصلی و گالری."
         source={{

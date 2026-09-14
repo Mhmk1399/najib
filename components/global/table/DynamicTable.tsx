@@ -50,6 +50,7 @@ import {
   isEmptyFilterValue,
   isTruthyConfig,
   pageCountFrom,
+  stableStringify,
 } from "./utils";
 import {
   useAdminTheme,
@@ -173,30 +174,28 @@ export function DynamicDataTable<
     columnVisibility?.storageKey ?? `najib-admin-table:${tableId}:columns`;
 
   useEffect(() => {
-    setVisibleColumnIds(defaultVisibleColumnIds);
-  }, [defaultVisibleColumnIds]);
-
-  useEffect(() => {
-    if (!columnVisibility?.persist) {
-      setColumnPreferencesReady(true);
-      return;
-    }
-    setColumnPreferencesReady(false);
-    try {
-      const saved = localStorage.getItem(columnStorageKey);
-      if (saved) {
-        const parsed = JSON.parse(saved) as string[];
-        const valid = parsed.filter((id) =>
-          columns.some((column) => column.id === id),
-        );
-        if (valid.length) setVisibleColumnIds(valid);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      if (!columnVisibility?.persist) {
+        setVisibleColumnIds(defaultVisibleColumnIds);
+        setColumnPreferencesReady(true);
+        return;
       }
-    } catch {
-      // Corrupt preferences intentionally fall back to defaults.
-    } finally {
-      setColumnPreferencesReady(true);
-    }
-  }, [columnStorageKey, columnVisibility?.persist, columnSignature, columns]);
+      setColumnPreferencesReady(false);
+      try {
+        const saved = localStorage.getItem(columnStorageKey);
+        const parsed = saved ? JSON.parse(saved) as string[] : [];
+        const valid = parsed.filter((id) => columns.some((column) => column.id === id));
+        setVisibleColumnIds(valid.length ? valid : defaultVisibleColumnIds);
+      } catch {
+        setVisibleColumnIds(defaultVisibleColumnIds);
+      } finally {
+        setColumnPreferencesReady(true);
+      }
+    });
+    return () => { cancelled = true; };
+  }, [columnStorageKey, columnVisibility?.persist, columnSignature, columns, defaultVisibleColumnIds]);
 
   useEffect(() => {
     if (!columnVisibility?.persist || !columnPreferencesReady) return;
@@ -271,9 +270,9 @@ export function DynamicDataTable<
         signal,
       }),
     placeholderData: keepPreviousData,
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnWindowFocus: false,
+    staleTime: 30_000,
+    gcTime: 10 * 60_000,
+    refetchOnWindowFocus: true,
     retry: 1,
   });
 
@@ -284,7 +283,9 @@ export function DynamicDataTable<
     pageCountFrom(total, tableQuery.data?.pageSize ?? pageSize);
 
   useEffect(() => {
-    if (!tableQuery.isFetching && page > totalPages) setPage(totalPages);
+    if (tableQuery.isFetching || page <= totalPages) return;
+    const frame = requestAnimationFrame(() => setPage(totalPages));
+    return () => cancelAnimationFrame(frame);
   }, [page, tableQuery.isFetching, totalPages]);
 
   const visibleColumns = useMemo(
@@ -516,6 +517,7 @@ export function DynamicDataTable<
 
         {filters.length ? (
           <DynamicFilters
+            key={stableStringify(committedFilters)}
             definitions={filters}
             committed={committedFilters}
             onApply={applyFilters}

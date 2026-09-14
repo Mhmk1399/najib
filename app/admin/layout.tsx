@@ -1,10 +1,13 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Script from "next/script";
-import { Vazirmatn } from "next/font/google";
 import { AdminQueryProvider } from "@/components/global/table/AdminQueryProvider";
 
- 
- 
+export const metadata: Metadata = {
+  title: "پنل مدیریت نجیب‌زاده",
+  description: "فضای مدیریت کاتالوگ نجیب‌زاده",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 const themeBootScript = `
   try {
@@ -21,10 +24,12 @@ const themeBootScript = `
       dark ? 'dark' : 'light';
 
     document.documentElement.dir = 'rtl';
+    document.documentElement.lang = 'fa';
   } catch (_) {
     document.documentElement.dataset.theme = 'dark';
     document.documentElement.style.colorScheme = 'dark';
     document.documentElement.dir = 'rtl';
+    document.documentElement.lang = 'fa';
   }
 `;
 
@@ -34,7 +39,7 @@ export default function AdminLayout({
   children: ReactNode;
 }>) {
   return (
-    <div  >
+    <div lang="fa" dir="rtl">
       <Script
         id="najib-admin-theme"
         strategy="beforeInteractive"

@@ -14,10 +14,10 @@ export function AdminQueryProvider({ children }: { children: ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: Infinity,
-            gcTime: Infinity,
-            refetchOnWindowFocus: false,
-            refetchOnReconnect: false,
+            staleTime: 30_000,
+            gcTime: 10 * 60_000,
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
             retry: 1,
           },
           mutations: { retry: 0 },

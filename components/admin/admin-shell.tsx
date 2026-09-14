@@ -2,28 +2,21 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  BarChart3,
-  Bell,
   Boxes,
   CalendarDays,
   ChevronDown,
   Crown,
+  FileText,
   Grid2X2,
-  Headphones,
+  Images,
   LogOut,
-  Mail,
   Menu,
   Moon,
   Package,
-  RotateCcw,
-  Search,
-  Settings,
-  ShoppingBag,
-  ShoppingCart,
+  SlidersHorizontal,
   Sun,
-  Tags,
   Users,
   X,
   type LucideIcon,
@@ -34,7 +27,6 @@ import {
   type AdminStaffProfile,
 } from "@/components/admin/admin-auth-context";
 import { Button } from "@/components/ui/Button";
-import { CustomInput } from "@/components/ui/CustomInput";
 
 type ThemeMode = "dark" | "light";
 
@@ -53,18 +45,9 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
   { label: "محصولات", href: "/admin/catalog/products", icon: Package },
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
-  { label: "سفارشات", href: "/admin/orders", icon: ShoppingCart },
-  { label: "مشتریان", href: "/admin/customers", icon: Users },
-  { label: "انبار", href: "/admin/inventory", icon: ShoppingBag },
-  { label: "مرجوعی‌ها", href: "/admin/returns", icon: RotateCcw },
-  { label: "تخفیف‌ها", href: "/admin/discounts", icon: Tags },
-  { label: "گزارشات", href: "/admin/reports", icon: BarChart3 },
-];
-
-const SECONDARY_NAV: NavItem[] = [
-  { label: "تنظیمات", href: "/admin/settings", icon: Settings },
-  { label: "کاربران", href: "/admin/users", icon: Users },
-  { label: "پشتیبانی", href: "/admin/support", icon: Headphones },
+  { label: "محتوای صفحات", href: "/admin/catalog/content", icon: FileText },
+  { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
+  { label: "اطلاعات پایه کاتالوگ", href: "/admin/catalog/references", icon: SlidersHorizontal },
 ];
 
 function useTehranClock() {
@@ -120,6 +103,17 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+  const logoutOpenerRef = useRef<HTMLElement | null>(null);
+
+  const requestLogout = () => {
+    logoutOpenerRef.current = document.activeElement as HTMLElement | null;
+    setLogoutOpen(true);
+  };
+
+  const closeLogout = () => {
+    setLogoutOpen(false);
+    requestAnimationFrame(() => logoutOpenerRef.current?.focus());
+  };
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -157,7 +151,8 @@ export function AdminShell({ children, staff }: AdminShellProps) {
           <aside className="relative order-1 hidden h-dvh w-[238px] shrink-0 overflow-hidden border-r border-white/[0.075] bg-[#090d11] xl:flex 2xl:w-[252px] group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-[#e9e5de]">
             <Sidebar
               pathname={pathname}
-              onLogout={() => setLogoutOpen(true)}
+              staff={staffProfile}
+              onLogout={requestLogout}
               onNavigate={() => undefined}
             />
           </aside>
@@ -172,7 +167,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
               onToggleTheme={() =>
                 setTheme((current) => (current === "dark" ? "light" : "dark"))
               }
-              onRequestLogout={() => setLogoutOpen(true)}
+              onRequestLogout={requestLogout}
             />
 
             <main
@@ -196,11 +191,12 @@ export function AdminShell({ children, staff }: AdminShellProps) {
           }}
           onLogout={() => {
             setMobileOpen(false);
-            setLogoutOpen(true);
+            requestLogout();
           }}
+          staff={staffProfile}
         />
 
-        <LogoutModal open={logoutOpen} onClose={() => setLogoutOpen(false)} />
+        <LogoutModal open={logoutOpen} onClose={closeLogout} />
       </div>
     </AdminAuthProvider>
   );
@@ -269,14 +265,6 @@ function Topbar({
             className="!size-10 !border-white/[0.085] !bg-white/[0.02] !text-white/58 hover:!border-white/[0.14] hover:!bg-white/[0.045] hover:!text-white group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!bg-black/[0.02] group-data-[theme=light]/admin:!text-black/58"
           />
 
-          <HeaderIcon label="اعلان‌ها" badge>
-            <Bell size={17} strokeWidth={1.45} />
-          </HeaderIcon>
-
-          <HeaderIcon label="پیام‌ها">
-            <Mail size={17} strokeWidth={1.45} />
-          </HeaderIcon>
-
           <div
             dir="rtl"
             className="hidden h-10 items-center gap-3 border border-white/[0.075] bg-white/[0.02] px-3 md:flex group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-black/[0.02]"
@@ -297,22 +285,7 @@ function Topbar({
           </div>
         </div>
 
-        {/* CENTER: canonical search input from the project UI kit. */}
-        <div className="hidden min-w-0 flex-1 justify-center lg:flex">
-          <div dir="rtl" className="w-full max-w-[560px]">
-            <CustomInput
-              id="admin-global-search"
-              name="adminSearch"
-              type="search"
-              placeholder="جستجو در محصولات، سفارش‌ها، مشتریان ..."
-              inputSize="sm"
-              tone={theme === "dark" ? "dark" : "light"}
-              leadingIcon={<Search size={16} strokeWidth={1.45} />}
-              clearable
-              inputClassName="!text-right !text-[11px] !tracking-normal"
-            />
-          </div>
-        </div>
+        <div className="min-w-0 flex-1" />
 
         {/* RIGHT: user identity and mobile navigation. */}
         <div dir="rtl" className="ml-auto flex shrink-0 items-center gap-2">
@@ -356,7 +329,7 @@ function ProfileDropdown({
   onLogout: () => void;
 }) {
   const fullName =
-    `${staff.firstName ?? ""} ${staff.lastName ?? ""}`.trim() || "Admin";
+    `${staff.firstName ?? ""} ${staff.lastName ?? ""}`.trim() || "کاربر مدیریت";
 
   return (
     <div ref={refContainer} className="relative">
@@ -447,41 +420,14 @@ function ProfileDropdown({
   );
 }
 
-function HeaderIcon({
-  children,
-  label,
-  badge = false,
-}: {
-  children: ReactNode;
-  label: string;
-  badge?: boolean;
-}) {
-  return (
-    <div className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        size="md"
-        iconOnly
-        icon={children}
-        aria-label={label}
-        className="!size-10 !border-white/[0.075] !bg-white/[0.02] !text-white/52 hover:!border-white/[0.13] hover:!bg-white/[0.045] hover:!text-white group-data-[theme=light]/admin:!border-black/[0.08] group-data-[theme=light]/admin:!bg-black/[0.02] group-data-[theme=light]/admin:!text-black/54"
-      />
-      {badge ? (
-        <span className="pointer-events-none absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-[#92654a] text-[7px] font-bold text-white">
-          3
-        </span>
-      ) : null}
-    </div>
-  );
-}
-
 function Sidebar({
   pathname,
+  staff,
   onLogout,
   onNavigate,
 }: {
   pathname: string;
+  staff: AdminStaffProfile;
   onLogout: () => void;
   onNavigate: () => void;
 }) {
@@ -504,7 +450,7 @@ function Sidebar({
       <div className="relative z-10 flex h-[76px] shrink-0 items-center justify-center border-b border-white/[0.075] px-5 group-data-[theme=light]/admin:border-black/[0.08]">
         <Link
           href="/admin"
-          aria-label="Najibzadeh Admin"
+          aria-label="پنل مدیریت نجیب‌زاده"
           className="group/brand flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#9d7357]/40"
         >
           <span className="text-right">
@@ -541,16 +487,13 @@ function Sidebar({
 
         <div className="my-4 h-px bg-white/[0.07] group-data-[theme=light]/admin:bg-black/[0.075]" />
 
-        <div className="space-y-1">
-          {SECONDARY_NAV.map((item) => (
-            <SidebarLink
-              key={item.href}
-              item={item}
-              active={isNavActive(pathname, item.href)}
-              onNavigate={onNavigate}
-            />
-          ))}
-        </div>
+        {staff.permissions?.includes("staff.manage") ? (
+          <SidebarLink
+            item={{ label: "کاربران", href: "/admin/users", icon: Users }}
+            active={isNavActive(pathname, "/admin/users")}
+            onNavigate={onNavigate}
+          />
+        ) : null}
 
         <Button
           type="button"
@@ -574,10 +517,10 @@ function Sidebar({
           className="mx-auto text-[#9d7357]"
         />
         <p className="mt-2 text-[6px] font-medium uppercase tracking-[0.28em] text-white/30 group-data-[theme=light]/admin:text-black/34">
-          Premium Menswear
+          مدیریت نجیب‌زاده
         </p>
         <p className="mt-1 text-[5px] uppercase tracking-[0.25em] text-[#9d7357]/75">
-          For a higher standard
+          فضای امن کارکنان
         </p>
       </div>
     </div>
@@ -617,9 +560,9 @@ function SidebarLink({
 }
 
 const FALLBACK_STAFF: AdminStaffProfile = {
-  firstName: "Najib",
-  lastName: "Admin",
-  displayRole: "Admin",
+  firstName: "کاربر",
+  lastName: "مدیریت",
+  displayRole: "همکار مدیریت",
   roles: [],
   permissions: [],
 };
@@ -632,11 +575,13 @@ function isNavActive(pathname: string, href: string) {
 function MobileSidebar({
   open,
   pathname,
+  staff,
   onClose,
   onLogout,
 }: {
   open: boolean;
   pathname: string;
+  staff: AdminStaffProfile;
   onClose: () => void;
   onLogout: () => void;
 }) {
@@ -680,7 +625,7 @@ function MobileSidebar({
             className="!size-9 !border-white/[0.09] !bg-white/[0.025] !text-white/58 group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!bg-black/[0.025] group-data-[theme=light]/admin:!text-black/58"
           />
         </div>
-        <Sidebar pathname={pathname} onLogout={onLogout} onNavigate={onClose} />
+        <Sidebar staff={staff} pathname={pathname} onLogout={onLogout} onNavigate={onClose} />
       </aside>
     </div>
   );
@@ -694,6 +639,9 @@ function LogoutModal({
   onClose: () => void;
 }) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const router = useRouter();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -701,6 +649,24 @@ function LogoutModal({
   }, [open]);
 
   if (!open) return null;
+
+  const logout = async () => {
+    if (pending) return;
+    setPending(true);
+    setError("");
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      if (!response.ok) throw new Error("logout_failed");
+      router.replace("/admin/login");
+      router.refresh();
+    } catch {
+      setError("خروج انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.");
+      setPending(false);
+    }
+  };
 
   return (
     <div
@@ -719,7 +685,7 @@ function LogoutModal({
         <header className="flex items-start justify-between gap-5 border-b border-white/[0.075] px-6 py-5 group-data-[theme=light]/admin:border-black/[0.08]">
           <div className="text-right">
             <p className="text-[7px] font-semibold uppercase tracking-[0.19em] text-[#9d7357]">
-              Account Session
+              نشست کاربری
             </p>
             <h2
               id="admin-logout-title"
@@ -742,9 +708,10 @@ function LogoutModal({
 
         <div className="px-6 py-5 text-right">
           <p className="text-[11px] leading-7 text-white/52 group-data-[theme=light]/admin:text-black/58">
-            آیا مطمئن هستید که می‌خواهید از پنل مدیریت خارج شوید؟ این نسخه فقط
-            رابط کاربری است و هیچ درخواست شبکه‌ای ارسال نمی‌کند.
+            آیا مطمئن هستید که می‌خواهید از پنل مدیریت خارج شوید؟ نشست امن شما
+            پایان می‌یابد و برای ورود دوباره باید رمز عبور را وارد کنید.
           </p>
+          {error ? <p role="alert" className="mt-3 text-[11px] text-[#df8178]">{error}</p> : null}
         </div>
 
         <footer className="grid grid-cols-2 gap-2 border-t border-white/[0.075] p-4 group-data-[theme=light]/admin:border-black/[0.08]">
@@ -752,6 +719,7 @@ function LogoutModal({
             ref={cancelRef}
             type="button"
             onClick={onClose}
+            disabled={pending}
             className="h-11 rounded-[3px] border border-white/[0.09] bg-white/[0.02] text-[10px] font-semibold text-white/64 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/18 group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-black/[0.02] group-data-[theme=light]/admin:text-black/62"
           >
             انصراف
@@ -762,10 +730,12 @@ function LogoutModal({
             size="md"
             fullWidth
             uppercase={false}
-            onClick={onClose}
+            onClick={() => void logout()}
+            loading={pending}
+            disabled={pending}
             className="!h-11 !justify-center !border-[#a5574f]/35 !bg-[#a5574f]/12 !tracking-normal !text-[#df8178] hover:!border-[#a5574f]/50 hover:!bg-[#a5574f]/18 hover:!text-[#ef9b93]"
           >
-            خروج از حساب
+            {pending ? "در حال خروج…" : "خروج از حساب"}
           </Button>
         </footer>
       </section>

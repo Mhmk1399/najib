@@ -1007,7 +1007,7 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
       >
         key={resource}
         tableId={`admin-${resource}`}
-        eyebrow={resource === "categories" ? "CATEGORY" : "SUBCATEGORY"}
+        eyebrow={resource === "categories" ? "دسته‌بندی" : "زیردسته"}
         title={title}
         description="ساخت و ویرایش مسیرهای اصلی کاتالوگ، متن‌های چندزبانه و دو بنر صفحه از همین بخش انجام می‌شود."
         source={source}

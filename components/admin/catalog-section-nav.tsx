@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Images, LayoutTemplate, Package } from "lucide-react";
+import { Boxes, FileText, Images, Package, SlidersHorizontal } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const destinations = [
@@ -11,12 +11,29 @@ const destinations = [
     detail: "دفتر محصولات",
     icon: Package,
   },
- 
+  {
+    href: "/admin/categories",
+    label: "دسته‌بندی‌ها",
+    detail: "دسته و زیردسته",
+    icon: Boxes,
+  },
+  {
+    href: "/admin/catalog/content",
+    label: "محتوای صفحات",
+    detail: "بنر و توضیحات",
+    icon: FileText,
+  },
   {
     href: "/admin/catalog/images",
     label: "تصاویر خریدپذیر",
     detail: "تصویر و نقاط محصول",
     icon: Images,
+  },
+  {
+    href: "/admin/catalog/references",
+    label: "اطلاعات پایه",
+    detail: "مجموعه، رنگ و سایز",
+    icon: SlidersHorizontal,
   },
 ];
 

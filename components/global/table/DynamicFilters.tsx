@@ -9,7 +9,7 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import { type RefObject, useMemo, useRef, useState } from "react";
 import type {
   AnyRecord,
   DataSelectOption,
@@ -50,10 +50,6 @@ export function DynamicFilters<TFilters extends AnyRecord, TRecord>({
   const [draft, setDraft] = useState<TFilters>(committed);
   const [activeId, setActiveId] = useState<string | null>(null);
   const activeTriggerRef = useRef<HTMLButtonElement | null>(null);
-
-  useEffect(() => {
-    setDraft(committed);
-  }, [committed]);
 
   if (!visibleDefinitions.length) return null;
 

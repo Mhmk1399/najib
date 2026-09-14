@@ -46,6 +46,20 @@ const checks = [
     validate: (body, response) =>
       typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
   },
+  {
+    name: "admin dashboard summary is protected",
+    path: "/api/admin/dashboard-summary",
+    status: 401,
+    validate: (body, response) =>
+      typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
+  },
+  {
+    name: "catalog reference data is protected",
+    path: "/api/catalog/collections",
+    status: 401,
+    validate: (body, response) =>
+      typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
+  },
 ];
 
 async function main() {

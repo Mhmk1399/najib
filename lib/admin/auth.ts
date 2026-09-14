@@ -53,7 +53,9 @@ export async function getStaff(): Promise<AdminStaff | null> {
 
 export async function requireStaff(): Promise<AdminStaff> {
   const staff = await getStaff();
-  if (!staff || !staff.permissions.includes("admin.access")) redirect("/admin/login?reason=session");
+  if (!staff || !staff.permissions.includes("admin.access")) {
+    redirect("/admin/login?refresh=1&reason=session");
+  }
   return staff;
 }
 
@@ -65,14 +67,14 @@ export async function requireStaffPermission(permission: string): Promise<AdminS
 
 export function displayRole(roles: string[]): string {
   const labels: Record<string, string> = {
-    owner: "Owner",
-    administrator: "Administrator",
-    catalog_manager: "Catalog manager",
-    inventory_manager: "Inventory manager",
-    order_manager: "Order manager",
-    customer_support: "Customer support",
-    finance: "Finance",
-    store_staff: "Store staff",
+    owner: "مالک",
+    administrator: "مدیر سیستم",
+    catalog_manager: "مدیر کاتالوگ",
+    inventory_manager: "مدیر انبار",
+    order_manager: "مدیر سفارش‌ها",
+    customer_support: "پشتیبانی مشتریان",
+    finance: "امور مالی",
+    store_staff: "همکار فروشگاه",
   };
-  return labels[roles[0] || ""] || "Staff";
+  return labels[roles[0] || ""] || "همکار مدیریت";
 }

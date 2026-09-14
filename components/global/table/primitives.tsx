@@ -613,9 +613,10 @@ export function DataSelect({
       ? [value]
       : [];
 
-  useEffect(() => {
-    if (!open) setSearch("");
-  }, [open]);
+  function closeSelect() {
+    setOpen(false);
+    setSearch("");
+  }
 
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -645,7 +646,7 @@ export function DataSelect({
     if (option.disabled) return;
     if (!multiple) {
       onChange(option.value);
-      setOpen(false);
+      closeSelect();
       return;
     }
     const next = selectedValues.includes(option.value)
@@ -671,7 +672,7 @@ export function DataSelect({
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={disabled || readOnly}
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => open ? closeSelect() : setOpen(true)}
         className={cx(
           "flex min-h-11 w-full min-w-0 cursor-pointer items-center justify-between gap-3 rounded-[5px] border bg-[var(--adt-surface)] px-3 text-right outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/20 disabled:cursor-not-allowed disabled:opacity-50",
           error
@@ -710,7 +711,7 @@ export function DataSelect({
 
       <FloatingPanel
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={closeSelect}
         triggerRef={triggerRef}
         title={label ?? "انتخاب"}
         desktopWidth={360}
@@ -825,7 +826,7 @@ export function DataSelect({
             <DataButton
               tone="secondary"
               size="sm"
-              onClick={() => setOpen(false)}
+              onClick={closeSelect}
             >
               بستن
             </DataButton>

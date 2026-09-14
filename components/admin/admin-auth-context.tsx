@@ -54,7 +54,7 @@ export function AdminAuthProvider({
 export function useAdminAuth() {
   const value = useContext(AdminAuthContext);
   if (!value) {
-    throw new Error("useAdminAuth must be used inside AdminAuthProvider.");
+    throw new Error("زمینه دسترسی مدیریت در این بخش فراهم نشده است.");
   }
   return value;
 }

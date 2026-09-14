@@ -70,9 +70,11 @@ export function DynamicModal({
   const closeRef = useRef(onClose);
   const escapeRef = useRef(closeOnEscape);
 
-  busyRef.current = busy;
-  closeRef.current = onClose;
-  escapeRef.current = closeOnEscape;
+  useEffect(() => {
+    busyRef.current = busy;
+    closeRef.current = onClose;
+    escapeRef.current = closeOnEscape;
+  }, [busy, closeOnEscape, onClose]);
 
   useEffect(() => {
     if (!open) return;

@@ -5,7 +5,7 @@ export type LocalizedTextList = Record<Locale, string[]>;
 
 export const emptyLocalizedText = (): LocalizedText => ({ fa: "", en: "", ar: "" });
 export const emptyLocalizedList = (): LocalizedTextList => ({ fa: [], en: [], ar: [] });
-export const localeLabels: Record<Locale, string> = { fa: "فارسی", en: "English", ar: "العربية" };
+export const localeLabels: Record<Locale, string> = { fa: "فارسی", en: "انگلیسی", ar: "عربی" };
 export const localeDirection = (locale: Locale) => locale === "en" ? "ltr" : "rtl";
 export const fa = (value?: LocalizedText | null) => value?.fa || "—";
 export const localizedComplete = (value: LocalizedText | LocalizedTextList, locale: Locale) => {

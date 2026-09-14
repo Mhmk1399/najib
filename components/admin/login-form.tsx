@@ -1,20 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LoaderCircle, LockKeyhole, ShieldCheck, UserPlus } from "lucide-react";
+import { LoaderCircle, LockKeyhole, ShieldCheck } from "lucide-react";
 import { type FormEvent, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Button";
 import { CustomInput } from "@/components/ui/CustomInput";
 
-type AuthMode = "login" | "signup";
-
 type FieldErrors = {
   email?: string;
   password?: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
 };
 
 type AuthResponse = {
@@ -28,7 +23,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
   const router = useRouter();
   const refreshAttempted = useRef(false);
 
-  const [mode, setMode] = useState<AuthMode>("login");
   const [submitting, setSubmitting] = useState(false);
   const [checkingSession, setCheckingSession] = useState(attemptRefresh);
   const [generalError, setGeneralError] = useState("");
@@ -65,12 +59,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
     void refreshSession();
   }, [attemptRefresh, router]);
 
-  const switchMode = (next: AuthMode) => {
-    setMode(next);
-    setGeneralError("");
-    setFieldErrors({});
-  };
-
   const clearFieldError = (field: keyof FieldErrors) => {
     setFieldErrors((errors) => ({ ...errors, [field]: undefined }));
     setGeneralError("");
@@ -84,9 +72,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
     const form = new FormData(event.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
-    const firstName = String(form.get("firstName") ?? "").trim();
-    const lastName = String(form.get("lastName") ?? "").trim();
-    const phone = String(form.get("phone") ?? "").trim();
     const localErrors: FieldErrors = {};
 
     if (!email) localErrors.email = "ایمیل خود را وارد کنید.";
@@ -99,11 +84,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
       localErrors.password = "رمز عبور باید دست‌کم ۱۲ کاراکتر باشد.";
     }
 
-    if (mode === "signup") {
-      if (!firstName) localErrors.firstName = "نام را وارد کنید.";
-      if (!lastName) localErrors.lastName = "نام خانوادگی را وارد کنید.";
-    }
-
     setFieldErrors(localErrors);
     setGeneralError("");
 
@@ -112,26 +92,12 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
     setSubmitting(true);
 
     try {
-      const response = await fetch(
-        mode === "signup" ? "/api/auth/signup" : "/api/auth/login",
-        {
+      const response = await fetch("/api/auth/login", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            mode === "signup"
-              ? {
-                  email,
-                  password,
-                  firstName,
-                  lastName,
-                  phone: phone || undefined,
-                  preferredLocale: "fa",
-                }
-              : { email, password },
-          ),
-        },
-      );
+          body: JSON.stringify({ email, password }),
+        });
 
       const result = (await response.json().catch(() => ({}))) as AuthResponse;
 
@@ -143,10 +109,7 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
 
       setFieldErrors(result.fieldErrors ?? {});
       setGeneralError(
-        result.error ||
-          (mode === "signup"
-            ? "ثبت نام انجام نشد. اطلاعات را بررسی و دوباره تلاش کنید."
-            : "ورود انجام نشد. اطلاعات خود را بررسی و دوباره تلاش کنید."),
+        result.error || "ورود انجام نشد. اطلاعات خود را بررسی و دوباره تلاش کنید.",
       );
     } catch {
       setGeneralError(
@@ -156,8 +119,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
       setSubmitting(false);
     }
   };
-
-  const isSignup = mode === "signup";
 
   return (
     <main
@@ -201,60 +162,17 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
             <header className="text-right">
               <div className="flex items-center justify-start gap-3 text-[11px] font-medium text-[#B08A68]">
                 <span className="h-px w-7 bg-current/70" aria-hidden="true" />
-                <span>{isSignup ? "ایجاد حساب" : "ورود امن"}</span>
+                <span>ورود امن کارکنان</span>
               </div>
 
               <h1 className="mt-4 text-[clamp(2.2rem,6vw,4.7rem)] font-semibold leading-[1.35] tracking-[-0.045em] text-white">
-                {isSignup ? "ثبت نام در نجیب‌زاده" : "خوش آمدید."}
+                خوش آمدید.
               </h1>
 
               <p className="mt-4 max-w-[570px] text-[12px] leading-7 text-white/48 sm:text-[13px]">
-                {isSignup
-                  ? "برای خرید، پیگیری سفارش و دریافت دسترسی‌های بعدی حساب خود را ایجاد کنید."
-                  : "با ایمیل و رمز عبور وارد حساب شوید. اگر دسترسی ادمین داشته باشید، پس از ورود به داشبورد هدایت می‌شوید."}
+                با حساب کارکنان وارد فضای مدیریت شوید. این بخش برای حساب مشتریان در دسترس نیست.
               </p>
             </header>
-
-            {/* Mode switch */}
-            <div
-              className="mt-8 grid grid-cols-2 border border-white/10 bg-black/20 p-1"
-              role="group"
-              aria-label="نوع فرم حساب کاربری"
-            >
-              <Button
-                type="button"
-                variant={mode === "login" ? "copper" : "outline"}
-                size="lg"
-                fullWidth
-                uppercase={false}
-                onClick={() => switchMode("login")}
-                aria-label="ورود به حساب"
-                className={
-                  mode === "login"
-                    ? "!min-h-[50px] !justify-center !tracking-normal"
-                    : "!min-h-[50px] !justify-center !border-transparent !bg-transparent !text-white/42 !tracking-normal hover:!border-white/10 hover:!bg-white/[0.05] hover:!text-white"
-                }
-              >
-                ورود
-              </Button>
-
-              <Button
-                type="button"
-                variant={mode === "signup" ? "copper" : "outline"}
-                size="lg"
-                fullWidth
-                uppercase={false}
-                onClick={() => switchMode("signup")}
-                aria-label="ثبت نام"
-                className={
-                  mode === "signup"
-                    ? "!min-h-[50px] !justify-center !tracking-normal"
-                    : "!min-h-[50px] !justify-center !border-transparent !bg-transparent !text-white/42 !tracking-normal hover:!border-white/10 hover:!bg-white/[0.05] hover:!text-white"
-                }
-              >
-                ثبت نام
-              </Button>
-            </div>
 
             <div className="mt-7">
               {checkingSession ? (
@@ -276,7 +194,7 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                   </span>
                 </div>
               ) : (
-                <form className="space-y-5" onSubmit={submit} noValidate>
+                <form className="space-y-5" method="post" onSubmit={submit} noValidate>
                   {generalError ? (
                     <div
                       role="alert"
@@ -288,41 +206,6 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                         className="mt-0.5 shrink-0"
                       />
                       <span>{generalError}</span>
-                    </div>
-                  ) : null}
-
-                  {isSignup ? (
-                    <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                      <AuthFieldLabel label="نام" htmlFor="account-first-name">
-                        <CustomInput
-                          id="account-first-name"
-                          name="firstName"
-                          placeholder="نام خود را وارد کنید"
-                          autoComplete="given-name"
-                          inputSize="lg"
-                          tone="dark"
-                          error={fieldErrors.firstName}
-                          onChange={() => clearFieldError("firstName")}
-                          inputClassName="!text-right !tracking-normal"
-                        />
-                      </AuthFieldLabel>
-
-                      <AuthFieldLabel
-                        label="نام خانوادگی"
-                        htmlFor="account-last-name"
-                      >
-                        <CustomInput
-                          id="account-last-name"
-                          name="lastName"
-                          placeholder="نام خانوادگی خود را وارد کنید"
-                          autoComplete="family-name"
-                          inputSize="lg"
-                          tone="dark"
-                          error={fieldErrors.lastName}
-                          onChange={() => clearFieldError("lastName")}
-                          inputClassName="!text-right !tracking-normal"
-                        />
-                      </AuthFieldLabel>
                     </div>
                   ) : null}
 
@@ -344,41 +227,17 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                     />
                   </AuthFieldLabel>
 
-                  {isSignup ? (
-                    <AuthFieldLabel label="شماره تماس" htmlFor="account-phone">
-                      <CustomInput
-                        id="account-phone"
-                        name="phone"
-                        type="tel"
-                        autoComplete="tel"
-                        dir="ltr"
-                        placeholder="0912 123 4567"
-                        inputSize="lg"
-                        tone="dark"
-                        error={fieldErrors.phone}
-                        onChange={() => clearFieldError("phone")}
-                        inputClassName="!text-left !tracking-normal"
-                      />
-                    </AuthFieldLabel>
-                  ) : null}
-
                   <AuthFieldLabel
                     label="رمز عبور"
                     htmlFor="account-password"
-                    meta={isSignup ? "حداقل ۱۲ کاراکتر" : "ورود امن"}
+                    meta="ورود امن"
                   >
                     <CustomInput
                       id="account-password"
                       name="password"
                       type="password"
-                      autoComplete={
-                        isSignup ? "new-password" : "current-password"
-                      }
-                      placeholder={
-                        isSignup
-                          ? "یک رمز عبور حداقل ۱۲ کاراکتری وارد کنید"
-                          : "رمز عبور خود را وارد کنید"
-                      }
+                      autoComplete="current-password"
+                      placeholder="رمز عبور خود را وارد کنید"
                       inputSize="lg"
                       tone="dark"
                       error={fieldErrors.password}
@@ -395,21 +254,11 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
                     uppercase={false}
                     loading={submitting}
                     disabled={submitting}
-                    icon={
-                      isSignup ? (
-                        <UserPlus size={17} aria-hidden="true" />
-                      ) : (
-                        <LockKeyhole size={17} aria-hidden="true" />
-                      )
-                    }
+                    icon={<LockKeyhole size={17} aria-hidden="true" />}
                     iconPosition="right"
                     className="!min-h-14 !justify-center !gap-3 !text-[12px] !tracking-normal sm:!text-[13px]"
                   >
-                    {submitting
-                      ? "در حال بررسی…"
-                      : isSignup
-                        ? "ثبت نام"
-                        : "ورود"}
+                    {submitting ? "در حال بررسی…" : "ورود به پنل مدیریت"}
                   </Button>
                 </form>
               )}
@@ -423,11 +272,10 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
               />
               <p className="min-w-0">
                 <strong className="block text-[11px] font-semibold text-white/72">
-                  دسترسی ادمین جداگانه کنترل می‌شود
+                  ورود فقط برای کارکنان مجاز است
                 </strong>
                 <span className="mt-1.5 block text-[10px] leading-6 text-white/32">
-                  همه می‌توانند حساب بسازند؛ اما داشبورد فقط برای حساب‌هایی باز
-                  می‌شود که مجوز ادمین دارند.
+                  برای ساخت یا تغییر حساب کارکنان با مالک سامانه تماس بگیرید.
                 </span>
               </p>
             </aside>
@@ -462,7 +310,7 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
 
           <div className="relative z-10 flex items-center justify-between px-8 pt-8 xl:px-12 xl:pt-10 2xl:px-16">
             <span className="text-[10px] font-medium text-white/28">
-              ۰۱ / ورود و عضویت
+              ۰۱ / ورود کارکنان
             </span>
           </div>
 
@@ -477,15 +325,15 @@ export function LoginForm({ attemptRefresh }: { attemptRefresh: boolean }) {
             </h2>
 
             <p className="mt-7 max-w-[610px] text-[13px] leading-8 text-white/46 xl:text-[14px]">
-              با یک حساب، سفارش‌ها و تجربه خرید خود را دنبال کنید. کاربران دارای
-              مجوز ادمین پس از ورود مستقیماً به فضای مدیریت هدایت می‌شوند.
+              دسترسی هر همکار بر اساس نقش و مجوزهای او کنترل می‌شود و نشست‌های
+              مدیریتی به‌صورت امن نگهداری می‌شوند.
             </p>
 
             <div className="mt-10 grid max-w-[620px] grid-cols-3 border-y border-white/9 py-6">
               <IdentityPoint title="ورود سریع" text="دسترسی مستقیم به حساب" />
               <IdentityPoint
-                title="ثبت نام"
-                text="ایجاد حساب در چند قدم"
+                title="نشست امن"
+                text="بازیابی خودکار دسترسی"
                 divided
               />
               <IdentityPoint title="امن" text="کنترل مجوزهای دسترسی" divided />
