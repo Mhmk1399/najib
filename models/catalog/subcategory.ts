@@ -41,6 +41,7 @@ const subcategorySchema = new Schema(
 );
 
 subcategorySchema.index({ categoryId: 1, slug: 1 }, { unique: true });
+subcategorySchema.index({ categoryId: 1, isActive: 1, sortOrder: 1, _id: 1 });
 
 export type SubcategoryDocument = InferSchemaType<typeof subcategorySchema>;
 export const Subcategory =

@@ -19,8 +19,19 @@ export async function connectToDatabase() {
   cached.__najibMongoose!.promise ??= mongoose.connect(uri, {
     dbName,
     bufferCommands: false,
+    maxPoolSize: Number(process.env.MONGODB_MAX_POOL_SIZE || 10),
+    minPoolSize: Number(process.env.MONGODB_MIN_POOL_SIZE || 0),
+    maxIdleTimeMS: 60_000,
+    serverSelectionTimeoutMS: 5_000,
+    socketTimeoutMS: 15_000,
   });
 
-  cached.__najibMongoose!.connection = await cached.__najibMongoose!.promise;
-  return cached.__najibMongoose!.connection;
+  try {
+    cached.__najibMongoose!.connection = await cached.__najibMongoose!.promise;
+    return cached.__najibMongoose!.connection;
+  } catch (error) {
+    // Allow a later request to retry after a temporary database outage.
+    cached.__najibMongoose!.promise = undefined;
+    throw error;
+  }
 }

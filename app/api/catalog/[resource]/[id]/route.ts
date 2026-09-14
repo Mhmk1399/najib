@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin/auth";
 import { forbidden, unauthorized } from "@/lib/server/errors";
-import { jsonError } from "@/lib/server/response";
+import { jsonError, jsonResponse } from "@/lib/server/response";
 import { catalogService } from "@/services/catalog/service";
 
 type RouteContext = { params: Promise<{ resource: string; id: string }> };
@@ -19,7 +18,7 @@ export async function GET(_request: Request, context: RouteContext) {
     const { resource: rawResource, id: rawId } = await context.params;
     const resource = catalogService.parseResource(rawResource);
     const id = catalogService.parseId(rawId);
-    return NextResponse.json(await catalogService.findById(resource, id));
+    return jsonResponse(await catalogService.findById(resource, id), { cache: "no-store" });
   } catch (error) {
     return jsonError(error);
   }
@@ -32,7 +31,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     const resource = catalogService.parseResource(rawResource);
     const id = catalogService.parseId(rawId);
     const payload = catalogService.parseUpdate(resource, await request.json());
-    return NextResponse.json(await catalogService.update(resource, id, payload));
+    return jsonResponse(await catalogService.update(resource, id, payload), { cache: "no-store" });
   } catch (error) {
     return jsonError(error);
   }

@@ -1,7 +1,6 @@
-import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/admin/auth";
 import { forbidden, unauthorized } from "@/lib/server/errors";
-import { jsonError } from "@/lib/server/response";
+import { jsonError, jsonResponse } from "@/lib/server/response";
 import { catalogService } from "@/services/catalog/service";
 
 type RouteContext = { params: Promise<{ resource: string }> };
@@ -30,10 +29,10 @@ export async function GET(request: Request, context: RouteContext) {
     await assertCatalogAccess(false);
     const resource = catalogService.parseResource((await context.params).resource);
     const query = catalogService.parseListQuery(queryFrom(request));
-    return NextResponse.json(await catalogService.list(resource, query));
+    return jsonResponse(await catalogService.list(resource, query), { cache: "no-store" });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("Unsupported catalog filter:")) {
-      return NextResponse.json({ error: error.message }, { status: 400 });
+      return jsonResponse({ error: error.message }, { status: 400 });
     }
     return jsonError(error);
   }
@@ -44,7 +43,10 @@ export async function POST(request: Request, context: RouteContext) {
     await assertCatalogAccess(true);
     const resource = catalogService.parseResource((await context.params).resource);
     const payload = catalogService.parseCreate(resource, await request.json());
-    return NextResponse.json(await catalogService.create(resource, payload), { status: 201 });
+    return jsonResponse(await catalogService.create(resource, payload), {
+      status: 201,
+      cache: "no-store",
+    });
   } catch (error) {
     return jsonError(error);
   }

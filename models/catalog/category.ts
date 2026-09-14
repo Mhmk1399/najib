@@ -35,6 +35,7 @@ const categorySchema = new Schema(
 );
 
 categorySchema.index({ slug: 1 }, { unique: true });
+categorySchema.index({ isActive: 1, sortOrder: 1, _id: 1 });
 
 export type CategoryDocument = InferSchemaType<typeof categorySchema>;
 export const Category = models.Category || model("Category", categorySchema);

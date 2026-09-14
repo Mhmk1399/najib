@@ -35,6 +35,7 @@ const collectionSchema = new Schema(
 );
 
 collectionSchema.index({ slug: 1 }, { unique: true });
+collectionSchema.index({ isActive: 1, sortOrder: 1, _id: 1 });
 
 export type CollectionDocument = InferSchemaType<typeof collectionSchema>;
 export const Collection =
