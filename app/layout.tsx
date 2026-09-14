@@ -26,10 +26,15 @@ import { LenisProvider } from "@/components/providers/lenis-provider";
 import { Dana } from "@/next-persian-fonts/dana";
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
+import { Vazirmatn } from "next/font/google";
 // ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
-
+const vazir = Vazirmatn({
+  subsets: ["arabic", "latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
 export const metadata: Metadata = {
   title: {
     default: "Najibzadeh — Luxury Menswear & Tailoring",
@@ -99,7 +104,7 @@ export default function RootLayout({
     >
       <head></head>
 
-      <body dir="ltr" className={`antialiased ${Dana.className} min-h-dvh`}>
+      <body dir="ltr" className={`antialiased  ${vazir.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
             <SiteShell>

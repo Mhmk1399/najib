@@ -925,23 +925,23 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(
             }}
             className={cx(
               `
-                min-w-0
+                !border-0
+bg-transparent
+p-0
 
-                flex-1
+!outline-none
+!ring-0
+!shadow-none
 
-                border-0
+focus:!border-0
+focus:!outline-none
+focus:!ring-0
+focus:!shadow-none
 
-                bg-transparent
-
-                p-0
-
-                text-[16px]
-
-                leading-none
-
-                text-[var(--input-text)]
-
-                outline-none
+focus-visible:!border-0
+focus-visible:!outline-none
+focus-visible:!ring-0
+focus-visible:!shadow-none
 
                 placeholder:text-[var(--input-muted)]
                 placeholder:opacity-55

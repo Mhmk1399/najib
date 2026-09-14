@@ -26,8 +26,7 @@
 /* Persian operational interface and RTL geometry */
 html[dir="rtl"] body {
   direction: rtl;
-  font-family: var(--sans);
-}
+ }
 html[dir="rtl"] .admin-shell {
   padding-left: 0;
   padding-right: var(--sidebar-width);
@@ -1506,8 +1505,7 @@ body {
   margin: 0;
   background: var(--canvas);
   color: var(--ink);
-  font-family: var(--sans);
-  -webkit-font-smoothing: antialiased;
+   -webkit-font-smoothing: antialiased;
 }
 button,
 input {
