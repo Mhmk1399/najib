@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
   type CSSProperties,
@@ -15,18 +16,19 @@ import {
   useRef,
   useState,
 } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
+import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
 
 import {
   COLOR_OPTIONS,
   MATERIAL_OPTIONS,
-  SHOP_PRODUCTS,
   SIZE_OPTIONS,
-  type ProductCategory,
-  type ShopProduct as Product,
+  type ShopProduct as FakeShopProduct,
+  type ShopProductImage,
 } from "@/data/fake-shop-products";
 
 /* ────────────────────────────────────────────────────────────
@@ -35,6 +37,72 @@ import {
 
 type SortOption = "new-arrivals" | "price-low" | "price-high" | "featured";
 type CollectionOption = "all" | "new-season";
+type ProductCategory = string;
+
+type Product = Omit<FakeShopProduct, "category" | "images"> & {
+  category: ProductCategory;
+  categoryLabel?: string;
+  currency?: string;
+  images: ShopProductImage[];
+};
+
+type CategoryOption = {
+  value: ProductCategory;
+  label: string;
+};
+
+type LocalizedText = {
+  fa?: string;
+  en?: string;
+  ar?: string;
+};
+
+type LocalizedTextList = {
+  fa?: string[];
+  en?: string[];
+  ar?: string[];
+};
+
+type StorefrontProductRecord = {
+  _id: string;
+  name: LocalizedText;
+  slug: string;
+  description?: LocalizedText;
+  categoryId: string;
+  subcategoryId: string;
+  basePriceMinor: number;
+  currency: string;
+  status: "draft" | "active" | "archived";
+  material?: LocalizedTextList;
+  primaryImageId?: string | null;
+  primaryImageObjectPosition?: string;
+  imageIds?: string[];
+  createdAt?: string;
+};
+
+type StorefrontProductPayload = {
+  items: StorefrontProductRecord[];
+};
+
+type CatalogImageAsset = {
+  _id: string;
+  url: string;
+  alt?: LocalizedText;
+  objectPosition?: string;
+};
+
+type CatalogCategoryRecord = {
+  _id: string;
+  name: LocalizedText;
+  slug: string;
+};
+
+type CatalogSubcategoryRecord = {
+  _id: string;
+  name: LocalizedText;
+  slug: string;
+  categoryId: string;
+};
 
 type ShopBanner = {
   id: string;
@@ -64,8 +132,6 @@ type ProductPanelSide = "left" | "right";
    CONSTANTS
    ──────────────────────────────────────────────────────────── */
 
-const PRODUCTS = SHOP_PRODUCTS;
-
 const SHOP_BANNERS: ShopBanner[] = [
   {
     id: "banner-aw-collection",
@@ -82,18 +148,7 @@ const SHOP_BANNERS: ShopBanner[] = [
   },
 ];
 
-const CATEGORIES: { value: ProductCategory; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "new-arrivals", label: "New Arrivals" },
-  { value: "jackets", label: "Jackets" },
-  { value: "knitwear", label: "Knitwear" },
-  { value: "shirts", label: "Shirts" },
-  { value: "trousers", label: "Trousers" },
-  { value: "shoes", label: "Shoes" },
-  { value: "bags", label: "Bags" },
-  { value: "accessories", label: "Accessories" },
-  { value: "fragrance", label: "Fragrance" },
-];
+const ALL_CATEGORY_OPTION: CategoryOption = { value: "all", label: "همه" };
 
 const PRODUCTS_PER_BANNER = 6;
 
@@ -106,13 +161,13 @@ const SORT_MENU_OPTIONS: {
   label: string;
   shortLabel: string;
 }[] = [
-  { value: "new-arrivals", label: "New Arrivals", shortLabel: "New Arrivals" },
-  { value: "featured", label: "Featured", shortLabel: "Featured" },
-  { value: "price-low", label: "Price: Low to High", shortLabel: "Price Low" },
+  { value: "new-arrivals", label: "جدیدترین", shortLabel: "جدیدترین" },
+  { value: "featured", label: "ویژه", shortLabel: "ویژه" },
+  { value: "price-low", label: "قیمت: کم به زیاد", shortLabel: "ارزان‌تر" },
   {
     value: "price-high",
-    label: "Price: High to Low",
-    shortLabel: "Price High",
+    label: "قیمت: زیاد به کم",
+    shortLabel: "گران‌تر",
   },
 ];
 
@@ -120,12 +175,148 @@ const SORT_MENU_OPTIONS: {
    HELPERS
    ──────────────────────────────────────────────────────────── */
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-US", {
+function money(value: number, currency = "USD") {
+  return new Intl.NumberFormat("fa-IR", {
     style: "currency",
-    currency: "USD",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
+}
+
+function fa(value: LocalizedText | null | undefined, fallback = "") {
+  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+}
+
+function idOf(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toString" in value) {
+    return String(value);
+  }
+  return "";
+}
+
+function listParam(value: string | null) {
+  return value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
+}
+
+function cleanList(values: string[]) {
+  return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
+}
+
+function validSort(value: string | null): SortOption {
+  return SORT_MENU_OPTIONS.some((option) => option.value === value)
+    ? (value as SortOption)
+    : "new-arrivals";
+}
+
+function validCollection(value: string | null): CollectionOption {
+  return value === "new-season" ? "new-season" : "all";
+}
+
+async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...Object.fromEntries(new Headers(init?.headers).entries()),
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? "دریافت محصولات ناموفق بود.");
+  }
+
+  return (await response.json()) as T;
+}
+
+function makeImageMap(images: CatalogImageAsset[] = []) {
+  return new Map(images.map((image) => [idOf(image._id), image]));
+}
+
+function makeProductImages(
+  product: StorefrontProductRecord,
+  imageMap: Map<string, CatalogImageAsset>,
+): ShopProductImage[] {
+  const ids = cleanList([
+    product.primaryImageId ?? "",
+    ...(product.imageIds ?? []),
+  ]);
+
+  return ids.reduce<ShopProductImage[]>((items, imageId, index) => {
+    const image = imageMap.get(imageId);
+    if (!image?.url) return items;
+
+    items.push({
+      id: `${product._id}-${index + 1}`,
+      src: image.url,
+      alt: fa(image.alt, fa(product.name, product.slug)),
+      position:
+        index === 0
+          ? product.primaryImageObjectPosition ?? image.objectPosition
+          : image.objectPosition,
+    });
+
+    return items;
+  }, []);
+}
+
+function firstLine(value: string, max = 80) {
+  const compact = value.replace(/\s+/g, " ").trim();
+  if (compact.length <= max) return compact;
+  return `${compact.slice(0, max).trim()}...`;
+}
+
+function mapStorefrontProduct({
+  product,
+  imageMap,
+  subcategoryMap,
+}: {
+  product: StorefrontProductRecord;
+  imageMap: Map<string, CatalogImageAsset>;
+  subcategoryMap: Map<string, CatalogSubcategoryRecord>;
+}): Product {
+  const title = fa(product.name, product.slug);
+  const subcategory = subcategoryMap.get(idOf(product.subcategoryId));
+  const subcategoryLabel = fa(subcategory?.name, subcategory?.slug ?? "محصول");
+  const images = makeProductImages(product, imageMap);
+  const fallbackImage = images[0] ?? {
+    id: `${product._id}-fallback`,
+    src: "/assets/images/banner.webp",
+    alt: title,
+    position: "center",
+  };
+  const materials = product.material?.fa?.map((item) => item.toLowerCase()) ?? [];
+
+  return {
+    id: idOf(product._id),
+    slug: product.slug,
+    sku: idOf(product._id).slice(-8).toUpperCase(),
+    title,
+    subtitle: subcategoryLabel,
+    description: fa(product.description, title),
+    price: Math.round(product.basePriceMinor / 100),
+    currency: product.currency,
+    href: `/shop/${product.slug}`,
+    image: fallbackImage.src,
+    imageAlt: fallbackImage.alt ?? title,
+    imagePosition: fallbackImage.position ?? "center",
+    category: subcategory?.slug ?? idOf(product.subcategoryId),
+    categoryLabel: subcategoryLabel,
+    isNew: Boolean(product.createdAt),
+    colors: [],
+    sizes: [],
+    materials,
+    origin: firstLine(fa(product.description), 42),
+    images: images.length ? images : [fallbackImage],
+  };
 }
 
 function getColorMeta(colorId: string) {
@@ -145,13 +336,14 @@ function activeFilterCount(
   selectedMaterials: string[],
   maxPrice: number,
   collection: CollectionOption,
+  defaultMaxPrice: number,
 ) {
   let count = 0;
   if (category !== "all") count += 1;
   count += selectedSizes.length;
   count += selectedColors.length;
   count += selectedMaterials.length;
-  if (maxPrice < 5000) count += 1;
+  if (maxPrice < defaultMaxPrice) count += 1;
   if (collection !== "all") count += 1;
   return count;
 }
@@ -191,29 +383,190 @@ function startLenis() {
    ──────────────────────────────────────────────────────────── */
 
 export function ShopPage() {
-  const [category, setCategory] = useState<ProductCategory>("all");
-  const [sort, setSort] = useState<SortOption>("new-arrivals");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const catalogQuery = useStorefrontCatalog();
+
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
-  const [maxPrice, setMaxPrice] = useState(5000);
-  const [collection, setCollection] = useState<CollectionOption>("all");
   const [desktopFilterOpen, setDesktopFilterOpen] = useState(false);
   const [desktopFilterPinned, setDesktopFilterPinned] = useState(false);
 
+  const selectedSubcategorySlug = searchParams.get("subcategory") ?? "";
+  const selectedCategorySlug = searchParams.get("category") ?? "";
+  const category: ProductCategory = selectedSubcategorySlug || "all";
+  const sort = validSort(searchParams.get("sort"));
+  const selectedSizes = useMemo(
+    () => listParam(searchParams.get("size")),
+    [searchParams],
+  );
+  const selectedColors = useMemo(
+    () => listParam(searchParams.get("color")),
+    [searchParams],
+  );
+  const selectedMaterials = useMemo(
+    () => listParam(searchParams.get("material")),
+    [searchParams],
+  );
+  const collection = validCollection(searchParams.get("collection"));
+
+  const catalogCategories = useMemo(
+    () => (catalogQuery.data?.categories ?? []) as CatalogCategoryRecord[],
+    [catalogQuery.data?.categories],
+  );
+  const catalogSubcategories = useMemo(
+    () =>
+      (catalogQuery.data?.subcategories ?? []) as CatalogSubcategoryRecord[],
+    [catalogQuery.data?.subcategories],
+  );
+  const catalogImages = useMemo(
+    () => (catalogQuery.data?.images ?? []) as CatalogImageAsset[],
+    [catalogQuery.data?.images],
+  );
+
+  const selectedCategoryRecord = useMemo(
+    () =>
+      catalogCategories.find((item) => item.slug === selectedCategorySlug) ??
+      null,
+    [catalogCategories, selectedCategorySlug],
+  );
+
+  const selectedSubcategoryRecord = useMemo(
+    () =>
+      catalogSubcategories.find(
+        (item) => item.slug === selectedSubcategorySlug,
+      ) ?? null,
+    [catalogSubcategories, selectedSubcategorySlug],
+  );
+
+  const categoryOptions = useMemo<CategoryOption[]>(
+    () => [
+      ALL_CATEGORY_OPTION,
+      ...catalogSubcategories.map((item) => ({
+        value: item.slug,
+        label: fa(item.name, item.slug),
+      })),
+    ],
+    [catalogSubcategories],
+  );
+
+  const updateUrlFilters = useCallback(
+    (updates: Record<string, string | string[] | number | null | undefined>) => {
+      const params = new URLSearchParams(searchParams.toString());
+
+      for (const [key, value] of Object.entries(updates)) {
+        if (
+          value === null ||
+          value === undefined ||
+          value === "" ||
+          (Array.isArray(value) && value.length === 0)
+        ) {
+          params.delete(key);
+          continue;
+        }
+
+        params.set(
+          key,
+          Array.isArray(value) ? cleanList(value).join(",") : String(value),
+        );
+      }
+
+      const query = params.toString();
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const setCategory = useCallback(
+    (value: ProductCategory) => {
+      updateUrlFilters({
+        subcategory: value === "all" ? null : value,
+        category: null,
+      });
+    },
+    [updateUrlFilters],
+  );
+
+  const setSort = useCallback(
+    (value: SortOption) => {
+      updateUrlFilters({ sort: value === "new-arrivals" ? null : value });
+    },
+    [updateUrlFilters],
+  );
+
+  const setSelectedSizes = useCallback(
+    (values: string[]) => updateUrlFilters({ size: values }),
+    [updateUrlFilters],
+  );
+
+  const setSelectedColors = useCallback(
+    (values: string[]) => updateUrlFilters({ color: values }),
+    [updateUrlFilters],
+  );
+
+  const setSelectedMaterials = useCallback(
+    (values: string[]) => updateUrlFilters({ material: values }),
+    [updateUrlFilters],
+  );
+
+  const setCollection = useCallback(
+    (value: CollectionOption) => {
+      updateUrlFilters({ collection: value === "all" ? null : value });
+    },
+    [updateUrlFilters],
+  );
+
+  const selectedCategoryId = idOf(selectedCategoryRecord?._id);
+  const selectedSubcategoryId = idOf(selectedSubcategoryRecord?._id);
+
+  const productsQueryUrl = useMemo(() => {
+    const params = new URLSearchParams({ limit: "100" });
+
+    if (selectedSubcategoryId) {
+      params.set("subcategoryId", selectedSubcategoryId);
+    } else if (selectedCategoryId) {
+      params.set("categoryId", selectedCategoryId);
+    }
+
+    return `/api/storefront/products?${params.toString()}`;
+  }, [selectedCategoryId, selectedSubcategoryId]);
+
+  const invalidUrlTaxonomy =
+    (selectedSubcategorySlug && catalogQuery.isSuccess && !selectedSubcategoryRecord) ||
+    (selectedCategorySlug && catalogQuery.isSuccess && !selectedCategoryRecord);
+
+  const productsQuery = useQuery({
+    queryKey: ["storefront", "shop-products", productsQueryUrl],
+    queryFn: ({ signal }) =>
+      fetchJson<StorefrontProductPayload>(productsQueryUrl, { signal }),
+    enabled: catalogQuery.isSuccess && !invalidUrlTaxonomy,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    retry: 1,
+  });
+
   const themeVars = {
-    "--shop-bg": "#F6F2EB",
-    "--shop-surface": brandColors.white.hex,
-    "--shop-black": "#0B0B0B",
-    "--shop-text": "#0B0B0B",
+    "--shop-bg": lightTokens.canvas,
+    "--shop-surface": lightTokens.surface,
+    "--shop-surface-muted": lightTokens.surfaceMuted,
+    "--shop-cream": lightTokens.surfaceBrand,
+    "--shop-black": brandColors.black.hex,
+    "--shop-text": lightTokens.text,
     "--shop-muted": lightTokens.textMuted,
     "--shop-soft": lightTokens.textSoft,
-    "--shop-border": "#DDD8D0",
+    "--shop-border": lightTokens.border,
     "--shop-copper": brandColors.copper.hex,
+    "--shop-copper-strong": lightTokens.accentStrong,
+    "--shop-copper-soft": `rgb(${brandColors.copper.rgb} / 0.08)`,
+    "--shop-copper-soft-strong": `rgb(${brandColors.copper.rgb} / 0.14)`,
     "--shop-scrollbar-thumb": `rgb(${brandColors.copper.rgb} / 0.58)`,
     "--shop-scrollbar-thumb-hover": `rgb(${brandColors.copper.rgb} / 0.82)`,
-    "--shop-scrollbar-track": "rgb(11 11 11 / 0.06)",
+    "--shop-scrollbar-track": "rgb(35 31 32 / 0.06)",
   } as CSSProperties;
 
   useEffect(() => {
@@ -227,10 +580,49 @@ export function ShopPage() {
     };
   }, [mobileFiltersOpen]);
 
+  const mappedProducts = useMemo(() => {
+    if (invalidUrlTaxonomy) return [];
+
+    const imageMap = makeImageMap(catalogImages);
+    const subcategoryMap = new Map(
+      catalogSubcategories.map((item) => [idOf(item._id), item]),
+    );
+
+    return (productsQuery.data?.items ?? []).map((product) =>
+      mapStorefrontProduct({ product, imageMap, subcategoryMap }),
+    );
+  }, [
+    catalogImages,
+    catalogSubcategories,
+    invalidUrlTaxonomy,
+    productsQuery.data?.items,
+  ]);
+
+  const defaultMaxPrice = useMemo(
+    () =>
+      Math.max(
+        5000,
+        ...mappedProducts.map((product) => Math.ceil(product.price / 100) * 100),
+      ),
+    [mappedProducts],
+  );
+
+  const maxPrice = Math.max(
+    0,
+    Number(searchParams.get("max") ?? defaultMaxPrice) || defaultMaxPrice,
+  );
+
+  const setMaxPrice = useCallback(
+    (value: number) => {
+      updateUrlFilters({
+        max: value >= defaultMaxPrice ? null : value,
+      });
+    },
+    [defaultMaxPrice, updateUrlFilters],
+  );
+
   const products = useMemo(() => {
-    let r = [...PRODUCTS];
-    if (category === "new-arrivals") r = r.filter((p) => p.isNew);
-    else if (category !== "all") r = r.filter((p) => p.category === category);
+    let r = [...mappedProducts];
     if (selectedSizes.length)
       r = r.filter((p) => p.sizes?.some((s) => selectedSizes.includes(s)));
     if (selectedColors.length)
@@ -247,7 +639,7 @@ export function ShopPage() {
       r.sort((a, b) => Number(b.isNew) - Number(a.isNew));
     return r;
   }, [
-    category,
+    mappedProducts,
     sort,
     selectedSizes,
     selectedColors,
@@ -285,13 +677,17 @@ export function ShopPage() {
   }, [products]);
 
   const resetFilters = useCallback(() => {
-    setCategory("all");
-    setSelectedSizes([]);
-    setSelectedColors([]);
-    setSelectedMaterials([]);
-    setMaxPrice(5000);
-    setCollection("all");
-  }, []);
+    updateUrlFilters({
+      category: null,
+      subcategory: null,
+      sort: null,
+      size: null,
+      color: null,
+      material: null,
+      max: null,
+      collection: null,
+    });
+  }, [updateUrlFilters]);
 
   const filterCount = activeFilterCount(
     category,
@@ -300,13 +696,17 @@ export function ShopPage() {
     selectedMaterials,
     maxPrice,
     collection,
+    defaultMaxPrice,
   );
 
   const desktopFilterExpanded = desktopFilterOpen || desktopFilterPinned;
+  const isLoadingProducts = catalogQuery.isLoading || productsQuery.isLoading;
+  const hasProductsError = catalogQuery.isError || productsQuery.isError;
 
   return (
     <main
       style={themeVars}
+      dir="rtl"
       className="min-h-screen bg-[var(--shop-bg)] text-[var(--shop-text)]"
     >
       {/* The shop hero starts at page top so the existing transparent navbar can sit over it. */}
@@ -321,7 +721,7 @@ export function ShopPage() {
         <div className="w-full">
           <div className="px-8 pb-16 pt-0 xl:px-10">
             {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
-            <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[rgba(246,242,235,0.97)] px-8 py-3 backdrop-blur-[14px] xl:-mx-10 xl:px-10">
+            <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-3 xl:-mx-10 xl:px-10">
               <div className="relative flex min-h-[52px] items-center justify-between gap-3">
                 <div className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
                   <DesktopFilterIsland
@@ -332,6 +732,7 @@ export function ShopPage() {
                     onTogglePin={() => setDesktopFilterPinned((v) => !v)}
                     category={category}
                     setCategory={setCategory}
+                    categoryOptions={categoryOptions}
                     selectedSizes={selectedSizes}
                     setSelectedSizes={setSelectedSizes}
                     selectedColors={selectedColors}
@@ -340,29 +741,28 @@ export function ShopPage() {
                     setSelectedMaterials={setSelectedMaterials}
                     maxPrice={maxPrice}
                     setMaxPrice={setMaxPrice}
+                    defaultMaxPrice={defaultMaxPrice}
                     filterCount={filterCount}
                     resetFilters={resetFilters}
                   />
 
                   <DesktopToolbarPopover
-                    label="Category"
+                    label="دسته‌بندی"
                     active={category !== "all"}
                     widthClass="w-[220px]"
                   >
                     <div className="p-1.5">
-                      {CATEGORIES.filter(
-                        (item) => item.value !== "new-arrivals",
-                      ).map((item) => {
+                      {categoryOptions.map((item) => {
                         const active = category === item.value;
                         return (
                           <button
                             key={item.value}
                             type="button"
                             onClick={() => setCategory(item.value)}
-                            className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
                               active
-                                ? "bg-black text-white"
-                                : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+                                ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
+                                : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                             }`}
                           >
                             {item.label}
@@ -374,7 +774,7 @@ export function ShopPage() {
                   </DesktopToolbarPopover>
 
                   <DesktopToolbarPopover
-                    label="Size"
+                    label="سایز"
                     active={selectedSizes.length > 0}
                     widthClass="w-[250px]"
                   >
@@ -387,7 +787,7 @@ export function ShopPage() {
                   </DesktopToolbarPopover>
 
                   <DesktopToolbarPopover
-                    label="Color"
+                    label="رنگ"
                     active={selectedColors.length > 0}
                     widthClass="w-[290px]"
                   >
@@ -400,17 +800,21 @@ export function ShopPage() {
                   </DesktopToolbarPopover>
 
                   <DesktopToolbarPopover
-                    label="Price"
-                    active={maxPrice < 5000}
+                    label="قیمت"
+                    active={maxPrice < defaultMaxPrice}
                     widthClass="w-[270px]"
                   >
                     <div className="p-4">
-                      <PriceSelector value={maxPrice} onChange={setMaxPrice} />
+                      <PriceSelector
+                        value={maxPrice}
+                        max={defaultMaxPrice}
+                        onChange={setMaxPrice}
+                      />
                     </div>
                   </DesktopToolbarPopover>
 
                   <DesktopToolbarPopover
-                    label="Material"
+                    label="جنس"
                     active={selectedMaterials.length > 0}
                     widthClass="w-[230px]"
                   >
@@ -423,14 +827,14 @@ export function ShopPage() {
                   </DesktopToolbarPopover>
 
                   <DesktopToolbarPopover
-                    label="Collection"
+                    label="کالکشن"
                     active={collection !== "all"}
                     widthClass="w-[210px]"
                   >
                     <div className="p-1.5">
                       {[
-                        { value: "all" as const, label: "All Collections" },
-                        { value: "new-season" as const, label: "New Season" },
+                        { value: "all" as const, label: "همه کالکشن‌ها" },
+                        { value: "new-season" as const, label: "فصل جدید" },
                       ].map((item) => {
                         const active = collection === item.value;
                         return (
@@ -438,10 +842,10 @@ export function ShopPage() {
                             key={item.value}
                             type="button"
                             onClick={() => setCollection(item.value)}
-                            className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                            className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
                               active
-                                ? "bg-black text-white"
-                                : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+                                ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
+                                : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                             }`}
                           >
                             {item.label}
@@ -455,13 +859,13 @@ export function ShopPage() {
 
                 <div className="relative z-10 flex shrink-0 items-center gap-2">
                   <span className="hidden text-[5.5px] font-semibold uppercase tracking-[0.12em] text-black/38 xl:block">
-                    Sort by
+                    مرتب‌سازی
                   </span>
                   <DesktopSortControl value={sort} onChange={setSort} />
-                  <div className="flex items-center border-l border-black/10 pl-2">
+                  <div className="flex items-center border-r border-[var(--shop-border)] pr-2">
                     <button
                       type="button"
-                      aria-label="Grid view"
+                      aria-label="نمایش شبکه‌ای"
                       aria-pressed="true"
                       className="grid size-9 place-items-center border border-black bg-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
                     >
@@ -469,7 +873,7 @@ export function ShopPage() {
                     </button>
                     <button
                       type="button"
-                      aria-label="List view"
+                      aria-label="نمایش لیستی"
                       aria-pressed="false"
                       className="grid size-9 place-items-center border-y border-r border-black/12 bg-white/44 text-black/42 transition-colors hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
                     >
@@ -482,18 +886,25 @@ export function ShopPage() {
 
             <div className="flex min-h-[54px] items-center justify-between border-b border-[var(--shop-border)] px-1">
               <span className="text-[6.5px] font-semibold uppercase tracking-[0.18em] text-black/62">
-                {products.length} products
+                {new Intl.NumberFormat("fa-IR").format(products.length)} محصول
               </span>
               <div className="flex items-center gap-4">
                 <span className="text-[5.5px] font-semibold uppercase tracking-[0.2em] text-black/28">
-                  A more considered wardrobe
+                  انتخاب‌های دقیق نجیب‌زاده
                 </span>
                 <span className="h-px w-16 bg-black/14" />
               </div>
             </div>
 
             <div className="pt-4">
-              {products.length ? (
+              {isLoadingProducts ? (
+                <ShopProductsState title="در حال دریافت محصولات" />
+              ) : hasProductsError ? (
+                <ShopProductsState
+                  title="دریافت محصولات ناموفق بود"
+                  description="اتصال دیتابیس یا سرویس فروشگاه را بررسی کنید."
+                />
+              ) : products.length ? (
                 <DesktopInterleavedGrid content={interleavedContent} />
               ) : (
                 <EmptyProducts resetFilters={resetFilters} />
@@ -504,7 +915,7 @@ export function ShopPage() {
       </section>
 
       {/* Mobile sticky toolbar */}
-      <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[rgba(246,242,235,0.96)] px-3 py-2 backdrop-blur-[16px] lg:hidden">
+      <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2 lg:hidden">
         <div className="relative z-10 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -515,11 +926,11 @@ export function ShopPage() {
               <FilterIcon />
             </span>
             <span className="text-[7px] font-semibold uppercase tracking-[0.14em]">
-              Filters
+              فیلترها
             </span>
             {filterCount > 0 && (
               <span className="grid size-[18px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[7px] font-bold tabular-nums text-white">
-                {filterCount}
+                {new Intl.NumberFormat("fa-IR").format(filterCount)}
               </span>
             )}
             <span className="absolute inset-x-3 bottom-0 h-px origin-left scale-x-0 bg-[var(--shop-copper)] transition-transform duration-300 group-active/mobile-filter:scale-x-100" />
@@ -535,16 +946,23 @@ export function ShopPage() {
 
       <div className="flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden">
         <span className="text-[6px] font-semibold uppercase tracking-[0.18em] text-black/62">
-          {products.length} products
+          {new Intl.NumberFormat("fa-IR").format(products.length)} محصول
         </span>
         <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-black/28">
-          Najibzadeh selection
+          انتخاب نجیب‌زاده
         </span>
       </div>
 
       {/* Mobile grid — ProductCard itself is intentionally untouched. */}
       <div className="pb-6 lg:hidden">
-        {products.length ? (
+        {isLoadingProducts ? (
+          <ShopProductsState title="در حال دریافت محصولات" />
+        ) : hasProductsError ? (
+          <ShopProductsState
+            title="دریافت محصولات ناموفق بود"
+            description="اتصال دیتابیس یا سرویس فروشگاه را بررسی کنید."
+          />
+        ) : products.length ? (
           <MobileInterleavedGrid content={interleavedContent} />
         ) : (
           <EmptyProducts resetFilters={resetFilters} />
@@ -557,6 +975,7 @@ export function ShopPage() {
         onClose={() => setMobileFiltersOpen(false)}
         category={category}
         setCategory={setCategory}
+        categoryOptions={categoryOptions}
         sort={sort}
         setSort={setSort}
         selectedSizes={selectedSizes}
@@ -567,6 +986,7 @@ export function ShopPage() {
         setSelectedMaterials={setSelectedMaterials}
         maxPrice={maxPrice}
         setMaxPrice={setMaxPrice}
+        defaultMaxPrice={defaultMaxPrice}
         resetFilters={resetFilters}
         resultCount={products.length}
       />
@@ -602,7 +1022,7 @@ function ShopHero({
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(90deg,rgba(11,11,11,0.76)_0%,rgba(11,11,11,0.46)_34%,rgba(11,11,11,0.08)_68%,rgba(11,11,11,0.24)_100%)]"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(270deg,rgba(11,11,11,0.78)_0%,rgba(11,11,11,0.48)_34%,rgba(11,11,11,0.10)_68%,rgba(11,11,11,0.22)_100%)]"
       />
       <div
         aria-hidden="true"
@@ -610,7 +1030,7 @@ function ShopHero({
       />
 
       <div className="mx-auto flex h-full max-w-[1920px] items-end justify-between px-5 pb-7 pt-[94px] sm:px-7 sm:pb-8 lg:px-10 lg:pb-10 lg:pt-[108px] xl:px-12">
-        <div>
+        <div className="text-right">
           <h1 className="font-serif text-[44px] font-normal leading-[0.9] tracking-[-0.045em] sm:text-[52px] lg:text-[62px]">
             Shop
           </h1>
@@ -619,7 +1039,7 @@ function ShopHero({
           </p>
         </div>
 
-        <div className="mb-1 hidden border-l border-white/20 pl-5 lg:block">
+        <div className="mb-1 hidden border-r border-white/20 pr-5 text-right lg:block">
           <span className="block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
             Quality
           </span>
@@ -684,10 +1104,10 @@ function DesktopToolbarPopover({
         onClick={() => setOpen((value) => !value)}
         className={`group/filter-chip relative flex h-9 items-center gap-2 border px-3 text-[7px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           open
-            ? "border-black bg-black text-white"
+            ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_26px_-20px_rgba(35,31,32,0.32)]"
             : active
-              ? "border-black/28 bg-white text-black"
-              : "border-black/12 bg-white/44 text-black/68 hover:border-black/28 hover:bg-white hover:text-black"
+              ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
+              : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:text-[var(--shop-text)]"
         }`}
       >
         <span>{label}</span>
@@ -705,12 +1125,12 @@ function DesktopToolbarPopover({
       <div
         id={menuId}
         aria-hidden={!open}
-        className={`absolute left-0 top-[calc(100%_+_7px)] z-[130] ${widthClass} border border-black/10 bg-[#F8F5EF] shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+        className={`absolute right-0 top-[calc(100%_+_7px)] z-[130] ${widthClass} origin-top-right border border-[var(--shop-border)] bg-[var(--shop-surface)] text-right shadow-[0_18px_42px_-26px_rgba(35,31,32,0.30)] ${
           open ? "pointer-events-auto visible" : "pointer-events-none invisible"
         }`}
       >
-        <div className="border-b border-black/[0.07] px-4 py-2.5">
-          <p className="text-[5.5px] font-semibold uppercase tracking-[0.18em] text-black/34">
+        <div className="border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 py-2.5 text-right">
+          <p className="text-[5.5px] font-semibold uppercase tracking-[0.18em] text-[var(--shop-muted)]">
             {label}
           </p>
         </div>
@@ -732,6 +1152,7 @@ function DesktopFilterIsland({
   onTogglePin,
   category,
   setCategory,
+  categoryOptions,
   selectedSizes,
   setSelectedSizes,
   selectedColors,
@@ -740,6 +1161,7 @@ function DesktopFilterIsland({
   setSelectedMaterials,
   maxPrice,
   setMaxPrice,
+  defaultMaxPrice,
   filterCount,
   resetFilters,
 }: {
@@ -750,6 +1172,7 @@ function DesktopFilterIsland({
   onTogglePin: () => void;
   category: ProductCategory;
   setCategory: (v: ProductCategory) => void;
+  categoryOptions: CategoryOption[];
   selectedSizes: string[];
   setSelectedSizes: (v: string[]) => void;
   selectedColors: string[];
@@ -758,6 +1181,7 @@ function DesktopFilterIsland({
   setSelectedMaterials: (v: string[]) => void;
   maxPrice: number;
   setMaxPrice: (v: number) => void;
+  defaultMaxPrice: number;
   filterCount: number;
   resetFilters: () => void;
 }) {
@@ -852,36 +1276,30 @@ function DesktopFilterIsland({
         aria-controls={popoverId}
         onClick={togglePinned}
         onFocus={scheduleOpen}
-        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 text-left transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 text-right transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           expanded
-            ? "border-black bg-black text-white"
-            : "border-black/12 bg-white/44 text-black/72 hover:border-black/28 hover:bg-white hover:text-black"
+            ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_26px_-20px_rgba(35,31,32,0.32)]"
+            : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:text-[var(--shop-text)]"
         }`}
       >
         <span
           className={`grid size-5 shrink-0 place-items-center transition-colors ${
-            expanded ? "text-white" : "text-black/58"
+            expanded ? "text-[var(--shop-copper)]" : "text-[var(--shop-muted)]"
           }`}
         >
           <FilterIcon />
         </span>
         <span className="text-[7px] font-semibold uppercase tracking-[0.08em]">
-          Filters
+          فیلترها
         </span>
         {filterCount > 0 && (
-          <span
-            className={`grid size-[16px] shrink-0 place-items-center text-[6px] font-bold tabular-nums ${
-              expanded
-                ? "bg-[var(--shop-copper)] text-white"
-                : "bg-black text-white"
-            }`}
-          >
+          <span className="grid size-[16px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[6px] font-bold tabular-nums text-white">
             {filterCount}
           </span>
         )}
         <span
           className={`ml-0.5 transition-[color,transform] duration-300 ${
-            expanded ? "rotate-180 text-white/55" : "rotate-0 text-black/42"
+            expanded ? "rotate-180 text-[var(--shop-copper)]" : "rotate-0 text-[var(--shop-soft)]"
           }`}
         >
           <ChevronDownIcon className="size-3" />
@@ -898,7 +1316,7 @@ function DesktopFilterIsland({
 
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute left-5 top-[calc(100%_+_6px)] z-[59] size-3 rotate-45 border-l border-t border-white/65 bg-[rgba(248,245,239,0.92)] ${
+        className={`pointer-events-none absolute right-5 top-[calc(100%_+_6px)] z-[59] size-3 rotate-45 border-l border-t border-[var(--shop-border)] bg-[var(--shop-surface)] ${
           expanded ? "visible" : "invisible"
         }`}
       />
@@ -906,39 +1324,35 @@ function DesktopFilterIsland({
       <div
         id={popoverId}
         role="region"
-        aria-label="Product filters"
+        aria-label="فیلترهای محصول"
         aria-hidden={!expanded}
-        className={`absolute left-0 top-[calc(100%_+_11px)] z-[60] w-[342px] max-w-[calc(100vw_-_5rem)] origin-top-left ${
+        className={`absolute right-0 top-[calc(100%_+_11px)] z-[60] w-[342px] max-w-[calc(100vw_-_5rem)] origin-top-right text-right ${
           expanded ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-white/75 shadow-[0_34px_80px_-24px_rgba(11,11,11,0.40),inset_0_1px_0_rgba(255,255,255,0.94)] ring-1 ring-inset ring-black/[0.055] ${
+          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_24px_60px_-34px_rgba(35,31,32,0.34)] ${
             expanded ? "opacity-100" : "opacity-[0.001]"
           }`}
           style={{
-            background:
-              "linear-gradient(145deg, rgba(255,255,255,0.72) 0%, rgba(246,242,235,0.66) 58%, rgba(255,255,255,0.60) 100%)",
-            backdropFilter: "blur(42px) saturate(145%)",
-            WebkitBackdropFilter: "blur(42px) saturate(145%)",
-            willChange: "opacity, backdrop-filter",
+            background: "var(--shop-surface)",
           }}
         />
         <div className={expanded ? "visible" : "invisible"}>
-          <div className="relative z-10 flex items-start justify-between border-b border-black/[0.09] bg-white/16 px-5 pb-4 pt-[18px]">
+          <div className="relative z-10 flex items-start justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 pb-4 pt-[18px]">
             <div className="flex items-center gap-2.5">
-              <span className="grid size-7 place-items-center border border-white/10 bg-black/88 text-white shadow-[0_8px_20px_-14px_rgba(11,11,11,0.60)]">
+              <span className="grid size-7 place-items-center border border-[var(--shop-copper)] bg-[var(--shop-copper)] text-white shadow-[0_8px_20px_-14px_rgba(11,11,11,0.60)]">
                 <FilterIcon />
               </span>
               <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-black">
-                  Filters
+                <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[var(--shop-text)]">
+                  فیلترها
                 </p>
-                <p className="mt-1 text-[6.5px] font-medium uppercase tracking-[0.10em] text-black/38">
+                <p className="mt-1 text-[6.5px] font-medium uppercase tracking-[0.10em] text-[var(--shop-muted)]">
                   {filterCount > 0
-                    ? `${filterCount} active ${filterCount === 1 ? "filter" : "filters"}`
-                    : "Refine the collection"}
+                    ? `${new Intl.NumberFormat("fa-IR").format(filterCount)} فیلتر فعال`
+                    : "انتخاب‌ها را دقیق‌تر کنید"}
                 </p>
               </div>
             </div>
@@ -949,13 +1363,13 @@ function DesktopFilterIsland({
                 disabled={filterCount === 0}
                 className="min-h-8 px-2 text-[7px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-copper)] transition-opacity hover:opacity-65 disabled:pointer-events-none disabled:opacity-25"
               >
-                Clear all
+                پاک‌کردن
               </button>
               <button
                 type="button"
-                aria-label="Close filters"
+                aria-label="بستن فیلترها"
                 onClick={closeFilter}
-                className="grid size-8 place-items-center border border-white/70 bg-white/35 text-black/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-xl transition-[background-color,color,transform] hover:bg-black/88 hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
+                className="grid size-8 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
               >
                 <CloseIcon />
               </button>
@@ -965,19 +1379,19 @@ function DesktopFilterIsland({
             data-lenis-prevent=""
             className="relative z-10 max-h-[min(640px,calc(100svh_-_190px))] overflow-y-auto overscroll-contain px-5 py-2 [scrollbar-color:rgb(11_11_11_/_0.18)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent"
           >
-            <IslandAccordion title="Category" defaultOpen>
+            <IslandAccordion title="دسته‌بندی" defaultOpen>
               <div className="space-y-0.5">
-                {CATEGORIES.map((item) => {
+                {categoryOptions.map((item) => {
                   const active = category === item.value;
                   return (
                     <button
                       key={item.value}
                       type="button"
                       onClick={() => setCategory(item.value)}
-                      className={`group/category flex min-h-[32px] w-full items-center justify-between border px-2.5 text-left backdrop-blur-sm transition-[background-color,border-color,color,transform] duration-200 ${
+                      className={`group/category flex min-h-[32px] w-full items-center justify-between border px-2.5 text-right backdrop-blur-sm transition-[background-color,border-color,color,transform] duration-200 ${
                         active
-                          ? "border-black/80 bg-black/86 text-white shadow-[0_8px_18px_-14px_rgba(11,11,11,0.65)]"
-                          : "border-transparent bg-white/10 text-black/52 hover:translate-x-0.5 hover:border-white/65 hover:bg-white/32 hover:text-black"
+                          ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
+                          : "border-transparent bg-transparent text-[var(--shop-muted)] hover:-translate-x-0.5 hover:border-[var(--shop-border)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                       }`}
                     >
                       <span className="flex items-center gap-2.5 text-[8px] font-semibold uppercase tracking-[0.08em]">
@@ -991,48 +1405,52 @@ function DesktopFilterIsland({
                         {item.label}
                       </span>
                       {active && (
-                        <CheckIcon className="size-2.5 text-white/70" />
+                        <CheckIcon className="size-2.5 text-[var(--shop-copper)]" />
                       )}
                     </button>
                   );
                 })}
               </div>
             </IslandAccordion>
-            <IslandAccordion title="Size">
+            <IslandAccordion title="سایز">
               <SizeSelector
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </IslandAccordion>
-            <IslandAccordion title="Color" defaultOpen>
+            <IslandAccordion title="رنگ" defaultOpen>
               <ColorSelector
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
             </IslandAccordion>
-            <IslandAccordion title="Material">
+            <IslandAccordion title="جنس">
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
             </IslandAccordion>
-            <IslandAccordion title="Price" defaultOpen>
-              <PriceSelector value={maxPrice} onChange={setMaxPrice} />
+            <IslandAccordion title="قیمت" defaultOpen>
+              <PriceSelector
+                value={maxPrice}
+                max={defaultMaxPrice}
+                onChange={setMaxPrice}
+              />
             </IslandAccordion>
           </div>
-          <div className="relative z-10 flex items-center justify-between border-t border-black/[0.09] bg-white/20 px-5 py-3">
+          <div className="relative z-10 flex items-center justify-between border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 py-3">
             <div className="flex items-center gap-2">
               <span
                 className={`size-1.5 ${
-                  pinned ? "bg-[var(--shop-copper)]" : "bg-black/18"
+                  pinned ? "bg-[var(--shop-copper)]" : "bg-[var(--shop-soft)]"
                 }`}
               />
-              <span className="text-[6.5px] font-semibold uppercase tracking-[0.11em] text-black/36">
-                {pinned ? "Pinned open" : "Hover preview"}
+              <span className="text-[6.5px] font-semibold uppercase tracking-[0.11em] text-[var(--shop-muted)]">
+                {pinned ? "ثابت شده" : "پیش‌نمایش"}
               </span>
             </div>
-            <span className="text-[6.5px] font-medium uppercase tracking-[0.1em] text-black/30">
-              Click to {pinned ? "release" : "pin"}
+            <span className="text-[6.5px] font-medium uppercase tracking-[0.1em] text-[var(--shop-soft)]">
+              کلیک برای {pinned ? "آزاد کردن" : "ثابت کردن"}
             </span>
           </div>
         </div>
@@ -1100,32 +1518,32 @@ function GlassSortControl({
               ? "border-white/26 bg-white/16 text-white ring-white/[0.05] focus-visible:ring-white/25"
               : "border-white/16 bg-white/[0.08] text-white ring-white/[0.035] hover:border-white/28 hover:bg-white/[0.13] focus-visible:ring-white/20"
             : open
-              ? "border-white/90 bg-white/50 text-black ring-black/[0.035] shadow-[0_14px_34px_-18px_rgba(11,11,11,0.32),inset_0_1px_0_rgba(255,255,255,0.95)] focus-visible:ring-black/15"
-              : "border-white/70 bg-white/28 text-black ring-black/[0.025] hover:-translate-y-px hover:border-white/90 hover:bg-white/46 hover:shadow-[0_14px_30px_-18px_rgba(11,11,11,0.30),inset_0_1px_0_rgba(255,255,255,0.92)] focus-visible:ring-black/15"
+              ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] ring-[var(--shop-copper-soft)] shadow-[0_12px_28px_-22px_rgba(35,31,32,0.28)] focus-visible:ring-[var(--shop-copper-soft-strong)]"
+              : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-text)] ring-black/[0.025] hover:-translate-y-px hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] focus-visible:ring-[var(--shop-copper-soft-strong)]"
         }`}
       >
         <span
           className={`grid size-6 shrink-0 place-items-center border ${
             dark
               ? "border-white/10 bg-white/[0.08] text-white/72"
-              : "border-white/55 bg-white/34 text-black/68"
+              : "border-[var(--shop-border)] bg-[var(--shop-surface-muted)] text-[var(--shop-muted)]"
           }`}
         >
           <SortIcon />
         </span>
-        <span className="min-w-0 flex-1 text-left">
+        <span className="min-w-0 flex-1 text-right">
           {!compact && (
             <span
               className={`block text-[5.5px] font-semibold uppercase tracking-[0.16em] ${
-                dark ? "text-white/36" : "text-black/32"
+                dark ? "text-white/42" : "text-[var(--shop-soft)]"
               }`}
             >
-              Sort by
+              مرتب‌سازی
             </span>
           )}
           <span
             className={`${compact ? "text-[7px]" : "mt-0.5 text-[7.5px]"} block truncate font-semibold uppercase tracking-[0.10em] ${
-              dark ? "text-white/78" : "text-black/78"
+              dark ? "text-white/84" : "text-[var(--shop-text)]"
             }`}
           >
             {compact ? current.shortLabel : current.label}
@@ -1134,7 +1552,7 @@ function GlassSortControl({
         <ChevronDownIcon
           className={`size-3 shrink-0 transition-transform duration-250 ${
             open ? "rotate-180" : "rotate-0"
-          } ${dark ? "text-white/48" : "text-black/42"}`}
+          } ${dark ? "text-white/56" : "text-[var(--shop-soft)]"}`}
         />
         <span
           aria-hidden="true"
@@ -1147,7 +1565,7 @@ function GlassSortControl({
       <div
         id={menuId}
         role="listbox"
-        aria-label="Sort products"
+        aria-label="مرتب‌سازی محصولات"
         aria-hidden={!open}
         className={`absolute top-[calc(100%_+_8px)] z-[120] w-[228px] ${
           align === "right"
@@ -1165,7 +1583,7 @@ function GlassSortControl({
           style={{
             background: dark
               ? "linear-gradient(145deg, rgba(19,19,19,0.76) 0%, rgba(6,6,6,0.72) 100%)"
-              : "linear-gradient(145deg, rgba(255,255,255,0.74) 0%, rgba(246,242,235,0.68) 100%)",
+              : "var(--shop-surface)",
             backdropFilter: "blur(42px) saturate(145%)",
             WebkitBackdropFilter: "blur(42px) saturate(145%)",
             willChange: "opacity, backdrop-filter",
@@ -1202,14 +1620,14 @@ function GlassSortControl({
                     onChange(opt.value);
                     setOpen(false);
                   }}
-                  className={`group/option flex min-h-10 w-full items-center justify-between border px-3 text-left transition-[background-color,border-color,color,transform] duration-180 ${
+                  className={`group/option flex min-h-10 w-full items-center justify-between border px-3 text-right transition-[background-color,border-color,color,transform] duration-180 ${
                     dark
                       ? sel
                         ? "border-white/18 bg-white/14 text-white"
                         : "border-transparent text-white/54 hover:translate-x-0.5 hover:border-white/10 hover:bg-white/[0.07] hover:text-white"
                       : sel
-                        ? "border-black/80 bg-black/86 text-white"
-                        : "border-transparent text-black/52 hover:translate-x-0.5 hover:border-white/70 hover:bg-white/34 hover:text-black"
+                        ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
+                        : "border-transparent text-[var(--shop-muted)] hover:-translate-x-0.5 hover:border-[var(--shop-border)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                   }`}
                 >
                   <span className="text-[7px] font-semibold uppercase tracking-[0.09em]">
@@ -1275,10 +1693,10 @@ function DesktopSortControl({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((state) => !state)}
-        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           open
-            ? "border-black bg-black text-white"
-            : "border-black/12 bg-white/44 text-black hover:border-black/28 hover:bg-white"
+            ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_24px_-20px_rgba(35,31,32,0.30)]"
+            : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-text)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)]"
         }`}
       >
         <span className="truncate text-[7px] font-semibold tracking-[0.02em]">
@@ -1292,9 +1710,9 @@ function DesktopSortControl({
       <div
         id={menuId}
         role="listbox"
-        aria-label="Sort products"
+        aria-label="مرتب‌سازی محصولات"
         aria-hidden={!open}
-        className={`absolute right-0 top-[calc(100%_+_7px)] z-[140] w-[210px] border border-black/10 bg-[#F8F5EF] p-1.5 shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+        className={`absolute right-0 top-[calc(100%_+_7px)] z-[140] w-[210px] border border-[var(--shop-border)] bg-[var(--shop-surface)] p-1.5 text-right shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
           open ? "pointer-events-auto visible" : "pointer-events-none invisible"
         }`}
       >
@@ -1310,10 +1728,10 @@ function DesktopSortControl({
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`flex min-h-9 w-full items-center justify-between px-3 text-left text-[7px] font-semibold tracking-[0.02em] transition-colors ${
+              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold tracking-[0.02em] transition-colors ${
                 active
-                  ? "bg-black text-white"
-                  : "text-black/58 hover:bg-black/[0.045] hover:text-black"
+                  ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
+                  : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
               }`}
             >
               {option.label}
@@ -1346,7 +1764,7 @@ function IslandAccordion({
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-7 w-full items-center justify-between text-left"
+        className="flex min-h-7 w-full items-center justify-between text-right"
       >
         <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-black/80">
           {title}
@@ -1510,8 +1928,7 @@ function ProductCard({
   const activeImage = productImages[activeImgIdx] ?? productImages[0];
   const selectedColor = colors.find((c) => c.id === selColorId) ?? colors[0];
   const categoryLabel =
-    CATEGORIES.find((c) => c.value === product.category)?.label ??
-    String(product.category).replaceAll("-", " ");
+    product.categoryLabel ?? String(product.category).replaceAll("-", " ");
 
   const prevIdx =
     (activeImgIdx - 1 + productImages.length) % productImages.length;
@@ -1785,15 +2202,15 @@ function ProductCard({
   function toggleFav() {
     const n = !favorite;
     setFavorite(n);
-    toast.info(n ? "Saved to wishlist" : "Removed from wishlist", {
+    toast.info(n ? "به علاقه‌مندی‌ها اضافه شد" : "از علاقه‌مندی‌ها حذف شد", {
       description: product.title,
     });
   }
   async function addToBag() {
     if (product.sizes?.length && !selSize) {
       setLockedOpen(true);
-      toast.info("Select your size", {
-        description: "Choose a size before adding this piece to your bag.",
+      toast.info("سایز را انتخاب کنید", {
+        description: "قبل از افزودن محصول به سبد، یک سایز انتخاب کنید.",
       });
       return;
     }
@@ -1802,11 +2219,11 @@ function ProductCard({
     try {
       await new Promise((r) => window.setTimeout(r, 520));
       setCartState("added");
-      toast.success("Added to your bag", {
+      toast.success("به سبد خرید اضافه شد", {
         description: [
           product.title,
           selectedColor?.label,
-          selSize ? `Size ${selSize}` : undefined,
+          selSize ? `سایز ${selSize}` : undefined,
         ]
           .filter(Boolean)
           .join(" — "),
@@ -1817,8 +2234,8 @@ function ProductCard({
       if (compact) setHoverOpen(false);
     } catch {
       setCartState("idle");
-      toast.error("Unable to add item", {
-        description: "Try adding the item again.",
+      toast.error("افزودن محصول ناموفق بود", {
+        description: "دوباره برای افزودن محصول تلاش کنید.",
       });
     }
   }
@@ -1841,7 +2258,7 @@ function ProductCard({
       {/* Main product image */}
       <Link
         href={product.href}
-        aria-label={`View ${product.title}`}
+        aria-label={`مشاهده ${product.title}`}
         className="absolute inset-0 z-0 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
       >
         <Image
@@ -1876,8 +2293,8 @@ function ProductCard({
         type="button"
         aria-label={
           favorite
-            ? `Remove ${product.title} from wishlist`
-            : `Save ${product.title} to wishlist`
+            ? `حذف ${product.title} از علاقه‌مندی‌ها`
+            : `افزودن ${product.title} به علاقه‌مندی‌ها`
         }
         aria-pressed={favorite}
         onClick={toggleFav}
@@ -1928,7 +2345,7 @@ function ProductCard({
               compact ? "text-[12px]" : "text-[10px] md:text-[11px]"
             }`}
           >
-            {money(product.price)}
+            {money(product.price, product.currency)}
           </span>
           <div
             className={`bg-[var(--shop-copper)] ${
@@ -2098,7 +2515,7 @@ function ProductCard({
           {compact && !open && (
             <button
               type="button"
-              aria-label="Quick options"
+              aria-label="گزینه‌های سریع"
               onClick={() => setLockedOpen(true)}
               className="relative z-10 flex min-h-0 flex-1 flex-col items-start justify-center gap-1 border-t border-white/8 px-3 text-left transition-colors active:bg-white/[0.04] focus-visible:outline-none focus-visible:bg-white/[0.04]"
             >
@@ -2111,7 +2528,7 @@ function ProductCard({
                 {categoryLabel}
               </span>
               <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-white/30">
-                Quick options
+                گزینه‌های سریع
               </span>
             </button>
           )}
@@ -2227,7 +2644,7 @@ function ProductCard({
             >
               {colors.length > 0 && (
                 <GlassOptionRail
-                  label="Color"
+                  label="رنگ"
                   compact={compact}
                   selectedLabel={selectedColor?.label}
                 >
@@ -2268,7 +2685,7 @@ function ProductCard({
               )}
               {product.sizes && product.sizes.length > 0 && (
                 <GlassOptionRail
-                  label="Size"
+                  label="سایز"
                   compact={compact}
                   selectedLabel={selSize || undefined}
                 >
@@ -2321,7 +2738,7 @@ function ProductCard({
                 {cartState === "added" ? (
                   <span className="inline-flex items-center gap-2">
                     <AddedCheckIcon />
-                    Added
+                    اضافه شد
                   </span>
                 ) : (
                   "Add to Bag"
@@ -2544,6 +2961,7 @@ function MobileFilters({
   onClose,
   category,
   setCategory,
+  categoryOptions,
   sort,
   setSort,
   selectedSizes,
@@ -2554,6 +2972,7 @@ function MobileFilters({
   setSelectedMaterials,
   maxPrice,
   setMaxPrice,
+  defaultMaxPrice,
   resetFilters,
   resultCount,
 }: {
@@ -2561,6 +2980,7 @@ function MobileFilters({
   onClose: () => void;
   category: ProductCategory;
   setCategory: (v: ProductCategory) => void;
+  categoryOptions: CategoryOption[];
   sort: SortOption;
   setSort: (v: SortOption) => void;
   selectedSizes: string[];
@@ -2571,6 +2991,7 @@ function MobileFilters({
   setSelectedMaterials: (v: string[]) => void;
   maxPrice: number;
   setMaxPrice: (v: number) => void;
+  defaultMaxPrice: number;
   resetFilters: () => void;
   resultCount: number;
 }) {
@@ -2595,7 +3016,7 @@ function MobileFilters({
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`fixed inset-0 z-[1199] bg-black/28 transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-[1199] bg-black/35 transition-opacity duration-300 lg:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
@@ -2607,35 +3028,29 @@ function MobileFilters({
       >
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-white/18 shadow-[0_32px_90px_-24px_rgba(0,0,0,0.74),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-inset ring-white/[0.04] ${
+          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_28px_70px_-30px_rgba(35,31,32,0.38)] ring-1 ring-inset ring-black/[0.03] ${
             open ? "opacity-100" : "opacity-[0.001]"
           }`}
-          style={{
-            background:
-              "linear-gradient(155deg, rgba(24,24,24,0.78) 0%, rgba(7,7,7,0.73) 58%, rgba(16,16,16,0.70) 100%)",
-            backdropFilter: "blur(38px) saturate(140%)",
-            WebkitBackdropFilter: "blur(38px) saturate(140%)",
-            willChange: "opacity, backdrop-filter",
-          }}
+          style={{ background: "var(--shop-surface)" }}
         />
         <div
-          className={`${open ? "visible" : "invisible"} relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden text-white`}
+          className={`${open ? "visible" : "invisible"} relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden text-[var(--shop-text)]`}
         >
-          <div className="relative z-10 flex h-16 flex-none items-center justify-between border-b border-white/10 bg-white/[0.045] px-4">
+          <div className="relative z-10 flex h-16 flex-none items-center justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 text-right">
             <button
               type="button"
-              aria-label="Close filters"
+              aria-label="بستن فیلترها"
               onClick={onClose}
-              className="grid size-10 place-items-center border border-white/10 bg-white/[0.06] text-white/82 transition-[background-color,border-color,transform] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/25"
+              className="grid size-10 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
             >
               <CloseIcon />
             </button>
-            <div className="text-center">
+            <div className="text-right">
               <span className="block text-[9px] font-semibold uppercase tracking-[0.21em]">
-                Filters
+                فیلترها
               </span>
-              <span className="mt-1 block text-[5.5px] font-semibold uppercase tracking-[0.12em] text-white/34">
-                {resultCount} {resultCount === 1 ? "result" : "results"}
+              <span className="mt-1 block text-[5.5px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-muted)]">
+                {new Intl.NumberFormat("fa-IR").format(resultCount)} نتیجه
               </span>
             </div>
             <button
@@ -2643,28 +3058,28 @@ function MobileFilters({
               onClick={resetFilters}
               className="min-h-10 px-2 text-[7px] font-semibold uppercase tracking-[0.14em] text-[var(--shop-copper)] transition-opacity active:opacity-60"
             >
-              Clear
+              پاک
             </button>
           </div>
           <div
             ref={scrollRef}
             data-lenis-prevent
-            className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 [scrollbar-color:rgb(255_255_255_/_0.20)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-white/18 [&::-webkit-scrollbar-track]:bg-transparent"
+            className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 [scrollbar-color:rgb(193_84_39_/_0.42)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[var(--shop-copper)] [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <MobileFilterBlock title="Category" defaultOpen>
+            <MobileFilterBlock title="دسته‌بندی" defaultOpen>
               <div className="grid grid-cols-2 gap-2 pt-3">
-                {CATEGORIES.map((item) => {
+                {categoryOptions.map((item) => {
                   const active = category === item.value;
                   return (
                     <button
                       key={item.value}
                       type="button"
                       onClick={() => setCategory(item.value)}
-                      className={`relative min-h-11 border px-3 text-[7px] font-semibold uppercase tracking-[0.08em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
+                      className={`relative min-h-11 border px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
                         active
-                          ? "border-white/76 bg-white/92 text-black"
-                          : "border-white/10 bg-white/[0.045] text-white/52 hover:border-white/24 hover:bg-white/[0.08] hover:text-white/80"
+                          ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
+                          : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                       }`}
                     >
                       {item.label}
@@ -2676,37 +3091,38 @@ function MobileFilters({
                 })}
               </div>
             </MobileFilterBlock>
-            <MobileFilterBlock title="Size">
+            <MobileFilterBlock title="سایز">
               <SizeSelector
                 values={selectedSizes}
                 onChange={setSelectedSizes}
-                dark
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="Color" defaultOpen>
+            <MobileFilterBlock title="رنگ" defaultOpen>
               <ColorSelector
                 values={selectedColors}
                 onChange={setSelectedColors}
-                dark
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="Material">
+            <MobileFilterBlock title="جنس">
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
-                dark
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="Price" defaultOpen>
-              <PriceSelector value={maxPrice} onChange={setMaxPrice} dark />
+            <MobileFilterBlock title="قیمت" defaultOpen>
+              <PriceSelector
+                value={maxPrice}
+                max={defaultMaxPrice}
+                onChange={setMaxPrice}
+              />
             </MobileFilterBlock>
-            <div className="flex min-h-[82px] items-center justify-between gap-3 border-b border-white/7 py-3">
+            <div className="flex min-h-[82px] items-center justify-between gap-3 border-b border-[var(--shop-border)] py-3 text-right">
               <div>
-                <span className="block text-[8px] font-semibold uppercase tracking-[0.15em] text-white/62">
-                  Sort by
+                <span className="block text-[8px] font-semibold uppercase tracking-[0.15em] text-[var(--shop-text)]">
+                  مرتب‌سازی
                 </span>
-                <span className="mt-1 block text-[5.5px] font-medium uppercase tracking-[0.1em] text-white/28">
-                  Order the collection
+                <span className="mt-1 block text-[5.5px] font-medium uppercase tracking-[0.1em] text-[var(--shop-muted)]">
+                  ترتیب نمایش محصولات
                 </span>
               </div>
               <div className="w-[168px] max-w-[58vw]">
@@ -2714,21 +3130,20 @@ function MobileFilters({
                   value={sort}
                   onChange={setSort}
                   compact
-                  dark
                   align="right"
                 />
               </div>
             </div>
           </div>
-          <div className="relative z-10 flex-none border-t border-white/10 bg-white/[0.045] p-3">
+          <div className="relative z-10 flex-none border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] p-3">
             <Button
               type="button"
-              variant="cream"
+              variant="black"
               size="lg"
               fullWidth
               onClick={onClose}
             >
-              View {resultCount} {resultCount === 1 ? "Item" : "Items"}
+              مشاهده {new Intl.NumberFormat("fa-IR").format(resultCount)} محصول
             </Button>
           </div>
         </div>
@@ -2748,18 +3163,18 @@ function MobileFilterBlock({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-white/5 py-5">
+    <div className="border-b border-[var(--shop-border)] py-5">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between"
+        className="flex w-full items-center justify-between text-right"
       >
-        <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-white/66">
+        <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[var(--shop-text)]">
           {title}
         </span>
         <span
-          className={`text-[14px] font-light text-white/40 transition-transform duration-300 ${
+          className={`text-[14px] font-light text-[var(--shop-soft)] transition-transform duration-300 ${
             open ? "rotate-45" : "rotate-0"
           }`}
         >
@@ -2813,8 +3228,8 @@ function SizeSelector({
                   ? "border-white bg-white text-black"
                   : "border-white/10 text-white/48 hover:border-white/35 hover:bg-white/5 hover:text-white"
                 : sel
-                  ? "border-black bg-black text-white"
-                  : "border-black/12 text-black/52 hover:border-black/38 hover:text-black"
+                  ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
+                  : "border-[var(--shop-border)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
             }`}
           >
             {size}
@@ -2857,7 +3272,7 @@ function ColorSelector({
                 sel
                   ? dark
                     ? "border-white"
-                    : "border-black"
+                    : "border-[var(--shop-copper)]"
                   : dark
                     ? "border-white/10 group-hover/color:border-white/38"
                     : "border-black/12 group-hover/color:border-black/34"
@@ -2916,14 +3331,14 @@ function MaterialSelector({
             type="button"
             aria-pressed={sel}
             onClick={() => toggle(mat)}
-            className="group flex min-h-8 w-full items-center gap-3 text-left"
+            className="group flex min-h-8 w-full items-center gap-3 text-right"
           >
             <span
               className={`grid size-[16px] flex-none place-items-center border transition-colors ${
                 dark
                   ? "border-white/20 group-hover:border-white/40"
-                  : "border-black/20"
-              } ${sel ? (dark ? "border-white bg-white" : "bg-black") : ""}`}
+                  : "border-[var(--shop-border)] group-hover:border-[var(--shop-copper)]"
+              } ${sel ? (dark ? "border-white bg-white" : "border-[var(--shop-copper)] bg-[var(--shop-copper)]") : ""}`}
             >
               {sel && (
                 <CheckIcon
@@ -2938,8 +3353,8 @@ function MaterialSelector({
                     ? "text-white"
                     : "text-white/48 group-hover:text-white/80"
                   : sel
-                    ? "text-black"
-                    : "text-black/52"
+                    ? "text-[var(--shop-text)]"
+                    : "text-[var(--shop-muted)] group-hover:text-[var(--shop-text)]"
               }`}
             >
               {mat}
@@ -2953,46 +3368,52 @@ function MaterialSelector({
 
 function PriceSelector({
   value,
+  max,
   onChange,
   dark = false,
 }: {
   value: number;
+  max: number;
   onChange: (v: number) => void;
   dark?: boolean;
 }) {
-  const pct = ((value - 300) / (5000 - 300)) * 100;
+  const min = 0;
+  const safeMax = Math.max(max, 100);
+  const pct = (Math.min(value, safeMax) / safeMax) * 100;
   return (
     <div>
       <div className="flex justify-between text-[7px] font-semibold uppercase tracking-[0.08em]">
-        <span className={dark ? "text-white/34" : "text-black/34"}>$0</span>
+        <span className={dark ? "text-white/34" : "text-black/34"}>
+          {money(min)}
+        </span>
         <span className={dark ? "text-white/78" : "text-black/78"}>
           {money(value)}
         </span>
       </div>
       <div className="relative mt-4 h-6">
         <div
-          className={`absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 ${
+          className={`absolute right-0 top-1/2 h-[2px] w-full -translate-y-1/2 ${
             dark ? "bg-white/10" : "bg-black/10"
           }`}
         />
         <div
-          className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 bg-[var(--shop-copper)]"
+          className="absolute right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[var(--shop-copper)]"
           style={{ width: `${pct}%` }}
         />
         <input
           type="range"
-          min={300}
-          max={5000}
+          min={min}
+          max={safeMax}
           step={100}
           value={value}
-          aria-label="Maximum price"
+          aria-label="حداکثر قیمت"
           onChange={(e) => onChange(Number(e.target.value))}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 border border-[var(--shop-copper)] bg-white"
-          style={{ left: `${pct}%` }}
+          className="pointer-events-none absolute top-1/2 size-3 translate-x-1/2 -translate-y-1/2 border border-[var(--shop-copper)] bg-[var(--shop-surface)]"
+          style={{ right: `${pct}%` }}
         />
       </div>
     </div>
@@ -3003,6 +3424,28 @@ function PriceSelector({
    EMPTY STATE
    ═══════════════════════════════════════════════════════════ */
 
+function ShopProductsState({
+  title,
+  description = "چند لحظه صبر کنید.",
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div className="flex min-h-[500px] flex-col items-center justify-center px-6 text-center">
+      <div className="mb-5 grid size-14 place-items-center border border-black/8">
+        <SearchIcon className="size-5 text-black/28" />
+      </div>
+      <p className="font-serif text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
+        {title}
+      </p>
+      <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
   return (
     <div className="flex min-h-[500px] flex-col items-center justify-center px-6 text-center">
@@ -3010,10 +3453,10 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
         <SearchIcon className="size-5 text-black/28" />
       </div>
       <p className="font-serif text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
-        Nothing found
+        محصولی پیدا نشد
       </p>
       <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
-        Adjust your filters to discover more of the collection.
+        فیلترها را تغییر دهید تا محصولات بیشتری از فروشگاه نمایش داده شود.
       </p>
       <div className="mt-7">
         <Button
@@ -3022,7 +3465,7 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
           size="md"
           onClick={resetFilters}
         >
-          Reset Filters
+          پاک‌کردن فیلترها
         </Button>
       </div>
     </div>
@@ -3050,12 +3493,12 @@ function InterstitialBanner({ banner }: { banner: ShopBanner }) {
           aria-hidden="true"
           className={`absolute inset-0 ${
             isDark
-              ? "bg-gradient-to-r from-black/78 via-black/42 to-black/8"
-              : "bg-gradient-to-r from-white/88 via-white/54 to-white/10"
+              ? "bg-gradient-to-l from-black/78 via-black/42 to-black/8"
+              : "bg-gradient-to-l from-white/88 via-white/54 to-white/10"
           }`}
         />
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full max-w-[570px] px-10 xl:px-14">
+          <div className="w-full max-w-[570px] px-10 text-right xl:px-14">
             {banner.badge && (
               <div className="mb-5 flex items-center gap-3 text-[6px] font-semibold uppercase tracking-[0.2em] text-[var(--shop-copper)]">
                 <span className="h-px w-6 bg-[var(--shop-copper)]" />
@@ -3122,7 +3565,7 @@ function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
           }`}
         />
         <div className="absolute inset-0 flex items-end">
-          <div className="w-full p-6 pb-8 sm:p-8 sm:pb-10">
+          <div className="w-full p-6 pb-8 text-right sm:p-8 sm:pb-10">
             {banner.badge && (
               <div className="mb-4 flex items-center gap-2 text-[6px] font-semibold uppercase tracking-[0.18em] text-[var(--shop-copper)]">
                 <span className="h-px w-5 bg-[var(--shop-copper)]" />
