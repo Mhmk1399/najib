@@ -39,10 +39,10 @@ export function Dashboard() {
   if (query.isError) {
     return (
       <main className="mx-auto w-full max-w-[1700px] p-4 sm:p-6">
-        <section className="border border-[#a7554c]/35 bg-[#a7554c]/[0.06] p-6 text-right">
+        <section className="border border-[#a7554c]/35 bg-[#a7554c]/[0.06] p-6 text-right text-white group-data-[theme=light]/admin:text-[#24211e]">
           <AlertTriangle className="text-[#df8178]" size={24} />
           <h1 className="mt-4 text-[18px] font-bold">خلاصه کاتالوگ در دسترس نیست</h1>
-          <p className="mt-2 text-[12px] leading-7 text-white/55 group-data-[theme=light]/admin:text-black/60">{query.error.message}</p>
+          <p className="mt-2 text-[12px] leading-7 text-white/55 group-data-[theme=light]/admin:text-black/70">{query.error.message}</p>
           <Button className="mt-5" type="button" variant="outline" onClick={() => void query.refetch()} icon={<RefreshCw size={16} />}>تلاش دوباره</Button>
         </section>
       </main>
@@ -67,30 +67,30 @@ export function Dashboard() {
 
   return (
     <main className="mx-auto w-full max-w-[1700px] p-3 sm:p-5 lg:p-6">
-      <header className="border border-white/[0.08] bg-[#0d1319] px-5 py-7 text-right shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] sm:px-7">
-        <p className="text-[11px] font-semibold text-[#b58a6c]">مرکز کنترل کاتالوگ</p>
+      <header className="border border-white/[0.08] bg-[#0d1319] px-5 py-7 text-right text-white shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e] sm:px-7">
+        <p className="text-[11px] font-semibold text-[#b58a6c] group-data-[theme=light]/admin:text-[#80543a]">مرکز کنترل کاتالوگ</p>
         <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><h1 className="text-[clamp(1.6rem,4vw,2.6rem)] font-bold leading-[1.5]">وضعیت واقعی فروشگاه، در یک نگاه</h1><p className="mt-2 text-[12px] leading-7 text-white/52 group-data-[theme=light]/admin:text-black/58">اعداد این صفحه مستقیماً از کاتالوگ و حساب‌های ثبت‌شده خوانده می‌شوند.</p></div>
-          <p className="text-[11px] text-white/38 group-data-[theme=light]/admin:text-black/48">بروزرسانی: {date.format(new Date(data.generatedAt))}</p>
+          <div><h1 className="text-[clamp(1.6rem,4vw,2.6rem)] font-bold leading-[1.5]">وضعیت واقعی فروشگاه، در یک نگاه</h1><p className="mt-2 text-[12px] leading-7 text-white/52 group-data-[theme=light]/admin:text-black/68">اعداد این صفحه مستقیماً از کاتالوگ و حساب‌های ثبت‌شده خوانده می‌شوند.</p></div>
+          <p className="text-[11px] text-white/38 group-data-[theme=light]/admin:text-black/60">بروزرسانی: {date.format(new Date(data.generatedAt))}</p>
         </div>
       </header>
 
       <section aria-label="آمار کاتالوگ" className="mt-3 grid grid-cols-1 border-r border-t border-white/[0.08] group-data-[theme=light]/admin:border-black/[0.09] sm:grid-cols-2 xl:grid-cols-3">
         {summaryCards.map(({ label, value, detail, href, icon: Icon }) => (
-          <Link key={label} href={href} className="group flex min-h-28 items-center gap-4 border-b border-l border-white/[0.08] bg-[#0d1319] p-5 text-right outline-none transition-colors hover:bg-[#121a22] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b08061] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:hover:bg-[#f5f1ea]">
-            <span className="grid size-11 shrink-0 place-items-center border border-[#a87959]/25 bg-[#a87959]/10 text-[#c59676]"><Icon size={19} /></span>
-            <span className="min-w-0"><span className="block text-[12px] text-white/55 group-data-[theme=light]/admin:text-black/58">{label}</span><strong className="mt-1 block text-[28px] leading-none">{number.format(value)}</strong><span className="mt-2 block text-[11px] text-[#b58a6c]">{detail}</span></span>
+          <Link key={label} href={href} className="group flex min-h-28 items-center gap-4 border-b border-l border-white/[0.08] bg-[#0d1319] p-5 text-right text-white outline-none transition-colors hover:bg-[#121a22] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b08061] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e] group-data-[theme=light]/admin:hover:bg-[#f5f1ea]">
+            <span className="grid size-11 shrink-0 place-items-center border border-[#a87959]/25 bg-[#a87959]/10 text-[#c59676] group-data-[theme=light]/admin:text-[#80543a]"><Icon size={19} /></span>
+            <span className="min-w-0"><span className="block text-[12px] text-white/55 group-data-[theme=light]/admin:text-black/65">{label}</span><strong className="mt-1 block text-[28px] leading-none">{number.format(value)}</strong><span className="mt-2 block text-[11px] text-[#b58a6c] group-data-[theme=light]/admin:text-[#80543a]">{detail}</span></span>
           </Link>
         ))}
       </section>
 
       <div className="mt-3 grid gap-3 xl:grid-cols-[0.8fr_1.2fr]">
-        <section className="border border-white/[0.08] bg-[#0d1319] p-5 group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3]">
-          <h2 className="text-[15px] font-bold">نیازمند توجه</h2><p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/50">موارد قابل پیگیری در داده‌های فعلی کاتالوگ</p>
-          <div className="mt-4 divide-y divide-white/[0.07] group-data-[theme=light]/admin:divide-black/[0.08]">{attention.map((item) => <Link key={item.label} href={item.href} className="flex min-h-12 items-center justify-between gap-4 py-3 text-[12px] outline-none hover:text-[#c59676] focus-visible:ring-2 focus-visible:ring-[#b08061]"><span>{item.label}</span><strong className={item.value ? "text-[#dda15f]" : "text-[#70b48d]"}>{number.format(item.value)}</strong></Link>)}</div>
+        <section className="border border-white/[0.08] bg-[#0d1319] p-5 text-white group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e]">
+          <h2 className="text-[15px] font-bold">نیازمند توجه</h2><p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/62">موارد قابل پیگیری در داده‌های فعلی کاتالوگ</p>
+          <div className="mt-4 divide-y divide-white/[0.07] group-data-[theme=light]/admin:divide-black/[0.08]">{attention.map((item) => <Link key={item.label} href={item.href} className="flex min-h-12 items-center justify-between gap-4 py-3 text-[12px] outline-none hover:text-[#c59676] focus-visible:ring-2 focus-visible:ring-[#b08061]"><span>{item.label}</span><strong className={item.value ? "text-[#dda15f] group-data-[theme=light]/admin:text-[#8a4f18]" : "text-[#70b48d] group-data-[theme=light]/admin:text-[#2f6f4f]"}>{number.format(item.value)}</strong></Link>)}</div>
         </section>
-        <section className="border border-white/[0.08] bg-[#0d1319] p-5 group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3]">
-          <h2 className="text-[15px] font-bold">آخرین محصولات ویرایش‌شده</h2><p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/50">آخرین تغییرات ثبت‌شده در محصول‌ها</p>
+        <section className="border border-white/[0.08] bg-[#0d1319] p-5 text-white group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e]">
+          <h2 className="text-[15px] font-bold">آخرین محصولات ویرایش‌شده</h2><p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/62">آخرین تغییرات ثبت‌شده در محصول‌ها</p>
           {data.recentlyEditedProducts.length ? <div className="mt-4 divide-y divide-white/[0.07] group-data-[theme=light]/admin:divide-black/[0.08]">{data.recentlyEditedProducts.map((product) => <Link key={product._id} href="/admin/catalog/products" className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-4 py-3 outline-none hover:text-[#c59676] focus-visible:ring-2 focus-visible:ring-[#b08061]"><span className="min-w-0"><strong className="block truncate text-[12px]">{fa(product.name)}</strong><span dir="ltr" className="mt-1 block truncate text-left text-[10px] text-white/35 group-data-[theme=light]/admin:text-black/45">{product.slug}</span></span><span className="text-left text-[10px] text-white/42 group-data-[theme=light]/admin:text-black/50">{product.updatedAt ? date.format(new Date(product.updatedAt)) : "—"}</span></Link>)}</div> : <div className="mt-5 border border-dashed border-white/[0.12] px-4 py-8 text-center text-[12px] text-white/44 group-data-[theme=light]/admin:border-black/[0.14] group-data-[theme=light]/admin:text-black/52">هنوز محصولی ثبت نشده است.</div>}
         </section>
       </div>

@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/admin/login-form";
+import { redirect } from "next/navigation";
 
 type LoginPageProps = {
   searchParams: Promise<{ refresh?: string | string[] }>;
@@ -6,5 +6,5 @@ type LoginPageProps = {
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = await searchParams;
-  return <LoginForm attemptRefresh={params.refresh === "1"} />;
+  redirect(`/auth?mode=login${params.refresh === "1" ? "&refresh=1" : ""}&next=%2Fadmin`);
 }

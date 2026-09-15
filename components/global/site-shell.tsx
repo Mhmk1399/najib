@@ -8,8 +8,9 @@ import FloatingContactDock from "@/components/global/floating";
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith("/admin");
+  const isAccountWorkspace = pathname === "/auth" || pathname.startsWith("/customer-dashboard");
 
-  if (isAdminRoute) return <>{children}</>;
+  if (isAdminRoute || isAccountWorkspace) return <>{children}</>;
 
   return (
     <>

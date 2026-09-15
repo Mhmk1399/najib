@@ -186,7 +186,7 @@ export function PageComposer({
   const [notice, setNotice] = useState("");
   const auth = useCallback(
     (status: number) => {
-      if (status === 401) router.replace("/login?reason=session");
+      if (status === 401) router.replace("/auth?mode=login&refresh=1&next=%2Fadmin");
     },
     [router],
   );
