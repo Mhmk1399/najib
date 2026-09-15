@@ -2,11 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   ACCESS_COOKIE,
+  LEGACY_ACCESS_COOKIE,
+  LEGACY_REFRESH_COOKIE,
   REFRESH_COOKIE,
+  accountDestination,
   authSessionSchema,
   cookieOptions,
-} from "@/lib/admin/auth";
-import { jsonError } from "@/lib/server/response";
+} from "@/lib/auth/session";
+import { isApiError } from "@/lib/server/errors";
 import { signupCustomer } from "@/services/auth/service";
 
 const signupSchema = z.object({
@@ -32,13 +35,13 @@ export async function POST(request: Request) {
       const fields = z.flattenError(parsed.error).fieldErrors;
       return NextResponse.json(
         {
-          error: "Check your sign-up details.",
+          error: "اطلاعات ثبت‌نام را بررسی کنید.",
           fieldErrors: {
-            email: fields.email?.[0],
-            password: fields.password?.[0],
-            firstName: fields.firstName?.[0],
-            lastName: fields.lastName?.[0],
-            phone: fields.phone?.[0],
+            email: fields.email?.[0] ? "ایمیل معتبر وارد کنید." : undefined,
+            password: fields.password?.[0] ? "رمز عبور باید دست‌کم ۱۲ کاراکتر باشد." : undefined,
+            firstName: fields.firstName?.[0] ? "نام را وارد کنید." : undefined,
+            lastName: fields.lastName?.[0] ? "نام خانوادگی را وارد کنید." : undefined,
+            phone: fields.phone?.[0] ? "شماره تماس معتبر نیست." : undefined,
           },
         },
         { status: 400 },
@@ -48,7 +51,7 @@ export async function POST(request: Request) {
     const session = authSessionSchema.parse(
       await signupCustomer(parsed.data, metadata(request)),
     );
-    const response = NextResponse.json({ ok: true, destination: "/" });
+    const response = NextResponse.json({ ok: true, destination: accountDestination(session.staff) });
     response.cookies.set(
       ACCESS_COOKIE,
       session.accessToken,
@@ -67,8 +70,24 @@ export async function POST(request: Request) {
         ),
       ),
     );
+    response.cookies.delete(LEGACY_ACCESS_COOKIE);
+    response.cookies.delete(LEGACY_REFRESH_COOKIE);
     return response;
   } catch (error) {
-    return jsonError(error);
+    if (isApiError(error)) {
+      return NextResponse.json(
+        {
+          error:
+            error.status === 409
+              ? "حسابی با این ایمیل وجود دارد. وارد حساب خود شوید."
+              : "ثبت‌نام انجام نشد. دوباره تلاش کنید.",
+        },
+        { status: error.status },
+      );
+    }
+    return NextResponse.json(
+      { error: "سرویس ثبت‌نام موقتاً در دسترس نیست." },
+      { status: 500 },
+    );
   }
 }

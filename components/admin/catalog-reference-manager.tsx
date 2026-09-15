@@ -145,9 +145,9 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
   const invalidate = () => { void queryClient.invalidateQueries({ queryKey: ["catalog"] }); };
   const save = (id: string | null, values: FormValues) => api<ReferenceRecord>(`/api/catalog/${resource}${id ? `/${id}` : ""}`, { method: id ? "PATCH" : "POST", body: JSON.stringify(payload(resource, values)) });
 
-  return <div className="min-w-0 space-y-3 p-3 sm:p-4 lg:p-5">
+  return <div className="min-w-0 space-y-3 p-3 text-[var(--adt-text)] sm:p-4 lg:p-5">
     <CatalogSectionNav />
-    <section className="border border-[var(--adt-border)] bg-[var(--adt-surface)] p-3">
+    <section className="border border-[var(--adt-border)] bg-[var(--adt-surface)] p-3 text-[var(--adt-text)]">
       <h1 className="px-1 text-[16px] font-bold">اطلاعات پایه کاتالوگ</h1><p className="mt-1 px-1 text-[11px] leading-6 text-[var(--adt-muted)]">مجموعه‌ها، رنگ‌ها، سایزها و تنوع‌های قابل انتخاب محصول را از این بخش مدیریت کنید.</p>
       <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">{resources.map(({ id, label, description, icon: Icon }) => <DataButton key={id} tone={resource === id ? "danger" : "ghost"} size="md" icon={<Icon size={15} />} onClick={() => setResource(id)} aria-pressed={resource === id}><span className="text-right"><strong className="block text-[11px]">{label}</strong><small className="mt-0.5 block text-[8px] opacity-65">{description}</small></span></DataButton>)}</div>
     </section>

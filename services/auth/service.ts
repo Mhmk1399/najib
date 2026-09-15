@@ -23,7 +23,7 @@ export type RequestMetadata = { ipAddress?: string; userAgent?: string };
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1_000;
-const DUMMY_PASSWORD_HASH_PROMISE = import("@/services/auth/password").then(({ hashPassword }) => hashPassword("not-a-real-staff-password"));
+const DUMMY_PASSWORD_HASH_PROMISE = import("@/services/auth/password").then(({ hashPassword }) => hashPassword("not-a-real-account-password"));
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("base64url");
@@ -44,7 +44,7 @@ function refreshTtl() {
   return Number(process.env.AUTH_REFRESH_TOKEN_TTL_SECONDS || 14 * 24 * 60 * 60);
 }
 
-export async function loginStaff(value: unknown, requestMetadata: RequestMetadata): Promise<StaffSessionResponse> {
+export async function loginAccount(value: unknown, requestMetadata: RequestMetadata): Promise<StaffSessionResponse> {
   const input = staffLoginSchema.safeParse(value);
   if (!input.success) badRequest("Invalid staff login payload.", input.error.issues);
   await connectToDatabase();
@@ -102,7 +102,7 @@ export async function signupCustomer(value: unknown, requestMetadata: RequestMet
   return response.body;
 }
 
-export async function refreshStaffSession(value: unknown, requestMetadata: RequestMetadata): Promise<StaffSessionResponse> {
+export async function refreshAccountSession(value: unknown, requestMetadata: RequestMetadata): Promise<StaffSessionResponse> {
   const input = staffRefreshSchema.safeParse(value);
   if (!input.success) badRequest("Invalid refresh-token payload.", input.error.issues);
   await connectToDatabase();
@@ -140,7 +140,7 @@ export async function refreshStaffSession(value: unknown, requestMetadata: Reque
   return body;
 }
 
-export async function getStaffProfile(accessToken: string): Promise<StaffProfile> {
+export async function getAccountProfile(accessToken: string): Promise<StaffProfile> {
   await connectToDatabase();
   const claims = verifyStaffAccessToken(accessToken);
   const session = await StaffSession.findOne({ _id: claims.sid, userId: claims.sub, revokedAt: { $exists: false }, expiresAt: { $gt: new Date() } }).lean();
@@ -151,7 +151,7 @@ export async function getStaffProfile(accessToken: string): Promise<StaffProfile
   return profileFor(user, roles);
 }
 
-export async function logoutStaff(value: unknown, requestMetadata: RequestMetadata): Promise<{ success: true }> {
+export async function logoutAccount(value: unknown, requestMetadata: RequestMetadata): Promise<{ success: true }> {
   const input = staffRefreshSchema.safeParse(value);
   if (!input.success) return { success: true };
   await connectToDatabase();

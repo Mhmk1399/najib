@@ -1,11 +1,12 @@
-# Staff Authentication and Authorization
+# Unified Account Authentication and Staff Authorization
 
 ## Ownership and request flow
 
-Customer Data owns staff identities and database-backed sessions. The Admin
-application is a server-side gateway: it exchanges credentials with Customer
-Data and stores the returned tokens in `HttpOnly`, `SameSite=Strict` cookies.
-Browser JavaScript never receives either token.
+The unified User model owns customer and staff identities and database-backed
+sessions. Customers and staff use the same `/auth` page and `/api/auth/login`
+endpoint. The server resolves permissions after verification and sends customers
+to `/customer-dashboard` or authorized staff to `/admin`. Tokens are stored in
+`HttpOnly`, `SameSite=Strict` cookies and never returned to browser JavaScript.
 
 Access tokens are signed, scoped, and expire after 15 minutes by default.
 Refresh tokens are random opaque values, stored only as SHA-256 hashes, expire
@@ -33,6 +34,11 @@ item is only a usability feature, never the security control.
 
 Existing `accountant` and `merchandiser` records are translated to `finance`
 and `catalog_manager` during sign-in so older staff data remains usable.
+
+The `customer` role has no `admin.access` permission. Admin routes enforce that
+permission on the server and redirect an authenticated customer to their own
+dashboard. The customer dashboard performs the inverse check. `/api/auth/me`
+provides a token-free profile check for authenticated clients.
 
 Commerce catalog creation and updates currently require `catalog.write`.
 Public catalog reads remain available to the storefront.
@@ -72,10 +78,10 @@ status, and roles and records an audit event.
 ## Validation
 
 ```bash
-npm run auth:test
-npm run test:auth-flow
-npm run test:admin-auth-flow
+npm run typecheck
+npm run test:api
 ```
 
-The live flow tests create isolated temporary staff data and remove it when
-finished.
+The API script creates an isolated temporary customer, tests customer session
+rotation and logout, promotes that temporary record to an owner for the admin
+destination/isolation checks, then removes its user, session, and audit records.

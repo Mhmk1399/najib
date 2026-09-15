@@ -278,9 +278,12 @@ export function DynamicDataTable<
 
   const records = tableQuery.data?.items ?? [];
   const total = tableQuery.data?.total ?? 0;
-  const totalPages =
+  const reportedPageCount =
     tableQuery.data?.pageCount ??
     pageCountFrom(total, tableQuery.data?.pageSize ?? pageSize);
+  const totalPages = Number.isFinite(reportedPageCount)
+    ? Math.max(1, Math.floor(reportedPageCount))
+    : 1;
 
   useEffect(() => {
     if (tableQuery.isFetching || page <= totalPages) return;

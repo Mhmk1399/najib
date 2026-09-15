@@ -88,22 +88,30 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const pathname = usePathname();
   const clock = useTehranClock();
   const staffProfile = staff ?? FALLBACK_STAFF;
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") return "dark";
-    try {
-      const saved = localStorage.getItem("najib-admin-theme");
-      if (saved === "light" || saved === "dark") return saved;
-      return window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
-    } catch {
-      return "dark";
-    }
-  });
+  const [theme, setTheme] = useState<ThemeMode>("dark");
+  const [themePreferenceReady, setThemePreferenceReady] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const logoutOpenerRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    let preferred: ThemeMode = "dark";
+    try {
+      const saved = localStorage.getItem("najib-admin-theme");
+      if (saved === "light" || saved === "dark") {
+        preferred = saved;
+      } else if (!window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        preferred = "light";
+      }
+    } catch {}
+
+    const frame = requestAnimationFrame(() => {
+      setTheme(preferred);
+      setThemePreferenceReady(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const requestLogout = () => {
     logoutOpenerRef.current = document.activeElement as HTMLElement | null;
@@ -116,12 +124,13 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   };
 
   useEffect(() => {
+    if (!themePreferenceReady) return;
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
     try {
       localStorage.setItem("najib-admin-theme", theme);
     } catch {}
-  }, [theme]);
+  }, [theme, themePreferenceReady]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -145,13 +154,14 @@ export function AdminShell({ children, staff }: AdminShellProps) {
       <div
         dir="rtl"
         data-theme={theme}
-        className="group/admin h-dvh overflow-hidden bg-[#080c10]       text-[#f5f3ee] antialiased selection:bg-[#a87552]/40 group-data-[theme=light]/admin:bg-[#ddd9d2] group-data-[theme=light]/admin:text-[#1d1c1a]"
+        className="group/admin h-dvh overflow-hidden bg-[#080c10] text-[#f5f3ee] antialiased selection:bg-[#a87552]/40 data-[theme=light]:bg-[#ddd9d2] data-[theme=light]:text-[#1d1c1a]"
       >
         <div className="flex h-full min-w-0 flex-row">
           <aside className="relative order-1 hidden h-dvh w-[238px] shrink-0 overflow-hidden border-r border-white/[0.075] bg-[#090d11] xl:flex 2xl:w-[252px] group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-[#e9e5de]">
             <Sidebar
               pathname={pathname}
               staff={staffProfile}
+              imagePriority
               onLogout={requestLogout}
               onNavigate={() => undefined}
             />
@@ -423,11 +433,13 @@ function ProfileDropdown({
 function Sidebar({
   pathname,
   staff,
+  imagePriority = false,
   onLogout,
   onNavigate,
 }: {
   pathname: string;
   staff: AdminStaffProfile;
+  imagePriority?: boolean;
   onLogout: () => void;
   onNavigate: () => void;
 }) {
@@ -441,6 +453,7 @@ function Sidebar({
           src="/assets/images/suit.webp"
           alt=""
           fill
+          priority={imagePriority}
           sizes="252px"
           className="object-cover object-[42%_22%] grayscale"
         />
@@ -660,7 +673,7 @@ function LogoutModal({
         credentials: "same-origin",
       });
       if (!response.ok) throw new Error("logout_failed");
-      router.replace("/admin/login");
+      router.replace("/auth?mode=login");
       router.refresh();
     } catch {
       setError("خروج انجام نشد. اتصال خود را بررسی و دوباره تلاش کنید.");

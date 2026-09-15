@@ -1,7 +1,7 @@
 # Next.js Consolidation
 
 This project now runs as one primary Next.js application. Public storefront pages,
-the admin dashboard, staff auth, and catalog CRUD APIs live in the root app
+the admin dashboard, unified account auth, and catalog CRUD APIs live in the root app
 instead of separate NestJS services or a separate admin Next app.
 
 ## Runtime
@@ -19,7 +19,8 @@ Local routes:
 
 - Public storefront: `http://localhost:3000`
 - Admin dashboard: `http://localhost:3000/admin`
-- Admin login: `http://localhost:3000/admin/login`
+- Customer dashboard: `http://localhost:3000/customer-dashboard`
+- Login and sign-up: `http://localhost:3000/auth`
 - Catalog API: `http://localhost:3000/api/catalog/:resource`
 - Staff auth API: `http://localhost:3000/api/auth/login`
 
@@ -30,15 +31,16 @@ the consolidated app path.
 
 - `app/` contains the public App Router pages and root API routes.
 - `app/admin/` contains the admin routes inside the same Next app.
-- `app/api/auth/` contains staff login, refresh, and logout endpoints.
+- `app/api/auth/` contains customer/staff login, sign-up, profile, refresh, and logout endpoints.
 - `app/api/catalog/` contains catalog list, read, create, and update endpoints.
 - `components/admin/` contains admin UI components copied from the old admin app.
-- `lib/admin/` contains admin session and dashboard helpers.
+- `lib/auth/` contains shared account cookies, profile verification, and role destinations.
+- `lib/admin/` contains permission-enforced admin session and dashboard helpers.
 - `lib/server/` contains shared backend helpers for database, auth tokens,
   responses, and typed API errors.
-- `models/auth/` contains staff/user/session/audit Mongoose models.
+- `models/auth/` contains unified user/session/audit Mongoose models.
 - `models/catalog/` contains catalog Mongoose models.
-- `services/auth/` contains staff authentication business logic.
+- `services/auth/` contains account authentication business logic.
 - `services/catalog/` contains catalog CRUD business logic and validation schemas.
 
 The old service source trees under `services/*/src` are treated as legacy code
@@ -60,7 +62,7 @@ Optional:
 ```bash
 MONGODB_DB_NAME=najib
 AUTH_ACCESS_TOKEN_TTL_SECONDS=900
-STAFF_SESSION_TTL_DAYS=7
+AUTH_REFRESH_TOKEN_TTL_SECONDS=1209600
 ```
 
 S3-compatible uploads, including Liara Object Storage buckets:
@@ -84,10 +86,24 @@ fine for some S3-compatible providers but not all custom domains.
 
 ## API Behavior
 
-Auth routes set HTTP-only cookies:
+Auth routes set HTTP-only, SameSite Strict cookies:
 
-- `najib_admin_access`
-- `najib_admin_refresh`
+- `najib_access`
+- `najib_refresh`
+
+The old `najib_admin_access` and `najib_admin_refresh` names are read during the
+transition and cleared after login, refresh, or logout. Browser JavaScript never
+receives either token in a response body.
+
+The shared login endpoint resolves the destination from server-side permissions:
+
+- Accounts with `admin.access` go to `/admin`.
+- Customer/non-admin accounts go to `/customer-dashboard`.
+
+`GET /api/auth/me` returns the verified profile and resolved destination without
+returning access or refresh tokens. Both dashboards repeat their authorization
+check on the server; a customer cannot enter Admin, and a staff account is sent
+away from the customer dashboard.
 
 Catalog routes use the shared staff session guard and role permissions:
 
@@ -103,6 +119,8 @@ returned as JSON with stable HTTP statuses instead of leaking raw exceptions.
 
 - The public storefront UI was left in place.
 - The admin UI was moved under `/admin` without redesigning its screens.
+- Root `npm run typecheck` and `npm run test:api` verify the single Next app,
+  including isolated customer sign-up/login/refresh/logout and role isolation.
 - Root `npm run build` verifies the single Next app, including the admin and API
   routes.
 - `npm run typecheck` uses `tsconfig.typecheck.json` so stale Next dev cache
