@@ -183,6 +183,8 @@ const productSchema = z
     categoryId: objectIdSchema,
     subcategoryId: objectIdSchema,
     collectionIds: z.array(objectIdSchema).default([]),
+    colorIds: z.array(objectIdSchema).default([]),
+    sizeIds: z.array(objectIdSchema).default([]),
     basePriceMinor: z.number().int().nonnegative(),
     currency: z.string().trim().length(3),
     status: z.enum(["draft", "active", "archived"]).default("draft"),

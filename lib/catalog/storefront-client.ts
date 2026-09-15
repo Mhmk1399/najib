@@ -70,6 +70,14 @@ type CatalogProductRecord = {
   currency: string;
   primaryImageId?: string | null;
   primaryImageObjectPosition?: string;
+  colorIds?: string[];
+};
+
+type CatalogColorRecord = {
+  _id: string;
+  name: LocalizedText;
+  slug: string;
+  hex?: string;
 };
 
 type StorefrontCatalogPayload = {
@@ -80,6 +88,7 @@ type StorefrontCatalogPayload = {
 
 type StorefrontProductPayload = {
   items: CatalogProductRecord[];
+  colors?: CatalogColorRecord[];
 };
 
 export type StorefrontMenuSection = {
@@ -144,6 +153,10 @@ function idOf(value: unknown) {
 
 function imageMapFrom(images: CatalogImageAsset[]) {
   return new Map(images.map((image) => [idOf(image._id), image]));
+}
+
+function colorMapFrom(colors: CatalogColorRecord[] = []) {
+  return new Map(colors.map((color) => [idOf(color._id), color]));
 }
 
 function imageUrl(
@@ -324,9 +337,13 @@ function buildCategoryPageData(
 function productCard(
   product: CatalogProductRecord,
   imageMap: Map<string, CatalogImageAsset>,
+  colorMap: Map<string, CatalogColorRecord>,
 ): CategoryProduct {
   const title = fa(product.name, product.slug);
   const imageId = product.primaryImageId;
+  const colors = (product.colorIds ?? [])
+    .map((colorId) => colorMap.get(idOf(colorId))?.hex)
+    .filter((hex): hex is string => Boolean(hex));
 
   return {
     id: idOf(product._id),
@@ -341,6 +358,7 @@ function productCard(
       product.primaryImageObjectPosition,
     ),
     priceLabel: formatMoney(product.basePriceMinor, product.currency),
+    colors,
   };
 }
 
@@ -349,6 +367,7 @@ function buildSubcategoryPageData(
   categorySlug: string,
   subcategorySlug: string,
   products: CatalogProductRecord[],
+  colors: CatalogColorRecord[] = [],
 ): SubcategoryPageData | null {
   const category = catalog.categories.find((item) => item.slug === categorySlug);
   if (!category) return null;
@@ -360,6 +379,7 @@ function buildSubcategoryPageData(
   if (!subcategory) return null;
 
   const imageMap = imageMapFrom(catalog.images);
+  const colorMap = colorMapFrom(colors);
   const name = fa(subcategory.name, subcategory.slug);
   const categoryName = fa(category.name, category.slug);
   const content = subcategory.pageContent ?? {};
@@ -409,7 +429,7 @@ function buildSubcategoryPageData(
         fa(subcategory.description, "جزئیات این زیردسته به‌زودی تکمیل می‌شود."),
       ),
     },
-    products: products.map((product) => productCard(product, imageMap)),
+    products: products.map((product) => productCard(product, imageMap, colorMap)),
     feature: {
       eyebrow: fa(secondaryBanner.eyebrow, "جزئیات کالکشن"),
       title: fa(secondaryBanner.heading, name),
@@ -526,6 +546,7 @@ export function useSubcategoryPageData(
       categorySlug,
       subcategorySlug,
       productsQuery.data.items,
+      productsQuery.data.colors,
     );
   }, [
     base,

@@ -27,6 +27,7 @@ import {
   COLOR_OPTIONS,
   MATERIAL_OPTIONS,
   SIZE_OPTIONS,
+  type ShopColorOption,
   type ShopProduct as FakeShopProduct,
   type ShopProductImage,
 } from "@/data/fake-shop-products";
@@ -44,6 +45,8 @@ type Product = Omit<FakeShopProduct, "category" | "images"> & {
   categoryLabel?: string;
   currency?: string;
   images: ShopProductImage[];
+  colorSwatches?: ShopColorOption[];
+  sizeOptions?: ShopSizeOption[];
 };
 
 type CategoryOption = {
@@ -63,6 +66,11 @@ type LocalizedTextList = {
   ar?: string[];
 };
 
+type ShopSizeOption = {
+  id: string;
+  label: string;
+};
+
 type StorefrontProductRecord = {
   _id: string;
   name: LocalizedText;
@@ -77,11 +85,15 @@ type StorefrontProductRecord = {
   primaryImageId?: string | null;
   primaryImageObjectPosition?: string;
   imageIds?: string[];
+  colorIds?: string[];
+  sizeIds?: string[];
   createdAt?: string;
 };
 
 type StorefrontProductPayload = {
   items: StorefrontProductRecord[];
+  colors?: CatalogColorRecord[];
+  sizes?: CatalogSizeRecord[];
 };
 
 type CatalogImageAsset = {
@@ -102,6 +114,18 @@ type CatalogSubcategoryRecord = {
   name: LocalizedText;
   slug: string;
   categoryId: string;
+};
+
+type CatalogColorRecord = CatalogCategoryRecord & {
+  hex?: string;
+  swatchImageUrl?: string;
+};
+
+type CatalogSizeRecord = {
+  _id: string;
+  name: LocalizedText;
+  code: string;
+  sortOrder?: number;
 };
 
 type ShopBanner = {
@@ -184,7 +208,9 @@ function money(value: number, currency = "USD") {
 }
 
 function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+  return (
+    value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback
+  );
 }
 
 function idOf(value: unknown) {
@@ -241,6 +267,14 @@ function makeImageMap(images: CatalogImageAsset[] = []) {
   return new Map(images.map((image) => [idOf(image._id), image]));
 }
 
+function makeColorMap(colors: CatalogColorRecord[] = []) {
+  return new Map(colors.map((color) => [idOf(color._id), color]));
+}
+
+function makeSizeMap(sizes: CatalogSizeRecord[] = []) {
+  return new Map(sizes.map((size) => [idOf(size._id), size]));
+}
+
 function makeProductImages(
   product: StorefrontProductRecord,
   imageMap: Map<string, CatalogImageAsset>,
@@ -260,7 +294,7 @@ function makeProductImages(
       alt: fa(image.alt, fa(product.name, product.slug)),
       position:
         index === 0
-          ? product.primaryImageObjectPosition ?? image.objectPosition
+          ? (product.primaryImageObjectPosition ?? image.objectPosition)
           : image.objectPosition,
     });
 
@@ -278,10 +312,14 @@ function mapStorefrontProduct({
   product,
   imageMap,
   subcategoryMap,
+  colorMap,
+  sizeMap,
 }: {
   product: StorefrontProductRecord;
   imageMap: Map<string, CatalogImageAsset>;
   subcategoryMap: Map<string, CatalogSubcategoryRecord>;
+  colorMap: Map<string, CatalogColorRecord>;
+  sizeMap: Map<string, CatalogSizeRecord>;
 }): Product {
   const title = fa(product.name, product.slug);
   const subcategory = subcategoryMap.get(idOf(product.subcategoryId));
@@ -293,7 +331,25 @@ function mapStorefrontProduct({
     alt: title,
     position: "center",
   };
-  const materials = product.material?.fa?.map((item) => item.toLowerCase()) ?? [];
+  const materials =
+    product.material?.fa?.map((item) => item.toLowerCase()) ?? [];
+  const colorIds = cleanList(product.colorIds ?? []);
+  const sizeIds = cleanList(product.sizeIds ?? []);
+  const colorSwatches = colorIds.map((colorId) => {
+    const color = colorMap.get(colorId);
+    return {
+      id: colorId,
+      label: fa(color?.name, color?.slug ?? colorId),
+      value: color?.hex || "#111111",
+    };
+  });
+  const sizeOptions = sizeIds.map((sizeId) => {
+    const size = sizeMap.get(sizeId);
+    return {
+      id: sizeId,
+      label: fa(size?.name, size?.code ?? sizeId),
+    };
+  });
 
   return {
     id: idOf(product._id),
@@ -311,16 +367,19 @@ function mapStorefrontProduct({
     category: subcategory?.slug ?? idOf(product.subcategoryId),
     categoryLabel: subcategoryLabel,
     isNew: Boolean(product.createdAt),
-    colors: [],
-    sizes: [],
+    colors: colorIds,
+    colorSwatches,
+    sizes: sizeIds,
+    sizeOptions,
     materials,
     origin: firstLine(fa(product.description), 42),
     images: images.length ? images : [fallbackImage],
   };
 }
 
-function getColorMeta(colorId: string) {
+function getColorMeta(colorId: string, colorMap?: Map<string, ShopColorOption>) {
   return (
+    colorMap?.get(colorId) ??
     COLOR_OPTIONS.find((c) => c.id === colorId) ?? {
       id: colorId,
       label: colorId,
@@ -451,7 +510,9 @@ export function ShopPage() {
   );
 
   const updateUrlFilters = useCallback(
-    (updates: Record<string, string | string[] | number | null | undefined>) => {
+    (
+      updates: Record<string, string | string[] | number | null | undefined>,
+    ) => {
       const params = new URLSearchParams(searchParams.toString());
 
       for (const [key, value] of Object.entries(updates)) {
@@ -534,7 +595,9 @@ export function ShopPage() {
   }, [selectedCategoryId, selectedSubcategoryId]);
 
   const invalidUrlTaxonomy =
-    (selectedSubcategorySlug && catalogQuery.isSuccess && !selectedSubcategoryRecord) ||
+    (selectedSubcategorySlug &&
+      catalogQuery.isSuccess &&
+      !selectedSubcategoryRecord) ||
     (selectedCategorySlug && catalogQuery.isSuccess && !selectedCategoryRecord);
 
   const productsQuery = useQuery({
@@ -584,25 +647,58 @@ export function ShopPage() {
     if (invalidUrlTaxonomy) return [];
 
     const imageMap = makeImageMap(catalogImages);
+    const colorMap = makeColorMap(productsQuery.data?.colors ?? []);
+    const sizeMap = makeSizeMap(productsQuery.data?.sizes ?? []);
     const subcategoryMap = new Map(
       catalogSubcategories.map((item) => [idOf(item._id), item]),
     );
 
     return (productsQuery.data?.items ?? []).map((product) =>
-      mapStorefrontProduct({ product, imageMap, subcategoryMap }),
+      mapStorefrontProduct({
+        product,
+        imageMap,
+        subcategoryMap,
+        colorMap,
+        sizeMap,
+      }),
     );
   }, [
     catalogImages,
     catalogSubcategories,
     invalidUrlTaxonomy,
+    productsQuery.data?.colors,
     productsQuery.data?.items,
+    productsQuery.data?.sizes,
   ]);
+
+  const colorFilterOptions = useMemo<ShopColorOption[]>(() => {
+    const dynamic = productsQuery.data?.colors?.map((color) => ({
+      id: idOf(color._id),
+      label: fa(color.name, color.slug),
+      value: color.hex || "#111111",
+    })) ?? [];
+
+    return dynamic.length ? dynamic : COLOR_OPTIONS;
+  }, [productsQuery.data?.colors]);
+
+  const sizeFilterOptions = useMemo<ShopSizeOption[]>(() => {
+    const dynamic = productsQuery.data?.sizes?.map((size) => ({
+      id: idOf(size._id),
+      label: fa(size.name, size.code),
+    })) ?? [];
+
+    return dynamic.length
+      ? dynamic
+      : SIZE_OPTIONS.map((size) => ({ id: size, label: size }));
+  }, [productsQuery.data?.sizes]);
 
   const defaultMaxPrice = useMemo(
     () =>
       Math.max(
         5000,
-        ...mappedProducts.map((product) => Math.ceil(product.price / 100) * 100),
+        ...mappedProducts.map(
+          (product) => Math.ceil(product.price / 100) * 100,
+        ),
       ),
     [mappedProducts],
   );
@@ -735,8 +831,10 @@ export function ShopPage() {
                     categoryOptions={categoryOptions}
                     selectedSizes={selectedSizes}
                     setSelectedSizes={setSelectedSizes}
+                    sizeOptions={sizeFilterOptions}
                     selectedColors={selectedColors}
                     setSelectedColors={setSelectedColors}
+                    colorOptions={colorFilterOptions}
                     selectedMaterials={selectedMaterials}
                     setSelectedMaterials={setSelectedMaterials}
                     maxPrice={maxPrice}
@@ -780,6 +878,7 @@ export function ShopPage() {
                   >
                     <div className="p-4">
                       <SizeSelector
+                        options={sizeFilterOptions}
                         values={selectedSizes}
                         onChange={setSelectedSizes}
                       />
@@ -793,6 +892,7 @@ export function ShopPage() {
                   >
                     <div className="p-4">
                       <ColorSelector
+                        options={colorFilterOptions}
                         values={selectedColors}
                         onChange={setSelectedColors}
                       />
@@ -862,24 +962,7 @@ export function ShopPage() {
                     مرتب‌سازی
                   </span>
                   <DesktopSortControl value={sort} onChange={setSort} />
-                  <div className="flex items-center border-r border-[var(--shop-border)] pr-2">
-                    <button
-                      type="button"
-                      aria-label="نمایش شبکه‌ای"
-                      aria-pressed="true"
-                      className="grid size-9 place-items-center border border-black bg-black text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
-                    >
-                      <GridViewIcon />
-                    </button>
-                    <button
-                      type="button"
-                      aria-label="نمایش لیستی"
-                      aria-pressed="false"
-                      className="grid size-9 place-items-center border-y border-r border-black/12 bg-white/44 text-black/42 transition-colors hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/20"
-                    >
-                      <ListViewIcon />
-                    </button>
-                  </div>
+                
                 </div>
               </div>
             </div>
@@ -980,8 +1063,10 @@ export function ShopPage() {
         setSort={setSort}
         selectedSizes={selectedSizes}
         setSelectedSizes={setSelectedSizes}
+        sizeOptions={sizeFilterOptions}
         selectedColors={selectedColors}
         setSelectedColors={setSelectedColors}
+        colorOptions={colorFilterOptions}
         selectedMaterials={selectedMaterials}
         setSelectedMaterials={setSelectedMaterials}
         maxPrice={maxPrice}
@@ -1155,8 +1240,10 @@ function DesktopFilterIsland({
   categoryOptions,
   selectedSizes,
   setSelectedSizes,
+  sizeOptions,
   selectedColors,
   setSelectedColors,
+  colorOptions,
   selectedMaterials,
   setSelectedMaterials,
   maxPrice,
@@ -1175,8 +1262,10 @@ function DesktopFilterIsland({
   categoryOptions: CategoryOption[];
   selectedSizes: string[];
   setSelectedSizes: (v: string[]) => void;
+  sizeOptions: ShopSizeOption[];
   selectedColors: string[];
   setSelectedColors: (v: string[]) => void;
+  colorOptions: ShopColorOption[];
   selectedMaterials: string[];
   setSelectedMaterials: (v: string[]) => void;
   maxPrice: number;
@@ -1239,13 +1328,19 @@ function DesktopFilterIsland({
 
   useEffect(() => {
     if (!pinned) return;
+    function closePinnedFilter() {
+      clearOpen();
+      clearClose();
+      onTogglePin();
+      onHoverClose();
+    }
     function onPD(e: PointerEvent) {
       const r = rootRef.current;
       if (!r || r.contains(e.target as Node)) return;
-      closeFilter();
+      closePinnedFilter();
     }
     function onKD(e: KeyboardEvent) {
-      if (e.key === "Escape") closeFilter();
+      if (e.key === "Escape") closePinnedFilter();
     }
     document.addEventListener("pointerdown", onPD);
     window.addEventListener("keydown", onKD);
@@ -1253,7 +1348,7 @@ function DesktopFilterIsland({
       document.removeEventListener("pointerdown", onPD);
       window.removeEventListener("keydown", onKD);
     };
-  }, [pinned]);
+  }, [onHoverClose, onTogglePin, pinned]);
 
   useEffect(
     () => () => {
@@ -1299,7 +1394,9 @@ function DesktopFilterIsland({
         )}
         <span
           className={`ml-0.5 transition-[color,transform] duration-300 ${
-            expanded ? "rotate-180 text-[var(--shop-copper)]" : "rotate-0 text-[var(--shop-soft)]"
+            expanded
+              ? "rotate-180 text-[var(--shop-copper)]"
+              : "rotate-0 text-[var(--shop-soft)]"
           }`}
         >
           <ChevronDownIcon className="size-3" />
@@ -1414,12 +1511,14 @@ function DesktopFilterIsland({
             </IslandAccordion>
             <IslandAccordion title="سایز">
               <SizeSelector
+                options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </IslandAccordion>
             <IslandAccordion title="رنگ" defaultOpen>
               <ColorSelector
+                options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
@@ -1912,11 +2011,21 @@ function ProductCard({
         },
       ];
 
-  const colors = (product.colors ?? []).map(getColorMeta);
+  const colorMetaMap = useMemo(
+    () =>
+      new Map((product.colorSwatches ?? []).map((color) => [color.id, color])),
+    [product.colorSwatches],
+  );
+  const colors = (product.colors ?? []).map((colorId) =>
+    getColorMeta(colorId, colorMetaMap),
+  );
+  const sizeOptions =
+    product.sizeOptions ??
+    (product.sizes ?? []).map((size) => ({ id: size, label: size }));
 
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const [selColorId, setSelColorId] = useState(colors[0]?.id ?? "");
-  const [selSize, setSelSize] = useState("");
+  const [selSizeId, setSelSizeId] = useState("");
   const [hoverOpen, setHoverOpen] = useState(false);
   const [lockedOpen, setLockedOpen] = useState(false);
   const [favorite, setFavorite] = useState(false);
@@ -1934,7 +2043,7 @@ function ProductCard({
     (activeImgIdx - 1 + productImages.length) % productImages.length;
   const nextIdx = (activeImgIdx + 1) % productImages.length;
   const prevImage = productImages[prevIdx] ?? activeImage;
-  const curPreviewImage = productImages[activeImgIdx] ?? activeImage;
+  const curPreviewImage = activeImage;
   const nextImage = productImages[nextIdx] ?? activeImage;
 
   const canCycle = productImages.length > 1;
@@ -2207,7 +2316,7 @@ function ProductCard({
     });
   }
   async function addToBag() {
-    if (product.sizes?.length && !selSize) {
+    if (sizeOptions.length && !selSizeId) {
       setLockedOpen(true);
       toast.info("سایز را انتخاب کنید", {
         description: "قبل از افزودن محصول به سبد، یک سایز انتخاب کنید.",
@@ -2223,7 +2332,12 @@ function ProductCard({
         description: [
           product.title,
           selectedColor?.label,
-          selSize ? `سایز ${selSize}` : undefined,
+          selSizeId
+            ? `سایز ${
+                sizeOptions.find((size) => size.id === selSizeId)?.label ??
+                selSizeId
+              }`
+            : undefined,
         ]
           .filter(Boolean)
           .join(" — "),
@@ -2477,6 +2591,7 @@ function ProductCard({
             <div className="absolute inset-0 overflow-hidden">
               <div
                 ref={previewTrackRef}
+                dir="ltr"
                 style={{ transform: "translate3d(-100%, 0, 0)" }}
                 className="absolute inset-0 flex [backface-visibility:hidden]"
               >
@@ -2553,7 +2668,7 @@ function ProductCard({
                   onClick={() => animateSlide(-1)}
                   compact={false}
                 >
-                  <ArrowLeftIcon />
+                  <ArrowRightSmallIcon />
                 </GlassIconButton>
                 <GlassIconButton
                   label="Next image"
@@ -2561,7 +2676,7 @@ function ProductCard({
                   onClick={() => animateSlide(1)}
                   compact={false}
                 >
-                  <ArrowRightSmallIcon />
+                  <ArrowLeftIcon />
                 </GlassIconButton>
                 <button
                   type="button"
@@ -2611,7 +2726,7 @@ function ProductCard({
                   onClick={() => animateSlide(-1)}
                   compact={compact}
                 >
-                  <ArrowLeftIcon />
+                  <ArrowRightSmallIcon />
                 </GlassIconButton>
                 <GlassIconButton
                   label="Next image"
@@ -2619,7 +2734,7 @@ function ProductCard({
                   onClick={() => animateSlide(1)}
                   compact={compact}
                 >
-                  <ArrowRightSmallIcon />
+                  <ArrowLeftIcon />
                 </GlassIconButton>
                 <button
                   type="button"
@@ -2655,7 +2770,7 @@ function ProductCard({
                         key={color.id}
                         type="button"
                         tabIndex={hiddenTab}
-                        aria-label={`Select ${color.label}`}
+                        aria-label={`انتخاب رنگ ${color.label}`}
                         aria-pressed={active}
                         onClick={(e) => {
                           selectColor(color.id, ci);
@@ -2683,23 +2798,25 @@ function ProductCard({
                   })}
                 </GlassOptionRail>
               )}
-              {product.sizes && product.sizes.length > 0 && (
+              {sizeOptions.length > 0 && (
                 <GlassOptionRail
                   label="سایز"
                   compact={compact}
-                  selectedLabel={selSize || undefined}
+                  selectedLabel={
+                    sizeOptions.find((size) => size.id === selSizeId)?.label
+                  }
                 >
-                  {product.sizes.map((size) => {
-                    const active = selSize === size;
+                  {sizeOptions.map((size) => {
+                    const active = selSizeId === size.id;
                     return (
                       <button
-                        key={size}
+                        key={size.id}
                         type="button"
                         tabIndex={hiddenTab}
-                        aria-label={`Select size ${size}`}
+                        aria-label={`انتخاب سایز ${size.label}`}
                         aria-pressed={active}
                         onClick={(e) => {
-                          setSelSize(size);
+                          setSelSizeId(size.id);
                           centerOption(e.currentTarget);
                         }}
                         className={`shrink-0 snap-center border font-semibold transition-[background-color,border-color,color] duration-150 ${
@@ -2712,7 +2829,7 @@ function ProductCard({
                             : "border-white/14 text-white/50 hover:border-white/42 hover:text-white"
                         }`}
                       >
-                        {size}
+                        {size.label}
                       </button>
                     );
                   })}
@@ -2966,8 +3083,10 @@ function MobileFilters({
   setSort,
   selectedSizes,
   setSelectedSizes,
+  sizeOptions,
   selectedColors,
   setSelectedColors,
+  colorOptions,
   selectedMaterials,
   setSelectedMaterials,
   maxPrice,
@@ -2985,8 +3104,10 @@ function MobileFilters({
   setSort: (v: SortOption) => void;
   selectedSizes: string[];
   setSelectedSizes: (v: string[]) => void;
+  sizeOptions: ShopSizeOption[];
   selectedColors: string[];
   setSelectedColors: (v: string[]) => void;
+  colorOptions: ShopColorOption[];
   selectedMaterials: string[];
   setSelectedMaterials: (v: string[]) => void;
   maxPrice: number;
@@ -3093,12 +3214,14 @@ function MobileFilters({
             </MobileFilterBlock>
             <MobileFilterBlock title="سایز">
               <SizeSelector
+                options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </MobileFilterBlock>
             <MobileFilterBlock title="رنگ" defaultOpen>
               <ColorSelector
+                options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
@@ -3199,14 +3322,19 @@ function MobileFilterBlock({
    ═══════════════════════════════════════════════════════════ */
 
 function SizeSelector({
+  options,
   values,
   onChange,
   dark = false,
 }: {
+  options?: ShopSizeOption[];
   values: string[];
   onChange: (v: string[]) => void;
   dark?: boolean;
 }) {
+  const items =
+    options?.length ? options : SIZE_OPTIONS.map((size) => ({ id: size, label: size }));
+
   function toggle(v: string) {
     onChange(
       values.includes(v) ? values.filter((i) => i !== v) : [...values, v],
@@ -3214,14 +3342,14 @@ function SizeSelector({
   }
   return (
     <div className="grid grid-cols-4 gap-2">
-      {SIZE_OPTIONS.map((size) => {
-        const sel = values.includes(size);
+      {items.map((size) => {
+        const sel = values.includes(size.id);
         return (
           <button
-            key={size}
+            key={size.id}
             type="button"
             aria-pressed={sel}
-            onClick={() => toggle(size)}
+            onClick={() => toggle(size.id)}
             className={`min-h-9 border text-[8px] font-semibold transition-[background-color,border-color,color] ${
               dark
                 ? sel
@@ -3232,7 +3360,7 @@ function SizeSelector({
                   : "border-[var(--shop-border)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
             }`}
           >
-            {size}
+            {size.label}
           </button>
         );
       })}
@@ -3241,14 +3369,18 @@ function SizeSelector({
 }
 
 function ColorSelector({
+  options,
   values,
   onChange,
   dark = false,
 }: {
+  options?: ShopColorOption[];
   values: string[];
   onChange: (v: string[]) => void;
   dark?: boolean;
 }) {
+  const items = options?.length ? options : COLOR_OPTIONS;
+
   function toggle(v: string) {
     onChange(
       values.includes(v) ? values.filter((i) => i !== v) : [...values, v],
@@ -3256,7 +3388,7 @@ function ColorSelector({
   }
   return (
     <div className="flex flex-wrap gap-2.5">
-      {COLOR_OPTIONS.map((color) => {
+      {items.map((color) => {
         const sel = values.includes(color.id);
         return (
           <button

@@ -212,6 +212,32 @@ export class CatalogService {
       }
     }
 
+    const colorIds = Array.isArray(input.colorIds)
+      ? input.colorIds.map(String)
+      : [];
+    if (input.status !== "archived" && colorIds.length === 0) {
+      badRequest("At least one product color is required");
+    }
+    if (colorIds.length > 0) {
+      const colorCount = await Color.countDocuments({ _id: { $in: colorIds } });
+      if (colorCount !== new Set(colorIds).size) {
+        badRequest("One or more product colors do not exist");
+      }
+    }
+
+    const sizeIds = Array.isArray(input.sizeIds)
+      ? input.sizeIds.map(String)
+      : [];
+    if (input.status !== "archived" && sizeIds.length === 0) {
+      badRequest("At least one product size is required");
+    }
+    if (sizeIds.length > 0) {
+      const sizeCount = await Size.countDocuments({ _id: { $in: sizeIds } });
+      if (sizeCount !== new Set(sizeIds).size) {
+        badRequest("One or more product sizes do not exist");
+      }
+    }
+
     const imageIds = new Set<string>();
     if (input.primaryImageId) imageIds.add(String(input.primaryImageId));
     if (Array.isArray(input.imageIds)) {

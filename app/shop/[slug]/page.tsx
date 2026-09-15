@@ -1,9 +1,5 @@
-import { ProductDetailPage } from "@/components/static/Shop/Product/ProductDetailPage";
-import {
-  getShopProductDetailBySlug,
-  getShopProductStaticParams,
-} from "@/data/fake-product-detail";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { ProductDetailClient } from "@/components/static/Shop/Product/ProductDetailClient";
 
 type ProductPageProps = {
   params: Promise<{
@@ -14,15 +10,20 @@ type ProductPageProps = {
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
 
-  const product = getShopProductDetailBySlug(slug);
-
-  if (!product) {
-    notFound();
-  }
-
-  return <ProductDetailPage product={product} />;
+  return <ProductDetailClient slug={slug} />;
 }
 
 export function generateStaticParams() {
-  return getShopProductStaticParams();
+  return [];
+}
+
+export async function generateMetadata({
+  params,
+}: ProductPageProps): Promise<Metadata> {
+  const { slug } = await params;
+
+  return {
+    title: `${decodeURIComponent(slug)} | Najibzadeh`,
+    description: "جزئیات محصول فروشگاه نجیب‌زاده.",
+  };
 }

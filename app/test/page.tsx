@@ -3,15 +3,18 @@
 import { CustomInput } from "@/components/ui/CustomInput";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { useToast } from "@/components/ui/CustomToast";
+import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import { useState } from "react";
 
 const page = () => {
   const [name, setName] = useState("");
   const toast = useToast();
+  const loading = true;
   return (
     <>
       {" "}
       <div className="py-30">
+        <BrandSketchLoader open label="در حال آماده‌سازی صفحه" />{" "}
         <CustomInput
           label="Full Name"
           name="fullName"
@@ -103,7 +106,6 @@ const page = () => {
           value="client@example.com"
           success="Email address verified."
         />
-
         <CustomSelect
           label="Preferred Time"
           tone="light"
@@ -128,7 +130,6 @@ const page = () => {
             },
           ]}
         />
-
         <CustomSelect
           label="Selected Country"
           readOnly
@@ -248,7 +249,6 @@ const page = () => {
         >
           Error
         </button>
-
         <button
           onClick={() =>
             toast.info("Your appointment is pending", {
@@ -258,7 +258,6 @@ const page = () => {
         >
           Info
         </button>
-
         <button
           onClick={() =>
             toast.warning("Only one item remaining", {
@@ -268,7 +267,6 @@ const page = () => {
         >
           Warning
         </button>
-
         <button onClick={() => toast.loading("Updating your bag...")}>
           Loading
         </button>

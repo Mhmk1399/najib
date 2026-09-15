@@ -75,6 +75,8 @@ export type RelatedProductItem = {
 
   price: number;
 
+  currency?: string;
+
   image: string;
 
   imageAlt?: string;
@@ -253,12 +255,12 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
   async function addToBag() {
     if (product.sizes?.length && !selectedSize) {
-      setSizeError("Please select your size.");
+      setSizeError("لطفاً سایز را انتخاب کنید.");
 
       setMobileSheetExpanded(true);
 
-      toast.error("Select your size", {
-        description: "Choose a size before adding this piece to your bag.",
+      toast.error("سایز را انتخاب کنید", {
+        description: "قبل از افزودن محصول به سبد خرید، یک سایز انتخاب کنید.",
       });
 
       return;
@@ -285,8 +287,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
     setAddingToBag(false);
 
-    toast.success("Added to your bag", {
-      description: `${product.name}${selectedSize ? ` · ${selectedSize}` : ""}`,
+    toast.success("به سبد خرید اضافه شد", {
+      description: `${product.name}${selectedSize ? ` - ${selectedSize}` : ""}`,
     });
   }
 
@@ -299,7 +301,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
     setFavorite(next);
 
-    toast.info(next ? "Saved to your wishlist" : "Removed from wishlist");
+    toast.info(next ? "به علاقه‌مندی‌ها اضافه شد" : "از علاقه‌مندی‌ها حذف شد");
   }
 
   /* ------------------------------------------------------------------------
@@ -322,7 +324,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
       await navigator.clipboard.writeText(url);
 
-      toast.success("Link copied");
+      toast.success("لینک کپی شد");
     } catch {
       /*
        * Share cancel هم ممکن است اینجا بیاید.
@@ -332,7 +334,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
   return (
     <main
-      dir="ltr"
+      dir="rtl"
       style={themeVars}
       className="
         min-h-screen
@@ -374,6 +376,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
           lg:grid
           lg:grid-cols-[minmax(0,1.17fr)_minmax(430px,0.83fr)]
+          lg:[direction:ltr]
         "
       >
         {/* =============================================================
@@ -391,6 +394,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
         ============================================================== */}
 
         <aside
+          dir="rtl"
           className="
             hidden
 
@@ -544,6 +548,7 @@ function ProductStackGallery({
 }) {
   return (
     <div
+      dir="ltr"
       className="
         min-w-0
 
@@ -554,7 +559,7 @@ function ProductStackGallery({
         <button
           key={image.id}
           type="button"
-          aria-label={`View ${productName} image ${index + 1}`}
+          aria-label={`مشاهده تصویر ${new Intl.NumberFormat("fa-IR").format(index + 1)} ${productName}`}
           onClick={() => onZoom(index)}
           className="
               group
@@ -740,6 +745,7 @@ function ProductPurchasePanel({
 }: PurchasePanelProps) {
   return (
     <div
+      dir="rtl"
       className="
         mx-auto
 
@@ -747,43 +753,7 @@ function ProductPurchasePanel({
         max-w-[720px]
       "
     >
-      {/* =====================================================
-          BREADCRUMB
-      ====================================================== */}
-
-      <div
-        className="
-          mb-9
-
-          flex
-
-          items-center
-          gap-2
-
-          text-[6.5px]
-          font-semibold
-
-          uppercase
-          tracking-[0.15em]
-
-          text-black/35
-        "
-      >
-        <Link
-          href="/shop"
-          className="
-            transition-colors
-
-            hover:text-black
-          "
-        >
-          Shop
-        </Link>
-
-        <span>/</span>
-
-        <span>{product.eyebrow ?? "Collection"}</span>
-      </div>
+     
 
       {/* =====================================================
           SKU + ACTIONS
@@ -810,7 +780,7 @@ function ProductPurchasePanel({
             text-[var(--product-muted)]
           "
         >
-          SKU: {product.sku}
+          کد محصول: {product.sku}
         </span>
 
         <div
@@ -820,12 +790,12 @@ function ProductPurchasePanel({
             gap-1
           "
         >
-          <UtilityButton label="Share product" onClick={onShare}>
+          <UtilityButton label="اشتراک‌گذاری محصول" onClick={onShare}>
             <ShareIcon />
           </UtilityButton>
 
           <UtilityButton
-            label={favorite ? "Remove from wishlist" : "Add to wishlist"}
+            label={favorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
             active={favorite}
             onClick={onFavorite}
           >
@@ -930,7 +900,7 @@ function ProductPurchasePanel({
               text-black
             "
           >
-            Color
+            رنگ
           </p>
 
           <p
@@ -942,7 +912,7 @@ function ProductPurchasePanel({
           >
             {selectedColor?.name}
 
-            {selectedColor?.code ? ` · ${selectedColor.code}` : ""}
+            {selectedColor?.code ? ` - ${selectedColor.code}` : ""}
           </p>
         </div>
 
@@ -963,7 +933,7 @@ function ProductPurchasePanel({
               <button
                 key={color.id}
                 type="button"
-                aria-label={`Select ${color.name}`}
+                aria-label={`انتخاب ${color.name}`}
                 aria-pressed={active}
                 onClick={() => onColorChange(color.id)}
                 className={`
@@ -1058,7 +1028,7 @@ function ProductPurchasePanel({
                 text-black
               "
             >
-              Select Your Size
+              انتخاب سایز
             </p>
 
             <button
@@ -1082,14 +1052,14 @@ function ProductPurchasePanel({
                 hover:text-black
               "
             >
-              Size Guide
+              راهنمای سایز
             </button>
           </div>
 
           <CustomSelect
             value={selectedSize}
             options={sizeOptions}
-            placeholder="Choose your size"
+            placeholder="سایز را انتخاب کنید"
             size="lg"
             clearable
             error={sizeError}
@@ -1111,14 +1081,14 @@ function ProductPurchasePanel({
       >
         <Button
           type="button"
-          variant="black"
+          variant="outline"
           size="xl"
           loading={addingToBag}
           disabled={addingToBag}
           fullWidth
           onClick={onAddToBag}
         >
-          Add to Bag
+          افزودن به سبد خرید
         </Button>
       </div>
 
@@ -1146,7 +1116,7 @@ function ProductPurchasePanel({
 
         <span>
           {product.shippingNote ??
-            "Complimentary delivery and returns on selected orders."}
+            "ارسال و پشتیبانی خرید طبق شرایط فروشگاه انجام می‌شود."}
         </span>
       </div>
 
@@ -1177,10 +1147,10 @@ function ProductPurchasePanel({
             items-center
             gap-3
 
-            border-r
+            border-l
             border-[var(--product-border)]
 
-            pr-5
+            pl-5
 
             text-[7px]
             font-semibold
@@ -1196,7 +1166,7 @@ function ProductPurchasePanel({
           "
         >
           <PinIcon />
-          Find in Boutique
+          موجودی بوتیک
         </Link>
 
         <Link
@@ -1209,7 +1179,7 @@ function ProductPurchasePanel({
             items-center
             gap-3
 
-            pl-6
+            pr-6
 
             text-[7px]
             font-semibold
@@ -1225,7 +1195,7 @@ function ProductPurchasePanel({
           "
         >
           <MailIcon />
-          Client Services
+          پشتیبانی مشتریان
         </Link>
       </div>
     </div>
@@ -1477,8 +1447,8 @@ function MobileProductSheet({
         type="button"
         aria-label={
           expanded
-            ? "Collapse product information"
-            : "Expand product information"
+            ? "بستن اطلاعات محصول"
+            : "باز کردن اطلاعات محصول"
         }
         aria-expanded={expanded}
         aria-controls="mobile-product-sheet-options"
@@ -1610,12 +1580,12 @@ function MobileProductSheet({
               {money(product.price, product.currency)}
             </p>
 
-            <UtilityButton label="Share" onClick={onShare}>
+            <UtilityButton label="اشتراک‌گذاری" onClick={onShare}>
               <ShareIcon />
             </UtilityButton>
 
             <UtilityButton
-              label="Wishlist"
+              label="علاقه‌مندی‌ها"
               active={favorite}
               onClick={onFavorite}
             >
@@ -1679,7 +1649,7 @@ function MobileProductSheet({
                     tracking-[0.16em]
                   "
               >
-                Color
+                رنگ
               </span>
 
               <span
@@ -1750,11 +1720,11 @@ function MobileProductSheet({
                   "
               >
                 <CustomSelect
-                  label="Size"
+                  label="سایز"
                   value={selectedSize}
                   options={sizeOptions}
                   size="md"
-                  placeholder="Choose your size"
+                  placeholder="سایز را انتخاب کنید"
                   error={sizeError}
                   onChange={(value) =>
                     onSizeChange(typeof value === "string" ? value : "")
@@ -1781,10 +1751,10 @@ function MobileProductSheet({
               <Link
                 href="/stores"
                 className="
-                    border-r
+                    border-l
                     border-[var(--product-border)]
 
-                    pr-3
+                    pl-3
 
                     text-[6.5px]
                     font-semibold
@@ -1795,13 +1765,13 @@ function MobileProductSheet({
                     text-black/45
                   "
               >
-                Find in Boutique
+                موجودی بوتیک
               </Link>
 
               <Link
                 href="/contact"
                 className="
-                    pl-4
+                    pr-4
 
                     text-[6.5px]
                     font-semibold
@@ -1812,7 +1782,7 @@ function MobileProductSheet({
                     text-black/45
                   "
               >
-                Client Services
+                پشتیبانی مشتریان
               </Link>
             </div>
           </div>
@@ -1838,7 +1808,7 @@ function MobileProductSheet({
             disabled={addingToBag}
             onClick={onAddToBag}
           >
-            Add to Bag
+            افزودن به سبد خرید
           </Button>
         </div>
       </div>
@@ -1857,6 +1827,7 @@ function ProductDetailsSections({
 }) {
   return (
     <section
+      dir="rtl"
       className="
         bg-white
 
@@ -1907,7 +1878,7 @@ function ProductDetailsSections({
               text-[var(--product-copper)]
             "
           >
-            Product Notes
+            یادداشت‌های محصول
             <span
               className="
                 h-px
@@ -1932,9 +1903,9 @@ function ProductDetailsSections({
               text-black
             "
           >
-            The details make
+            جزئیات است که
             <br />
-            the difference.
+            تفاوت می‌سازد.
           </h2>
         </div>
 
@@ -2002,7 +1973,7 @@ function ProductAccordion({
 
           gap-6
 
-          text-left
+          text-right
         "
       >
         <span
@@ -2099,6 +2070,7 @@ function RelatedProductsSection({
 }) {
   return (
     <section
+      dir="rtl"
       className="
         bg-[var(--product-cream)]
 
@@ -2144,7 +2116,7 @@ function RelatedProductsSection({
                 text-[var(--product-copper)]
               "
             >
-              Selected for You
+              انتخاب‌شده برای شما
             </p>
 
             <h2
@@ -2162,7 +2134,7 @@ function RelatedProductsSection({
                 sm:text-[46px]
               "
             >
-              You may also like.
+              شاید بپسندید.
             </h2>
           </div>
 
@@ -2186,7 +2158,7 @@ function RelatedProductsSection({
               sm:block
             "
           >
-            View Collection →
+            مشاهده کالکشن
           </Link>
         </div>
 
@@ -2324,7 +2296,7 @@ function RelatedProductCard({ product }: { product: RelatedProductItem }) {
             text-black
           "
         >
-          {money(product.price)}
+          {money(product.price, product.currency)}
         </p>
       </div>
     </Link>
@@ -2364,7 +2336,7 @@ function ProductZoom({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Product image viewer"
+      aria-label="نمایشگر تصویر محصول"
       className="
         fixed
         inset-0
@@ -2414,7 +2386,7 @@ function ProductZoom({
 
         <button
           type="button"
-          aria-label="Close image viewer"
+          aria-label="بستن نمایشگر تصویر"
           onClick={onClose}
           className="
             grid
@@ -2449,7 +2421,7 @@ function ProductZoom({
       >
         <Image
           src={image.src}
-          alt={image.alt ?? "Product image"}
+          alt={image.alt ?? "تصویر محصول"}
           fill
           priority
           sizes="100vw"
@@ -2463,7 +2435,7 @@ function ProductZoom({
         <>
           <button
             type="button"
-            aria-label="Previous image"
+            aria-label="تصویر قبلی"
             onClick={onPrevious}
             className="
               absolute
@@ -2497,7 +2469,7 @@ function ProductZoom({
 
           <button
             type="button"
-            aria-label="Next image"
+            aria-label="تصویر بعدی"
             onClick={onNext}
             className="
               absolute
@@ -2594,12 +2566,8 @@ function UtilityButton({
    MONEY
 ============================================================================ */
 
-function money(
-  value: number,
-
-  currency = "USD",
-) {
-  return new Intl.NumberFormat("en-US", {
+function money(value: number, currency = "USD") {
+  return new Intl.NumberFormat("fa-IR", {
     style: "currency",
 
     currency,

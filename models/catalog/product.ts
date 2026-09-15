@@ -32,6 +32,14 @@ const productSchema = new Schema(
       index: true,
     },
     collectionIds: [{ type: Schema.Types.ObjectId, ref: "Collection" }],
+    colorIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Color" }],
+      default: [],
+    },
+    sizeIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Size" }],
+      default: [],
+    },
     basePriceMinor: {
       type: Number,
       required: true,
@@ -83,6 +91,8 @@ productSchema.index({ status: 1, _id: -1 });
 productSchema.index({ status: 1, categoryId: 1, _id: -1 });
 productSchema.index({ status: 1, subcategoryId: 1, _id: -1 });
 productSchema.index({ status: 1, collectionIds: 1, _id: -1 });
+productSchema.index({ status: 1, colorIds: 1, _id: -1 });
+productSchema.index({ status: 1, sizeIds: 1, _id: -1 });
 productSchema.index({
   "name.fa": "text",
   "name.en": "text",

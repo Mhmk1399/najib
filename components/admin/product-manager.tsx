@@ -35,6 +35,8 @@ type Product = {
   categoryId: string;
   subcategoryId: string;
   collectionIds: string[];
+  colorIds: string[];
+  sizeIds: string[];
   basePriceMinor: number;
   currency: string;
   status: ProductStatus;
@@ -58,6 +60,9 @@ type ReferenceItem = {
   name: LocalizedText;
   slug?: string;
   categoryId?: string;
+  code?: string;
+  hex?: string;
+  sizeGroupId?: string;
 };
 
 type ImageReference = {
@@ -95,6 +100,8 @@ type ProductFormValues = {
   categoryId: string;
   subcategoryId: string;
   collectionIds: string[];
+  colorIds: string[];
+  sizeIds: string[];
   price: number | null;
   currency: string;
   status: ProductStatus;
@@ -148,6 +155,28 @@ const numberFormatter = new Intl.NumberFormat("fa-IR");
 const emptyReferenceItems: ReferenceItem[] = [];
 const emptyImageReferences: ImageReference[] = [];
 
+function referenceOption(item: ReferenceItem): DataSelectOption {
+  const label = fa(item.name);
+
+  return {
+    value: item._id,
+    label: label === "—" ? (item.code ?? item.slug ?? item._id) : label,
+    description: item.code ?? item.slug,
+    meta: item.hex ? { swatch: item.hex } : undefined,
+  };
+}
+
+function referenceLabel(item: ReferenceItem) {
+  const label = fa(item.name);
+  return label === "—" ? (item.code ?? item.slug ?? item._id) : label;
+}
+
+function joinedReferenceLabels(ids: string[] | undefined, names: Map<string, string>) {
+  return ids?.length
+    ? ids.map((id) => names.get(id) ?? id).join("، ")
+    : "—";
+}
+
 function emptyForm(): ProductFormValues {
   return {
     name: emptyLocalizedText(),
@@ -156,6 +185,8 @@ function emptyForm(): ProductFormValues {
     categoryId: "",
     subcategoryId: "",
     collectionIds: [],
+    colorIds: [],
+    sizeIds: [],
     price: null,
     currency: "USD",
     status: "draft",
@@ -279,6 +310,8 @@ function productToForm(product: Product): ProductFormValues {
     categoryId: product.categoryId,
     subcategoryId: product.subcategoryId,
     collectionIds: product.collectionIds ?? [],
+    colorIds: product.colorIds ?? [],
+    sizeIds: product.sizeIds ?? [],
     price: product.basePriceMinor / 100,
     currency: product.currency,
     status: product.status,
@@ -312,6 +345,8 @@ function formPayload(values: ProductFormValues) {
     categoryId: values.categoryId,
     subcategoryId: values.subcategoryId,
     collectionIds: values.collectionIds,
+    colorIds: values.colorIds,
+    sizeIds: values.sizeIds,
     basePriceMinor: Math.round(Number(values.price ?? 0) * 100),
     currency: values.currency.trim().toUpperCase(),
     status: values.status,
@@ -419,6 +454,8 @@ function validateProduct(values: ProductFormValues) {
   }
   if (!values.categoryId) errors.categoryId = "دسته‌بندی را انتخاب کنید.";
   if (!values.subcategoryId) errors.subcategoryId = "زیردسته را انتخاب کنید.";
+  if (!values.colorIds.length) errors.colorIds = "حداقل یک رنگ انتخاب کنید.";
+  if (!values.sizeIds.length) errors.sizeIds = "حداقل یک سایز انتخاب کنید.";
   if (
     values.price === null ||
     !Number.isFinite(Number(values.price)) ||
@@ -481,12 +518,16 @@ function buildSchema({
   categoryOptions,
   subcategoryOptions,
   collectionOptions,
+  colorOptions,
+  sizeOptions,
   imageOptions,
   imageMap,
 }: {
   categoryOptions: DataSelectOption[];
   subcategoryOptions: DataSelectOption[];
   collectionOptions: DataSelectOption[];
+  colorOptions: DataSelectOption[];
+  sizeOptions: DataSelectOption[];
   imageOptions: DataSelectOption[];
   imageMap: Map<string, ImageReference>;
 }): DynamicFormSchema<ProductFormValues> {
@@ -539,6 +580,26 @@ function buildSchema({
         searchable: true,
         allowSelectAll: true,
         helperText: "محصول می‌تواند در چند کالکشن نمایش داده شود.",
+      },
+      {
+        kind: "multi-select",
+        name: "colorIds",
+        label: "رنگ‌های محصول",
+        options: colorOptions,
+        searchable: true,
+        allowSelectAll: true,
+        required: true,
+        helperText: "همه رنگ‌هایی که این محصول با آن‌ها قابل سفارش است انتخاب کنید.",
+      },
+      {
+        kind: "multi-select",
+        name: "sizeIds",
+        label: "سایزهای محصول",
+        options: sizeOptions,
+        searchable: true,
+        allowSelectAll: true,
+        required: true,
+        helperText: "همه سایزهای قابل ارائه برای این محصول را انتخاب کنید.",
       },
       {
         kind: "input",
@@ -625,6 +686,8 @@ function buildSchema({
           "categoryId",
           "subcategoryId",
           "collectionIds",
+          "colorIds",
+          "sizeIds",
           "price",
           "currency",
           "status",
@@ -752,6 +815,24 @@ export function ProductManager({
     enabled: canRead,
   });
 
+  const colorsQuery = useQuery({
+    queryKey: ["catalog", "colors", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ReferenceItem>>(
+        "/api/catalog/colors?limit=100&isActive=true",
+      ),
+    enabled: canRead,
+  });
+
+  const sizesQuery = useQuery({
+    queryKey: ["catalog", "sizes", "options"],
+    queryFn: () =>
+      fetchJson<ListResponse<ReferenceItem>>(
+        "/api/catalog/sizes?limit=100&isActive=true",
+      ),
+    enabled: canRead,
+  });
+
   const imagesQuery = useQuery({
     queryKey: ["catalog", "product-images", "options"],
     queryFn: () =>
@@ -764,6 +845,8 @@ export function ProductManager({
   const categories = categoriesQuery.data?.items ?? emptyReferenceItems;
   const subcategories = subcategoriesQuery.data?.items ?? emptyReferenceItems;
   const collections = collectionsQuery.data?.items ?? emptyReferenceItems;
+  const colors = colorsQuery.data?.items ?? emptyReferenceItems;
+  const sizes = sizesQuery.data?.items ?? emptyReferenceItems;
   const images = imagesQuery.data?.items ?? emptyImageReferences;
 
   const categoryNames = useMemo(
@@ -777,6 +860,14 @@ export function ProductManager({
   const collectionNames = useMemo(
     () => new Map(collections.map((item) => [item._id, fa(item.name)])),
     [collections],
+  );
+  const colorNames = useMemo(
+    () => new Map(colors.map((item) => [item._id, fa(item.name)])),
+    [colors],
+  );
+  const sizeNames = useMemo(
+    () => new Map(sizes.map((item) => [item._id, referenceLabel(item)])),
+    [sizes],
   );
   const imageMap = useMemo(
     () => new Map(images.map((image) => [image._id, image])),
@@ -806,13 +897,18 @@ export function ProductManager({
   );
 
   const collectionOptions = useMemo<DataSelectOption[]>(
-    () =>
-      collections.map((collection) => ({
-        value: collection._id,
-        label: fa(collection.name),
-        description: collection.slug,
-      })),
+    () => collections.map(referenceOption),
     [collections],
+  );
+
+  const colorOptions = useMemo<DataSelectOption[]>(
+    () => colors.map(referenceOption),
+    [colors],
+  );
+
+  const sizeOptions = useMemo<DataSelectOption[]>(
+    () => sizes.map(referenceOption),
+    [sizes],
   );
 
   const imageOptions = useMemo<DataSelectOption[]>(
@@ -834,6 +930,8 @@ export function ProductManager({
       queryKey: ["catalog", "subcategories"],
     });
     void queryClient.invalidateQueries({ queryKey: ["catalog", "collections"] });
+    void queryClient.invalidateQueries({ queryKey: ["catalog", "colors"] });
+    void queryClient.invalidateQueries({ queryKey: ["catalog", "sizes"] });
   }, [queryClient]);
 
   const schema = useMemo(
@@ -842,14 +940,18 @@ export function ProductManager({
         categoryOptions,
         subcategoryOptions,
         collectionOptions,
+        colorOptions,
+        sizeOptions,
         imageOptions,
         imageMap,
       }),
     [
       categoryOptions,
       collectionOptions,
+      colorOptions,
       imageMap,
       imageOptions,
+      sizeOptions,
       subcategoryOptions,
     ],
   );
@@ -921,11 +1023,21 @@ export function ProductManager({
         minWidth: 220,
         defaultHidden: true,
         cell: ({ record }) =>
-          record.collectionIds?.length
-            ? record.collectionIds
-                .map((id) => collectionNames.get(id) ?? id)
-                .join("، ")
-            : "—",
+          joinedReferenceLabels(record.collectionIds, collectionNames),
+        mobile: { hidden: true },
+      },
+      {
+        id: "colors",
+        label: "رنگ‌ها",
+        minWidth: 180,
+        cell: ({ record }) => joinedReferenceLabels(record.colorIds, colorNames),
+        mobile: { hidden: true },
+      },
+      {
+        id: "sizes",
+        label: "سایزها",
+        minWidth: 180,
+        cell: ({ record }) => joinedReferenceLabels(record.sizeIds, sizeNames),
         mobile: { hidden: true },
       },
       {
@@ -938,7 +1050,14 @@ export function ProductManager({
         mobile: { hidden: true },
       },
     ],
-    [categoryNames, collectionNames, imageMap, subcategoryNames],
+    [
+      categoryNames,
+      collectionNames,
+      colorNames,
+      imageMap,
+      sizeNames,
+      subcategoryNames,
+    ],
   );
 
   const filters = useMemo<DynamicFilterDefinition<ProductFilters, Product>[]>(
@@ -1006,7 +1125,7 @@ export function ProductManager({
         tableId="admin-products"
         eyebrow="کاتالوگ محصول"
         title="مدیریت محصولات"
-        description="محصول را از صفر بسازید: متن چندزبانه، جایگاه کاتالوگ، قیمت، وضعیت، تصویر اصلی و گالری."
+        description="محصول را از صفر بسازید: متن چندزبانه، جایگاه کاتالوگ، رنگ، سایز، قیمت، وضعیت، تصویر اصلی و گالری."
         source={{
           queryKey: ["catalog", "products"],
           fetchPage: async ({
@@ -1141,6 +1260,18 @@ export function ProductManager({
                   formatPrice(record.basePriceMinor, record.currency),
               },
               {
+                id: "colors",
+                label: "رنگ‌ها",
+                render: ({ record }) =>
+                  joinedReferenceLabels(record.colorIds, colorNames),
+              },
+              {
+                id: "sizes",
+                label: "سایزها",
+                render: ({ record }) =>
+                  joinedReferenceLabels(record.sizeIds, sizeNames),
+              },
+              {
                 id: "status",
                 label: "وضعیت",
                 render: ({ record }) => <StatusBadge status={record.status} />,
@@ -1192,7 +1323,14 @@ export function ProductManager({
               {
                 id: "commerce",
                 title: "فروش",
-                fieldIds: ["price", "status", "primaryImage", "gallery"],
+                fieldIds: [
+                  "price",
+                  "colors",
+                  "sizes",
+                  "status",
+                  "primaryImage",
+                  "gallery",
+                ],
               },
               {
                 id: "content",
