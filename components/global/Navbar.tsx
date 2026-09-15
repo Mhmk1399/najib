@@ -134,37 +134,37 @@ function getClampedScrollY(scrollY: number) {
 
 const QUICK_LINKS: QuickLink[] = [
   {
-    label: "Journal",
+    label: "وبلاگ",
     href: "/journal",
     icon: <JournalIcon />,
   },
 
   {
-    label: "Our Story",
+    label: "داستان ما",
     href: "/our-story",
     icon: <StoryIcon />,
   },
 
   {
-    label: "About",
+    label: "درباره ما",
     href: "/about",
     icon: <AboutIcon />,
   },
 
   {
-    label: "Contact",
+    label: "تماس با ما",
     href: "/contact",
     icon: <ContactIcon />,
   },
 
   {
-    label: "Shop",
+    label: "فروشگاه",
     href: "/shop",
     icon: <ShopIcon />,
   },
 
   {
-    label: "Profile",
+    label: "پروفایل",
     href: "/profile",
     icon: <ProfileIcon />,
   },
@@ -1030,7 +1030,7 @@ export default function Navbar({
         dir="ltr"
         style={{ fontFamily: fontTokens.english }}
         className={cx(
-          "fixed inset-x-0 top-0 z-[1000]",
+          "fixed inset-x-0 top-0 z-[100000]",
           "h-[70px] md:h-[78px]",
           "border-b",
           "transition-[background-color,border-color,box-shadow,color,backdrop-filter]",
@@ -1384,17 +1384,17 @@ export default function Navbar({
                   </div>
 
                   <div className="border-t border-black/[0.09] pt-5 dark:border-white/10">
-                    <div className="flex items-center justify-between gap-5">
+                    <div className="flex flex-row-reverse items-center justify-between gap-5">
                       <p
                         className={cx(
                           "text-[8px] font-semibold uppercase tracking-[0.2em]",
                           themeClasses.textSoft,
                         )}
                       >
-                        Quick access
+                        دسترسی سریع
                       </p>
 
-                      <div className="flex flex-wrap justify-end gap-2">
+                      <div className="flex flex-wrap justify-start gap-2">
                         {QUICK_LINKS.map((item) => (
                           <QuickAccessLink
                             key={item.href}
@@ -1910,7 +1910,7 @@ function QuickAccessLink({
     <Button
       href={href}
       onClick={onClick}
-      variant="outline"
+      variant="cream"
       size="sm"
       className="!min-h-8 !px-3 !text-[7px] !tracking-[0.13em]"
     >
