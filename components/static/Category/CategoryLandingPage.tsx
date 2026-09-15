@@ -22,35 +22,43 @@ type CategoryLandingPageProps = {
   data: CategoryPageData;
 };
 
+const CATEGORY_THEME_VARS = {
+  "--category-white": brandColors.white.hex,
+  "--category-black": "#0B0B0B",
+  "--category-black-rgb": "11 11 11",
+  "--category-cream": lightTokens.surfaceBrand,
+  "--category-muted": lightTokens.textMuted,
+  "--category-border": lightTokens.border,
+  "--category-copper": brandColors.copper.hex,
+} as CSSProperties;
+
+function RtlArrowIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-grid size-4 shrink-0 place-items-center [&>svg]:rotate-180"
+    >
+      <ArrowRightIcon />
+    </span>
+  );
+}
+
 /* ==========================================================================
    PAGE
 ============================================================================ */
 
 export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
-  const themeVars = {
-    "--category-white": brandColors.white.hex,
-
-    "--category-black": "#0B0B0B",
-
-    "--category-black-rgb": "11 11 11",
-
-    "--category-cream": lightTokens.surfaceBrand,
-
-    "--category-muted": lightTokens.textMuted,
-
-    "--category-border": lightTokens.border,
-
-    "--category-copper": brandColors.copper.hex,
-  } as CSSProperties;
-
   return (
     <main
-      style={themeVars}
+      dir="rtl"
+      lang="fa"
+      style={CATEGORY_THEME_VARS}
       className="
         w-full
         overflow-hidden
 
         bg-white
+        text-right
         text-[var(--category-black)]
       "
     >
@@ -99,6 +107,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
   return (
     <section
       ref={ref}
+      aria-labelledby="category-hero-title"
       style={
         {
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",
@@ -142,7 +151,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
       />
 
       {/* =====================================================
-          DESKTOP LEFT GRADIENT
+          DESKTOP RTL GRADIENT
       ====================================================== */}
 
       <div
@@ -154,7 +163,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
+          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.06)_0%,rgb(var(--category-black-rgb)/0.12)_38%,rgb(var(--category-black-rgb)/0.88)_100%)]
         "
@@ -202,17 +211,25 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
           md:items-center
           md:px-[7vw]
           md:pb-0
+
+          text-right
         "
       >
         <div
           className={`
+            ml-auto
             w-full
             max-w-[680px]
+
+            text-right
 
             transition-[opacity,transform]
             duration-[900ms]
 
             ease-[cubic-bezier(0.22,1,0.36,1)]
+
+            motion-reduce:transform-none
+            motion-reduce:transition-none
 
             ${
               revealed
@@ -227,8 +244,6 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
             }
           `}
         >
-     
-
           {/* =================================================
               EYEBROW
           ================================================= */}
@@ -271,6 +286,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
           ================================================= */}
 
           <h1
+            id="category-hero-title"
             className="
               whitespace-pre-line
 
@@ -332,7 +348,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
               href={hero.action.href}
               variant="black"
               size="lg"
-              icon={<ArrowRightIcon />}
+              icon={<RtlArrowIcon />}
               fullWidth
             >
               {hero.action.label}
@@ -362,14 +378,12 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
           href={hero.action.href}
           variant="black"
           size="lg"
-          icon={<ArrowRightIcon />}
+          icon={<RtlArrowIcon />}
           fullWidth
         >
           {hero.action.label}
         </Button>
       </div>
-
-    
     </section>
   );
 }
@@ -383,6 +397,7 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
 
   return (
     <section
+      aria-label={intro.title || data.name}
       className="
         w-full
 
@@ -397,14 +412,15 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
 
           max-w-[1000px]
 
+          w-full
           flex-col
-          items-center
+          items-start
 
           px-6
 
           py-16
 
-          text-center
+          text-right
 
           sm:px-8
           sm:py-20
@@ -419,7 +435,6 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
 
               flex
               items-center
-              justify-center
               gap-3
 
               text-[7px]
@@ -501,6 +516,7 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
 function CategoryCollections({ data }: { data: CategoryPageData }) {
   return (
     <section
+      aria-labelledby="category-subcategories-heading"
       className="
         w-full
 
@@ -538,6 +554,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
         "
       >
         <h2
+          id="category-subcategories-heading"
           className="
             text-[8px]
             font-semibold
@@ -573,6 +590,11 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
 
             hover:text-black
 
+            focus-visible:outline-none
+            focus-visible:ring-1
+            focus-visible:ring-black/60
+            focus-visible:ring-offset-4
+
             sm:flex
           "
         >
@@ -580,10 +602,10 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
           <span
             className="
               transition-transform
-              group-hover:translate-x-1
+              group-hover:-translate-x-1
             "
           >
-            →
+            <span aria-hidden="true">&larr;</span>
           </span>
         </Link>
       </div>
@@ -592,7 +614,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
           GRID
       ====================================================== */}
 
-      <div
+      <ul
         className="
           mx-auto
 
@@ -600,11 +622,15 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
 
           max-w-[1600px]
 
+          m-0
+          list-none
           grid-cols-1
 
           gap-px
 
           bg-black/10
+
+          p-0
 
           sm:grid-cols-2
 
@@ -612,9 +638,11 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
         "
       >
         {data.subcategories.map((category, index) => (
-          <CategoryCard key={category.id} category={category} index={index} />
+          <li key={category.id} className="min-w-0">
+            <CategoryCard category={category} index={index} />
+          </li>
         ))}
-      </div>
+      </ul>
 
       {/* =====================================================
           MOBILE VIEW ALL
@@ -632,7 +660,7 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
           href={`/shop?category=${data.slug}`}
           variant="black"
           size="lg"
-          icon={<ArrowRightIcon />}
+          icon={<RtlArrowIcon />}
           fullWidth
         >
           مشاهده همه {data.name}
@@ -659,6 +687,8 @@ function CategoryCard({
       href={category.href}
       className="
         group
+        block
+        h-full
 
         relative
         isolate
@@ -672,6 +702,11 @@ function CategoryCard({
         sm:min-h-[500px]
 
         lg:min-h-[560px]
+
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-inset
+        focus-visible:ring-white
       "
     >
       <Image
@@ -698,6 +733,9 @@ function CategoryCard({
           ease-[cubic-bezier(0.22,1,0.36,1)]
 
           group-hover:scale-[1.035]
+
+          motion-reduce:transform-none
+          motion-reduce:transition-none
         "
       />
 
@@ -723,6 +761,7 @@ function CategoryCard({
       {/* index */}
 
       <span
+        aria-hidden="true"
         className="
           absolute
 
@@ -797,7 +836,7 @@ function CategoryCard({
             "
           >
             مشاهده مجموعه
-            <span>→</span>
+            <span aria-hidden="true">&larr;</span>
           </span>
         </div>
 
@@ -816,14 +855,14 @@ function CategoryCard({
 
             transition-[background-color,color,border-color,transform]
 
-            group-hover:translate-x-1
+            group-hover:-translate-x-1
 
             group-hover:border-white
             group-hover:bg-white
             group-hover:text-black
           "
         >
-          →
+          <span aria-hidden="true">&larr;</span>
         </span>
       </div>
     </Link>
@@ -839,6 +878,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
 
   return (
     <section
+      aria-labelledby="category-feature-title"
       style={
         {
           "--feature-mobile-position": feature.mobileImagePosition ?? "center",
@@ -886,7 +926,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
+          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.05)_0%,rgb(var(--category-black-rgb)/0.20)_40%,rgb(var(--category-black-rgb)/0.90)_100%)]
         "
@@ -912,11 +952,15 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
 
           md:items-center
           md:px-[7vw]
+
+          text-right
         "
       >
         <div
           className="
+            ml-auto
             max-w-[620px]
+            text-right
           "
         >
           {feature.eyebrow && (
@@ -951,6 +995,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
           )}
 
           <h2
+            id="category-feature-title"
             className="
               flex
               flex-col
@@ -1016,6 +1061,7 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
 
   return (
     <section
+      aria-labelledby="category-final-cta-title"
       className="
         bg-[var(--category-cream)]
 
@@ -1055,6 +1101,8 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
             flex-col
 
             justify-center
+
+            text-right
 
             px-7
             py-10
@@ -1097,6 +1145,7 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
           )}
 
           <h2
+            id="category-final-cta-title"
             className="
               max-w-[540px]
 
@@ -1143,7 +1192,7 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
               href={cta.action.href}
               variant="black"
               size="lg"
-              icon={<ArrowRightIcon />}
+              icon={<RtlArrowIcon />}
               fullWidth
             >
               {cta.action.label}

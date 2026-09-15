@@ -18,31 +18,41 @@ type SubcategoryLandingPageProps = {
   data: SubcategoryPageData;
 };
 
+const SUBCATEGORY_THEME_VARS = {
+  "--category-white": brandColors.white.hex,
+  "--category-black": "#0B0B0B",
+  "--category-black-rgb": "11 11 11",
+  "--category-cream": lightTokens.surfaceBrand,
+  "--category-muted": lightTokens.textMuted,
+  "--category-border": lightTokens.border,
+  "--category-copper": brandColors.copper.hex,
+} as CSSProperties;
+
+const FA_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+
+function RtlArrowIcon() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-grid size-4 shrink-0 place-items-center [&>svg]:rotate-180"
+    >
+      <ArrowRightIcon />
+    </span>
+  );
+}
+
 export function SubcategoryLandingPage({ data }: SubcategoryLandingPageProps) {
-  const themeVars = {
-    "--category-white": brandColors.white.hex,
-
-    "--category-black": "#0B0B0B",
-
-    "--category-black-rgb": "11 11 11",
-
-    "--category-cream": lightTokens.surfaceBrand,
-
-    "--category-muted": lightTokens.textMuted,
-
-    "--category-border": lightTokens.border,
-
-    "--category-copper": brandColors.copper.hex,
-  } as CSSProperties;
-
   return (
     <main
-      style={themeVars}
+      dir="rtl"
+      lang="fa"
+      style={SUBCATEGORY_THEME_VARS}
       className="
         w-full
         overflow-hidden
 
         bg-white
+        text-right
         text-[var(--category-black)]
       "
     >
@@ -67,6 +77,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
   return (
     <section
       ref={ref}
+      aria-labelledby="subcategory-hero-title"
       style={
         {
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",
@@ -114,7 +125,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
+          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.06)_0%,rgb(var(--category-black-rgb)/0.12)_38%,rgb(var(--category-black-rgb)/0.88)_100%)]
         "
@@ -154,17 +165,25 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
           md:items-center
           md:px-[7vw]
           md:pb-0
+
+          text-right
         "
       >
         <div
           className={`
+            ml-auto
             w-full
             max-w-[680px]
+
+            text-right
 
             transition-[opacity,transform]
             duration-[900ms]
 
             ease-[cubic-bezier(0.22,1,0.36,1)]
+
+            motion-reduce:transform-none
+            motion-reduce:transition-none
 
             ${
               revealed
@@ -206,6 +225,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
           )}
 
           <h1
+            id="subcategory-hero-title"
             className="
               whitespace-pre-line
 
@@ -248,7 +268,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
               href={hero.action.href}
               variant="black"
               size="lg"
-              icon={<ArrowRightIcon />}
+              icon={<RtlArrowIcon />}
               fullWidth
             >
               {hero.action.label}
@@ -274,7 +294,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
           href={hero.action.href}
           variant="black"
           size="lg"
-          icon={<ArrowRightIcon />}
+          icon={<RtlArrowIcon />}
           fullWidth
         >
           {hero.action.label}
@@ -288,7 +308,7 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
   const intro = data.intro;
 
   return (
-    <section className="w-full bg-white">
+    <section aria-label={intro.title || data.name} className="w-full bg-white">
       <div
         className="
           mx-auto
@@ -297,14 +317,15 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
 
           max-w-[1000px]
 
+          w-full
           flex-col
-          items-center
+          items-start
 
           px-6
 
           py-16
 
-          text-center
+          text-right
 
           sm:px-8
           sm:py-20
@@ -319,7 +340,6 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
 
               flex
               items-center
-              justify-center
               gap-3
 
               text-[7px]
@@ -383,6 +403,7 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
 function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
   return (
     <section
+      aria-labelledby="subcategory-products-heading"
       className="
         w-full
 
@@ -417,6 +438,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
       >
         <div>
           <h2
+            id="subcategory-products-heading"
             className="
               text-[8px]
               font-semibold
@@ -431,7 +453,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
           </h2>
 
           <p className="mt-2 text-[9px] text-black/40">
-            {new Intl.NumberFormat("fa-IR").format(data.products.length)} محصول
+            {FA_NUMBER_FORMATTER.format(data.products.length)} محصول
           </p>
         </div>
 
@@ -457,18 +479,23 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
 
             hover:text-black
 
+            focus-visible:outline-none
+            focus-visible:ring-1
+            focus-visible:ring-black/60
+            focus-visible:ring-offset-4
+
             sm:flex
           "
         >
           مشاهده همه
-          <span className="transition-transform group-hover:translate-x-1">
-            -&gt;
+          <span className="transition-transform group-hover:-translate-x-1">
+            <span aria-hidden="true">&larr;</span>
           </span>
         </Link>
       </div>
 
       {data.products.length > 0 ? (
-        <div
+        <ul
           className="
             mx-auto
 
@@ -476,11 +503,15 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
 
             max-w-[1600px]
 
+            m-0
+            list-none
             grid-cols-1
 
             gap-px
 
             bg-black/10
+
+            p-0
 
             sm:grid-cols-2
 
@@ -490,9 +521,11 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
           "
         >
           {data.products.map((product, index) => (
-            <ProductCard key={product.id} index={index} product={product} />
+            <li key={product.id} className="min-w-0">
+              <ProductCard index={index} product={product} />
+            </li>
           ))}
-        </div>
+        </ul>
       ) : (
         <div className="px-6 sm:px-8 lg:px-12">
           <div
@@ -504,15 +537,16 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
               place-items-center
               bg-[var(--category-cream)]
               px-6
-              text-center
+              text-right
             "
           >
             <div>
               <p className="font-serif text-[42px] tracking-[-0.05em]">
                 هنوز محصولی برای این زیردسته ثبت نشده است.
               </p>
-              <p className="mx-auto mt-4 max-w-[420px] text-[10px] leading-[1.8] text-black/45">
-                محصول فعال بسازید و این زیردسته را انتخاب کنید تا همین‌جا نمایش داده شود.
+              <p className="mt-4 max-w-[420px] text-[10px] leading-[1.8] text-black/45">
+                محصول فعال بسازید و این زیردسته را انتخاب کنید تا همین‌جا نمایش
+                داده شود.
               </p>
             </div>
           </div>
@@ -524,7 +558,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
           href={`/shop?category=${data.slug}`}
           variant="black"
           size="lg"
-          icon={<ArrowRightIcon />}
+          icon={<RtlArrowIcon />}
           fullWidth
         >
           مشاهده همه {data.name}
@@ -547,6 +581,8 @@ function ProductCard({
       href={product.href}
       className="
         group
+        block
+        h-full
 
         relative
         isolate
@@ -560,6 +596,13 @@ function ProductCard({
         sm:min-h-[500px]
 
         xl:min-h-[540px]
+
+        text-right
+
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-inset
+        focus-visible:ring-white
       "
     >
       <Image
@@ -587,6 +630,9 @@ function ProductCard({
           ease-[cubic-bezier(0.22,1,0.36,1)]
 
           group-hover:scale-[1.035]
+
+          motion-reduce:transform-none
+          motion-reduce:transition-none
         "
       />
 
@@ -608,6 +654,7 @@ function ProductCard({
       />
 
       <span
+        aria-hidden="true"
         className="
           absolute
 
@@ -659,7 +706,7 @@ function ProductCard({
           lg:p-8
         "
       >
-        <div className="flex items-end justify-between gap-5">
+        <div className="flex items-end justify-between gap-5 text-right">
           <div className="min-w-0">
             <h3
               className="
@@ -756,14 +803,14 @@ function ProductCard({
 
               transition-[background-color,color,border-color,transform]
 
-              group-hover:translate-x-1
+              group-hover:-translate-x-1
 
               group-hover:border-white
               group-hover:bg-white
               group-hover:text-black
             "
           >
-            -&gt;
+            <span aria-hidden="true">&larr;</span>
           </span>
         </div>
       </div>
@@ -776,6 +823,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
 
   return (
     <section
+      aria-labelledby="subcategory-feature-title"
       style={
         {
           "--feature-mobile-position": feature.mobileImagePosition ?? "center",
@@ -823,7 +871,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
+          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.05)_0%,rgb(var(--category-black-rgb)/0.20)_40%,rgb(var(--category-black-rgb)/0.90)_100%)]
         "
@@ -849,9 +897,11 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
 
           md:items-center
           md:px-[7vw]
+
+          text-right
         "
       >
-        <div className="max-w-[620px]">
+        <div className="ml-auto max-w-[620px] text-right">
           {feature.eyebrow && (
             <div
               className="
@@ -877,6 +927,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
           )}
 
           <h2
+            id="subcategory-feature-title"
             className="
               flex
               flex-col
@@ -930,6 +981,7 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
 
   return (
     <section
+      aria-labelledby="subcategory-final-cta-title"
       className="
         bg-[var(--category-cream)]
 
@@ -966,6 +1018,8 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
 
             justify-center
 
+            text-right
+
             px-7
             py-10
 
@@ -1000,6 +1054,7 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
           )}
 
           <h2
+            id="subcategory-final-cta-title"
             className="
               max-w-[540px]
 
@@ -1039,7 +1094,7 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
               href={cta.action.href}
               variant="black"
               size="lg"
-              icon={<ArrowRightIcon />}
+              icon={<RtlArrowIcon />}
               fullWidth
             >
               {cta.action.label}
