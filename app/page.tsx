@@ -71,7 +71,6 @@ export const FAQ_DEMO_ITEMS: FAQItem[] = [
   },
 ];
 
-
 export default async function Page() {
   const categoryShowcaseItems = await getHomeCategoryShowcaseItems();
 
