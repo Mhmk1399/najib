@@ -78,10 +78,9 @@ export function HeroSection() {
             <div className="min-w-0 text-center">
               <h1
                 id="home-hero-title"
-                className="mx-auto max-w-[760px] text-[clamp(2.9rem,12vw,5.1rem)] font-semibold leading-[1.02] tracking-[-0.055em] text-[var(--hero-white)] sm:text-[clamp(3.5rem,9vw,5.8rem)] md:text-[clamp(4.2rem,7vw,6.4rem)] lg:text-[clamp(4.7rem,6vw,6.9rem)]"
+                className="mx-auto max-w-[760px] text-xl md:text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-[var(--hero-white)]  "
               >
-                <span className="block">حضور،</span>
-                <span className="block text-white/94">با دقت دوخته شده.</span>
+                حضور، با دقت دوخته شده
               </h1>
 
               <p className="mx-auto mt-6 max-w-[560px] text-[12px] font-normal leading-7 text-white/66 sm:text-[13px] md:mt-7 md:text-[14px] md:leading-8">
@@ -96,9 +95,7 @@ export function HeroSection() {
                     variant="cream"
                     size="lg"
                     fullWidth
-                    icon={
-                         <ArrowLeftIcon />
-                     }
+                    icon={<ArrowLeftIcon />}
                     iconPosition="right"
                     className="!tracking-normal"
                   >
@@ -112,9 +109,7 @@ export function HeroSection() {
                     variant="outline"
                     size="lg"
                     fullWidth
-                    icon={
-                         <ArrowLeftIcon />
-                     }
+                    icon={<ArrowLeftIcon />}
                     iconPosition="right"
                     className="min-w-0 !border-white/40 !bg-black/15 !text-white !tracking-normal backdrop-blur-[4px] hover:!border-white hover:!bg-white hover:!text-black"
                   >

@@ -254,9 +254,7 @@ function CategoryCard({ category }: { category: CategoryItem }) {
       />
 
       <div className="absolute inset-x-5 bottom-6 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:bottom-8">
-        <span className="text-[9px] font-medium text-white/55 sm:text-[10px]">
-          دسته اصلی
-        </span>
+        
 
         <h3 className="mt-2 text-balance text-[clamp(2.15rem,10vw,3.9rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-[clamp(2.3rem,6vw,4rem)] md:text-[clamp(2.3rem,3.5vw,4rem)]">
           {category.name}
