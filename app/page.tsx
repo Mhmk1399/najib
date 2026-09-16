@@ -13,61 +13,61 @@ import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection"
 export const dynamic = "force-dynamic";
 
 export const FAQ_DEMO_CONTENT = {
-  eyebrow: "Client Information",
-  title: "Questions, considered.",
+  eyebrow: "اطلاعات مشتریان",
+  title: "پاسخ‌هایی برای انتخابی مطمئن.",
   description:
-    "Everything you may want to know about ordering, delivery, returns, private appointments and the care of Najibzadeh pieces.",
+    "هر آنچه درباره سفارش، ارسال، مرجوعی، قرارهای خصوصی و نگهداری از محصولات نجیب‌زاده نیاز دارید.",
 };
 
 export const FAQ_DEMO_ITEMS: FAQItem[] = [
   {
     id: "delivery",
-    question: "How long does delivery take?",
-    answerLabel: "Delivery",
+    question: "ارسال سفارش چقدر زمان می‌برد؟",
+    answerLabel: "ارسال و تحویل",
     answer:
-      "Orders are prepared with care before dispatch. Standard delivery typically takes 2–5 business days after processing, while timing for international orders varies by destination and customs clearance.",
+      "سفارش‌ها پیش از ارسال با دقت آماده می‌شوند. تحویل استاندارد معمولاً پس از آماده‌سازی سفارش بین ۲ تا ۵ روز کاری زمان می‌برد. زمان تحویل سفارش‌های بین‌المللی نیز با توجه به مقصد و فرایندهای گمرکی متفاوت است.",
   },
   {
     id: "returns",
-    question: "Can I return or exchange an item?",
-    answerLabel: "Returns & Exchanges",
+    question: "آیا امکان بازگشت یا تعویض کالا وجود دارد؟",
+    answerLabel: "مرجوعی و تعویض",
     answer:
-      "Eligible pieces may be returned within the stated return window provided they remain unworn, unused and in their original condition with all packaging and tags intact. Final-sale and personalised pieces may be excluded.",
+      "کالاهای واجد شرایط در بازه تعیین‌شده قابل بازگشت یا تعویض هستند؛ مشروط بر اینکه استفاده نشده باشند و همراه با بسته‌بندی، لیبل‌ها و متعلقات اصلی بازگردانده شوند. برخی کالاهای شخصی‌سازی‌شده یا فروش نهایی ممکن است شامل شرایط بازگشت نباشند.",
   },
   {
     id: "appointment",
-    question: "How do I arrange a private appointment?",
-    answerLabel: "Private Client Services",
+    question: "چطور وقت ملاقات خصوصی رزرو کنم؟",
+    answerLabel: "خدمات اختصاصی مشتریان",
     answer:
-      "Private appointments can be requested through the appointments page. Select your preferred location and time, and the client services team can assist with wardrobe selection, sizing and product guidance.",
+      "از طریق صفحه رزرو ملاقات خصوصی می‌توانید زمان و محل موردنظر خود را انتخاب کنید. تیم خدمات مشتریان نجیب‌زاده برای انتخاب استایل، بررسی سایز و راهنمایی درباره محصولات در کنار شما خواهد بود.",
   },
   {
     id: "sizing",
-    question: "How should I choose the correct size?",
-    answerLabel: "Sizing",
+    question: "چطور سایز مناسب را انتخاب کنم؟",
+    answerLabel: "راهنمای سایز",
     answer:
-      "Use the size guide available on each product page as the primary reference. If you are between sizes or need help with a tailored piece, contact client services before ordering for more specific guidance.",
+      "راهنمای سایز هر محصول بهترین مرجع برای انتخاب اولیه است. اگر بین دو سایز هستید یا برای یک قطعه رسمی و خیاطی‌شده به راهنمایی دقیق‌تری نیاز دارید، پیش از ثبت سفارش با خدمات مشتریان تماس بگیرید.",
   },
   {
     id: "fragrance",
-    question: "Can fragrance be shipped internationally?",
-    answerLabel: "Fragrance",
+    question: "آیا عطر به خارج از کشور ارسال می‌شود؟",
+    answerLabel: "ارسال عطر",
     answer:
-      "Fragrance shipping availability depends on destination-specific carrier restrictions for alcohol-based products. Available delivery methods will be shown at checkout when fragrance is present in your bag.",
+      "امکان ارسال عطر به قوانین و محدودیت‌های شرکت‌های حمل‌ونقل در مقصد بستگی دارد، زیرا محصولات عطری معمولاً حاوی ترکیبات الکلی هستند. روش‌های ارسال در دسترس، هنگام تسویه‌حساب و بر اساس مقصد سفارش نمایش داده می‌شوند.",
   },
   {
     id: "care",
-    question: "How should Najibzadeh pieces be cared for?",
-    answerLabel: "Product Care",
+    question: "چطور از محصولات نجیب‌زاده نگهداری کنم؟",
+    answerLabel: "نگهداری محصول",
     answer:
-      "Always follow the care label supplied with the piece. Tailored garments should be rested between wears and professionally cleaned only when necessary. Leather goods and fragrance should be stored away from direct heat, moisture and sunlight.",
+      "همیشه دستورالعمل درج‌شده روی لیبل مراقبت محصول را دنبال کنید. بهتر است پوشاک رسمی بین هر بار استفاده استراحت داشته باشند و فقط در صورت نیاز به‌صورت حرفه‌ای تمیز شوند. محصولات چرمی و عطرها نیز باید دور از گرمای مستقیم، رطوبت و نور خورشید نگهداری شوند.",
   },
   {
     id: "payment",
-    question: "Which payment methods are accepted?",
-    answerLabel: "Payment",
+    question: "چه روش‌های پرداختی پذیرفته می‌شوند؟",
+    answerLabel: "پرداخت",
     answer:
-      "Available payment methods are presented securely during checkout and can vary by market. Your order is confirmed only after the payment has been successfully authorised.",
+      "روش‌های پرداخت قابل استفاده به‌صورت امن در مرحله تسویه‌حساب نمایش داده می‌شوند و ممکن است بسته به بازار یا محل سفارش متفاوت باشند. سفارش پس از تأیید موفق پرداخت نهایی خواهد شد.",
   },
 ];
 
@@ -81,83 +81,38 @@ export default async function Page() {
       <CinematicVideoSection
         videoSrc="/assets/video/videoCinema.mp4"
         posterSrc="/assets/images/p1.webp"
-        eyebrow="The House"
-        title="Crafted with intention."
-        description="A closer look at the details, materials and hands behind the Najibzadeh world."
+        posterAlt="خیاط در حال آماده‌سازی کت نجیب‌زاده"
+        eyebrow="هنر خیاطی"
+        title="جزئیات، تفاوت را می‌سازند."
+        description="هر قطعه با دقت، تجربه و توجه به تناسب ساخته می‌شود؛ از انتخاب پارچه تا آخرین دوخت."
         primaryAction={{
-          label: "Discover Our Story",
+          label: "کشف داستان ما",
           href: "/our-story",
         }}
         secondaryAction={{
-          label: "Explore Categories",
-          href: "/craftsmanship",
+          label: "مشاهده مجموعه",
+          href: "/shop",
         }}
       />
       <WhyChooseUsSection backgroundImage="/assets/images/whyus.webp" />
       <HouseEditorialSection
         imageSrc="/assets/images/p2.webp"
         imageAlt="Najibzadeh tailoring"
-        eyebrow="New Season"
-        title="Tailored for the memorable."
-        description="Timeless tailoring. Distinctive fragrance. Objects made with intention, for a life well-lived."
+        eyebrow="فصل تازه"
+        title="برای لحظه‌هایی که در خاطر می‌مانند."
+        description="خیاطی ماندگار، رایحه‌های متمایز و انتخاب‌هایی سنجیده؛ برای سبک زندگی‌ای که کیفیت را در جزئیات تعریف می‌کند"
         primaryAction={{
-          label: "Explore the Collection",
+          label: "مشاهده مجموعه",
           href: "/collections",
         }}
         secondaryAction={{
-          label: "Discover the House",
+          label: "کشف خانه نجیب‌زاده",
           href: "/our-story",
         }}
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />
-      <ProductEditorialGrid
-        products={[
-          {
-            id: "tailoring",
-            title: "Tailoring",
-            eyebrow: "01 / Collection",
-            href: "/tailoring",
-            image: "/assets/images/p1.webp",
-          },
-          {
-            id: "shoes",
-            title: "Shoes",
-            eyebrow: "02 / Essentials",
-            href: "/shoes",
-            image: "/assets/images/p2.webp",
-          },
-          {
-            id: "fragrance",
-            title: "Fragrance",
-            eyebrow: "03 / Signature",
-            href: "/fragrance",
-            image: "/assets/images/p6.webp",
-          },
-          {
-            id: "knitwear",
-            title: "Knitwear",
-            eyebrow: "04 / Softness",
-            href: "/knitwear",
-            image: "/assets/images/p7.webp",
-          },
-          {
-            id: "leather-goods",
-            title: "Leather Goods",
-            eyebrow: "05 / Craft",
-            href: "/accessories",
-            image: "/assets/images/p8.webp",
-          },
-          {
-            id: "accessories",
-            title: "Accessories",
-            eyebrow: "06 / Details",
-            href: "/accessories",
-            image: "/assets/images/p10.webp",
-            imagePosition: "center",
-          },
-        ]}
-      />
+      <ProductEditorialGrid />
       <FAQ
         eyebrow={FAQ_DEMO_CONTENT.eyebrow}
         title={FAQ_DEMO_CONTENT.title}

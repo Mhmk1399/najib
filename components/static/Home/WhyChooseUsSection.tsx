@@ -3,9 +3,9 @@ import Image from "next/image";
 import { type CSSProperties } from "react";
 
 import { brandColors } from "@/theme/theme-colors";
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
+import { ArrowLeftIcon, Button } from "@/components/ui/Button";
 
-/* ========================================================================== 
+/* ==========================================================================
    TYPES
 ============================================================================ */
 
@@ -40,54 +40,56 @@ type WhyChooseUsSectionProps = {
   className?: string;
 };
 
-/* ========================================================================== 
-   DATA
+/* ==========================================================================
+   DEFAULT CONTENT
 ============================================================================ */
 
 const DEFAULT_FEATURES: WhyChooseFeature[] = [
   {
     id: "quality",
-    title: "Uncompromising Quality",
+    title: "کیفیت بدون مصالحه",
     description:
-      "Exceptional materials carefully selected for their character and durability.",
+      "پارچه‌ها و متریال‌ها با وسواس انتخاب می‌شوند؛ برای کیفیتی که در لمس، فرم و ماندگاری دیده می‌شود.",
     icon: "quality",
   },
   {
     id: "craftsmanship",
-    title: "Considered Craftsmanship",
+    title: "ظرافت در ساخت",
     description:
-      "Traditional techniques refined through time, executed with intent.",
+      "تکنیک‌های اصیل خیاطی با نگاه امروز ترکیب می‌شوند تا هر جزئیات با دقت و هدف شکل بگیرد.",
     icon: "craftsmanship",
   },
   {
     id: "experience",
-    title: "Thoughtful Experience",
+    title: "تجربه‌ای سنجیده",
     description:
-      "From discovery to delivery, every touchpoint is designed around you.",
+      "از نخستین انتخاب تا تحویل نهایی، هر مرحله برای تجربه‌ای آرام، دقیق و شخصی طراحی شده است.",
     icon: "experience",
   },
   {
     id: "responsibility",
-    title: "Responsible Luxury",
-    description: "We choose better materials and mindful processes.",
+    title: "تجمل مسئولانه",
+    description:
+      "انتخاب‌های آگاهانه‌تر در متریال و فرایند تولید، بخشی از تعریف ما از کیفیت ماندگار است.",
     icon: "responsibility",
   },
   {
     id: "exclusive",
-    title: "Exclusive, Not Excessive",
-    description: "Limited quantities. Timeless designs. No unnecessary noise.",
+    title: "خاص، نه اغراق‌آمیز",
+    description:
+      "تعداد محدود، طراحی ماندگار و حضوری بی‌نیاز از هیاهو؛ انتخابی برای کسانی که جزئیات را می‌بینند.",
     icon: "exclusive",
   },
   {
     id: "lasting",
-    title: "Made to Last",
+    title: "ساخته‌شده برای ماندگاری",
     description:
-      "Crafted to be worn, lived in, and remembered for years to come.",
+      "قطعاتی برای پوشیدن، زندگی‌کردن و به‌خاطر سپردن؛ فراتر از یک فصل یا یک روند گذرا.",
     icon: "lasting",
   },
 ];
 
-/* ========================================================================== 
+/* ==========================================================================
    COMPONENT
 ============================================================================ */
 
@@ -95,13 +97,13 @@ export function WhyChooseUsSection({
   backgroundImage = "/assets/images/whyus.webp",
   backgroundImageAlt = "",
   backgroundPosition = "center",
-  eyebrow = "Why Choose Najibzadeh",
-  title = "Beyond fashion.",
-  italicTitle = "A standard of distinction.",
-  description = "Every choice we make is guided by purpose, precision and a belief that true luxury should endure.",
+  eyebrow = "چرا نجیب‌زاده؟",
+  title = "فراتر از پوشش.",
+  italicTitle = "معیاری برای تمایز.",
+  description = "هر انتخاب در نجیب‌زاده از دقت، هدف و باور به کیفیتی می‌آید که باید در گذر زمان معنا پیدا کند.",
   features = DEFAULT_FEATURES,
   action = {
-    label: "Discover Our Story",
+    label: "داستان نجیب‌زاده",
     href: "/our-story",
   },
   className = "",
@@ -118,6 +120,8 @@ export function WhyChooseUsSection({
 
   return (
     <section
+      dir="rtl"
+      lang="fa"
       style={themeVars}
       className={`relative isolate w-full overflow-hidden bg-[var(--why-black)] text-white ${className}`}
     >
@@ -132,55 +136,71 @@ export function WhyChooseUsSection({
         className="-z-30 object-cover"
       />
 
+      {/* Balanced contrast for the centered Persian composition. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(8,8,8,0.36)_0%,rgba(8,8,8,0.50)_42%,rgba(8,8,8,0.88)_100%)]"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(7,7,7,0.36)_0%,rgba(7,7,7,0.48)_42%,rgba(7,7,7,0.90)_100%)]"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_center,transparent_18%,rgba(0,0,0,0.30)_110%)]"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(6,6,6,0.15)_0%,rgba(6,6,6,0.18)_42%,rgba(6,6,6,0.90)_100%)]"
       />
 
-      <div className="mx-auto flex w-full max-w-[1440px] flex-col items-center px-5 py-20 text-center sm:px-8 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
-        <header className="flex max-w-[760px] flex-col items-center">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.12)_42%,rgba(0,0,0,0.42)_115%)]"
+      />
+
+      <div className="mx-auto w-full max-w-[1540px] px-5 py-20 sm:px-8 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
+        {/* --------------------------------------------------------------
+            EDITORIAL INTRO
+        --------------------------------------------------------------- */}
+        <header className="mx-auto flex max-w-[760px] flex-col items-center text-center">
           {eyebrow ? (
-            <div className="flex items-center justify-center gap-3 text-[7px] font-semibold uppercase tracking-[0.24em] text-white/58 sm:text-[8px]">
+            <div className="flex items-center justify-center gap-3">
               <span
                 aria-hidden="true"
-                className="h-px w-5 bg-[var(--why-copper)]"
+                className="h-px w-8 bg-[var(--why-copper)]"
               />
-              <span>{eyebrow}</span>
+              <p className="text-[10px] font-medium leading-none text-white/58 sm:text-[11px]">
+                {eyebrow}
+              </p>
               <span
                 aria-hidden="true"
-                className="h-px w-5 bg-[var(--why-copper)]"
+                className="h-px w-8 bg-[var(--why-copper)]"
               />
             </div>
           ) : null}
 
-          <h2 className="mt-5 font-serif font-normal text-white sm:mt-6">
-            <span className="block text-[clamp(2.9rem,10vw,4.6rem)] leading-[0.94] tracking-[-0.05em] sm:text-[clamp(3.7rem,8vw,5.4rem)] lg:text-[clamp(4.6rem,5.6vw,6.4rem)]">
+          <h2 className="mt-5 sm:mt-6">
+            <span className="block text-balance text-[clamp(2.7rem,10vw,4.6rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-white sm:text-[clamp(3.6rem,7vw,5.5rem)] lg:text-[clamp(4.2rem,5.2vw,6.2rem)]">
               {title}
             </span>
-            <span className="mt-2 block text-[clamp(1.9rem,6.8vw,3.1rem)] italic leading-[1] tracking-[-0.04em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2.4rem,5vw,3.5rem)] lg:text-[clamp(2.9rem,3.4vw,4rem)]">
+
+            <span className="mt-2 block text-balance text-[clamp(1.65rem,6vw,2.8rem)] font-medium leading-[1.3] tracking-[-0.035em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2rem,4.5vw,3.3rem)] lg:text-[clamp(2.4rem,3vw,3.7rem)]">
               {italicTitle}
             </span>
           </h2>
 
           {description ? (
-            <p className="mt-5 max-w-[520px] text-[11px] leading-[1.8] text-white/62 sm:mt-6 sm:text-[12px] lg:text-[13px]">
+            <p className="mx-auto mt-5 max-w-[610px] text-pretty text-[12px] leading-7 text-white/62 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
               {description}
             </p>
           ) : null}
 
           {action ? (
-            <div className="mt-7 w-full max-w-[226px] sm:mt-8">
+            <div className="mx-auto mt-7 w-full max-w-[230px] sm:mt-8">
               <Button
                 href={action.href}
                 variant="cream"
                 size="md"
-                icon={<ArrowRightIcon />}
+                  icon={
+                         <ArrowLeftIcon />
+                     }
+                    iconPosition="right"
                 fullWidth
+                className="!tracking-normal"
               >
                 {action.label}
               </Button>
@@ -188,46 +208,67 @@ export function WhyChooseUsSection({
           ) : null}
         </header>
 
-        <div className="mt-14 w-full max-w-[1180px] border-l border-t border-white/1 sm:mt-16 lg:mt-20">
+        {/* --------------------------------------------------------------
+            FEATURES
+        --------------------------------------------------------------- */}
+        <div className="mt-14 w-full border-r border-t border-white/[0.12] sm:mt-16 lg:mt-20">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
             {visibleFeatures.map((feature) => (
               <FeatureCard key={feature.id} feature={feature} />
             ))}
           </div>
         </div>
+
+        {/* Quiet brand signature */}
+        <div
+          aria-hidden="true"
+          className="mt-8 flex items-center justify-center gap-3 text-white/24 sm:mt-10"
+        >
+          <span className="text-[7px] font-medium tracking-[0.22em]">
+            NAJIBZADEH
+          </span>
+          <span className="h-px w-10 bg-current" />
+        </div>
       </div>
     </section>
   );
 }
 
-/* ========================================================================== 
+/* ==========================================================================
    FEATURE CARD
 ============================================================================ */
 
 function FeatureCard({ feature }: { feature: WhyChooseFeature }) {
   return (
-    <article className="group relative flex min-h-[154px] flex-col items-center justify-center border-b border-r border-white/[0.14] bg-black/[0.10] px-6 py-7 text-center transition-colors duration-300 hover:bg-white/[0.035] sm:min-h-[168px] sm:px-7 lg:min-h-[190px] lg:px-8 lg:py-8">
-      <span className="grid size-9 place-items-center border border-white/22 text-white/68 transition-[border-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--why-copper)]/70 group-hover:text-[var(--why-copper)] lg:size-10">
-        <FeatureIcon type={feature.icon} />
-      </span>
+    <article className="group relative flex min-h-[162px] flex-col items-center justify-center border-b border-l border-white/[0.12] bg-black/[0.10] px-6 py-7 text-center backdrop-blur-[1px] transition-[background-color,border-color] duration-300 hover:border-white/[0.18] hover:bg-white/[0.035] sm:min-h-[178px] sm:px-7 lg:min-h-[198px] lg:px-8 lg:py-9">
+      <div className="flex w-full flex-col items-center justify-center gap-4">
+        <span className="grid size-10 shrink-0 place-items-center border border-white/20 text-white/66 transition-[border-color,color,transform,background-color] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--why-copper)]/70 group-hover:bg-[var(--why-copper)]/[0.06] group-hover:text-[var(--why-copper)]">
+          <FeatureIcon type={feature.icon} />
+        </span>
 
-      <h3 className="mt-4 max-w-[280px] font-serif text-[17px] font-normal leading-[1.08] tracking-[-0.025em] text-white sm:text-[18px] lg:mt-5 lg:text-[19px]">
+        <span
+          aria-hidden="true"
+          className="h-px w-10 bg-white/[0.12] transition-[width,background-color] duration-300 group-hover:w-14 group-hover:bg-[var(--why-copper)]/35"
+        />
+      </div>
+
+      <h3 className="mt-5 max-w-[300px] text-[18px] font-semibold leading-[1.45] tracking-[-0.025em] text-white sm:text-[19px] lg:text-[20px]">
         {feature.title}
       </h3>
 
-      <span
-        aria-hidden="true"
-        className="mt-4 h-px w-7 bg-white/24 transition-[width,background-color] duration-300 group-hover:w-10 group-hover:bg-[var(--why-copper)]/65"
-      />
-
-      <p className="mt-4 max-w-[300px] text-[10px] leading-[1.7] text-white/48 sm:text-[10.5px] lg:text-[11px]">
+      <p className="mt-3 max-w-[330px] text-[11px] leading-6 text-white/48 sm:text-[11.5px] lg:text-[12px]">
         {feature.description}
       </p>
+
+      <span
+        aria-hidden="true"
+        className="absolute bottom-0 right-0 h-px w-0 bg-[var(--why-copper)] transition-[width] duration-500 ease-out group-hover:w-full"
+      />
     </article>
   );
 }
 
-/* ========================================================================== 
+/* ==========================================================================
    ICON SWITCH
 ============================================================================ */
 
@@ -250,7 +291,7 @@ function FeatureIcon({ type }: { type: FeatureIcon }) {
   }
 }
 
-/* ========================================================================== 
+/* ==========================================================================
    ICONS
 ============================================================================ */
 

@@ -18,7 +18,7 @@
  * - Metadata export works normally — this is still a Server Component.
  */
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import "./admin/admin.css";
 import { LenisProvider } from "@/components/providers/lenis-provider";
@@ -26,23 +26,33 @@ import { QueryProvider } from "@/components/providers/query-provider";
 
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
-import { Vazirmatn } from "next/font/google";
-import { Dana } from "@/next-persian-fonts/dana";
-// ---------------------------------------------------------------------------
-// Metadata
-// ---------------------------------------------------------------------------
-const vazir = Vazirmatn({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
+import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { estedad } from "@/next-persian-fonts/estedad";
+ 
 export const metadata: Metadata = {
-  title: 
-    "Najibzadeh — Luxury Menswear & Tailoring",
-   
+  title: "Najibzadeh | Luxury Menswear & Tailoring",
   description:
     "Dignity in silence. Najibzadeh is a luxury menswear and tailoring house.",
   metadataBase: new URL("https://najibzadeh.com"),
+  applicationName: "Najibzadeh",
+  manifest: "/manifest.webmanifest",
+  formatDetection: {
+    telephone: false,
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "نجیب‌زاده",
+  },
+  icons: {
+    icon: [
+      { url: "/pwa/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/pwa/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/pwa/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -55,33 +65,17 @@ export const metadata: Metadata = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#F6F2EB" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0B0B" },
+  ],
+};
 
-/**
- * Configure these variables in your next/font setup and pass the resulting
- * className strings to <body>.  The font token names (--font-dana and
- * --font-open-sans) match the values in fontTokens.
- *
- * Example (add to a separate fonts.ts file):
- *
- *   import localFont from 'next/font/local';
- *   import { Open_Sans } from 'next/font/google';
- *
- *   export const dana = localFont({
- *     src: '../fonts/Dana-Regular.woff2',
- *     variable: '--font-dana',
- *     display: 'swap',
- *   });
- *
- *   export const openSans = Open_Sans({
- *     subsets: ['latin'],
- *     variable: '--font-open-sans',
- *     display: 'swap',
- *   });
- */
-
+ 
 interface RootLayoutProps {
   children: React.ReactNode;
 }
@@ -104,10 +98,11 @@ export default function RootLayout({
     >
       <head></head>
 
-      <body dir="ltr" className={`antialiased  ${Dana.className} min-h-dvh`}>
+      <body dir="ltr" className={`antialiased  ${estedad.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
             <QueryProvider>
+              <PwaInstallPrompt />
               <SiteShell>
                 <div className="flex-1">
                   <ToastProvider position="top-right" maxToasts={5}>

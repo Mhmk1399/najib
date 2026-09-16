@@ -2,7 +2,7 @@ import { type CSSProperties } from "react";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
-/* ========================================================================== 
+/* ==========================================================================
    TYPES
 ============================================================================ */
 
@@ -16,44 +16,45 @@ type BrandStorySectionProps = {
   className?: string;
 };
 
-/* ========================================================================== 
+/* ==========================================================================
    DEFAULT BRAND COPY
 ============================================================================ */
 
 const DEFAULT_BRAND_TEXT = `
-Najibzadeh is a contemporary house shaped by a belief that true elegance is never loud.
+نجیب‌زاده خانه‌ای معاصر است که بر یک باور ساده شکل گرفته: ظرافت واقعی هیچ‌وقت نیاز به هیاهو ندارد.
 
-Our world is built around considered tailoring, distinctive fragrance and objects chosen for their character, material and permanence.
+جهان ما حول خیاطی سنجیده، رایحه‌های متمایز و اشیایی ساخته شده که به‌خاطر شخصیت، متریال و ماندگاری‌شان انتخاب می‌شوند.
 
-We are drawn to pieces that feel relevant today yet remain meaningful long after the season has passed. Every detail begins with intention, from the proportion of a garment to the texture of a fabric and the atmosphere created by a scent.
+ما به قطعاتی علاقه‌مندیم که امروز معنادار باشند و پس از گذر فصل‌ها نیز ارزش خود را حفظ کنند. هر جزئیات با نیت آغاز می‌شود؛ از تناسب یک لباس و بافت پارچه تا حسی که یک رایحه در فضا باقی می‌گذارد.
 
-For us, luxury is found in restraint, precision and the confidence to remove what is unnecessary. We value craftsmanship not as decoration, but as the foundation of everything we create.
+برای ما، تجمل در خویشتن‌داری، دقت و توانایی حذف هر چیزی است که ضرورتی ندارد. مهارت در ساخت را نه به‌عنوان تزئین، بلکه به‌عنوان پایه هر آنچه خلق می‌کنیم می‌بینیم.
 
-Our approach brings together traditional knowledge and a modern point of view, allowing familiar forms to feel new again. Clothing is designed to become part of a person's life rather than simply occupy a wardrobe.
+نگاه نجیب‌زاده دانش سنتی را با دیدگاهی امروزی کنار هم قرار می‌دهد تا فرم‌های آشنا دوباره تازه و معاصر احساس شوند. لباس قرار نیست فقط بخشی از کمد باشد؛ باید آرام‌آرام به بخشی از زندگی فرد تبدیل شود.
 
-Fragrance is treated as an extension of presence, capable of holding memory and creating a quiet impression. The objects within the Najibzadeh world are selected with the same attention to balance, function and enduring beauty.
+عطر برای ما امتداد حضور است؛ چیزی که می‌تواند خاطره را در خود نگه دارد و بدون اغراق اثری ماندگار ایجاد کند. اشیای جهان نجیب‌زاده نیز با همان دقت در تعادل، کاربرد و زیبایی پایدار انتخاب می‌شوند.
 
-We believe personal style grows stronger when it is built slowly and with purpose. That philosophy shapes the way we think about materials, silhouettes, color and the experience surrounding every product.
+باور داریم سبک شخصی زمانی عمیق‌تر می‌شود که آهسته و آگاهانه ساخته شود. همین نگاه، انتخاب متریال، فرم، رنگ و تجربه پیرامون هر محصول را شکل می‌دهد.
 
-Najibzadeh is not defined by excess or constant change, but by a consistent pursuit of quality and character. It is a house for those who appreciate detail without needing it to announce itself.
+نجیب‌زاده با افراط یا تغییر دائمی تعریف نمی‌شود؛ بلکه با پیگیری مداوم کیفیت، شخصیت و جزئیاتی شناخته می‌شود که برای دیده‌شدن فریاد نمی‌زنند.
 
-Everything we create is intended to feel personal, lasting and quietly unmistakable.
+هر آنچه می‌سازیم باید شخصی، ماندگار و بی‌نیاز از توضیح اضافه باشد.
 `.trim();
 
-/* ========================================================================== 
+/* ==========================================================================
    COMPONENT
 ============================================================================ */
 
 export function BrandStorySection({
-  eyebrow = "The House",
-  title = "The world of Najibzadeh.",
+  eyebrow = "خانه نجیب‌زاده",
+  title = "جهان نجیب‌زاده.",
   text = DEFAULT_BRAND_TEXT,
-  readMoreLabel = "Read Our Story",
-  readLessLabel = "Show Less",
+  readMoreLabel = "ادامه داستان",
+  readLessLabel = "بستن داستان",
   defaultExpanded = false,
   className = "",
 }: BrandStorySectionProps) {
   const paragraphs = splitStoryText(text);
+
   const previewParagraphs = paragraphs.slice(0, Math.min(2, paragraphs.length));
   const remainingParagraphs = paragraphs.slice(previewParagraphs.length);
 
@@ -61,73 +62,124 @@ export function BrandStorySection({
     "--story-bg": lightTokens.surfaceBrand,
     "--story-text": brandColors.black.hex,
     "--story-muted": lightTokens.textMuted,
+    "--story-soft": lightTokens.textSoft,
     "--story-copper": brandColors.copper.hex,
   } as CSSProperties;
 
   return (
     <section
+      dir="rtl"
+      lang="fa"
       style={themeVars}
       aria-labelledby="brand-story-title"
-      className={`w-full bg-[var(--story-bg)] text-[var(--story-text)] ${className}`}
+      className={`relative w-full overflow-hidden bg-[var(--story-bg)] text-[var(--story-text)] ${className}`}
     >
-      <div className="mx-auto w-full max-w-[980px] px-6 py-16 text-center sm:px-8 sm:py-20 lg:px-10 lg:py-28">
-        <header className="mx-auto flex max-w-[780px] flex-col items-center">
-          {eyebrow ? (
-            <div className="mb-5 flex flex-col items-center gap-3 sm:mb-6">
-              <span
-                aria-hidden="true"
-                className="h-px w-6 bg-[var(--story-copper)]"
-              />
-              <p className="text-[7px] font-semibold uppercase tracking-[0.24em] text-[var(--story-copper)] sm:text-[8px]">
-                {eyebrow}
-              </p>
+      {/* Quiet editorial rails — structural rather than decorative. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-[clamp(20px,4vw,56px)] hidden w-px bg-black/[0.055] lg:block"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 left-[clamp(20px,4vw,56px)] hidden w-px bg-black/[0.055] lg:block"
+      />
+
+      <div className="mx-auto w-full max-w-[1440px] px-5 py-20 sm:px-8 sm:py-24 lg:px-12 lg:py-28 xl:px-14 xl:py-32">
+        {/* ==============================================================
+            CENTERED EDITORIAL INTRO
+        ============================================================== */}
+        <div className="mx-auto max-w-[900px] text-center">
+          <header className="mx-auto flex max-w-[720px] flex-col items-center text-center">
+            {eyebrow ? (
+              <div className="flex items-center justify-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 bg-[var(--story-copper)]"
+                />
+                <p className="text-[10px] font-medium leading-none text-[var(--story-copper)] sm:text-[11px]">
+                  {eyebrow}
+                </p>
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 bg-[var(--story-copper)]"
+                />
+              </div>
+            ) : null}
+
+            <h2
+              id="brand-story-title"
+              className="mt-5 max-w-[720px] text-balance text-[clamp(2.9rem,10vw,4.65rem)] font-semibold leading-[1.08] tracking-[-0.045em] sm:mt-6 sm:text-[clamp(3.7rem,7vw,5.4rem)] lg:text-[clamp(4.15rem,5vw,6rem)]"
+            >
+              {title}
+            </h2>
+
+            <div
+              aria-hidden="true"
+              className="mt-7 flex items-center justify-center gap-3 text-[var(--story-copper)]/60 sm:mt-8"
+            >
+              <span className="h-px w-10 bg-current" />
+              <span className="text-[7px] font-medium tracking-[0.22em]">
+                NAJIBZADEH
+              </span>
+              <span className="h-px w-10 bg-current" />
             </div>
-          ) : null}
+          </header>
 
-          <h2
-            id="brand-story-title"
-            className="max-w-[760px] font-serif text-[clamp(2.9rem,10vw,4.3rem)] font-normal leading-[0.96] tracking-[-0.05em] text-[var(--story-text)] sm:text-[clamp(3.5rem,7vw,4.9rem)] lg:text-[clamp(4rem,4.7vw,5.5rem)]"
-          >
-            {title}
-          </h2>
-        </header>
-
-        {previewParagraphs.length ? (
-          <div className="mx-auto mt-7 max-w-[720px] space-y-4 sm:mt-9 sm:space-y-5 lg:mt-10">
-            {previewParagraphs.map((paragraph, index) => (
-              <p
-                key={`${paragraph.slice(0, 36)}-${index}`}
-                className="text-[12px] font-normal leading-[1.9] text-[var(--story-muted)] sm:text-[13px] lg:text-[14px]"
-              >
-                {paragraph}
-              </p>
-            ))}
-          </div>
-        ) : null}
-
-        {remainingParagraphs.length ? (
-          <details
-            open={defaultExpanded}
-            className="group mx-auto max-w-[760px]"
-          >
-            <summary className="mx-auto mt-8 flex w-fit cursor-pointer list-none items-center justify-center gap-3 border-b border-black/15 pb-2 text-[7px] font-semibold uppercase tracking-[0.18em] text-black/58 transition-[border-color,color] duration-200 hover:border-[var(--story-copper)] hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 focus-visible:ring-offset-4 focus-visible:ring-offset-[var(--story-bg)] sm:mt-9 sm:text-[8px] [&::-webkit-details-marker]:hidden">
-              <span className="group-open:hidden">{readMoreLabel}</span>
-              <span className="hidden group-open:inline">{readLessLabel}</span>
-              <span
-                aria-hidden="true"
-                className="relative block h-px w-5 bg-black/30 transition-colors duration-200 group-hover:bg-[var(--story-copper)]"
-              />
-            </summary>
-
-            <div className="mx-auto mt-8 space-y-4 border-t border-black/[0.08] pt-8 sm:mt-9 sm:space-y-5 sm:pt-9 lg:mt-10 lg:pt-10">
-              {remainingParagraphs.map((paragraph, index) => (
+          {previewParagraphs.length ? (
+            <div className="mx-auto mt-9 max-w-[780px] space-y-5 text-center sm:mt-10">
+              {previewParagraphs.map((paragraph, index) => (
                 <p
                   key={`${paragraph.slice(0, 36)}-${index}`}
-                  className="text-[12px] font-normal leading-[1.9] text-[var(--story-muted)] sm:text-[13px] lg:text-[14px]"
+                  className={
+                    index === 0
+                      ? "text-pretty text-[15px] font-medium leading-8 text-[var(--story-text)]/82 sm:text-[16px] sm:leading-9 lg:text-[17px]"
+                      : "text-pretty text-[12px] font-normal leading-7 text-[var(--story-muted)] sm:text-[13px] sm:leading-8 lg:text-[14px]"
+                  }
                 >
                   {paragraph}
                 </p>
               ))}
+            </div>
+          ) : null}
+        </div>
+
+        {/* ==============================================================
+            EXPANDABLE STORY
+        ============================================================== */}
+        {remainingParagraphs.length ? (
+          <details
+            open={defaultExpanded}
+            className="group mx-auto mt-12 max-w-[900px] border-t border-black/[0.10] pt-1 sm:mt-14 lg:mt-16"
+          >
+            <summary className="mx-auto flex min-h-[64px] w-full cursor-pointer list-none items-center justify-center gap-3 border-b border-black/[0.10] py-5 text-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/45 [&::-webkit-details-marker]:hidden">
+              <span className="grid size-8 shrink-0 place-items-center border border-black/[0.16] text-black/60 transition-[border-color,color,background-color] duration-300 group-hover:border-[var(--story-copper)]/55 group-hover:text-[var(--story-copper)]">
+                <span className="relative block size-3.5">
+                  <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
+                  <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:scale-y-0 motion-reduce:transition-none" />
+                </span>
+              </span>
+
+              <span className="text-[12px] font-semibold text-black/68 transition-colors duration-200 group-hover:text-black sm:text-[13px]">
+                <span className="group-open:hidden">{readMoreLabel}</span>
+                <span className="hidden group-open:inline">
+                  {readLessLabel}
+                </span>
+              </span>
+            </summary>
+
+            <div className="grid transition-[grid-template-rows,opacity] duration-500 ease-out group-open:grid-rows-[1fr] group-open:opacity-100 motion-reduce:transition-none">
+              <div className="overflow-hidden">
+                <div className="mx-auto max-w-[800px] space-y-5 pb-2 pt-9 text-center sm:pt-10 lg:pt-12">
+                  {remainingParagraphs.map((paragraph, index) => (
+                    <p
+                      key={`${paragraph.slice(0, 36)}-${index}`}
+                      className="text-pretty text-[12px] font-normal leading-7 text-[var(--story-muted)] sm:text-[13px] sm:leading-8 lg:text-[14px]"
+                    >
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </div>
             </div>
           </details>
         ) : null}
@@ -136,7 +188,7 @@ export function BrandStorySection({
   );
 }
 
-/* ========================================================================== 
+/* ==========================================================================
    STORY TEXT NORMALIZATION
 ============================================================================ */
 
@@ -157,7 +209,7 @@ function splitStoryText(text: string) {
   const sentences =
     normalized
       .replace(/\s+/g, " ")
-      .match(/[^.!?]+[.!?]+|[^.!?]+$/g)
+      .match(/[^.!?؟]+[.!?؟]+|[^.!?؟]+$/g)
       ?.map((sentence) => sentence.trim())
       .filter(Boolean) ?? [];
 

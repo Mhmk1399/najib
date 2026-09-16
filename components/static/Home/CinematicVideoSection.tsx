@@ -1,10 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
 import { brandColors } from "@/theme/theme-colors";
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
+import { ArrowLeftIcon, Button } from "@/components/ui/Button";
 
 type VideoAction = {
   label: string;
@@ -29,7 +30,7 @@ export function CinematicVideoSection({
   videoSrc,
   posterSrc,
   posterAlt = "",
-  eyebrow = "The House",
+  eyebrow = "خانه نجیب‌زاده",
   title,
   description,
   primaryAction,
@@ -44,6 +45,8 @@ export function CinematicVideoSection({
   const [shouldMountVideo, setShouldMountVideo] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+
+  const titleId = useId();
 
   const themeVars = {
     "--video-black": brandColors.black.hex,
@@ -75,6 +78,7 @@ export function CinematicVideoSection({
     if (reducedMotion || shouldMountVideo) return;
 
     const section = sectionRef.current;
+
     if (!section) return;
 
     if (!("IntersectionObserver" in window)) {
@@ -85,6 +89,7 @@ export function CinematicVideoSection({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (!entry?.isIntersecting) return;
+
         setShouldMountVideo(true);
         observer.disconnect();
       },
@@ -136,9 +141,13 @@ export function CinematicVideoSection({
   return (
     <section
       ref={sectionRef}
+      dir="rtl"
+      lang="fa"
+      aria-labelledby={titleId}
       style={themeVars}
       className={`relative isolate flex h-[86svh] min-h-[640px] max-h-[920px] w-full items-center justify-center overflow-hidden bg-[var(--video-black)] text-[var(--video-white)] sm:min-h-[680px] lg:h-[88svh] ${className}`}
     >
+      {/* Poster remains the visual fallback for reduced-motion users and while video initializes. */}
       <Image
         src={posterSrc}
         alt={posterAlt}
@@ -150,7 +159,7 @@ export function CinematicVideoSection({
         style={{
           objectPosition: mobileVideoPosition,
         }}
-        className={`-z-40 object-cover transition-opacity duration-500 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
+        className={`-z-40 object-cover transition-opacity duration-700 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
           videoReady ? "opacity-0" : "opacity-100"
         }`}
       />
@@ -169,7 +178,7 @@ export function CinematicVideoSection({
           style={{
             objectPosition: mobileVideoPosition,
           }}
-          className={`absolute inset-0 -z-30 size-full object-cover transition-opacity duration-500 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
+          className={`absolute inset-0 -z-30 size-full object-cover transition-opacity duration-700 motion-reduce:transition-none md:[object-position:var(--video-desktop-position)] ${
             videoReady ? "opacity-100" : "opacity-0"
           }`}
         >
@@ -177,73 +186,104 @@ export function CinematicVideoSection({
         </video>
       )}
 
+      {/* Symmetrical cinematic fade for a centered composition. */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--video-black-rgb)/0.26)_0%,rgb(var(--video-black-rgb)/0.08)_30%,rgb(var(--video-black-rgb)/0.14)_58%,rgb(var(--video-black-rgb)/0.66)_100%)]"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--video-black-rgb)/0.20)_0%,rgb(var(--video-black-rgb)/0.06)_30%,rgb(var(--video-black-rgb)/0.15)_58%,rgb(var(--video-black-rgb)/0.78)_100%)]"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_center,rgb(var(--video-black-rgb)/0.02)_0%,transparent_34%,rgb(var(--video-black-rgb)/0.34)_112%)]"
+        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_12%,rgb(var(--video-black-rgb)/0.08)_48%,rgb(var(--video-black-rgb)/0.36)_120%)]"
       />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-[980px] flex-col items-center px-5 text-center sm:px-8 lg:px-10">
-        {eyebrow && (
-          <div className="mb-5 flex flex-col items-center gap-3 sm:mb-6">
-            <span
-              aria-hidden="true"
-              className="h-px w-7 bg-[var(--video-copper)]"
-            />
-            <p className="text-[7px] font-semibold uppercase tracking-[0.24em] text-white/58 sm:text-[8px]">
-              {eyebrow}
-            </p>
-          </div>
-        )}
+      {/* Subtle editorial frame. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-4 z-0 border border-white/[0.08] sm:inset-6 lg:inset-8"
+      />
 
-        <h2 className="max-w-[880px] font-serif text-[clamp(3rem,12vw,4.45rem)] font-normal leading-[0.92] tracking-[-0.055em] text-white drop-shadow-[0_4px_26px_rgb(var(--video-black-rgb)/0.34)] sm:text-[clamp(3.8rem,9vw,5.2rem)] md:text-[clamp(4.6rem,6.3vw,6.5rem)] lg:text-[clamp(5rem,5.35vw,6.9rem)]">
-          {title}
-        </h2>
+      <div className="relative z-10 mx-auto flex w-full max-w-[1600px] items-center justify-center px-5 py-12 sm:px-8 sm:py-16 lg:px-12 xl:px-16">
+        <div className="mx-auto flex w-full max-w-[760px] flex-col items-center text-center">
+          {eyebrow && (
+            <div className="mb-5 flex items-center justify-center gap-3 sm:mb-6">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 bg-[var(--video-copper)]/95"
+              />
 
-        {description && (
-          <p className="mt-5 max-w-[390px] text-[11px] font-normal leading-[1.75] text-white/66 sm:mt-6 sm:max-w-[470px] sm:text-[12px] md:max-w-[560px] md:text-[13px]">
-            {description}
-          </p>
-        )}
+              <p className="text-[10px] font-medium leading-none text-white/58 sm:text-[11px]">
+                {eyebrow}
+              </p>
 
-        {(primaryAction || secondaryAction) && (
-          <div
-            className={`mt-8 grid w-full gap-2 sm:mt-9 ${
-              hasBothActions
-                ? "max-w-[440px] grid-cols-1 min-[420px]:grid-cols-2"
-                : "max-w-[220px] grid-cols-1"
-            }`}
+              <span
+                aria-hidden="true"
+                className="h-px w-8 bg-[var(--video-copper)]/95"
+              />
+            </div>
+          )}
+
+          <h2
+            id={titleId}
+            className="mx-auto max-w-[720px] text-balance text-xl md:text-5xl font-semibold leading-[1.1] tracking-[-0.045em] text-white [text-shadow:0_5px_32px_rgb(var(--video-black-rgb)/0.38)]  "
           >
-            {primaryAction && (
-              <Button
-                href={primaryAction.href}
-                variant="cream"
-                size="lg"
-                icon={<ArrowRightIcon />}
-                fullWidth
-              >
-                {primaryAction.label}
-              </Button>
-            )}
+            {title}
+          </h2>
 
-            {secondaryAction && (
-              <Button
-                href={secondaryAction.href}
-                variant="outline"
-                size="lg"
-                icon={<ArrowRightIcon />}
-                fullWidth
-                className="border-white/42 bg-black/16 text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
-              >
-                {secondaryAction.label}
-              </Button>
-            )}
+          {description && (
+            <p className="mx-auto mt-5 max-w-[540px] text-pretty text-[12px] leading-7 text-white/68 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
+              {description}
+            </p>
+          )}
+
+          {(primaryAction || secondaryAction) && (
+            <div
+              className={`mx-auto mt-7 grid w-full gap-2.5 sm:mt-8 sm:gap-3 ${
+                hasBothActions
+                  ? "max-w-[470px] grid-cols-1 min-[430px]:grid-cols-2"
+                  : "max-w-[230px] grid-cols-1"
+              }`}
+            >
+              {primaryAction && (
+                <Button
+                  href={primaryAction.href}
+                  variant="cream"
+                  size="lg"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
+                  fullWidth
+                  className="!tracking-normal"
+                >
+                  {primaryAction.label}
+                </Button>
+              )}
+
+              {secondaryAction && (
+                <Button
+                  href={secondaryAction.href}
+                  variant="outline"
+                  size="lg"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
+                  fullWidth
+                  className="border-white/40 bg-black/15 !tracking-normal text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
+                >
+                  {secondaryAction.label}
+                </Button>
+              )}
+            </div>
+          )}
+
+          <div
+            aria-hidden="true"
+            className="mt-8 flex items-center justify-center gap-3 text-white/28 sm:mt-10"
+          >
+            <span className="h-px w-10 bg-current" />
+            <span className="text-[7px] font-medium tracking-[0.22em]">
+              NAJIBZADEH
+            </span>
           </div>
-        )}
+        </div>
       </div>
     </section>
   );

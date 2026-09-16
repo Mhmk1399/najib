@@ -14,6 +14,7 @@ type ProductListInput = {
   categoryId?: string;
   subcategoryId?: string;
   limit?: number;
+  sort?: "curated" | "latest";
 };
 
 type PlainCatalogRecord = Record<string, unknown>;
@@ -108,8 +109,13 @@ export async function getStorefrontProducts(input: ProductListInput = {}) {
   if (input.subcategoryId) filter.subcategoryId = input.subcategoryId;
 
   const limit = Math.min(Math.max(input.limit ?? 48, 1), 100);
+  const sort: Record<string, 1 | -1> =
+    input.sort === "latest"
+      ? { createdAt: -1, _id: -1 }
+      : { sortOrder: 1, createdAt: -1 };
+
   const products = await Product.find(filter)
-    .sort({ sortOrder: 1, createdAt: -1 })
+    .sort(sort)
     .limit(limit)
     .lean() as PlainCatalogRecord[];
 
