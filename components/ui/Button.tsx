@@ -168,8 +168,7 @@ const variantClasses: Record<ButtonVariant, string> = {
     text-[var(--button-black)]
 
     hover:border-[var(--button-black)]
-    hover:bg-[var(--button-black)]
-    hover:text-[var(--button-cream)]
+     hover:text-[var(--button-cream)]
   `,
 };
 

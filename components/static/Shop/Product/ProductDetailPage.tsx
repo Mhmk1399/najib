@@ -21,6 +21,7 @@ import { CustomSelect, type SelectOption } from "@/components/ui/CustomSelect";
 import { useToast } from "@/components/ui/CustomToast";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
+import { ShoppingBag } from "lucide-react";
 
 /* ==========================================================================
    TYPES
@@ -1423,7 +1424,7 @@ function MobileProductSheet({
         inset-x-0
         bottom-0
 
-        z-[90]
+        z-[900]
 
         border-t
         border-black/10
@@ -1801,13 +1802,17 @@ function MobileProductSheet({
         >
           <Button
             type="button"
-            variant="black"
+            variant="outline"
             size="lg"
+            align="center"
             fullWidth
             loading={addingToBag}
             disabled={addingToBag}
             onClick={onAddToBag}
-          >
+            icon={
+              <ShoppingBag />
+            }
+           >
             افزودن به سبد خرید
           </Button>
         </div>
@@ -2341,7 +2346,7 @@ function ProductZoom({
         fixed
         inset-0
 
-        z-[1200]
+        z-[12000000000]
 
         bg-[#0B0B0B]
 
@@ -2544,16 +2549,15 @@ function UtilityButton({
         ${
           active
             ? `
-              bg-black
+              bg-black/50
 
-              text-white
+              text-red-800
             `
             : `
-              text-black/55
+              text-red-800
 
-              hover:bg-black
-              hover:text-white
-            `
+               hover:text-white
+            ` 
         }
       `}
     >

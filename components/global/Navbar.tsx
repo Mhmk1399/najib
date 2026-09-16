@@ -695,7 +695,7 @@ export default function Navbar({
         dir="rtl"
         lang="fa"
         className={cx(
-          "fixed inset-x-0 top-0 z-[100000]",
+          "fixed inset-x-0 top-0 z-[999999999]",
           "h-[70px] md:h-[78px]",
           "border-b",
           "transition-[background-color,border-color,box-shadow,color,backdrop-filter]",

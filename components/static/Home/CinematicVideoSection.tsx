@@ -5,7 +5,7 @@ import Image from "next/image";
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
 import { brandColors } from "@/theme/theme-colors";
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
+import { ArrowLeftIcon, Button } from "@/components/ui/Button";
 
 type VideoAction = {
   label: string;
@@ -225,7 +225,7 @@ export function CinematicVideoSection({
 
           <h2
             id={titleId}
-            className="mx-auto max-w-[720px] text-balance text-[clamp(2.8rem,11vw,4.6rem)] font-semibold leading-[1.1] tracking-[-0.045em] text-white [text-shadow:0_5px_32px_rgb(var(--video-black-rgb)/0.38)] sm:text-[clamp(3.5rem,8vw,5.35rem)] md:text-[clamp(4rem,6vw,6.15rem)] lg:text-[clamp(4.35rem,5vw,6.4rem)]"
+            className="mx-auto max-w-[720px] text-balance text-xl md:text-5xl font-semibold leading-[1.1] tracking-[-0.045em] text-white [text-shadow:0_5px_32px_rgb(var(--video-black-rgb)/0.38)]  "
           >
             {title}
           </h2>
@@ -249,12 +249,8 @@ export function CinematicVideoSection({
                   href={primaryAction.href}
                   variant="cream"
                   size="lg"
-                  icon={
-                    <span className="inline-flex rotate-180">
-                      <ArrowRightIcon />
-                    </span>
-                  }
-                  iconPosition="left"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
                   fullWidth
                   className="!tracking-normal"
                 >
@@ -267,12 +263,8 @@ export function CinematicVideoSection({
                   href={secondaryAction.href}
                   variant="outline"
                   size="lg"
-                  icon={
-                    <span className="inline-flex rotate-180">
-                      <ArrowRightIcon />
-                    </span>
-                  }
-                  iconPosition="left"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
                   fullWidth
                   className="border-white/40 bg-black/15 !tracking-normal text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
                 >

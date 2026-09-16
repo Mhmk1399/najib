@@ -165,7 +165,11 @@ function StorefrontFooter() {
 
     const categoryLinks = menuSections
       .filter((section) => {
-        if (!section?.href || section.href === "/shop" || seen.has(section.href)) {
+        if (
+          !section?.href ||
+          section.href === "/shop" ||
+          seen.has(section.href)
+        ) {
           return false;
         }
 
@@ -237,82 +241,6 @@ function StorefrontFooter() {
       style={FOOTER_THEME_VARS}
       className="relative w-full overflow-visible bg-[var(--footer-cream)] text-[var(--footer-black)]"
     >
-      {/* =====================================================================
-          EDITORIAL INTRO + CLIENT SERVICES
-      ===================================================================== */}
-
-      <section
-        aria-labelledby="footer-house-title"
-        className="border-t border-black/[0.10]"
-      >
-        <div className="mx-auto grid w-full max-w-[1920px] lg:grid-cols-[minmax(0,1.18fr)_minmax(390px,0.82fr)]">
-          <div className="px-5 py-10 text-right sm:px-7 sm:py-12 lg:border-l lg:border-black/[0.10] lg:px-10 lg:py-14 xl:px-14 xl:py-16">
-            <div className="mb-6 flex items-center gap-3">
-              <span className="text-[8px] font-semibold tracking-[0.08em] text-[var(--footer-copper)]">
-                خانه نجیب‌زاده
-              </span>
-              <span aria-hidden="true" className="h-px w-10 bg-black/[0.15]" />
-            </div>
-
-            <h2
-              id="footer-house-title"
-              className="max-w-[820px] text-[34px] font-bold leading-[1.25] tracking-[-0.035em] sm:text-[44px] lg:text-[52px] xl:text-[58px]"
-            >
-              پشت هر انتخاب، روایتی از مهارت، اصالت و جزئیات ماندگار وجود دارد.
-            </h2>
-
-            <p className="mt-5 max-w-[660px] text-[11px] leading-7 text-black/[0.58] sm:text-[12px] sm:leading-8">
-              با جهان نجیب‌زاده آشنا شوید، تازه‌ترین مجموعه‌ها را ببینید یا برای
-              انتخاب دقیق‌تر و تجربه‌ای شخصی‌تر، از مشاوره اختصاصی ما استفاده کنید.
-            </p>
-
-            <div className="mt-8 flex flex-col items-stretch gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center">
-              <Button
-                href="/our-story"
-                variant="black"
-                size="md"
-                icon={<ArrowLeftIcon />}
-                iconPosition="left"
-              >
-                داستان نجیب‌زاده
-              </Button>
-
-              <Button
-                href="/appointments"
-                variant="outline"
-                size="md"
-                icon={<ArrowLeftIcon />}
-                iconPosition="left"
-              >
-                رزرو مشاوره خصوصی
-              </Button>
-            </div>
-          </div>
-
-          <div className="grid border-t border-black/[0.10] bg-[#0C0C0C] text-white lg:border-t-0">
-            <ServicePanel
-              index={formatIndex(1)}
-              eyebrow="خدمات مشتریان"
-              title="همراهی اختصاصی"
-              description="برای مشاوره خرید، راهنمای انتخاب محصول و خدمات پس از خرید کنار شما هستیم."
-              href="mailto:clientservices@najibzadeh.com"
-              linkLabel="clientservices@najibzadeh.com"
-              linkDirection="ltr"
-            />
-
-            <ServicePanel
-              index={formatIndex(2)}
-              eyebrow="فروشگاه‌ها"
-              title="نجیب‌زاده را پیدا کنید"
-              description="نشانی فروشگاه‌ها را ببینید و پیش از مراجعه، برنامه دیدار خود را تنظیم کنید."
-              href="/stores"
-              linkLabel="مشاهده فروشگاه‌ها"
-              internal
-            />
-          </div>
-        </div>
-      </section>
-
       {/* =====================================================================
           DYNAMIC CATEGORY DIRECTORY + STATIC NAVIGATION
       ===================================================================== */}
@@ -743,10 +671,7 @@ function MobileFooterGroup({
   defaultOpen?: boolean;
 }) {
   return (
-    <details
-      open={defaultOpen}
-      className="group border-b border-black/[0.10]"
-    >
+    <details open={defaultOpen} className="group border-b border-black/[0.10]">
       <summary className="flex min-h-[68px] cursor-pointer list-none items-center gap-4 px-5 text-right focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/[0.60] sm:px-7 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.015em]">
           {group.title}

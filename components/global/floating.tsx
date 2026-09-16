@@ -83,7 +83,7 @@ export default function FloatingContactDock({
         ...themeVars,
         fontFamily: fontTokens.english,
       }}
-      className="pointer-events-none fixed bottom-[max(14px,env(safe-area-inset-bottom))] right-[max(14px,env(safe-area-inset-right))] z-[1400] sm:bottom-[max(20px,env(safe-area-inset-bottom))] sm:right-[max(20px,env(safe-area-inset-right))]"
+      className="pointer-events-none fixed bottom-[max(14px,env(safe-area-inset-bottom))] right-[max(14px,env(safe-area-inset-right))] z-[140] sm:bottom-[max(20px,env(safe-area-inset-bottom))] sm:right-[max(20px,env(safe-area-inset-right))]"
     >
       {open && (
         <section
