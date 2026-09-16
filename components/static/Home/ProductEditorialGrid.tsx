@@ -1,10 +1,14 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 
-import { type CSSProperties } from "react";
+import { type CSSProperties, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import { brandColors, lightTokens, themeClasses } from "@/theme/theme-colors";
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
+import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
 
 /* ========================================================================== 
    TYPES
@@ -34,74 +38,132 @@ type ProductEditorialGridProps = {
   className?: string;
 };
 
-/* ========================================================================== 
-   FAKE DATA
-============================================================================ */
+type LocalizedText = {
+  fa?: string;
+  en?: string;
+  ar?: string;
+};
 
-export const fakeEditorialProducts: EditorialProduct[] = [
-  {
-    id: "tailoring",
-    title: "Tailoring",
-    eyebrow: "01 / Collection",
-    href: "/tailoring",
-    image: "/assets/images/p1.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "shoes",
-    title: "Shoes",
-    eyebrow: "02 / Essentials",
-    href: "/shoes",
-    image: "/assets/images/p2.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "fragrance",
-    title: "Fragrance",
-    eyebrow: "03 / Signature",
-    href: "/fragrance",
-    image: "/assets/images/p6.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "knitwear",
-    title: "Knitwear",
-    eyebrow: "04 / Softness",
-    href: "/knitwear",
-    image: "/assets/images/p3.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "leather-goods",
-    title: "Leather Goods",
-    eyebrow: "05 / Craft",
-    href: "/accessories",
-    image: "/assets/images/p8.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "accessories",
-    title: "Accessories",
-    eyebrow: "06 / Details",
-    href: "/accessories",
-    image: "/assets/images/p7.webp",
-    imagePosition: "center",
-  },
-];
+type CatalogImageAsset = {
+  _id: unknown;
+  url?: string;
+  alt?: LocalizedText;
+  objectPosition?: string;
+};
+
+type StorefrontProductRecord = {
+  _id: unknown;
+  name?: LocalizedText;
+  slug: string;
+  primaryImageId?: unknown;
+  primaryImageObjectPosition?: string;
+};
+
+type StorefrontProductPayload = {
+  items: StorefrontProductRecord[];
+};
+
+const FALLBACK_PRODUCT_IMAGE = "/assets/images/p1.webp";
+const indexFormatter = new Intl.NumberFormat("fa-IR", {
+  minimumIntegerDigits: 2,
+  useGrouping: false,
+});
+
+async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+  const response = await fetch(input, {
+    ...init,
+    headers: {
+      Accept: "application/json",
+      ...Object.fromEntries(new Headers(init?.headers).entries()),
+    },
+  });
+
+  if (!response.ok) {
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(body?.error ?? "دریافت محصولات ناموفق بود.");
+  }
+
+  return (await response.json()) as T;
+}
+
+function idOf(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toString" in value) {
+    return String(value);
+  }
+  return "";
+}
+
+function fa(value: LocalizedText | null | undefined, fallback = "") {
+  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+}
+
+function imageMapFrom(images: CatalogImageAsset[] = []) {
+  return new Map(images.map((image) => [idOf(image._id), image]));
+}
+
+function productToEditorialItem(
+  product: StorefrontProductRecord,
+  imageMap: Map<string, CatalogImageAsset>,
+  index: number,
+): EditorialProduct {
+  const title = fa(product.name, product.slug);
+  const imageId = product.primaryImageId;
+  const image = imageMap.get(idOf(imageId));
+
+  return {
+    id: idOf(product._id) || product.slug,
+    title,
+    eyebrow: `محصول ${indexFormatter.format(index + 1)}`,
+    href: `/shop/${product.slug}`,
+    image: image?.url || FALLBACK_PRODUCT_IMAGE,
+    imageAlt: fa(image?.alt, title),
+    imagePosition:
+      product.primaryImageObjectPosition ?? image?.objectPosition ?? "center",
+  };
+}
 
 /* ========================================================================== 
    COMPONENT
 ============================================================================ */
 
 export function ProductEditorialGrid({
-  products = fakeEditorialProducts,
-  eyebrow = "Najibzadeh Selection",
-  title = "Objects of character.",
-  description = "A considered edit of tailoring, fragrance and objects defined by material, proportion and lasting character.",
+  products,
+  eyebrow = "تازه‌ترین محصولات",
+  title = "انتخاب‌های تازه نجیب‌زاده",
+  description = "شش محصول تازه از کالکشن‌های فعال فروشگاه، با تصویر و اطلاعات واقعی کاتالوگ.",
   action,
   className = "",
 }: ProductEditorialGridProps) {
-  if (!products.length) return null;
+  const catalogQuery = useStorefrontCatalog();
+  const productsQuery = useQuery({
+    queryKey: ["storefront", "home-editorial-products", "latest", 6],
+    queryFn: ({ signal }) =>
+      fetchJson<StorefrontProductPayload>(
+        "/api/storefront/products?limit=6&sort=latest",
+        { signal },
+      ),
+    enabled: !products,
+    staleTime: Infinity,
+    gcTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
+    retry: 1,
+  });
+
+  const dynamicProducts = useMemo(() => {
+    const imageMap = imageMapFrom(catalogQuery.data?.images);
+    return (productsQuery.data?.items ?? []).map((product, index) =>
+      productToEditorialItem(product, imageMap, index),
+    );
+  }, [catalogQuery.data?.images, productsQuery.data?.items]);
+
+  const visibleProducts = products ?? dynamicProducts;
+
+  if (!visibleProducts.length) return null;
 
   const themeVars = {
     "--grid-bg": lightTokens.surfaceBrand,
@@ -113,6 +175,8 @@ export function ProductEditorialGrid({
 
   return (
     <section
+      dir="rtl"
+      lang="fa"
       style={themeVars}
       aria-labelledby="editorial-selection-title"
       className={`w-full overflow-hidden bg-[var(--grid-bg)] text-[var(--grid-text)] ${className}`}
@@ -161,7 +225,7 @@ export function ProductEditorialGrid({
 
       <div className="mx-auto w-full max-w-[1680px] px-3 pb-3 sm:px-4 sm:pb-4 lg:px-5 lg:pb-5">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 lg:gap-4">
-          {products.map((product) => (
+          {visibleProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
@@ -178,10 +242,10 @@ function ProductCard({ product }: { product: EditorialProduct }) {
   return (
     <Link
       href={product.href}
-      aria-label={`Explore ${product.title}`}
+      aria-label={`مشاهده محصول ${product.title}`}
       className={`group relative isolate block overflow-hidden bg-black outline-none ${themeClasses.focusRing}`}
     >
-      <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[4/5] lg:aspect-[1.08/1]">
+      <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[4/5] lg:aspect-[0.8/1]">
         <Image
           src={product.image}
           alt={product.imageAlt ?? product.title}
@@ -220,7 +284,7 @@ function ProductCard({ product }: { product: EditorialProduct }) {
           />
 
           <span className="mt-3 inline-flex items-center gap-2 text-[7px] font-semibold uppercase tracking-[0.16em] text-white/62 transition-colors duration-300 group-hover:text-white sm:text-[7.5px]">
-            Explore
+            مشاهده محصول
             <ArrowIcon />
           </span>
         </div>

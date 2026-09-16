@@ -8,7 +8,7 @@ import {
   useState,
 } from "react";
 
-import { brandColors, fontTokens, lightTokens } from "@/theme/theme-colors";
+import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 export type FAQItem = {
   id: string;
@@ -36,11 +36,18 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 function safeDomId(value: string) {
-  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+  return value
+    .normalize("NFKC")
+    .replace(/[^\p{L}\p{N}_-]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function toPersianDigits(value: number | string) {
+  return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
 }
 
 export default function FAQ({
-  eyebrow = "Frequently Asked Questions",
+  eyebrow = "پرسش‌های متداول",
   title,
   description,
   items,
@@ -53,6 +60,8 @@ export default function FAQ({
   footer,
 }: FAQProps) {
   const reactId = useId();
+  const headingId = `${safeDomId(reactId)}-faq-title`;
+
   const [internalOpenIds, setInternalOpenIds] =
     useState<string[]>(defaultOpenIds);
 
@@ -90,38 +99,52 @@ export default function FAQ({
 
   return (
     <section
-      dir="ltr"
-      aria-label="Frequently asked questions"
-      style={{ ...themeVars, fontFamily: fontTokens.english }}
+      dir="rtl"
+      lang="fa"
+      aria-labelledby={headingId}
+      style={themeVars}
       className={cx(
         "relative w-full overflow-hidden bg-[var(--faq-cream)] text-[var(--faq-black)]",
         className,
       )}
     >
+      {/* Quiet editorial guide on larger screens. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-0 right-[clamp(1.25rem,5vw,4rem)] hidden w-px bg-black/[0.045] lg:block"
+      />
+
       <div className="mx-auto w-full max-w-[1920px] px-5 py-20 sm:px-7 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
         {/* HEADER */}
-        <header className="mx-auto flex max-w-[980px] flex-col items-center text-center">
-          <div className="flex w-full max-w-[520px] items-center gap-4">
-            <span aria-hidden="true" className="h-px flex-1 bg-black/[0.14]" />
-            <p className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.28em] text-[var(--faq-copper)]">
-              {eyebrow}
-            </p>
-            <span aria-hidden="true" className="h-px flex-1 bg-black/[0.14]" />
-          </div>
+        <header className="mx-auto flex max-w-[900px] flex-col items-center text-center">
+          {eyebrow ? (
+            <div className="flex items-center justify-center gap-3">
+              <span
+                aria-hidden="true"
+                className="h-px w-8 bg-[var(--faq-copper)]"
+              />
+              <p className="text-[10px] font-medium leading-none text-[var(--faq-copper)] sm:text-[11px]">
+                {eyebrow}
+              </p>
+            </div>
+          ) : null}
 
-          <h2 className="mt-8 max-w-[900px] text-balance text-[42px] font-medium leading-[0.94] tracking-[-0.055em] sm:text-[56px] lg:text-[68px] xl:text-[76px]">
+          <h2
+            id={headingId}
+            className="mt-6 max-w-[880px] text-balance text-xl md:text-5xl font-semibold leading-[1.12] tracking-[-0.045em] sm:mt-7  "
+          >
             {title}
           </h2>
 
-          {description && (
-            <div className="mt-7 max-w-[660px] text-pretty text-[11px] leading-6 text-black/[0.52] sm:text-[12px] sm:leading-7 lg:text-[13px]">
+          {description ? (
+            <div className="mt-5 max-w-[680px] text-pretty text-[12px] leading-7 text-black/[0.54] sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
               {description}
             </div>
-          )}
+          ) : null}
         </header>
 
         {/* ACCORDION */}
-        <div className="mx-auto mt-16 w-full max-w-[1080px] sm:mt-20 lg:mt-24">
+        <div className="mt-14 w-full max-w-[1120px] mx-auto sm:mt-16 lg:mt-20">
           {items.length > 0 ? (
             <div className="border-t border-black/[0.14]">
               {items.map((item, index) => {
@@ -133,13 +156,16 @@ export default function FAQ({
                 return (
                   <article
                     key={item.id}
-                    className="group/item relative border-b border-black/[0.14]"
+                    className={cx(
+                      "group/item relative border-b border-black/[0.14] transition-colors duration-300",
+                      isOpen && "bg-black/[0.018]",
+                    )}
                   >
                     <span
                       aria-hidden="true"
                       className={cx(
-                        "absolute inset-x-0 top-0 h-px origin-center bg-[var(--faq-copper)] transition-transform duration-500 ease-out motion-reduce:transition-none",
-                        isOpen ? "scale-x-100" : "scale-x-0",
+                        "absolute inset-y-0 right-0 w-[2px] origin-center bg-[var(--faq-copper)] transition-transform duration-500 ease-out motion-reduce:transition-none",
+                        isOpen ? "scale-y-100" : "scale-y-0",
                       )}
                     />
 
@@ -149,18 +175,18 @@ export default function FAQ({
                       aria-expanded={isOpen}
                       aria-controls={panelId}
                       onClick={() => toggleItem(item.id)}
-                      className="grid w-full cursor-pointer grid-cols-[40px_minmax(0,1fr)_40px] items-center gap-3 py-7 outline-none sm:grid-cols-[56px_minmax(0,1fr)_56px] sm:gap-5 sm:py-8 lg:grid-cols-[72px_minmax(0,1fr)_72px] lg:py-9 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black"
+                      className="grid w-full cursor-pointer grid-cols-[44px_minmax(0,1fr)_40px] items-center gap-3 px-1 py-6 text-center outline-none sm:grid-cols-[56px_minmax(0,1fr)_48px] sm:gap-5 sm:px-2 sm:py-7 lg:grid-cols-[64px_minmax(0,1fr)_56px] lg:py-8 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/70"
                     >
                       {showIndex ? (
                         <span
                           className={cx(
-                            "justify-self-start text-[7px] font-semibold tabular-nums tracking-[0.18em] transition-colors duration-300",
+                            "justify-self-start text-[9px] font-medium tabular-nums transition-colors duration-300",
                             isOpen
                               ? "text-[var(--faq-copper)]"
-                              : "text-black/[0.30] group-hover/item:text-black/[0.52]",
+                              : "text-black/[0.28] group-hover/item:text-black/[0.50]",
                           )}
                         >
-                          {String(index + 1).padStart(2, "0")}
+                          {toPersianDigits(String(index + 1).padStart(2, "0"))}
                         </span>
                       ) : (
                         <span aria-hidden="true" />
@@ -168,10 +194,10 @@ export default function FAQ({
 
                       <span
                         className={cx(
-                          "mx-auto max-w-[780px] text-center text-[17px] font-medium leading-[1.2] tracking-[-0.025em] transition-[color,letter-spacing] duration-300 sm:text-[19px] lg:text-[22px]",
+                          "mx-auto max-w-[820px] text-center text-[16px] font-semibold leading-[1.65] tracking-[-0.02em] transition-colors duration-300 sm:text-[18px] lg:text-[20px]",
                           isOpen
                             ? "text-black"
-                            : "text-black/[0.78] group-hover/item:text-black",
+                            : "text-black/[0.76] group-hover/item:text-black",
                         )}
                       >
                         {item.question}
@@ -179,12 +205,17 @@ export default function FAQ({
 
                       <span
                         aria-hidden="true"
-                        className="relative block size-[18px] justify-self-end text-black sm:size-5"
+                        className={cx(
+                          "relative block size-9 justify-self-end border transition-[border-color,color,background-color] duration-300 sm:size-10",
+                          isOpen
+                            ? "border-[var(--faq-copper)]/55 bg-[var(--faq-copper)]/[0.05] text-[var(--faq-copper)]"
+                            : "border-black/[0.14] text-black/58 group-hover/item:border-black/30 group-hover/item:text-black",
+                        )}
                       >
-                        <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
+                        <span className="absolute left-1/2 top-1/2 h-px w-3.5 -translate-x-1/2 -translate-y-1/2 bg-current" />
                         <span
                           className={cx(
-                            "absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current transition-transform duration-300 ease-out motion-reduce:transition-none",
+                            "absolute left-1/2 top-1/2 h-3.5 w-px -translate-x-1/2 -translate-y-1/2 bg-current transition-transform duration-300 ease-out motion-reduce:transition-none",
                             isOpen ? "scale-y-0" : "scale-y-100",
                           )}
                         />
@@ -204,18 +235,17 @@ export default function FAQ({
                       )}
                     >
                       <div className="overflow-hidden">
-                        <div className="mx-auto max-w-[760px] px-4 pb-10 text-center sm:px-8 sm:pb-11 lg:pb-12">
-                          {item.answerLabel && (
+                        <div className="mx-auto max-w-[820px] px-6 pb-8 text-center sm:px-10 sm:pb-10 lg:px-14 lg:pb-11">
+                          {item.answerLabel ? (
                             <div className="mb-4 flex items-center justify-center gap-3">
                               <span className="h-px w-7 bg-[var(--faq-copper)]/70" />
-                              <p className="text-[7px] font-semibold uppercase tracking-[0.22em] text-[var(--faq-copper)]">
+                              <p className="text-[9px] font-medium text-[var(--faq-copper)]">
                                 {item.answerLabel}
                               </p>
-                              <span className="h-px w-7 bg-[var(--faq-copper)]/70" />
                             </div>
-                          )}
+                          ) : null}
 
-                          <div className="text-pretty text-[11px] leading-6 text-black/[0.56] sm:text-[12px] sm:leading-7 lg:text-[13px] lg:leading-7">
+                          <div className="text-pretty text-[12px] leading-7 text-black/[0.56] sm:text-[13px] md:text-[14px] md:leading-8">
                             {item.answer}
                           </div>
                         </div>
@@ -226,23 +256,27 @@ export default function FAQ({
               })}
             </div>
           ) : (
-            <div className="border-y border-black/[0.14] py-16 text-center">
-              <p className="text-[8px] font-semibold uppercase tracking-[0.24em] text-[var(--faq-copper)]">
-                No questions yet
-              </p>
-              <p className="mx-auto mt-4 max-w-[460px] text-[12px] leading-6 text-black/[0.50]">
-                Add items to the FAQ data array and they will appear here
-                automatically.
+            <div className="border-y border-black/[0.14] py-14 text-center sm:py-16">
+              <div className="flex items-center justify-center gap-3">
+                <span className="h-px w-8 bg-[var(--faq-copper)]" />
+                <p className="text-[10px] font-medium text-[var(--faq-copper)]">
+                  هنوز پرسشی ثبت نشده است
+                </p>
+              </div>
+
+              <p className="mx-auto mt-4 max-w-[520px] text-[12px] leading-7 text-black/[0.50] sm:text-[13px]">
+                پرسش‌ها را به داده‌های FAQ اضافه کنید؛ موارد جدید به‌صورت خودکار
+                در این بخش نمایش داده می‌شوند.
               </p>
             </div>
           )}
         </div>
 
-        {footer && (
-          <div className="mx-auto mt-12 max-w-[760px] border-t border-black/[0.10] pt-7 text-center">
+        {footer ? (
+          <div className="mx-auto mt-10 max-w-[820px] border-t border-black/[0.10] pt-7 text-center sm:mt-12">
             {footer}
           </div>
-        )}
+        ) : null}
       </div>
     </section>
   );

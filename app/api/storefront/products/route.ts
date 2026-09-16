@@ -20,6 +20,12 @@ function optionalLimit(value: string | null) {
   return parsed;
 }
 
+function optionalSort(value: string | null) {
+  if (!value) return undefined;
+  if (value === "latest" || value === "curated") return value;
+  badRequest("sort must be either latest or curated.");
+}
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
@@ -34,6 +40,7 @@ export async function GET(request: Request) {
           "subcategoryId",
         ),
         limit: optionalLimit(url.searchParams.get("limit")),
+        sort: optionalSort(url.searchParams.get("sort")),
       }),
     );
   } catch (error) {

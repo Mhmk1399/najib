@@ -26,16 +26,9 @@ import { QueryProvider } from "@/components/providers/query-provider";
 
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
-import { Vazirmatn } from "next/font/google";
-import { Dana } from "@/next-persian-fonts/dana";
-// ---------------------------------------------------------------------------
-// Metadata
-// ---------------------------------------------------------------------------
-const vazir = Vazirmatn({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
+ import { Dana } from "@/next-persian-fonts/dana";
+import { estedad } from "@/next-persian-fonts/estedad";
+ 
 export const metadata: Metadata = {
   title: 
     "Najibzadeh — Luxury Menswear & Tailoring",
@@ -55,33 +48,7 @@ export const metadata: Metadata = {
   },
 };
 
-// ---------------------------------------------------------------------------
-// Layout
-// ---------------------------------------------------------------------------
-
-/**
- * Configure these variables in your next/font setup and pass the resulting
- * className strings to <body>.  The font token names (--font-dana and
- * --font-open-sans) match the values in fontTokens.
- *
- * Example (add to a separate fonts.ts file):
- *
- *   import localFont from 'next/font/local';
- *   import { Open_Sans } from 'next/font/google';
- *
- *   export const dana = localFont({
- *     src: '../fonts/Dana-Regular.woff2',
- *     variable: '--font-dana',
- *     display: 'swap',
- *   });
- *
- *   export const openSans = Open_Sans({
- *     subsets: ['latin'],
- *     variable: '--font-open-sans',
- *     display: 'swap',
- *   });
- */
-
+ 
 interface RootLayoutProps {
   children: React.ReactNode;
 }
@@ -104,7 +71,7 @@ export default function RootLayout({
     >
       <head></head>
 
-      <body dir="ltr" className={`antialiased  ${Dana.className} min-h-dvh`}>
+      <body dir="ltr" className={`antialiased  ${estedad.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
             <QueryProvider>
