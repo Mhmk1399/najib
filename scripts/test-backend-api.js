@@ -60,6 +60,19 @@ const checks = [
     validate: (body, response) =>
       typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
   },
+  ...[
+    ["admin orders are protected", "/api/admin/orders"],
+    ["admin carts are protected", "/api/admin/carts"],
+    ["admin checkouts are protected", "/api/admin/checkouts"],
+    ["admin abandoned checkouts are protected", "/api/admin/abandoned-checkouts"],
+    ["admin audit history is protected", "/api/admin/audit"],
+  ].map(([name, path]) => ({
+    name,
+    path,
+    status: 401,
+    validate: (body, response) =>
+      typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
+  })),
 ];
 
 async function envValue(name) {
@@ -126,6 +139,9 @@ async function runAuthFlow() {
   let db;
   let userId;
   let mongoose;
+  let ownedOrderId;
+  let foreignOrderId;
+  let cartId;
 
   try {
     const anonymousMe = await apiRequest("/api/auth/me");
@@ -156,11 +172,137 @@ async function runAuthFlow() {
       `${signup.response.status}, ${signup.body?.destination || "no destination"}`,
     );
 
+    const mongoUri = await envValue("MONGODB_URI");
+    if (!mongoUri) throw new Error("MONGODB_URI is required for the isolated role test.");
+    ({ default: mongoose } = await import("mongoose"));
+    const connection = await mongoose.connect(mongoUri, {
+      dbName: (await envValue("MONGODB_DB_NAME")) || "najib",
+      serverSelectionTimeoutMS: 5_000,
+    });
+    db = connection.connection.db;
+    const user = await db.collection("users").findOne({ email });
+    if (!user) throw new Error("Temporary auth-test user was not found.");
+    userId = user._id;
+
+    const now = new Date();
+    ownedOrderId = new mongoose.Types.ObjectId();
+    foreignOrderId = new mongoose.Types.ObjectId();
+    cartId = new mongoose.Types.ObjectId();
+    const orderBase = {
+      orderNumber: `TEST-${suffix}`.toUpperCase(),
+      idempotencyKey: `test-${suffix}`,
+      correlationId: `test-${suffix}`,
+      cartId: String(cartId),
+      checkoutSessionId: `checkout-${suffix}`,
+      contact: { email, firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567" },
+      storeId: "test-store",
+      cityId: "test-city",
+      currency: "IRR",
+      items: [{
+        _id: new mongoose.Types.ObjectId(),
+        variantId: "test-variant",
+        productId: "test-product",
+        productName: { fa: "کت آزمایشی", en: "Test jacket", ar: "سترة اختبار" },
+        sku: "TEST-SKU",
+        colorName: { fa: "مشکی", en: "Black", ar: "أسود" },
+        sizeName: { fa: "متوسط", en: "Medium", ar: "متوسط" },
+        unitPriceMinor: 1_200_000,
+        taxMinor: 0,
+        discountMinor: 0,
+        quantity: 1,
+        lineTotalMinor: 1_200_000,
+      }],
+      subtotalMinor: 1_200_000,
+      taxMinor: 0,
+      discountMinor: 0,
+      shippingMinor: 0,
+      totalMinor: 1_200_000,
+      status: "confirmed",
+      policyVersion: "test-v1",
+      confirmedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await Promise.all([
+      db.collection("orders").insertOne({ ...orderBase, _id: ownedOrderId, userId: String(userId) }),
+      db.collection("orders").insertOne({
+        ...orderBase,
+        _id: foreignOrderId,
+        orderNumber: `FOREIGN-${suffix}`.toUpperCase(),
+        idempotencyKey: `foreign-${suffix}`,
+        checkoutSessionId: `foreign-checkout-${suffix}`,
+        userId: String(new mongoose.Types.ObjectId()),
+      }),
+      db.collection("carts").insertOne({
+        _id: cartId,
+        userId: String(userId),
+        currency: "IRR",
+        items: [{ _id: new mongoose.Types.ObjectId(), variantId: new mongoose.Types.ObjectId(), quantity: 2, unitPriceMinor: 400_000, addedAt: now }],
+        status: "active",
+        expiresAt: new Date(now.getTime() + 86_400_000),
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("users").updateOne({ _id: userId }, { $set: { addresses: [{ _id: new mongoose.Types.ObjectId(), label: "خانه", firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567", line1: "نشانی آزمایشی", city: "تهران", postalCode: "1234567890", countryCode: "IR", isDefault: true }] } }),
+    ]);
+
     const customerMe = await apiRequest("/api/auth/me", { jar: customerCookies });
     failed += result(
       "customer account profile",
       customerMe.response.status === 200 && customerMe.body?.account?.email === email && customerMe.body?.destination === "/customer-dashboard" && !customerMe.body?.accessToken,
       String(customerMe.response.status),
+    );
+
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile"]) {
+      const anonymousAccount = await apiRequest(path);
+      failed += result(`anonymous is blocked from ${path}`, anonymousAccount.response.status === 401, String(anonymousAccount.response.status));
+    }
+
+    const accountSummary = await apiRequest("/api/account/summary", { jar: customerCookies });
+    failed += result(
+      "customer summary is scoped and safe",
+      accountSummary.response.status === 200 && accountSummary.body?.orders?.total === 1 && accountSummary.body?.profile?.addressCount === 1 && !accountSummary.body?.profile?.passwordHash && accountSummary.response.headers.get("cache-control") === "no-store",
+      String(accountSummary.response.status),
+    );
+
+    const accountOrders = await apiRequest("/api/account/orders?limit=10", { jar: customerCookies });
+    failed += result(
+      "customer order list enforces ownership",
+      accountOrders.response.status === 200 && accountOrders.body?.items?.length === 1 && accountOrders.body.items[0]?.id === String(ownedOrderId) && !JSON.stringify(accountOrders.body).includes(`FOREIGN-${suffix}`.toUpperCase()),
+      String(accountOrders.response.status),
+    );
+
+    const ownOrder = await apiRequest(`/api/account/orders/${ownedOrderId}`, { jar: customerCookies });
+    const foreignOrder = await apiRequest(`/api/account/orders/${foreignOrderId}`, { jar: customerCookies });
+    failed += result(
+      "customer order detail is localized and owned",
+      ownOrder.response.status === 200 && ownOrder.body?.items?.[0]?.productName === "کت آزمایشی" && ownOrder.body?.items?.[0]?.colorName === "مشکی" && foreignOrder.response.status === 404,
+      `${ownOrder.response.status}/${foreignOrder.response.status}`,
+    );
+
+    const accountCart = await apiRequest("/api/account/cart", { jar: customerCookies });
+    failed += result(
+      "customer cart is scoped to the session account",
+      accountCart.response.status === 200 && accountCart.body?.id === String(cartId) && accountCart.body?.itemCount === 2,
+      String(accountCart.response.status),
+    );
+
+    const safeProfileUpdate = await apiRequest("/api/account/profile", {
+      method: "PATCH",
+      jar: customerCookies,
+      body: { firstName: "نام جدید", lastName: "آزمایشی", phone: "+98 912 123 4567", preferredLocale: "fa" },
+    });
+    const unsafeProfileUpdate = await apiRequest("/api/account/profile", {
+      method: "PATCH",
+      jar: customerCookies,
+      body: { roles: ["owner"], status: "suspended", email: "attacker@example.test" },
+    });
+    const profileAfterUpdates = await apiRequest("/api/account/profile", { jar: customerCookies });
+    const storedCustomer = await db.collection("users").findOne({ _id: userId });
+    failed += result(
+      "profile accepts safe fields and rejects privilege fields",
+      safeProfileUpdate.response.status === 200 && safeProfileUpdate.body?.firstName === "نام جدید" && safeProfileUpdate.body?.addresses?.length === 1 && unsafeProfileUpdate.response.status === 400 && storedCustomer?.email === email && storedCustomer?.roles?.includes("customer") && profileAfterUpdates.body?.phone === "+98 912 123 4567",
+      `${safeProfileUpdate.response.status}/${unsafeProfileUpdate.response.status}`,
     );
 
     const customerAdmin = await apiRequest("/admin", { jar: customerCookies, redirect: "manual" });
@@ -205,17 +347,6 @@ async function runAuthFlow() {
     );
     await apiRequest("/api/auth/logout", { method: "POST", jar: customerCookies });
 
-    const mongoUri = await envValue("MONGODB_URI");
-    if (!mongoUri) throw new Error("MONGODB_URI is required for the isolated role test.");
-    ({ default: mongoose } = await import("mongoose"));
-    const connection = await mongoose.connect(mongoUri, {
-      dbName: (await envValue("MONGODB_DB_NAME")) || "najib",
-      serverSelectionTimeoutMS: 5_000,
-    });
-    db = connection.connection.db;
-    const user = await db.collection("users").findOne({ email });
-    if (!user) throw new Error("Temporary auth-test user was not found.");
-    userId = user._id;
     await db.collection("users").updateOne({ _id: userId }, { $set: { roles: ["owner"], permissions: [] } });
 
     const adminLogin = await apiRequest("/api/auth/login", {
@@ -236,6 +367,26 @@ async function runAuthFlow() {
       String(adminMe.response.status),
     );
 
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile"]) {
+      const staffAccount = await apiRequest(path, { jar: adminCookies });
+      failed += result(`staff is isolated from ${path}`, staffAccount.response.status === 403, String(staffAccount.response.status));
+    }
+
+    for (const [name, path] of [
+      ["admin can list orders", "/api/admin/orders?limit=2"],
+      ["admin can list carts", "/api/admin/carts?limit=2"],
+      ["admin can list checkouts", "/api/admin/checkouts?limit=2"],
+      ["admin can list abandoned checkouts", "/api/admin/abandoned-checkouts?limit=2"],
+      ["admin can read audit history", "/api/admin/audit?limit=2"],
+    ]) {
+      const operationalList = await apiRequest(path, { jar: adminCookies });
+      failed += result(
+        name,
+        operationalList.response.status === 200 && Array.isArray(operationalList.body?.items),
+        String(operationalList.response.status),
+      );
+    }
+
     const adminCustomer = await apiRequest("/customer-dashboard", { jar: adminCookies, redirect: "manual" });
     failed += result(
       "admin is isolated from customer dashboard",
@@ -255,6 +406,8 @@ async function runAuthFlow() {
       await Promise.all([
         db.collection("staffsessions").deleteMany({ userId }),
         db.collection("staffaudits").deleteMany({ userId }),
+        db.collection("orders").deleteMany({ _id: { $in: [ownedOrderId, foreignOrderId].filter(Boolean) } }),
+        db.collection("carts").deleteMany({ _id: { $in: [cartId].filter(Boolean) } }),
         db.collection("users").deleteOne({ _id: userId }),
       ]).catch(() => undefined);
     }
