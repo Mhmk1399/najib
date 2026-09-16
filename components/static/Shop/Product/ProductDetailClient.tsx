@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/Button";
+import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import {
   ProductDetailPage,
   type ProductColorVariant,
@@ -344,7 +345,7 @@ export function ProductDetailClient({ slug }: { slug: string }) {
   );
 
   if (query.isLoading) {
-    return <ProductDetailState title="در حال دریافت محصول" />;
+    return <BrandSketchLoader open label="در حال دریافت محصول" />;
   }
 
   if (query.isError) {

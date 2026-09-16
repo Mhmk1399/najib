@@ -21,6 +21,7 @@ import { useQuery } from "@tanstack/react-query";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
+import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
 
 import {
@@ -805,6 +806,11 @@ export function ShopPage() {
       dir="rtl"
       className="min-h-screen bg-[var(--shop-bg)] text-[var(--shop-text)]"
     >
+      <BrandSketchLoader
+        open={isLoadingProducts}
+        label="در حال دریافت محصولات"
+      />
+
       {/* The shop hero starts at page top so the existing transparent navbar can sit over it. */}
       <ShopHero
         image={SHOP_HERO_IMAGE}
@@ -3745,67 +3751,6 @@ function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
 /* ═══════════════════════════════════════════════════════════
    ICONS
    ═══════════════════════════════════════════════════════════ */
-
-function GridViewIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="size-3.5"
-    >
-      <rect
-        x="2"
-        y="2"
-        width="4"
-        height="4"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-      <rect
-        x="10"
-        y="2"
-        width="4"
-        height="4"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-      <rect
-        x="2"
-        y="10"
-        width="4"
-        height="4"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-      <rect
-        x="10"
-        y="10"
-        width="4"
-        height="4"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
-
-function ListViewIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="size-3.5"
-    >
-      <path
-        d="M2 4H4M6 4H14M2 8H4M6 8H14M2 12H4M6 12H14"
-        stroke="currentColor"
-        strokeWidth="1"
-      />
-    </svg>
-  );
-}
 
 function SortIcon() {
   return (

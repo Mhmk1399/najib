@@ -2,6 +2,7 @@
 
 import { CategoryLandingPage } from "@/components/static/Category/CategoryLandingPage";
 import { Button } from "@/components/ui/Button";
+import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import {
   useCategoryPageData,
   useSubcategoryPageData,
@@ -20,7 +21,7 @@ export function CategoryPageClient({ categorySlug }: CategoryPageClientProps) {
   const query = useCategoryPageData(categorySlug);
 
   if (query.isLoading) {
-    return <CatalogState title="در حال دریافت دسته‌بندی" />;
+    return <BrandSketchLoader open label="در حال دریافت دسته‌بندی" />;
   }
 
   if (query.isError) {
@@ -55,7 +56,7 @@ export function SubcategoryPageClient({
   const query = useSubcategoryPageData(categorySlug, subcategorySlug);
 
   if (query.isLoading) {
-    return <CatalogState title="در حال دریافت زیردسته" />;
+    return <BrandSketchLoader open label="در حال دریافت زیردسته" />;
   }
 
   if (query.isError) {

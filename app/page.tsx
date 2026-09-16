@@ -1,11 +1,17 @@
 import FAQ, { FAQItem } from "@/components/global/faq";
 import { BrandStorySection } from "@/components/static/Home/BrandStorySection";
-import { CategoryShowcase } from "@/components/static/Home/CategoryShowcase";
+import {
+  CategoryShowcase,
+  getHomeCategoryShowcaseItems,
+} from "@/components/static/Home/CategoryShowcase";
 import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
 import { HeroSection } from "@/components/static/Home/HeroSection";
 import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSection";
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
 import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
+
+export const dynamic = "force-dynamic";
+
 export const FAQ_DEMO_CONTENT = {
   eyebrow: "Client Information",
   title: "Questions, considered.",
@@ -65,11 +71,13 @@ export const FAQ_DEMO_ITEMS: FAQItem[] = [
   },
 ];
 
-export default function Page() {
+export default async function Page() {
+  const categoryShowcaseItems = await getHomeCategoryShowcaseItems();
+
   return (
     <main>
       <HeroSection />
-      <CategoryShowcase />
+      <CategoryShowcase categories={categoryShowcaseItems} />
       <CinematicVideoSection
         videoSrc="/assets/video/videoCinema.mp4"
         posterSrc="/assets/images/p1.webp"

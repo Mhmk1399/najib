@@ -27,6 +27,7 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
 import { Vazirmatn } from "next/font/google";
+import { Dana } from "@/next-persian-fonts/dana";
 // ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
@@ -103,7 +104,7 @@ export default function RootLayout({
     >
       <head></head>
 
-      <body dir="ltr" className={`antialiased  ${vazir.className} min-h-dvh`}>
+      <body dir="ltr" className={`antialiased  ${Dana.className} min-h-dvh`}>
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
             <QueryProvider>

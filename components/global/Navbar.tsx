@@ -16,7 +16,7 @@ import {
 
 import { Button } from "@/components/ui/Button";
 import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
-import { fontTokens, themeClasses } from "@/theme/theme-colors";
+import { themeClasses } from "@/theme/theme-colors";
 
 /* ==========================================================================
    TYPES
@@ -128,6 +128,26 @@ function getClampedScrollY(scrollY: number) {
   return Math.min(scrollY, maxScrollY);
 }
 
+const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+
+function formatPersianNumber(value: number | string, minimumLength = 0) {
+  return String(value)
+    .padStart(minimumLength, "0")
+    .replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)] ?? digit);
+}
+
+const BADGE_LABELS: Record<string, string> = {
+  New: "جدید",
+  جدید: "جدید",
+  Exclusive: "انحصاری",
+  Limited: "محدود",
+};
+
+function localizeBadge(label?: string) {
+  if (!label) return undefined;
+  return BADGE_LABELS[label] ?? label;
+}
+
 /* ==========================================================================
    QUICK LINKS
 ============================================================================ */
@@ -171,593 +191,235 @@ const QUICK_LINKS: QuickLink[] = [
 ];
 
 /* ==========================================================================
-   MENU DATA
+   MENU COPY LOCALIZATION
 ============================================================================ */
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const MENU: MenuSection[] = [
-  {
-    id: "new",
-
-    title: "New & Featured",
-
-    subtitle: "Discover the latest expressions of Najibzadeh.",
-
-    href: "/new",
-
-    image:
-      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=1400&q=72",
-
-    imageLabel: "The New Season",
-
-    groups: [
-      {
-        title: "New",
-
-        items: [
-          {
-            label: "New Arrivals",
-            href: "/new-arrivals",
-            badge: "New",
-          },
-
-          {
-            label: "Latest Collection",
-            href: "/collections/latest",
-          },
-
-          {
-            label: "Best Sellers",
-            href: "/best-sellers",
-          },
-
-          {
-            label: "Najibzadeh Icons",
-            href: "/icons",
-          },
-        ],
-      },
-
-      {
-        title: "Curated",
-
-        items: [
-          {
-            label: "The Evening Edit",
-            href: "/edits/evening",
-          },
-
-          {
-            label: "Business Wardrobe",
-            href: "/edits/business",
-          },
-
-          {
-            label: "Weekend Selection",
-            href: "/edits/weekend",
-          },
-
-          {
-            label: "Travel Essentials",
-            href: "/edits/travel",
-          },
-        ],
-      },
-
-      {
-        title: "Discover",
-
-        items: [
-          {
-            label: "The Journal",
-            href: "/journal",
-          },
-
-          {
-            label: "Campaigns",
-            href: "/campaigns",
-          },
-
-          {
-            label: "Lookbook",
-            href: "/lookbook",
-          },
-
-          {
-            label: "Our World",
-            href: "/world",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    id: "clothing",
-
-    title: "Clothing",
-
-    subtitle:
-      "Modern tailoring and refined essentials designed for everyday presence.",
-
-    href: "/clothing",
-
-    image: "https://unsplash.com/photos/f61236AEprY/download?force=true&w=1400",
-
-    imageLabel: "Modern Tailoring",
-
-    groups: [
-      {
-        title: "Tailoring",
-
-        items: [
-          {
-            label: "Suits",
-            href: "/clothing/suits",
-          },
-
-          {
-            label: "Blazers",
-            href: "/clothing/blazers",
-          },
-
-          {
-            label: "Tuxedos",
-            href: "/clothing/tuxedos",
-          },
-
-          {
-            label: "Waistcoats",
-            href: "/clothing/waistcoats",
-          },
-        ],
-      },
-
-      {
-        title: "Essentials",
-
-        items: [
-          {
-            label: "Shirts",
-            href: "/clothing/shirts",
-          },
-
-          {
-            label: "Polos",
-            href: "/clothing/polos",
-          },
-
-          {
-            label: "T-Shirts",
-            href: "/clothing/t-shirts",
-          },
-
-          {
-            label: "Knitwear",
-            href: "/clothing/knitwear",
-          },
-        ],
-      },
-
-      {
-        title: "Bottoms",
-
-        items: [
-          {
-            label: "Trousers",
-            href: "/clothing/trousers",
-          },
-
-          {
-            label: "Denim",
-            href: "/clothing/denim",
-          },
-
-          {
-            label: "Chinos",
-            href: "/clothing/chinos",
-          },
-
-          {
-            label: "Shorts",
-            href: "/clothing/shorts",
-          },
-        ],
-      },
-
-      {
-        title: "Outerwear",
-
-        items: [
-          {
-            label: "Coats",
-            href: "/clothing/coats",
-          },
-
-          {
-            label: "Jackets",
-            href: "/clothing/jackets",
-          },
-
-          {
-            label: "Leather",
-            href: "/clothing/leather",
-          },
-
-          {
-            label: "Overshirts",
-            href: "/clothing/overshirts",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    id: "fragrance",
-
-    title: "Fragrance",
-
-    subtitle: "Signature scents created to leave a lasting impression.",
-
-    href: "/fragrance",
-
-    image:
-      "https://images.unsplash.com/photo-1774682060992-46c7e9f2e50b?auto=format&fit=crop&w=1400&q=72",
-
-    imageLabel: "Noir Absolu",
-
-    groups: [
-      {
-        title: "Fragrances",
-
-        items: [
-          {
-            label: "All Fragrances",
-            href: "/fragrance",
-          },
-
-          {
-            label: "Extrait de Parfum",
-            href: "/fragrance/extrait",
-          },
-
-          {
-            label: "Eau de Parfum",
-            href: "/fragrance/eau-de-parfum",
-          },
-
-          {
-            label: "Discovery Sets",
-            href: "/fragrance/discovery",
-          },
-        ],
-      },
-
-      {
-        title: "By Character",
-
-        items: [
-          {
-            label: "Woody",
-            href: "/fragrance/woody",
-          },
-
-          {
-            label: "Leather",
-            href: "/fragrance/leather",
-          },
-
-          {
-            label: "Amber",
-            href: "/fragrance/amber",
-          },
-
-          {
-            label: "Fresh",
-            href: "/fragrance/fresh",
-          },
-        ],
-      },
-
-      {
-        title: "Signatures",
-
-        items: [
-          {
-            label: "Noir Absolu",
-            href: "/fragrance/noir-absolu",
-          },
-
-          {
-            label: "Vetiver Éclat",
-            href: "/fragrance/vetiver-eclat",
-          },
-
-          {
-            label: "Santal Royal",
-            href: "/fragrance/santal-royal",
-          },
-
-          {
-            label: "Oud Essence",
-            href: "/fragrance/oud-essence",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    id: "accessories",
-
-    title: "Accessories",
-
-    subtitle: "Considered details that complete the Najibzadeh wardrobe.",
-
-    href: "/accessories",
-
-    image: "https://unsplash.com/photos/YuqBcL1pKAg/download?force=true&w=1400",
-
-    imageLabel: "Objects of Character",
-
-    groups: [
-      {
-        title: "Leather Goods",
-
-        items: [
-          {
-            label: "Bags",
-            href: "/accessories/bags",
-          },
-
-          {
-            label: "Briefcases",
-            href: "/accessories/briefcases",
-          },
-
-          {
-            label: "Wallets",
-            href: "/accessories/wallets",
-          },
-
-          {
-            label: "Belts",
-            href: "/accessories/belts",
-          },
-        ],
-      },
-
-      {
-        title: "Footwear",
-
-        items: [
-          {
-            label: "Loafers",
-            href: "/footwear/loafers",
-          },
-
-          {
-            label: "Oxfords",
-            href: "/footwear/oxfords",
-          },
-
-          {
-            label: "Sneakers",
-            href: "/footwear/sneakers",
-          },
-
-          {
-            label: "Boots",
-            href: "/footwear/boots",
-          },
-        ],
-      },
-
-      {
-        title: "Details",
-
-        items: [
-          {
-            label: "Eyewear",
-            href: "/accessories/eyewear",
-          },
-
-          {
-            label: "Ties",
-            href: "/accessories/ties",
-          },
-
-          {
-            label: "Pocket Squares",
-            href: "/accessories/pocket-squares",
-          },
-
-          {
-            label: "Watches",
-            href: "/accessories/watches",
-          },
-        ],
-      },
-    ],
-  },
-
-  {
-    id: "house",
-
-    title: "The House",
-
-    subtitle: "Craftsmanship, heritage and the world behind Najibzadeh.",
-
-    href: "/house",
-
-    image: "https://unsplash.com/photos/bhRcP1KqS0g/download?force=true&w=1400",
-
-    imageLabel: "Inside the Atelier",
-
-    groups: [
-      {
-        title: "The Atelier",
-
-        items: [
-          {
-            label: "Craftsmanship",
-            href: "/craftsmanship",
-          },
-
-          {
-            label: "Materials",
-            href: "/materials",
-          },
-
-          {
-            label: "Private Appointment",
-            href: "/appointments",
-          },
-        ],
-      },
-
-      {
-        title: "The House",
-
-        items: [
-          {
-            label: "Our Story",
-            href: "/our-story",
-          },
-
-          {
-            label: "Heritage",
-            href: "/heritage",
-          },
-
-          {
-            label: "The Journal",
-            href: "/journal",
-          },
-
-          {
-            label: "Stores",
-            href: "/stores",
-          },
-        ],
-      },
-    ],
-  },
-];
+const MENU_TEXT_TRANSLATIONS: Record<string, string> = {
+  "New & Featured": "جدید و منتخب",
+  "Discover the latest expressions of Najibzadeh.":
+    "تازه‌ترین روایت‌های نجیب‌زاده را کشف کنید.",
+  "The New Season": "فصل تازه",
+  New: "جدید",
+  "New Arrivals": "تازه‌رسیده‌ها",
+  "Latest Collection": "جدیدترین مجموعه",
+  "Best Sellers": "پرفروش‌ها",
+  "Najibzadeh Icons": "نمادهای نجیب‌زاده",
+  Curated: "انتخاب‌شده",
+  "The Evening Edit": "انتخاب شب",
+  "Business Wardrobe": "کمد رسمی",
+  "Weekend Selection": "انتخاب آخر هفته",
+  "Travel Essentials": "ضروریات سفر",
+  Discover: "کشف کنید",
+  "The Journal": "مجله",
+  Campaigns: "کمپین‌ها",
+  Lookbook: "لوک‌بوک",
+  "Our World": "دنیای ما",
+  Clothing: "پوشاک",
+  "Modern tailoring and refined essentials designed for everyday presence.":
+    "خیاطی مدرن و ضروریات پالوده برای حضوری متمایز در هر روز.",
+  "Modern Tailoring": "خیاطی مدرن",
+  Tailoring: "خیاطی",
+  Suits: "کت‌وشلوار",
+  Blazers: "بلیزر",
+  Tuxedos: "تاکسیدو",
+  Waistcoats: "جلیقه",
+  Essentials: "ضروریات",
+  Shirts: "پیراهن",
+  Polos: "پولوشرت",
+  "T-Shirts": "تی‌شرت",
+  Knitwear: "پوشاک بافت",
+  Bottoms: "شلوار",
+  Trousers: "شلوار پارچه‌ای",
+  Denim: "جین",
+  Chinos: "چینو",
+  Shorts: "شلوارک",
+  Outerwear: "لباس بیرونی",
+  Coats: "پالتو",
+  Jackets: "کت و کاپشن",
+  Leather: "چرم",
+  Overshirts: "اورشرت",
+  Fragrance: "عطر",
+  "Signature scents created to leave a lasting impression.":
+    "رایحه‌های امضادار برای اثری ماندگار.",
+  "Noir Absolu": "نوآر ابسولو",
+  Fragrances: "عطرها",
+  "All Fragrances": "همه عطرها",
+  "Extrait de Parfum": "اکستریت دو پرفیوم",
+  "Eau de Parfum": "ادو پرفیوم",
+  "Discovery Sets": "ست‌های اکتشافی",
+  "By Character": "بر اساس رایحه",
+  Woody: "چوبی",
+  Amber: "عنبری",
+  Fresh: "تازه",
+  Signatures: "رایحه‌های امضا",
+  "Vetiver Éclat": "وتیور اکلا",
+  "Santal Royal": "سانتال رویال",
+  "Oud Essence": "عود اسنس",
+  Accessories: "اکسسوری",
+  "Considered details that complete the Najibzadeh wardrobe.":
+    "جزئیات سنجیده‌ای که استایل نجیب‌زاده را کامل می‌کنند.",
+  "Objects of Character": "جزئیات ماندگار",
+  "Leather Goods": "کالاهای چرمی",
+  Bags: "کیف‌ها",
+  Briefcases: "کیف اداری",
+  Wallets: "کیف پول",
+  Belts: "کمربند",
+  Footwear: "کفش",
+  Loafers: "لوفر",
+  Oxfords: "آکسفورد",
+  Sneakers: "کتانی",
+  Boots: "بوت",
+  Details: "جزئیات",
+  Eyewear: "عینک",
+  Ties: "کراوات",
+  "Pocket Squares": "پوشت",
+  Watches: "ساعت",
+  "The House": "خانه نجیب‌زاده",
+  "Craftsmanship, heritage and the world behind Najibzadeh.":
+    "هنر ساخت، میراث و جهان پشت نام نجیب‌زاده.",
+  "Inside the Atelier": "درون آتلیه",
+  "The Atelier": "آتلیه",
+  Craftsmanship: "هنر ساخت",
+  Materials: "متریال‌ها",
+  "Private Appointment": "قرار اختصاصی",
+  "Our Story": "داستان ما",
+  Heritage: "میراث",
+  Stores: "فروشگاه‌ها",
+};
+
+function localizeMenuText(value: string) {
+  return MENU_TEXT_TRANSLATIONS[value] ?? value;
+}
 
 /* ==========================================================================
    BREADCRUMB LABELS
 ============================================================================ */
 
 const BREADCRUMB_LABELS: Record<string, string> = {
-  new: "New",
+  shop: "فروشگاه",
+  profile: "حساب کاربری",
+  wishlist: "علاقه‌مندی‌ها",
+  cart: "سبد خرید",
+  about: "درباره ما",
+  contact: "تماس با ما",
+  campaigns: "کمپین‌ها",
+  lookbook: "لوک‌بوک",
+  world: "دنیای ما",
+  "best-sellers": "پرفروش‌ها",
+  icons: "نمادهای نجیب‌زاده",
+  edits: "منتخب‌ها",
+  evening: "انتخاب شب",
+  business: "کمد رسمی",
+  weekend: "انتخاب آخر هفته",
+  travel: "ضروریات سفر",
+  "customer-care": "پشتیبانی مشتریان",
+  new: "جدیدها",
 
-  "new-arrivals": "New Arrivals",
+  "new-arrivals": "تازه‌رسیده‌ها",
 
-  collections: "Collections",
+  collections: "مجموعه‌ها",
 
-  latest: "Latest Collection",
+  latest: "جدیدترین مجموعه",
 
-  clothing: "Clothing",
+  clothing: "پوشاک",
 
-  suits: "Suits",
+  suits: "کت‌وشلوار",
 
-  blazers: "Blazers",
+  blazers: "بلیزر",
 
-  tuxedos: "Tuxedos",
+  tuxedos: "تاکسیدو",
 
-  waistcoats: "Waistcoats",
+  waistcoats: "جلیقه",
 
-  shirts: "Shirts",
+  shirts: "پیراهن",
 
-  polos: "Polos",
+  polos: "پولوشرت",
 
-  "t-shirts": "T-Shirts",
+  "t-shirts": "تی‌شرت",
 
-  knitwear: "Knitwear",
+  knitwear: "پوشاک بافت",
 
-  trousers: "Trousers",
+  trousers: "شلوار پارچه‌ای",
 
-  denim: "Denim",
+  denim: "جین",
 
-  chinos: "Chinos",
+  chinos: "چینو",
 
-  shorts: "Shorts",
+  shorts: "شلوارک",
 
-  coats: "Coats",
+  coats: "پالتو",
 
-  jackets: "Jackets",
+  jackets: "کت و کاپشن",
 
-  leather: "Leather",
+  leather: "چرم",
 
-  overshirts: "Overshirts",
+  overshirts: "اورشرت",
 
-  fragrance: "Fragrance",
+  fragrance: "عطر",
 
-  extrait: "Extrait de Parfum",
+  extrait: "اکستریت دو پرفیوم",
 
-  "eau-de-parfum": "Eau de Parfum",
+  "eau-de-parfum": "ادو پرفیوم",
 
-  discovery: "Discovery Sets",
+  discovery: "ست‌های اکتشافی",
 
-  woody: "Woody",
+  woody: "چوبی",
 
-  amber: "Amber",
+  amber: "عنبری",
 
-  fresh: "Fresh",
+  fresh: "تازه",
 
-  "noir-absolu": "Noir Absolu",
+  "noir-absolu": "نوآر ابسولو",
 
-  "vetiver-eclat": "Vetiver Éclat",
+  "vetiver-eclat": "وتیور اکلا",
 
-  "santal-royal": "Santal Royal",
+  "santal-royal": "سانتال رویال",
 
-  "oud-essence": "Oud Essence",
+  "oud-essence": "عود اسنس",
 
-  accessories: "Accessories",
+  accessories: "اکسسوری",
 
-  bags: "Bags",
+  bags: "کیف‌ها",
 
-  briefcases: "Briefcases",
+  briefcases: "کیف اداری",
 
-  wallets: "Wallets",
+  wallets: "کیف پول",
 
-  belts: "Belts",
+  belts: "کمربند",
 
-  footwear: "Footwear",
+  footwear: "کفش",
 
-  loafers: "Loafers",
+  loafers: "لوفر",
 
-  oxfords: "Oxfords",
+  oxfords: "آکسفورد",
 
-  sneakers: "Sneakers",
+  sneakers: "کتانی",
 
-  boots: "Boots",
+  boots: "بوت",
 
-  eyewear: "Eyewear",
+  eyewear: "عینک",
 
-  ties: "Ties",
+  ties: "کراوات",
 
-  "pocket-squares": "Pocket Squares",
+  "pocket-squares": "پوشت",
 
-  watches: "Watches",
+  watches: "ساعت",
 
-  house: "The House",
+  house: "خانه نجیب‌زاده",
 
-  craftsmanship: "Craftsmanship",
+  craftsmanship: "هنر ساخت",
 
-  materials: "Materials",
+  materials: "متریال‌ها",
 
-  appointments: "Private Appointment",
+  appointments: "قرار اختصاصی",
 
-  "our-story": "Our Story",
+  "our-story": "داستان ما",
 
-  heritage: "Heritage",
+  heritage: "میراث",
 
-  journal: "Journal",
+  journal: "مجله",
 
-  stores: "Stores",
+  stores: "فروشگاه‌ها",
 };
 
 /* ==========================================================================
@@ -839,10 +501,13 @@ export default function Navbar({
 
     return segments.map((segment, index) => {
       const href = "/" + segments.slice(0, index + 1).join("/");
-      const generatedLabel = segment
-        .split("-")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
+      let generatedLabel = segment.replaceAll("-", " ");
+
+      try {
+        generatedLabel = decodeURIComponent(generatedLabel);
+      } catch {
+        // Keep the raw route segment when it is not valid URI-encoded text.
+      }
 
       return {
         href,
@@ -1027,14 +692,14 @@ export default function Navbar({
   return (
     <>
       <header
-        dir="ltr"
-        style={{ fontFamily: fontTokens.english }}
+        dir="rtl"
+        lang="fa"
         className={cx(
           "fixed inset-x-0 top-0 z-[100000]",
           "h-[70px] md:h-[78px]",
           "border-b",
           "transition-[background-color,border-color,box-shadow,color,backdrop-filter]",
-          "duration-500 ease-linear",
+          "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
           "motion-reduce:transition-none",
           menuMounted
             ? cx(themeClasses.megaMenu, themeClasses.border)
@@ -1054,13 +719,12 @@ export default function Navbar({
               variant="outline"
               size="sm"
               uppercase={false}
-              align="left"
-              aria-expanded={open}
+               aria-expanded={open}
               aria-controls="najibzadeh-luxury-menu"
-              aria-label={open ? "Close menu" : "Open menu"}
+              aria-label={open ? "بستن منو" : "باز کردن منو"}
               onClick={toggleMenu}
               icon={open ? <CloseIcon /> : <MenuIcon />}
-              iconPosition="left"
+              iconPosition="right"
               className={cx(
                 "h-11 !min-h-0 !border-0 !bg-transparent !px-0 !text-current",
                 "gap-3 !tracking-normal",
@@ -1070,16 +734,14 @@ export default function Navbar({
                   : NAVBAR_OVERLAY_CHROME_CLASSES,
               )}
             >
-              <span className="hidden text-[9px] font-semibold uppercase tracking-[0.22em] sm:inline">
-                {open ? "Close" : "Menu"}
-              </span>
+            
             </Button>
           </div>
 
           <Link
             href="/"
             onClick={hideMenu}
-            aria-label="Najibzadeh home"
+            aria-label="صفحه اصلی نجیب‌زاده"
             className={cx(
               "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
               "transition-[opacity,transform,filter] duration-300",
@@ -1091,11 +753,10 @@ export default function Navbar({
           >
             <Image
               src={
-                readableNavbar
-                  ? "/assets/images/logoblack.png"
-                  : "/assets/images/logo.png"
+                   
+                 "/assets/images/logo.png"
               }
-              alt="Najibzadeh"
+              alt="نجیب‌زاده"
               width={84}
               height={84}
               priority
@@ -1107,7 +768,7 @@ export default function Navbar({
             <div className="hidden sm:block">
               <NavAction
                 href="/profile"
-                label="Profile"
+                label="حساب کاربری"
                 onReadableSurface={readableNavbar}
               >
                 <ProfileIcon />
@@ -1117,7 +778,7 @@ export default function Navbar({
             <div className="hidden md:block">
               <NavAction
                 href="/wishlist"
-                label="Wishlist"
+                label="علاقه‌مندی‌ها"
                 onReadableSurface={readableNavbar}
               >
                 <HeartIcon />
@@ -1126,7 +787,7 @@ export default function Navbar({
 
             <NavAction
               href="/cart"
-              label="Shopping bag"
+              label="سبد خرید"
               badge={2}
               onReadableSurface={readableNavbar}
             >
@@ -1138,22 +799,22 @@ export default function Navbar({
 
       {!menuMounted && breadcrumbs.length > 0 && (
         <nav
-          dir="ltr"
-          aria-label="Breadcrumb"
-          style={{ fontFamily: fontTokens.english }}
+          dir="rtl"
+          lang="fa"
+          aria-label="مسیر صفحه"
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
             scrolled ? themeClasses.textAccent : overlayBreadcrumbClass,
           )}
         >
-          <div className="mx-auto max-w-[1920px] overflow-x-auto px-4 py-3 sm:px-6 lg:px-10">
-            <ol className="flex items-center gap-2 whitespace-nowrap text-[8px] font-semibold uppercase tracking-[0.16em]">
+          <div className="mx-auto max-w-[1920px] overflow-x-auto px-4 py-3 text-right sm:px-6 lg:px-10">
+            <ol className="flex items-center gap-2 whitespace-nowrap text-[9px] font-medium tracking-normal">
               <li>
                 <Link
                   href="/"
                   className="opacity-45 transition-opacity hover:opacity-100"
                 >
-                  Home
+                  خانه
                 </Link>
               </li>
 
@@ -1163,10 +824,15 @@ export default function Navbar({
                 return (
                   <li key={breadcrumb.href} className="flex items-center gap-2">
                     <span aria-hidden className="opacity-25">
-                      /
+                      ‹
                     </span>
                     {last ? (
-                      <span className="opacity-90">{breadcrumb.label}</span>
+                      <span
+                        aria-current="page"
+                        className="font-semibold opacity-90"
+                      >
+                        {breadcrumb.label}
+                      </span>
                     ) : (
                       <Link
                         href={breadcrumb.href}
@@ -1186,13 +852,14 @@ export default function Navbar({
       {menuMounted && (
         <div
           id="najibzadeh-luxury-menu"
-          dir="ltr"
+          dir="rtl"
+          lang="fa"
           data-lenis-prevent=""
           aria-hidden={!open}
-          style={{ fontFamily: fontTokens.english }}
+          aria-label="منوی اصلی فروشگاه"
           className={cx(
             "fixed inset-x-0 bottom-0 top-[70px] z-[990] md:top-[78px]",
-            "transition-opacity duration-[320ms] ease-linear",
+            "transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
             "motion-reduce:transition-none",
             menuVisible
               ? "pointer-events-auto opacity-100"
@@ -1201,7 +868,7 @@ export default function Navbar({
         >
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label="بستن منوی ناوبری"
             onClick={hideMenu}
             className={cx(
               "absolute inset-0 hidden bg-black/35 backdrop-blur-[3px] transition-opacity duration-300 lg:block",
@@ -1212,7 +879,7 @@ export default function Navbar({
           <div
             className={cx(
               "relative mx-auto h-full max-w-[1920px] overflow-hidden",
-              "transition-[transform,opacity] duration-[320ms] ease-linear",
+              "transition-[transform,opacity] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
               "motion-reduce:transition-none",
               menuVisible
                 ? "translate-y-0 opacity-100"
@@ -1222,11 +889,11 @@ export default function Navbar({
             <div className="hidden h-[min(760px,calc(100vh-92px))] min-h-[560px] grid-cols-[270px_minmax(0,1fr)_390px] overflow-hidden border-t border-black/[0.06] bg-[#F7F5F0] shadow-[0_30px_90px_rgba(0,0,0,0.18)] dark:border-white/10 dark:bg-[#0E0E0E] lg:grid xl:grid-cols-[300px_minmax(0,1fr)_450px]">
               <aside className="flex min-h-0 flex-col bg-[#0C0C0C] text-white">
                 <div className="flex items-center justify-between border-b border-white/10 px-6 py-5 xl:px-7">
-                  <p className="text-[8px] font-semibold uppercase tracking-[0.24em] text-white/45">
-                    Collections
+                  <p className="text-[9px] font-semibold tracking-[0.05em] text-white/45">
+                    مجموعه‌ها
                   </p>
                   <span className="text-[8px] font-medium tabular-nums text-white/35">
-                    {String(menuSections.length).padStart(2, "0")}
+                    {formatPersianNumber(menuSections.length, 2)}
                   </span>
                 </div>
 
@@ -1247,8 +914,9 @@ export default function Navbar({
                           setHoveredSubcategory(null);
                         }}
                         onClick={() => setActiveId(section.id)}
+                        aria-pressed={selected}
                         className={cx(
-                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-left",
+                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-right",
                           "transition-[background-color,transform] duration-300",
                           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-inset",
                           selected
@@ -1258,24 +926,24 @@ export default function Navbar({
                       >
                         <span
                           className={cx(
-                            "absolute inset-y-3 left-0 w-px bg-white transition-opacity duration-300",
+                            "absolute inset-y-3 right-0 w-px bg-white transition-opacity duration-300",
                             selected ? "opacity-100" : "opacity-0",
                           )}
                         />
 
                         <span className="w-6 shrink-0 text-[8px] font-medium tabular-nums tracking-[0.08em] text-white/35">
-                          {String(index + 1).padStart(2, "0")}
+                          {formatPersianNumber(index + 1, 2)}
                         </span>
 
                         <span
                           className={cx(
-                            "min-w-0 flex-1 text-[17px] font-medium tracking-[-0.025em] transition-all duration-300 xl:text-[18px]",
+                            "min-w-0 flex-1 text-[16px] font-semibold leading-7 tracking-[-0.015em] transition-all duration-300 xl:text-[18px]",
                             selected
-                              ? "translate-x-1 text-white"
+                              ? "-translate-x-1 text-white"
                               : "text-white/62 group-hover:text-white/90",
                           )}
                         >
-                          {section.title}
+                          {localizeMenuText(section.title)}
                         </span>
 
                         <span
@@ -1283,7 +951,7 @@ export default function Navbar({
                             "transition-[opacity,transform] duration-300",
                             selected
                               ? "translate-x-0 opacity-100"
-                              : "-translate-x-1 opacity-0",
+                              : "translate-x-1 opacity-0",
                           )}
                         >
                           <ArrowIcon />
@@ -1294,24 +962,27 @@ export default function Navbar({
                 </div>
 
                 <div className="border-t border-white/10 p-5 xl:p-6">
-                  <p className="mb-3 text-[8px] font-semibold uppercase tracking-[0.22em] text-white/35">
-                    Client services
+                  <p className="mb-3 text-[9px] font-semibold tracking-[0.05em] text-white/35">
+                    خدمات مشتریان
                   </p>
                   <div className="space-y-1">
                     <DarkUtilityLink href="/appointments" onClick={hideMenu}>
-                      Private appointment
+                      رزرو وقت اختصاصی
                     </DarkUtilityLink>
                     <DarkUtilityLink href="/stores" onClick={hideMenu}>
-                      Find a store
+                      یافتن فروشگاه
                     </DarkUtilityLink>
                     <DarkUtilityLink href="/customer-care" onClick={hideMenu}>
-                      Client care
+                      پشتیبانی مشتریان
                     </DarkUtilityLink>
                   </div>
                 </div>
               </aside>
 
-              <main className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 xl:px-12 xl:py-10">
+              <section
+                aria-label="جزئیات مجموعه"
+                className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-right xl:px-12 xl:py-10"
+              >
                 <div
                   key={active.id}
                   className="mx-auto flex min-h-full max-w-[920px] flex-col"
@@ -1321,31 +992,31 @@ export default function Navbar({
                       <div className="mb-4 flex items-center gap-3">
                         <span
                           className={cx(
-                            "text-[8px] font-semibold uppercase tracking-[0.24em]",
+                            "text-[9px] font-semibold tracking-[0.05em]",
                             themeClasses.textAccent,
                           )}
                         >
-                          Najibzadeh / {active.id}
+                          نجیب‌زاده / {localizeMenuText(active.title)}
                         </span>
                         <span className="h-px w-8 bg-current opacity-15" />
                       </div>
 
                       <h2
                         className={cx(
-                          "text-[40px] font-medium leading-[0.98] tracking-[-0.045em] xl:text-[50px]",
+                          "text-[36px] font-bold leading-[1.18] tracking-[-0.025em] xl:text-[46px]",
                           themeClasses.textPrimary,
                         )}
                       >
-                        {active.title}
+                        {localizeMenuText(active.title)}
                       </h2>
 
                       <p
                         className={cx(
-                          "mt-4 max-w-[560px] text-[12px] leading-6 xl:text-[13px]",
+                          "mt-4 max-w-[580px] text-[13px] leading-7 xl:text-[14px]",
                           themeClasses.textSecondary,
                         )}
                       >
-                        {active.subtitle}
+                        {localizeMenuText(active.subtitle)}
                       </p>
                     </div>
 
@@ -1355,10 +1026,10 @@ export default function Navbar({
                       variant="outline"
                       size="md"
                       icon={<ArrowIcon />}
-                      iconPosition="right"
-                      className="mt-1 !tracking-[0.18em]"
+                      iconPosition="left"
+                      className="mt-1 !tracking-normal !text-[10px]"
                     >
-                      View collection
+                      مشاهده مجموعه
                     </Button>
                   </div>
 
@@ -1384,10 +1055,10 @@ export default function Navbar({
                   </div>
 
                   <div className="border-t border-black/[0.09] pt-5 dark:border-white/10">
-                    <div className="flex flex-row-reverse items-center justify-between gap-5">
+                    <div className="flex items-center justify-between gap-5">
                       <p
                         className={cx(
-                          "text-[8px] font-semibold uppercase tracking-[0.2em]",
+                          "text-[9px] font-semibold tracking-[0.04em]",
                           themeClasses.textSoft,
                         )}
                       >
@@ -1401,16 +1072,16 @@ export default function Navbar({
                             href={item.href}
                             onClick={hideMenu}
                           >
-                            {item.label}
+                            {localizeMenuText(item.label)}
                           </QuickAccessLink>
                         ))}
                       </div>
                     </div>
                   </div>
                 </div>
-              </main>
+              </section>
 
-              <aside className="min-h-0 border-l border-black/[0.08] bg-[#EFEBE4] p-4 dark:border-white/10 dark:bg-[#151515] xl:p-5">
+              <aside className="min-h-0 border-r border-black/[0.08] bg-[#EFEBE4] p-4 dark:border-white/10 dark:bg-[#151515] xl:p-5">
                 <LuxuryEditorialCard
                   key={active.image}
                   section={active}
@@ -1421,7 +1092,7 @@ export default function Navbar({
 
             <div
               className={cx(
-                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 sm:px-6 lg:hidden",
+                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-right sm:px-6 lg:hidden",
                 themeClasses.megaMenu,
               )}
             >
@@ -1429,19 +1100,19 @@ export default function Navbar({
                 <div>
                   <p
                     className={cx(
-                      "text-[8px] font-semibold uppercase tracking-[0.22em]",
+                      "text-[9px] font-semibold tracking-[0.05em]",
                       themeClasses.textSoft,
                     )}
                   >
-                    Explore
+                    منوی نجیب‌زاده
                   </p>
                   <p
                     className={cx(
-                      "mt-1 text-[16px] font-medium tracking-[-0.02em]",
+                      "mt-1 text-[17px] font-bold tracking-[-0.015em]",
                       themeClasses.textPrimary,
                     )}
                   >
-                    Najibzadeh
+                    مجموعه‌ها
                   </p>
                 </div>
               </div>
@@ -1451,7 +1122,7 @@ export default function Navbar({
                   const expanded = resolvedMobileOpen === section.id;
 
                   return (
-                    <section
+                    <div
                       key={section.id}
                       className="border-b border-black/[0.08] last:border-b-0 dark:border-white/10"
                     >
@@ -1466,7 +1137,7 @@ export default function Navbar({
                           setActiveId(section.id);
                         }}
                         className={cx(
-                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-left sm:px-5",
+                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-right sm:px-5",
                           "transition-colors duration-300",
                           expanded
                             ? "bg-black/[0.025] dark:bg-white/[0.035]"
@@ -1480,15 +1151,15 @@ export default function Navbar({
                             themeClasses.textSoft,
                           )}
                         >
-                          {String(index + 1).padStart(2, "0")}
+                          {formatPersianNumber(index + 1, 2)}
                         </span>
                         <span
                           className={cx(
-                            "min-w-0 flex-1 text-[18px] font-medium tracking-[-0.025em]",
+                            "min-w-0 flex-1 text-[17px] font-bold leading-7 tracking-[-0.015em]",
                             themeClasses.textPrimary,
                           )}
                         >
-                          {section.title}
+                          {localizeMenuText(section.title)}
                         </span>
                         <span
                           className={cx(
@@ -1518,19 +1189,19 @@ export default function Navbar({
                             >
                               <Image
                                 src={section.image}
-                                alt={section.imageLabel}
+                                alt={localizeMenuText(section.imageLabel)}
                                 fill
                                 sizes="(max-width: 1024px) 100vw, 50vw"
-                                className="object-cover transition-transform duration-700 ease-linear group-hover:scale-[1.025]"
+                                className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025]"
                               />
                               <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
                               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 text-white">
                                 <div>
-                                  <p className="text-[8px] font-semibold uppercase tracking-[0.18em] text-white/55">
-                                    Featured
+                                  <p className="text-[9px] font-semibold tracking-[0.04em] text-white/55">
+                                    منتخب
                                   </p>
-                                  <p className="mt-1 text-[18px] font-medium tracking-[-0.02em]">
-                                    {section.imageLabel}
+                                  <p className="mt-1 text-[18px] font-bold leading-7 tracking-[-0.015em]">
+                                    {localizeMenuText(section.imageLabel)}
                                   </p>
                                 </div>
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/30 bg-white/10 backdrop-blur-md">
@@ -1541,11 +1212,11 @@ export default function Navbar({
 
                             <p
                               className={cx(
-                                "mt-4 max-w-[420px] text-[11px] leading-5",
+                                "mt-4 max-w-[420px] text-[12px] leading-6",
                                 themeClasses.textSecondary,
                               )}
                             >
-                              {section.subtitle}
+                              {localizeMenuText(section.subtitle)}
                             </p>
 
                             <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -1560,7 +1231,7 @@ export default function Navbar({
                           </div>
                         </div>
                       </div>
-                    </section>
+                    </div>
                   );
                 })}
               </div>
@@ -1574,12 +1245,11 @@ export default function Navbar({
                     variant="outline"
                     size="md"
                     fullWidth
-                    align="left"
-                    icon={item.icon}
-                    iconPosition="left"
-                    className="!min-h-[54px] !px-3 !tracking-[0.11em]"
+                     icon={item.icon}
+                    iconPosition="right"
+                    className="!min-h-[54px] !px-3 !text-[10px] !tracking-normal"
                   >
-                    {item.label}
+                    {localizeMenuText(item.label)}
                   </Button>
                 ))}
               </div>
@@ -1587,21 +1257,21 @@ export default function Navbar({
               <div className="mt-6 border-t border-black/[0.08] pt-5 dark:border-white/10">
                 <p
                   className={cx(
-                    "mb-3 text-[8px] font-semibold uppercase tracking-[0.2em]",
+                    "mb-3 text-[9px] font-semibold tracking-[0.04em]",
                     themeClasses.textSoft,
                   )}
                 >
-                  Client services
+                  خدمات مشتریان
                 </p>
                 <div className="grid gap-1 sm:grid-cols-3">
                   <LightUtilityLink href="/appointments" onClick={hideMenu}>
-                    Private appointment
+                    رزرو وقت اختصاصی
                   </LightUtilityLink>
                   <LightUtilityLink href="/stores" onClick={hideMenu}>
-                    Find a store
+                    یافتن فروشگاه
                   </LightUtilityLink>
                   <LightUtilityLink href="/customer-care" onClick={hideMenu}>
-                    Client care
+                    پشتیبانی مشتریان
                   </LightUtilityLink>
                 </div>
               </div>
@@ -1627,7 +1297,7 @@ function LuxuryMenuGroup({
   closeMenu: () => void;
 }) {
   return (
-    <div>
+    <div className="text-right">
       <div className="mb-4 flex items-center gap-2">
         <span
           className={cx(
@@ -1635,15 +1305,15 @@ function LuxuryMenuGroup({
             themeClasses.textSoft,
           )}
         >
-          {String(index + 1).padStart(2, "0")}
+          {formatPersianNumber(index + 1, 2)}
         </span>
         <p
           className={cx(
-            "text-[8px] font-semibold uppercase tracking-[0.2em]",
+            "text-[9px] font-semibold tracking-[0.04em]",
             themeClasses.textSoft,
           )}
         >
-          {group.title}
+          {localizeMenuText(group.title)}
         </p>
       </div>
 
@@ -1661,19 +1331,19 @@ function LuxuryMenuGroup({
                 onFocus={() => setHovered(item.href)}
                 onBlur={() => setHovered(null)}
                 className={cx(
-                  "group inline-flex min-h-9 items-center gap-2 text-[13px] font-medium tracking-[-0.012em]",
+                  "group inline-flex min-h-9 items-center gap-2 text-[13px] font-medium leading-6 tracking-normal",
                   "transition-[opacity,transform] duration-300",
                   dimmed ? "opacity-30" : "opacity-100",
-                  selected && "translate-x-1",
+                  selected && "-translate-x-1",
                   themeClasses.textPrimary,
                   themeClasses.focusRing,
                 )}
               >
                 <span className="relative">
-                  {item.label}
+                  {localizeMenuText(item.label)}
                   <span
                     className={cx(
-                      "absolute -bottom-0.5 left-0 h-px bg-current transition-[width,opacity] duration-300",
+                      "absolute -bottom-0.5 right-0 h-px bg-current transition-[width,opacity] duration-300",
                       selected ? "w-full opacity-40" : "w-0 opacity-0",
                     )}
                   />
@@ -1682,17 +1352,17 @@ function LuxuryMenuGroup({
                 {item.badge && (
                   <span
                     className={cx(
-                      "text-[7px] font-semibold uppercase tracking-[0.12em]",
+                      "text-[8px] font-semibold tracking-normal",
                       themeClasses.textAccent,
                     )}
                   >
-                    {item.badge}
+                    {localizeBadge(item.badge)}
                   </span>
                 )}
 
                 <span
                   className={cx(
-                    "-translate-x-1 opacity-0 transition-[opacity,transform] duration-300",
+                    "translate-x-1 opacity-0 transition-[opacity,transform] duration-300",
                     selected && "translate-x-0 opacity-100",
                   )}
                 >
@@ -1715,14 +1385,14 @@ function MobileLuxuryGroup({
   closeMenu: () => void;
 }) {
   return (
-    <div>
+    <div className="text-right">
       <p
         className={cx(
-          "mb-2 text-[8px] font-semibold uppercase tracking-[0.18em]",
+          "mb-2 text-[9px] font-semibold tracking-[0.04em]",
           themeClasses.textAccent,
         )}
       >
-        {group.title}
+        {localizeMenuText(group.title)}
       </p>
       <ul className="space-y-0.5">
         {group.items.map((item) => (
@@ -1736,15 +1406,15 @@ function MobileLuxuryGroup({
                 themeClasses.focusRing,
               )}
             >
-              {item.label}
+              {localizeMenuText(item.label)}
               {item.badge && (
                 <span
                   className={cx(
-                    "text-[7px] font-semibold uppercase tracking-[0.12em]",
+                    "text-[8px] font-semibold tracking-normal",
                     themeClasses.textAccent,
                   )}
                 >
-                  {item.badge}
+                  {localizeBadge(item.badge)}
                 </span>
               )}
             </Link>
@@ -1777,34 +1447,34 @@ function LuxuryEditorialCard({
       {!failed ? (
         <Image
           src={section.image}
-          alt={section.imageLabel}
+          alt={localizeMenuText(section.imageLabel)}
           fill
           sizes="(min-width: 1280px) 450px, 390px"
           loading="eager"
           decoding="async"
           onError={() => setFailedSrc(section.image)}
-          className="object-cover transition-transform duration-[1100ms] ease-linear group-hover:scale-[1.035]"
+          className="object-cover transition-transform duration-[1100ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.035]"
         />
       ) : (
         <div className="absolute inset-0 bg-[#D9D4CC] dark:bg-[#222]" />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/5" />
-      <div className="absolute inset-x-0 bottom-0 p-6 text-white xl:p-7">
+      <div className="absolute inset-x-0 bottom-0 p-6 text-right text-white xl:p-7">
         <div className="mb-3 flex items-center gap-3">
-          <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/55">
-            Editorial selection
+          <span className="text-[9px] font-semibold tracking-[0.05em] text-white/55">
+            انتخاب سردبیری
           </span>
           <span className="h-px w-8 bg-white/30" />
         </div>
 
         <div className="flex items-end justify-between gap-6">
           <div>
-            <h3 className="max-w-[300px] text-[28px] font-medium leading-[1.02] tracking-[-0.035em] xl:text-[32px]">
-              {section.imageLabel}
+            <h3 className="max-w-[300px] text-[27px] font-bold leading-[1.25] tracking-[-0.02em] xl:text-[31px]">
+              {localizeMenuText(section.imageLabel)}
             </h3>
-            <p className="mt-3 max-w-[310px] text-[10px] leading-5 text-white/62">
-              {section.subtitle}
+            <p className="mt-3 max-w-[320px] text-[11px] leading-6 text-white/62">
+              {localizeMenuText(section.subtitle)}
             </p>
           </div>
 
@@ -1851,49 +1521,16 @@ function NavAction({
       {!!badge && (
         <span
           className={cx(
-            "pointer-events-none absolute right-0 top-0 flex min-h-[15px] min-w-[15px] items-center justify-center px-[3px] text-[7px] font-semibold leading-none",
+            "pointer-events-none absolute left-0 top-0 flex min-h-[15px] min-w-[15px] items-center justify-center px-[3px] text-[7px] font-semibold leading-none",
             onReadableSurface
               ? "bg-[#0B0B0B] text-white dark:bg-white dark:text-[#0B0B0B]"
               : "bg-white text-black",
           )}
         >
-          {badge}
+          {formatPersianNumber(badge)}
         </span>
       )}
     </span>
-  );
-}
-
-function TextNavAction({
-  href,
-  label,
-  onReadableSurface,
-  children,
-}: {
-  href: string;
-  label: string;
-  onReadableSurface: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <Button
-      href={href}
-      aria-label={label}
-      variant="outline"
-      size="sm"
-      icon={children}
-      iconPosition="left"
-      align="left"
-      className={cx(
-        "!h-11 !min-h-0 !border-0 !bg-transparent !px-3 !text-current !tracking-[0.16em]",
-        "hover:!border-0 hover:!bg-transparent hover:opacity-60",
-        onReadableSurface
-          ? NAVBAR_SURFACE_CHROME_CLASSES
-          : NAVBAR_OVERLAY_CHROME_CLASSES,
-      )}
-    >
-      {label}
-    </Button>
   );
 }
 
@@ -1912,7 +1549,7 @@ function QuickAccessLink({
       onClick={onClick}
       variant="cream"
       size="sm"
-      className="!min-h-8 !px-3 !text-[7px] !tracking-[0.13em]"
+      className="!min-h-9 !px-3.5 !text-[9px] !tracking-normal"
     >
       {children}
     </Button>
@@ -1932,7 +1569,7 @@ function DarkUtilityLink({
     <Link
       href={href}
       onClick={onClick}
-      className="group flex min-h-8 w-fit items-center gap-2 text-[10px] font-medium text-white/58 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
+      className="group flex min-h-8 w-fit items-center gap-2 text-right text-[10px] font-medium text-white/58 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
     >
       <span className="h-px w-0 bg-white/60 transition-[width] duration-300 group-hover:w-3" />
       {children}
@@ -1954,7 +1591,7 @@ function LightUtilityLink({
       href={href}
       onClick={onClick}
       className={cx(
-        "flex min-h-10 items-center text-[10px] font-medium transition-opacity hover:opacity-55",
+        "flex min-h-10 items-center text-right text-[10px] font-medium transition-opacity hover:opacity-55",
         themeClasses.textSecondary,
         themeClasses.focusRing,
       )}
@@ -2036,24 +1673,6 @@ function HeartIcon() {
   );
 }
 
-function HistoryIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden="true"
-    >
-      <path d="M5 5h14v14H5z" />
-      <path d="M12 8v5l3 2" />
-      <path d="M8 2h8" />
-    </svg>
-  );
-}
-
 function ArrowIcon() {
   return (
     <svg
@@ -2067,8 +1686,8 @@ function ArrowIcon() {
       strokeLinejoin="miter"
       aria-hidden="true"
     >
-      <path d="M5 12h14" />
-      <path d="m14 7 5 5-5 5" />
+      <path d="M19 12H5" />
+      <path d="m10 7-5 5 5 5" />
     </svg>
   );
 }

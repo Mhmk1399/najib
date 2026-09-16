@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { type CSSProperties } from "react";
 
+import { getStorefrontCatalog } from "@/services/catalog/storefront";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 /* ========================================================================== 
@@ -15,6 +16,7 @@ export type CategoryItem = {
   href: string;
   image: string;
   imageAlt?: string;
+  imageFit?: CSSProperties["objectFit"];
   imagePosition?: string;
 };
 
@@ -26,46 +28,110 @@ type CategoryShowcaseProps = {
   className?: string;
 };
 
-/* ========================================================================== 
-   DATA
-============================================================================ */
+type LocalizedText = {
+  fa?: string;
+  en?: string;
+  ar?: string;
+};
 
-export const fakeCategories: CategoryItem[] = [
-  {
-    id: "tailoring",
-    name: "Tailoring",
-    href: "/tailoring",
-    image: "/assets/images/suit.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "fragrance",
-    name: "Fragrance",
-    href: "/fragrance",
-    image: "/assets/images/kafsh.webp",
-    imagePosition: "center",
-  },
-  {
-    id: "clothing",
-    name: "Clothing",
-    href: "/clothing",
-    image: "/assets/images/accessory.webp",
-    imagePosition: "center",
-  },
-];
+type CatalogImageAsset = {
+  _id: unknown;
+  url?: string;
+  alt?: LocalizedText;
+  objectFit?: string;
+  objectPosition?: string;
+};
+
+type CatalogCategoryRecord = {
+  _id: unknown;
+  name?: LocalizedText;
+  slug: string;
+  thumbnailImageId?: unknown;
+  thumbnailObjectFit?: string;
+  thumbnailObjectPosition?: string;
+  pageContent?: {
+    primaryBanner?: {
+      imageId?: unknown;
+      objectFit?: string;
+      objectPosition?: string;
+    };
+  };
+};
+
+const FALLBACK_IMAGE = "/assets/images/banner.webp";
+
+function idOf(value: unknown) {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "toString" in value) {
+    return String(value);
+  }
+  return "";
+}
+
+function fa(value: LocalizedText | null | undefined, fallback = "") {
+  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+}
+
+function imageFitOf(value: string | undefined): CSSProperties["objectFit"] {
+  if (
+    value === "contain" ||
+    value === "cover" ||
+    value === "fill" ||
+    value === "none" ||
+    value === "scale-down"
+  ) {
+    return value;
+  }
+
+  return "cover";
+}
+
+export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
+  const catalog = (await getStorefrontCatalog()) as unknown as {
+    categories?: CatalogCategoryRecord[];
+    images?: CatalogImageAsset[];
+  };
+
+  const imageMap = new Map(
+    (catalog.images ?? []).map((image) => [idOf(image._id), image]),
+  );
+
+  return (catalog.categories ?? []).map((category) => {
+    const name = fa(category.name, category.slug);
+    const banner = category.pageContent?.primaryBanner;
+    const imageId = category.thumbnailImageId ?? banner?.imageId;
+    const image = imageMap.get(idOf(imageId));
+
+    return {
+      id: idOf(category._id) || category.slug,
+      name,
+      href: `/${category.slug}`,
+      image: image?.url || FALLBACK_IMAGE,
+      imageAlt: fa(image?.alt, name),
+      imageFit: imageFitOf(
+        category.thumbnailObjectFit ?? banner?.objectFit ?? image?.objectFit,
+      ),
+      imagePosition:
+        category.thumbnailObjectPosition ??
+        banner?.objectPosition ??
+        image?.objectPosition ??
+        "center",
+    };
+  });
+}
 
 /* ========================================================================== 
    COMPONENT
 ============================================================================ */
 
 export function CategoryShowcase({
-  categories = fakeCategories,
-  eyebrow = "Explore Collection",
-  title = "Explore Najibzadeh",
-  description = "A considered world of tailoring, fragrance and objects shaped around modern living.",
+  categories = [],
+  eyebrow = "دسته‌بندی‌ها",
+  title = "دسته‌بندی‌های نجیب‌زاده",
+  description = "کالکشن‌های اصلی فروشگاه را بر اساس سلیقه، نیاز و موقعیت انتخاب کنید.",
   className = "",
 }: CategoryShowcaseProps) {
-  const visibleCategories = categories.slice(0, 3);
+  const visibleCategories = categories;
 
   const themeVars = {
     "--cat-bg": lightTokens.surfaceBrand,
@@ -81,11 +147,12 @@ export function CategoryShowcase({
     <section
       aria-labelledby="category-showcase-title"
       style={themeVars}
+      dir="rtl"
       className={`relative w-full overflow-hidden bg-[var(--cat-bg)] text-[var(--cat-text)] ${className}`}
     >
       <div className="mx-auto w-full max-w-[1760px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10 xl:py-28">
         <header className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-          {/* {eyebrow && (
+          {eyebrow && (
             <div className="flex items-center justify-center gap-3 text-[6.5px] font-semibold uppercase tracking-[0.22em] text-[var(--cat-accent)] sm:text-[7px]">
               <span
                 aria-hidden="true"
@@ -97,7 +164,7 @@ export function CategoryShowcase({
                 className="h-px w-5 bg-[var(--cat-accent)]/70"
               />
             </div>
-          )} */}
+          )}
 
           <h2
             id="category-showcase-title"
@@ -131,7 +198,7 @@ function CategoryCard({ category }: { category: CategoryItem }) {
   return (
     <Link
       href={category.href}
-      aria-label={`Explore ${category.name}`}
+      aria-label={`مشاهده دسته ${category.name}`}
       className="group relative isolate mx-auto block aspect-[4/5] w-full max-w-[620px] overflow-hidden bg-[#0B0B0B] text-white outline-none focus-visible:ring-2 focus-visible:ring-black/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cat-bg)] md:max-w-none"
     >
       <Image
@@ -140,8 +207,11 @@ function CategoryCard({ category }: { category: CategoryItem }) {
         fill
         draggable={false}
         sizes="(max-width: 767px) 100vw, 33vw"
-        style={{ objectPosition: category.imagePosition ?? "center" }}
-        className="pointer-events-none select-none object-cover transition-transform duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none"
+        style={{
+          objectFit: category.imageFit ?? "cover",
+          objectPosition: category.imagePosition ?? "center",
+        }}
+        className="pointer-events-none select-none transition-transform duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none"
       />
 
       <div
@@ -156,7 +226,7 @@ function CategoryCard({ category }: { category: CategoryItem }) {
 
       <div className="absolute inset-x-5 bottom-6 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:bottom-8">
         <span className="text-[6px] font-semibold uppercase tracking-[0.2em] text-white/55 sm:text-[6.5px]">
-          Collection
+          دسته اصلی
         </span>
 
         <h3 className="mt-2 font-serif text-[clamp(2.4rem,12vw,4rem)] font-normal leading-none tracking-[-0.045em] text-white md:text-[clamp(2.4rem,3.6vw,4.2rem)]">
@@ -169,7 +239,7 @@ function CategoryCard({ category }: { category: CategoryItem }) {
         />
 
         <span className="mt-4 inline-flex items-center gap-2 text-[6.5px] font-semibold uppercase tracking-[0.17em] text-white/68 transition-colors duration-300 group-hover:text-white sm:text-[7px]">
-          Explore
+          مشاهده دسته
           <ArrowIcon />
         </span>
       </div>

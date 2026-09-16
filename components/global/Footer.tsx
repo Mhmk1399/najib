@@ -1,26 +1,35 @@
 "use client";
 
 import Link from "next/link";
-
-import { type CSSProperties, type ReactNode, useEffect, useRef } from "react";
-
-import { Button } from "@/components/ui/Button";
-import { brandColors, fontTokens, lightTokens } from "@/theme/theme-colors";
 import { usePathname } from "next/navigation";
 
-/* ==========================================================================
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react";
+
+import { Button } from "@/components/ui/Button";
+import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
+import { brandColors, lightTokens } from "@/theme/theme-colors";
+
+/* =============================================================================
    TYPES
-============================================================================ */
+============================================================================= */
 
 type FooterLink = {
   label: string;
   href: string;
+  description?: string;
 };
 
 type FooterGroup = {
   id: string;
   title: string;
   links: FooterLink[];
+  featured?: boolean;
 };
 
 type SocialLink = {
@@ -30,52 +39,41 @@ type SocialLink = {
   code: string;
 };
 
-/* ==========================================================================
-   DATA
-============================================================================ */
+/* =============================================================================
+   STATIC DATA
+============================================================================= */
 
-const FOOTER_GROUPS: FooterGroup[] = [
-  {
-    id: "shop",
-    title: "Shop",
-    links: [
-      { label: "New Arrivals", href: "/new-arrivals" },
-      { label: "Clothing", href: "/clothing" },
-      { label: "Fragrance", href: "/fragrance" },
-      { label: "Accessories", href: "/accessories" },
-      { label: "Best Sellers", href: "/best-sellers" },
-    ],
-  },
+const STATIC_FOOTER_GROUPS: FooterGroup[] = [
   {
     id: "services",
-    title: "Services",
+    title: "خدمات مشتریان",
     links: [
-      { label: "Private Appointment", href: "/appointments" },
-      { label: "Find a Store", href: "/stores" },
-      { label: "Shipping & Returns", href: "/shipping-returns" },
-      { label: "Client Care", href: "/customer-care" },
+      { label: "مشاوره اختصاصی", href: "/appointments" },
+      { label: "یافتن فروشگاه", href: "/stores" },
+      { label: "ارسال و مرجوعی", href: "/shipping-returns" },
+      { label: "پشتیبانی مشتریان", href: "/customer-care" },
     ],
   },
   {
     id: "house",
-    title: "The House",
+    title: "خانه نجیب‌زاده",
     links: [
-      { label: "Our Story", href: "/our-story" },
-      { label: "Craftsmanship", href: "/craftsmanship" },
-      { label: "Heritage", href: "/heritage" },
-      { label: "The Journal", href: "/journal" },
-      { label: "Campaigns", href: "/campaigns" },
+      { label: "داستان ما", href: "/our-story" },
+      { label: "هنر خیاطی", href: "/craftsmanship" },
+      { label: "میراث نجیب‌زاده", href: "/heritage" },
+      { label: "مجله", href: "/journal" },
+      { label: "کمپین‌ها", href: "/campaigns" },
     ],
   },
   {
     id: "information",
-    title: "Information",
+    title: "اطلاعات",
     links: [
-      { label: "Contact", href: "/contact" },
-      { label: "FAQ", href: "/faq" },
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms & Conditions", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookies" },
+      { label: "تماس با ما", href: "/contact" },
+      { label: "سوالات متداول", href: "/faq" },
+      { label: "حریم خصوصی", href: "/privacy" },
+      { label: "قوانین و مقررات", href: "/terms" },
+      { label: "سیاست کوکی‌ها", href: "/cookies" },
     ],
   },
 ];
@@ -83,49 +81,143 @@ const FOOTER_GROUPS: FooterGroup[] = [
 const SOCIAL_LINKS: SocialLink[] = [
   {
     id: "instagram",
-    label: "Instagram",
+    label: "اینستاگرام",
     href: "https://instagram.com/",
     code: "IG",
   },
   {
     id: "linkedin",
-    label: "LinkedIn",
+    label: "لینکدین",
     href: "https://linkedin.com/",
     code: "IN",
   },
   {
     id: "pinterest",
-    label: "Pinterest",
+    label: "پینترست",
     href: "https://pinterest.com/",
     code: "PT",
   },
 ];
 
-/* ==========================================================================
-   UTILS
-============================================================================ */
+const FOOTER_THEME_VARS = {
+  "--footer-black": brandColors.black.hex,
+  "--footer-cream": brandColors.cream.hex,
+  "--footer-white": brandColors.white.hex,
+  "--footer-copper": brandColors.copper.hex,
+  "--footer-muted": lightTokens.textMuted,
+  "--footer-soft": lightTokens.textSoft,
+  "--footer-border": lightTokens.border,
+} as CSSProperties;
+
+/* =============================================================================
+   HELPERS
+============================================================================= */
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-/* ==========================================================================
-   FOOTER
-============================================================================ */
+function toPersianDigits(value: string | number) {
+  return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+}
+
+function formatIndex(index: number) {
+  return toPersianDigits(String(index).padStart(2, "0"));
+}
+
+function footerLinkKey(groupId: string, link: FooterLink, index: number) {
+  return `${groupId}-${link.href}-${link.label}-${index}`;
+}
+
+function shouldHideFooter(pathname: string | null) {
+  if (!pathname) return false;
+
+  return (
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/admin")
+  );
+}
+
+/* =============================================================================
+   PUBLIC FOOTER WRAPPER
+   Keeps the category query completely out of auth/admin routes.
+============================================================================= */
 
 export default function Footer() {
-  const year = new Date().getFullYear();
-  const pathName = usePathname()
+  const pathname = usePathname();
 
-  const themeVars = {
-    "--footer-black": brandColors.black.hex,
-    "--footer-cream": brandColors.cream.hex,
-    "--footer-white": brandColors.white.hex,
-    "--footer-copper": brandColors.copper.hex,
-    "--footer-muted": lightTokens.textMuted,
-    "--footer-soft": lightTokens.textSoft,
-    "--footer-border": lightTokens.border,
-  } as CSSProperties;
+  if (shouldHideFooter(pathname)) return null;
+
+  return <StorefrontFooter />;
+}
+
+/* =============================================================================
+   STOREFRONT FOOTER
+============================================================================= */
+
+function StorefrontFooter() {
+  const year = new Date().getFullYear();
+  const menuSections = useStorefrontMenuSections();
+
+  const footerGroups = useMemo<FooterGroup[]>(() => {
+    const seen = new Set<string>();
+
+    const categoryLinks = menuSections
+      .filter((section) => {
+        if (!section?.href || section.href === "/shop" || seen.has(section.href)) {
+          return false;
+        }
+
+        seen.add(section.href);
+        return true;
+      })
+      .slice(0, 8)
+      .map((section) => {
+        const childLabels = section.groups
+          .flatMap((group) => group.items)
+          .map((item) => item.label)
+          .filter(Boolean)
+          .slice(0, 3);
+
+        return {
+          label: section.title,
+          href: section.href,
+          description:
+            childLabels.length > 0
+              ? childLabels.join("، ")
+              : section.subtitle || undefined,
+        } satisfies FooterLink;
+      });
+
+    const catalogLinks: FooterLink[] =
+      categoryLinks.length > 0
+        ? [
+            ...categoryLinks,
+            {
+              label: "مشاهده همه محصولات",
+              href: "/shop",
+              description: "ورود به فروشگاه نجیب‌زاده",
+            },
+          ]
+        : [
+            {
+              label: "همه محصولات",
+              href: "/shop",
+              description: "مجموعه‌های فعال فروشگاه اینجا نمایش داده می‌شوند.",
+            },
+          ];
+
+    return [
+      {
+        id: "catalog",
+        title: "دسته‌بندی‌ها",
+        links: catalogLinks,
+        featured: true,
+      },
+      ...STATIC_FOOTER_GROUPS,
+    ];
+  }, [menuSections]);
 
   function scrollToTop() {
     const reducedMotion = window.matchMedia(
@@ -137,134 +229,135 @@ export default function Footer() {
       behavior: reducedMotion ? "auto" : "smooth",
     });
   }
-if(pathName === "/login" || pathName === "/signup" || pathName.startsWith("/admin")) {
-  return null
-}
+
   return (
     <footer
-      dir="ltr"
-      style={{
-        ...themeVars,
-        fontFamily: fontTokens.english,
-      }}
+      dir="rtl"
+      lang="fa"
+      style={FOOTER_THEME_VARS}
       className="relative w-full overflow-visible bg-[var(--footer-cream)] text-[var(--footer-black)]"
     >
-      {/* ================================================================
-          EDITORIAL / CLIENT SERVICES
-      ================================================================= */}
+      {/* =====================================================================
+          EDITORIAL INTRO + CLIENT SERVICES
+      ===================================================================== */}
 
-      <section className="border-t border-black/[0.10]">
+      <section
+        aria-labelledby="footer-house-title"
+        className="border-t border-black/[0.10]"
+      >
         <div className="mx-auto grid w-full max-w-[1920px] lg:grid-cols-[minmax(0,1.18fr)_minmax(390px,0.82fr)]">
-          <div className="px-5 py-10 sm:px-7 sm:py-12 lg:border-r lg:border-black/[0.10] lg:px-10 lg:py-14 xl:px-14 xl:py-16">
+          <div className="px-5 py-10 text-right sm:px-7 sm:py-12 lg:border-l lg:border-black/[0.10] lg:px-10 lg:py-14 xl:px-14 xl:py-16">
             <div className="mb-6 flex items-center gap-3">
-              <span className="text-[8px] font-semibold uppercase tracking-[0.24em] text-[var(--footer-copper)]">
-                Najibzadeh / The House
+              <span className="text-[8px] font-semibold tracking-[0.08em] text-[var(--footer-copper)]">
+                خانه نجیب‌زاده
               </span>
-              <span className="h-px w-10 bg-black/[0.15]" />
+              <span aria-hidden="true" className="h-px w-10 bg-black/[0.15]" />
             </div>
 
-            <h2 className="max-w-[760px] text-[34px] font-medium leading-[0.98] tracking-[-0.045em] sm:text-[44px] lg:text-[52px] xl:text-[60px]">
-              Craftsmanship, heritage and the world behind Najibzadeh.
+            <h2
+              id="footer-house-title"
+              className="max-w-[820px] text-[34px] font-bold leading-[1.25] tracking-[-0.035em] sm:text-[44px] lg:text-[52px] xl:text-[58px]"
+            >
+              پشت هر انتخاب، روایتی از مهارت، اصالت و جزئیات ماندگار وجود دارد.
             </h2>
 
-            <p className="mt-5 max-w-[590px] text-[11px] leading-6 text-black/[0.55] sm:text-[12px]">
-              Explore the house, discover the latest collections, or arrange a
-              private appointment with our client services team.
+            <p className="mt-5 max-w-[660px] text-[11px] leading-7 text-black/[0.58] sm:text-[12px] sm:leading-8">
+              با جهان نجیب‌زاده آشنا شوید، تازه‌ترین مجموعه‌ها را ببینید یا برای
+              انتخاب دقیق‌تر و تجربه‌ای شخصی‌تر، از مشاوره اختصاصی ما استفاده کنید.
             </p>
 
-            <div className="mt-8 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="mt-8 flex flex-col items-stretch gap-2 min-[420px]:flex-row min-[420px]:flex-wrap min-[420px]:items-center">
               <Button
                 href="/our-story"
                 variant="black"
                 size="md"
-                icon={<ArrowRightIcon />}
-                iconPosition="right"
-                className="!tracking-[0.17em]"
+                icon={<ArrowLeftIcon />}
+                iconPosition="left"
               >
-                Discover the House
+                داستان نجیب‌زاده
               </Button>
 
               <Button
                 href="/appointments"
                 variant="outline"
                 size="md"
-                icon={<ArrowRightIcon />}
-                iconPosition="right"
-                className="!tracking-[0.17em]"
+                icon={<ArrowLeftIcon />}
+                iconPosition="left"
               >
-                Private Appointment
+                رزرو مشاوره خصوصی
               </Button>
             </div>
           </div>
 
           <div className="grid border-t border-black/[0.10] bg-[#0C0C0C] text-white lg:border-t-0">
             <ServicePanel
-              index="01"
-              eyebrow="Client Services"
-              title="Personal assistance"
-              description="For appointments, product guidance and aftercare."
+              index={formatIndex(1)}
+              eyebrow="خدمات مشتریان"
+              title="همراهی اختصاصی"
+              description="برای مشاوره خرید، راهنمای انتخاب محصول و خدمات پس از خرید کنار شما هستیم."
               href="mailto:clientservices@najibzadeh.com"
               linkLabel="clientservices@najibzadeh.com"
+              linkDirection="ltr"
             />
 
             <ServicePanel
-              index="02"
-              eyebrow="Boutiques"
-              title="Find Najibzadeh"
-              description="Explore store locations and plan your visit."
+              index={formatIndex(2)}
+              eyebrow="فروشگاه‌ها"
+              title="نجیب‌زاده را پیدا کنید"
+              description="نشانی فروشگاه‌ها را ببینید و پیش از مراجعه، برنامه دیدار خود را تنظیم کنید."
               href="/stores"
-              linkLabel="Find a Store"
+              linkLabel="مشاهده فروشگاه‌ها"
               internal
             />
           </div>
         </div>
       </section>
 
-      {/* ================================================================
-          NAVIGATION — DESKTOP
-      ================================================================= */}
+      {/* =====================================================================
+          DYNAMIC CATEGORY DIRECTORY + STATIC NAVIGATION
+      ===================================================================== */}
 
-      <section className="border-t border-black/[0.10]">
-        <div className="mx-auto hidden w-full max-w-[1920px] grid-cols-4 md:grid">
-          {FOOTER_GROUPS.map((group, index) => (
+      <section
+        aria-label="راهنمای دسته‌بندی‌ها و پیوندهای سایت"
+        className="border-t border-black/[0.10]"
+      >
+        <div className="mx-auto hidden w-full max-w-[1920px] md:grid md:grid-cols-[1.45fr_repeat(3,minmax(0,1fr))]">
+          {footerGroups.map((group, index) => (
             <DesktopFooterGroup
               key={group.id}
               group={group}
-              index={String(index + 1).padStart(2, "0")}
-              isLast={index === FOOTER_GROUPS.length - 1}
+              index={formatIndex(index + 1)}
+              isLast={index === footerGroups.length - 1}
             />
           ))}
         </div>
 
-        {/* ==============================================================
-            NAVIGATION — MOBILE
-        =============================================================== */}
-
         <div className="mx-auto w-full max-w-[1920px] md:hidden">
-          {FOOTER_GROUPS.map((group, index) => (
+          {footerGroups.map((group, index) => (
             <MobileFooterGroup
               key={group.id}
               group={group}
-              index={String(index + 1).padStart(2, "0")}
+              index={formatIndex(index + 1)}
+              defaultOpen={group.featured}
             />
           ))}
         </div>
       </section>
 
-      {/* ================================================================
-          DARK UTILITY PRELUDE
-      ================================================================= */}
+      {/* =====================================================================
+          SOCIAL + SUPPORT UTILITY BAR
+      ===================================================================== */}
 
       <section className="bg-[#0C0C0C] text-[#F7F5F0]">
         <div className="mx-auto w-full max-w-[1920px] px-5 sm:px-7 lg:px-10 xl:px-14">
           <div className="grid border-b border-white/10 py-7 md:grid-cols-[1fr_auto] md:items-center md:gap-10 lg:py-8">
-            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
-              <p className="shrink-0 text-[8px] font-semibold uppercase tracking-[0.22em] text-white/[0.42]">
-                Follow
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+              <p className="shrink-0 text-[8px] font-semibold tracking-[0.08em] text-white/[0.42]">
+                همراه ما باشید
               </p>
 
               <nav
-                aria-label="Social media"
+                aria-label="شبکه‌های اجتماعی نجیب‌زاده"
                 className="flex flex-wrap gap-x-1 gap-y-2"
               >
                 {SOCIAL_LINKS.map((social) => (
@@ -273,70 +366,68 @@ if(pathName === "/login" || pathName === "/signup" || pathName.startsWith("/admi
               </nav>
             </div>
 
-            <div className="mt-6 flex items-center gap-5 md:mt-0 md:justify-end">
+            <div className="mt-6 flex flex-wrap items-center gap-5 md:mt-0 md:justify-end">
               <Button
                 href="/customer-care"
                 variant="outline"
                 size="sm"
-                icon={<ArrowRightIcon />}
-                iconPosition="right"
-                className="!border-white/[0.18] !bg-transparent !text-white !tracking-[0.16em] hover:!border-white hover:!bg-white hover:!text-black"
+                icon={<ArrowLeftIcon />}
+                iconPosition="left"
+                className="!border-white/[0.18] !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
               >
-                Client Care
+                خدمات مشتریان
               </Button>
 
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                uppercase
-                className="!min-h-0 !border-0 !bg-transparent !px-0 !py-2 !text-[8px] !text-white/[0.55] !tracking-[0.17em] hover:!border-0 hover:!bg-transparent hover:!text-white"
+              <span
+                aria-label="زبان فعلی: فارسی"
+                className="text-[8px] font-medium text-white/[0.48]"
               >
-                EN / IR
-              </Button>
+                فارسی
+              </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ================================================================
-          IMMERSIVE WORDMARK MOMENT
-
-          This stage intentionally owns the entire viewport while it is active.
-          z-[5000] places it above the fixed Navbar (z-[1000]).
-      ================================================================= */}
+      {/* =====================================================================
+          IMMERSIVE BRAND WORDMARK
+      ===================================================================== */}
 
       <WordmarkStage />
 
-      {/* ================================================================
-          LEGAL END-CAP
-      ================================================================= */}
+      {/* =====================================================================
+          LEGAL END CAP
+      ===================================================================== */}
 
       <section className="relative bg-[#0C0C0C] text-[#F7F5F0]">
         <div className="mx-auto w-full max-w-[1920px] px-5 sm:px-7 lg:px-10 xl:px-14">
           <div className="flex flex-col gap-5 border-t border-white/10 py-6 sm:flex-row sm:items-center sm:justify-between lg:py-7">
-            <p className="text-[7px] font-medium uppercase tracking-[0.16em] text-white/[0.35]">
-              © {year} Najibzadeh. All rights reserved.
+            <p className="text-[8px] font-medium text-white/[0.38]">
+              © {toPersianDigits(year)} نجیب‌زاده. همه حقوق محفوظ است.
             </p>
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-              <LegalLink href="/privacy">Privacy</LegalLink>
+            <nav
+              aria-label="پیوندهای حقوقی"
+              className="flex flex-wrap items-center gap-x-4 gap-y-3"
+            >
+              <LegalLink href="/privacy">حریم خصوصی</LegalLink>
               <Separator />
-              <LegalLink href="/terms">Terms</LegalLink>
+              <LegalLink href="/terms">قوانین و مقررات</LegalLink>
               <Separator />
-              <LegalLink href="/cookies">Cookies</LegalLink>
-            </div>
+              <LegalLink href="/cookies">سیاست کوکی‌ها</LegalLink>
+            </nav>
 
             <Button
               type="button"
               variant="outline"
               size="sm"
               icon={<ArrowUpIcon />}
-              iconPosition="right"
+              iconPosition="left"
               onClick={scrollToTop}
-              className="!border-white/[0.18] !bg-transparent !text-white !tracking-[0.16em] hover:!border-white hover:!bg-white hover:!text-black"
+              aria-label="بازگشت به ابتدای صفحه"
+              className="!border-white/[0.18] !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
             >
-              Back to Top
+              بازگشت به بالا
             </Button>
           </div>
         </div>
@@ -345,9 +436,9 @@ if(pathName === "/login" || pathName === "/signup" || pathName.startsWith("/admi
   );
 }
 
-/* ==========================================================================
-   IMMERSIVE WORDMARK STAGE
-============================================================================ */
+/* =============================================================================
+   WORDMARK STAGE
+============================================================================= */
 
 function WordmarkStage() {
   const stageRef = useRef<HTMLElement>(null);
@@ -357,9 +448,7 @@ function WordmarkStage() {
     const stage = stageRef.current;
     const surface = surfaceRef.current;
 
-    if (!stage || !surface) {
-      return;
-    }
+    if (!stage || !surface) return;
 
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
@@ -386,7 +475,6 @@ function WordmarkStage() {
 
       surface.style.setProperty("--wordmark-scale", scale.toFixed(4));
       surface.style.setProperty("--wordmark-shine", `${shine.toFixed(2)}%`);
-      surface.style.setProperty("--wordmark-glow", glow.toFixed(4));
       surface.style.setProperty("--wordmark-light-x", `${lightX.toFixed(2)}vw`);
       surface.style.setProperty(
         "--wordmark-light-opacity",
@@ -403,10 +491,7 @@ function WordmarkStage() {
     };
 
     const requestUpdate = () => {
-      if (frame !== null) {
-        return;
-      }
-
+      if (frame !== null) return;
       frame = requestAnimationFrame(update);
     };
 
@@ -417,18 +502,15 @@ function WordmarkStage() {
     return () => {
       window.removeEventListener("scroll", requestUpdate);
       window.removeEventListener("resize", requestUpdate);
-
-      if (frame !== null) {
-        cancelAnimationFrame(frame);
-      }
+      if (frame !== null) cancelAnimationFrame(frame);
     };
   }, []);
 
   return (
     <section
       ref={stageRef}
-      aria-label="Najibzadeh brand moment"
-      className="relative h-[210svh] bg-[#050505]"
+      aria-label="نمایش هویت بصری نجیب‌زاده"
+      className="relative h-[180svh] bg-[#050505] motion-reduce:h-[100svh]"
     >
       <div
         ref={surfaceRef}
@@ -437,7 +519,6 @@ function WordmarkStage() {
           {
             "--wordmark-scale": "0.955",
             "--wordmark-shine": "0%",
-            "--wordmark-glow": "0",
             "--wordmark-light-x": "-42vw",
             "--wordmark-light-opacity": "0.08",
             "--wordmark-white-glow": "8px",
@@ -445,7 +526,6 @@ function WordmarkStage() {
           } as CSSProperties
         }
       >
-        {/* A single linear light field. No card, frame, border or rounded shape. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-y-0 left-1/2 w-[34vw] min-w-[180px] -translate-x-1/2 blur-[70px] motion-reduce:hidden"
@@ -460,10 +540,11 @@ function WordmarkStage() {
 
         <Link
           href="/"
-          aria-label="Najibzadeh home"
-          className="relative z-10 block w-full focus-visible:outline-none"
+          aria-label="صفحه اصلی نجیب‌زاده"
+          className="relative z-10 block w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/70"
         >
           <span
+            dir="ltr"
             className="block whitespace-nowrap text-center text-[clamp(34px,9.6vw,205px)] font-medium uppercase leading-[0.78] tracking-[-0.07em] motion-reduce:transform-none"
             style={{
               transform: "scale(var(--wordmark-scale))",
@@ -488,9 +569,9 @@ function WordmarkStage() {
   );
 }
 
-/* ==========================================================================
+/* =============================================================================
    SERVICE PANEL
-============================================================================ */
+============================================================================= */
 
 function ServicePanel({
   index,
@@ -500,6 +581,7 @@ function ServicePanel({
   href,
   linkLabel,
   internal = false,
+  linkDirection = "rtl",
 }: {
   index: string;
   eyebrow: string;
@@ -508,40 +590,47 @@ function ServicePanel({
   href: string;
   linkLabel: string;
   internal?: boolean;
+  linkDirection?: "rtl" | "ltr";
 }) {
   const content = (
     <>
       <div className="flex items-center justify-between gap-6">
-        <span className="text-[8px] font-semibold uppercase tracking-[0.22em] text-white/[0.42]">
+        <span className="text-[8px] font-semibold tracking-[0.08em] text-white/[0.46]">
           {eyebrow}
         </span>
-        <span className="text-[8px] font-medium tabular-nums tracking-[0.12em] text-white/[0.28]">
+        <span className="text-[8px] font-medium tabular-nums text-white/[0.30]">
           {index}
         </span>
       </div>
 
-      <div className="mt-9 flex items-end justify-between gap-8">
-        <div>
-          <h3 className="text-[24px] font-medium tracking-[-0.035em] text-white sm:text-[27px]">
+      <div className="mt-8 flex items-end justify-between gap-6 sm:mt-9 sm:gap-8">
+        <div className="min-w-0 text-right">
+          <h3 className="text-[24px] font-bold tracking-[-0.025em] text-white sm:text-[27px]">
             {title}
           </h3>
-          <p className="mt-2 max-w-[360px] text-[10px] leading-5 text-white/[0.48]">
+          <p className="mt-2 max-w-[390px] text-[10px] leading-6 text-white/[0.52]">
             {description}
           </p>
-          <p className="mt-5 break-all text-[9px] font-semibold uppercase tracking-[0.12em] text-white/[0.68] sm:break-normal">
+          <p
+            dir={linkDirection}
+            className={cx(
+              "mt-5 text-[9px] font-semibold text-white/[0.72]",
+              linkDirection === "ltr" && "break-all text-left sm:break-normal",
+            )}
+          >
             {linkLabel}
           </p>
         </div>
 
-        <span className="grid size-11 shrink-0 place-items-center border border-white/[0.18] text-white/[0.65] transition-[background-color,color,border-color] duration-[250ms] group-hover:border-white group-hover:bg-white group-hover:text-black">
-          <ArrowRightIcon />
+        <span className="grid size-11 shrink-0 place-items-center border border-white/[0.18] text-white/[0.70] transition-[background-color,color,border-color,transform] duration-[250ms] group-hover:-translate-x-0.5 group-hover:border-white group-hover:bg-white group-hover:text-black motion-reduce:transform-none">
+          <ArrowLeftIcon />
         </span>
       </div>
     </>
   );
 
   const className =
-    "group block border-b border-white/10 p-6 transition-colors duration-300 last:border-b-0 hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/[0.65] sm:p-7 lg:p-8 xl:p-9";
+    "group block border-b border-white/10 p-6 transition-colors duration-300 last:border-b-0 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/[0.65] sm:p-7 lg:p-8 xl:p-9";
 
   if (internal) {
     return (
@@ -558,9 +647,9 @@ function ServicePanel({
   );
 }
 
-/* ==========================================================================
-   DESKTOP GROUP
-============================================================================ */
+/* =============================================================================
+   DESKTOP NAVIGATION GROUP
+============================================================================= */
 
 function DesktopFooterGroup({
   group,
@@ -575,27 +664,40 @@ function DesktopFooterGroup({
     <section
       aria-labelledby={`footer-desktop-${group.id}`}
       className={cx(
-        "min-h-[330px] px-7 py-10 lg:min-h-[360px] lg:px-9 lg:py-12 xl:px-12 xl:py-14",
-        !isLast && "border-r border-black/[0.10]",
+        "min-h-[340px] px-7 py-10 text-right lg:min-h-[370px] lg:px-9 lg:py-12 xl:px-12 xl:py-14",
+        !isLast && "border-l border-black/[0.10]",
       )}
     >
       <div className="mb-8 flex items-center justify-between gap-5">
         <h3
           id={`footer-desktop-${group.id}`}
-          className="text-[8px] font-semibold uppercase tracking-[0.22em] text-black/[0.85]"
+          className="text-[9px] font-bold tracking-[0.04em] text-black/[0.88]"
         >
           {group.title}
         </h3>
 
-        <span className="text-[8px] font-medium tabular-nums tracking-[0.12em] text-black/[0.28]">
+        <span className="text-[8px] font-medium tabular-nums text-black/[0.30]">
           {index}
         </span>
       </div>
 
-      <ul className="group/column space-y-0.5">
-        {group.links.map((link) => (
-          <li key={link.href}>
-            <FooterNavLink href={link.href}>{link.label}</FooterNavLink>
+      <ul
+        className={cx(
+          group.featured
+            ? "grid grid-cols-2 gap-x-6 gap-y-1 xl:gap-x-8"
+            : "space-y-0.5",
+        )}
+      >
+        {group.links.map((link, linkIndex) => (
+          <li
+            key={footerLinkKey(group.id, link, linkIndex)}
+            className="min-w-0"
+          >
+            {group.featured ? (
+              <CategoryFooterLink link={link} />
+            ) : (
+              <FooterNavLink href={link.href}>{link.label}</FooterNavLink>
+            )}
           </li>
         ))}
       </ul>
@@ -603,26 +705,55 @@ function DesktopFooterGroup({
   );
 }
 
-/* ==========================================================================
-   MOBILE GROUP
-============================================================================ */
+function CategoryFooterLink({ link }: { link: FooterLink }) {
+  return (
+    <Link
+      href={link.href}
+      className="group/category block min-h-[62px] border-b border-black/[0.08] py-3 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black/[0.60]"
+    >
+      <span className="flex items-center justify-between gap-3">
+        <span className="truncate text-[12px] font-semibold text-black/[0.72] transition-colors duration-200 group-hover/category:text-black">
+          {link.label}
+        </span>
+        <span className="shrink-0 text-black/[0.28] transition-[color,transform] duration-200 group-hover/category:-translate-x-0.5 group-hover/category:text-[var(--footer-copper)] motion-reduce:transform-none">
+          <ArrowLeftIcon />
+        </span>
+      </span>
+
+      {link.description && (
+        <span className="mt-1.5 block truncate text-[8px] leading-5 text-black/[0.38]">
+          {link.description}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+/* =============================================================================
+   MOBILE NAVIGATION GROUP
+============================================================================= */
 
 function MobileFooterGroup({
   group,
   index,
+  defaultOpen = false,
 }: {
   group: FooterGroup;
   index: string;
+  defaultOpen?: boolean;
 }) {
   return (
-    <details className="group border-b border-black/[0.10]">
-      <summary className="flex min-h-[66px] cursor-pointer list-none items-center gap-4 px-5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/[0.60] sm:px-7 [&::-webkit-details-marker]:hidden">
-        <span className="w-6 shrink-0 text-[8px] font-medium tabular-nums tracking-[0.10em] text-black/[0.28]">
-          {index}
+    <details
+      open={defaultOpen}
+      className="group border-b border-black/[0.10]"
+    >
+      <summary className="flex min-h-[68px] cursor-pointer list-none items-center gap-4 px-5 text-right focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/[0.60] sm:px-7 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.015em]">
+          {group.title}
         </span>
 
-        <span className="min-w-0 flex-1 text-[15px] font-medium tracking-[-0.02em]">
-          {group.title}
+        <span className="w-6 shrink-0 text-center text-[8px] font-medium tabular-nums text-black/[0.30]">
+          {index}
         </span>
 
         <span className="relative size-4 shrink-0 text-black/[0.55]">
@@ -632,10 +763,20 @@ function MobileFooterGroup({
       </summary>
 
       <div className="border-t border-black/[0.07] px-5 pb-7 pt-4 sm:px-7">
-        <ul className="space-y-0.5 pl-10">
-          {group.links.map((link) => (
-            <li key={link.href}>
-              <FooterNavLink href={link.href}>{link.label}</FooterNavLink>
+        <ul
+          className={cx(
+            group.featured
+              ? "grid grid-cols-1 gap-1 min-[430px]:grid-cols-2 min-[430px]:gap-x-5"
+              : "space-y-0.5",
+          )}
+        >
+          {group.links.map((link, linkIndex) => (
+            <li key={footerLinkKey(group.id, link, linkIndex)}>
+              {group.featured ? (
+                <CategoryFooterLink link={link} />
+              ) : (
+                <FooterNavLink href={link.href}>{link.label}</FooterNavLink>
+              )}
             </li>
           ))}
         </ul>
@@ -644,9 +785,9 @@ function MobileFooterGroup({
   );
 }
 
-/* ==========================================================================
-   NAV LINK
-============================================================================ */
+/* =============================================================================
+   LINKS
+============================================================================= */
 
 function FooterNavLink({
   href,
@@ -658,17 +799,13 @@ function FooterNavLink({
   return (
     <Link
       href={href}
-      className="group/link flex min-h-9 w-fit items-center gap-0 text-[12px] font-medium tracking-[-0.012em] text-black/[0.52] transition-[color,transform] duration-[250ms] hover:translate-x-1 hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black/[0.60]"
+      className="group/link flex min-h-9 w-fit items-center text-[12px] font-medium text-black/[0.54] transition-[color,transform] duration-[250ms] hover:-translate-x-1 hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black/[0.60] motion-reduce:transform-none"
     >
-      <span className="mr-0 h-px w-0 bg-black/[0.70] transition-[width,margin] duration-[250ms] group-hover/link:mr-2 group-hover/link:w-4" />
       <span>{children}</span>
+      <span className="mr-0 h-px w-0 bg-black/[0.72] transition-[width,margin] duration-[250ms] group-hover/link:mr-2 group-hover/link:w-4" />
     </Link>
   );
 }
-
-/* ==========================================================================
-   SOCIAL
-============================================================================ */
 
 function SocialTextLink({ social }: { social: SocialLink }) {
   return (
@@ -676,31 +813,30 @@ function SocialTextLink({ social }: { social: SocialLink }) {
       href={social.href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={social.label}
+      aria-label={`صفحه ${social.label} نجیب‌زاده`}
       variant="outline"
       size="sm"
       uppercase={false}
-      className="!min-h-9 !border-0 !bg-transparent !px-2.5 !text-white/[0.55] !tracking-normal hover:!border-0 hover:!bg-white/[0.06] hover:!text-white"
+      className="!min-h-9 !border-0 !bg-transparent !px-2.5 !text-white/[0.58] !tracking-normal hover:!border-0 hover:!bg-white/[0.06] hover:!text-white"
     >
       <span className="flex items-center gap-2.5">
-        <span className="text-[7px] font-semibold uppercase tracking-[0.16em] text-white/[0.30]">
+        <span className="text-[10px] font-medium">{social.label}</span>
+        <span
+          dir="ltr"
+          className="text-[7px] font-semibold uppercase tracking-[0.16em] text-white/[0.32]"
+        >
           {social.code}
         </span>
-        <span className="text-[10px] font-medium">{social.label}</span>
       </span>
     </Button>
   );
 }
 
-/* ==========================================================================
-   LEGAL
-============================================================================ */
-
 function LegalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
-      className="text-[7px] font-semibold uppercase tracking-[0.16em] text-white/[0.38] transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.65]"
+      className="text-[8px] font-semibold text-white/[0.42] transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.65]"
     >
       {children}
     </Link>
@@ -711,11 +847,11 @@ function Separator() {
   return <span aria-hidden="true" className="h-3 w-px bg-white/[0.14]" />;
 }
 
-/* ==========================================================================
-   ICONS — STRICTLY ANGULAR / NO CURVES
-============================================================================ */
+/* =============================================================================
+   ICONS
+============================================================================= */
 
-function ArrowRightIcon() {
+function ArrowLeftIcon() {
   return (
     <svg
       viewBox="0 0 16 16"
@@ -724,7 +860,7 @@ function ArrowRightIcon() {
       className="size-3.5"
     >
       <path
-        d="M2.5 8H13M9.5 4.5L13 8L9.5 11.5"
+        d="M13.5 8H3M6.5 4.5L3 8L6.5 11.5"
         stroke="currentColor"
         strokeWidth="1.1"
         strokeLinecap="square"

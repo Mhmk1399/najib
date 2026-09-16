@@ -59,6 +59,44 @@ export async function getStorefrontCatalog() {
   });
 }
 
+export async function getStorefrontCategoryRoute(slug: string) {
+  await connectToDatabase();
+
+  const category = await Category.findOne({ slug, isActive: true })
+    .select({ name: 1, slug: 1 })
+    .lean();
+
+  return category ? toPlainJson(category as PlainCatalogRecord) : null;
+}
+
+export async function getStorefrontSubcategoryRoute(
+  categorySlug: string,
+  subcategorySlug: string,
+) {
+  await connectToDatabase();
+
+  const category = (await Category.findOne({
+    slug: categorySlug,
+    isActive: true,
+  })
+    .select({ name: 1, slug: 1 })
+    .lean()) as PlainCatalogRecord | null;
+
+  if (!category) return null;
+
+  const subcategory = (await Subcategory.findOne({
+    slug: subcategorySlug,
+    categoryId: category._id,
+    isActive: true,
+  })
+    .select({ name: 1, slug: 1, categoryId: 1 })
+    .lean()) as PlainCatalogRecord | null;
+
+  if (!subcategory) return null;
+
+  return toPlainJson({ category, subcategory });
+}
+
 export async function getStorefrontProducts(input: ProductListInput = {}) {
   await connectToDatabase();
 
