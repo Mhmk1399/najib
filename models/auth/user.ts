@@ -75,6 +75,13 @@ const userSchema = new Schema(
       type: [{ type: String, enum: USER_ROLES }],
       default: ["customer"],
       required: true,
+      validate: {
+        validator(this: mongoose.Document, roles: string[]) {
+          if (!this.isNew && !this.isModified("roles")) return true;
+          return Array.isArray(roles) && roles.length === 1;
+        },
+        message: "A user must have exactly one role.",
+      },
     },
     permissions: { type: [{ type: String, trim: true }], default: [] },
     allowedStoreIds: { type: [{ type: String, trim: true }], default: [] },

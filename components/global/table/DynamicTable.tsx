@@ -14,6 +14,9 @@ import {
   ChevronRight,
   Edit3,
   Eye,
+  FileSpreadsheet,
+  ImageDown,
+  ListChecks,
   LoaderCircle,
   MoreHorizontal,
   Plus,
@@ -60,6 +63,7 @@ import { DynamicFilters } from "./DynamicFilters";
 import { DynamicForm } from "./DynamicForm";
 import { DynamicModal } from "./DynamicModal";
 import { DynamicRecordView } from "./DynamicRecordView";
+import { exportTableToExcel, exportTableToImage } from "./table-export";
 
 const DEFAULT_LABELS: Required<DynamicTableLabels> = {
   refresh: "بروزرسانی",
@@ -86,6 +90,14 @@ const DEFAULT_LABELS: Required<DynamicTableLabels> = {
   createSave: "ایجاد",
   editSave: "ذخیره تغییرات",
   noValue: "—",
+  selectRow: "انتخاب ردیف",
+  selectAllRows: "انتخاب همه ردیف‌های این صفحه",
+  selectedRows: "ردیف انتخاب شده",
+  clearSelection: "پاک کردن انتخاب‌ها",
+  exportExcel: "خروجی اکسل",
+  exportImage: "خروجی تصویر",
+  exportSuccess: "فایل خروجی با موفقیت آماده شد.",
+  exportError: "ساخت فایل خروجی انجام نشد. دوباره تلاش کنید.",
 };
 
 type DialogState<TRecord> =
@@ -121,6 +133,8 @@ export function DynamicDataTable<
   initialFilters,
   pagination,
   columnVisibility,
+  selection,
+  exportOptions,
   mobile,
   crud,
   emptyState,
@@ -133,6 +147,7 @@ export function DynamicDataTable<
   const themeVars = useMemo(() => getAdminDataThemeVars(theme), [theme]);
   const queryClient = useQueryClient();
   const labels = { ...DEFAULT_LABELS, ...labelOverrides };
+  const tableRootRef = useRef<HTMLElement | null>(null);
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(pagination?.initialPageSize ?? 15);
@@ -147,6 +162,10 @@ export function DynamicDataTable<
     type: "closed",
   });
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [exportBusy, setExportBusy] = useState<"excel" | "image" | null>(
+    null,
+  );
 
   const columnSignature = columns
     .map(
@@ -276,8 +295,39 @@ export function DynamicDataTable<
     retry: 1,
   });
 
-  const records = tableQuery.data?.items ?? [];
+  const records = useMemo(
+    () => tableQuery.data?.items ?? [],
+    [tableQuery.data?.items],
+  );
   const total = tableQuery.data?.total ?? 0;
+  const selectionEnabled = selection?.enabled !== false;
+  const selectionMode = selection?.mode ?? "multiple";
+  const isRowSelectable = selection?.isRowSelectable;
+  const selectableRecords = useMemo(
+    () =>
+      selectionEnabled
+        ? records.filter((record) => isRowSelectable?.(record) !== false)
+        : [],
+    [isRowSelectable, records, selectionEnabled],
+  );
+  const selectedRowIdSet = useMemo(
+    () => new Set(selectedRowIds),
+    [selectedRowIds],
+  );
+  const selectedRecords = useMemo(
+    () => records.filter((record) => selectedRowIdSet.has(getRowId(record))),
+    [getRowId, records, selectedRowIdSet],
+  );
+  const activeSelectedRowIds = useMemo(
+    () => selectedRecords.map(getRowId),
+    [getRowId, selectedRecords],
+  );
+  const allPageRowsSelected =
+    selectableRecords.length > 0 &&
+    selectableRecords.every((record) => selectedRowIdSet.has(getRowId(record)));
+  const somePageRowsSelected =
+    !allPageRowsSelected &&
+    selectableRecords.some((record) => selectedRowIdSet.has(getRowId(record)));
   const reportedPageCount =
     tableQuery.data?.pageCount ??
     pageCountFrom(total, tableQuery.data?.pageSize ?? pageSize);
@@ -298,6 +348,13 @@ export function DynamicDataTable<
           !column.desktop?.hidden && visibleColumnIds.includes(column.id),
       ),
     [columns, visibleColumnIds],
+  );
+  const exportColumns = useMemo(
+    () =>
+      (exportOptions?.includeHiddenColumns ? columns : visibleColumns).filter(
+        (column) => column.exportable !== false,
+      ),
+    [columns, exportOptions?.includeHiddenColumns, visibleColumns],
   );
 
   const mobileColumns = useMemo(() => {
@@ -324,9 +381,68 @@ export function DynamicDataTable<
     crud?.view || crud?.edit || crud?.delete || crud?.extraRowActions?.length,
   );
   const canCreate = Boolean(crud?.create && crud.create.enabled !== false);
+  const canExportExcel =
+    exportOptions?.enabled !== false && exportOptions?.excel !== false;
+  const canExportImage =
+    exportOptions?.enabled !== false && exportOptions?.image !== false;
 
   function announce(message: string, tone: Announcement["tone"] = "success") {
     setAnnouncement({ message, tone });
+  }
+
+  function toggleRowSelection(record: TRecord) {
+    if (!selectionEnabled || isRowSelectable?.(record) === false)
+      return;
+    const rowId = getRowId(record);
+    if (selectedRowIdSet.has(rowId)) {
+      setSelectedRowIds(activeSelectedRowIds.filter((id) => id !== rowId));
+      return;
+    }
+    setSelectedRowIds(
+      selectionMode === "single"
+        ? [rowId]
+        : [...activeSelectedRowIds, rowId],
+    );
+  }
+
+  function toggleAllPageRows() {
+    if (selectionMode !== "multiple") return;
+    setSelectedRowIds(
+      allPageRowsSelected ? [] : selectableRecords.map(getRowId),
+    );
+  }
+
+  async function runExport(kind: "excel" | "image") {
+    const exportRecords = selectedRecords.length ? selectedRecords : records;
+    if (!exportRecords.length || !exportColumns.length || exportBusy) return;
+
+    setExportBusy(kind);
+    try {
+      const args = {
+        title,
+        records: exportRecords,
+        columns: exportColumns,
+        displayedRows: readDisplayedTableRows(
+          tableRootRef.current,
+          exportRecords,
+          exportColumns,
+          getRowId,
+        ),
+        locale,
+        direction,
+        fileName: exportOptions?.fileName,
+        sheetName: exportOptions?.sheetName,
+        theme,
+      };
+      if (kind === "excel") await exportTableToExcel(args);
+      else await exportTableToImage(args);
+      announce(labels.exportSuccess);
+    } catch (error) {
+      console.error(`Dynamic table ${kind} export failed`, error);
+      announce(labels.exportError, "error");
+    } finally {
+      setExportBusy(null);
+    }
   }
 
   async function refresh() {
@@ -379,6 +495,7 @@ export function DynamicDataTable<
 
   return (
     <section
+      ref={tableRootRef}
       dir={direction}
       style={themeVars}
       className={cx(
@@ -472,6 +589,72 @@ export function DynamicDataTable<
           )}
 
           <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+            {selectionEnabled && selectedRecords.length ? (
+              <div
+                role="status"
+                aria-live="polite"
+                className="inline-flex min-h-9 items-center gap-2 border border-[var(--adt-accent)]/30 bg-[var(--adt-accent)]/[0.08] px-2.5 text-[10px] font-semibold text-[var(--adt-text)]"
+              >
+                <ListChecks
+                  size={14}
+                  className="text-[var(--adt-accent-strong)]"
+                />
+                <span className="tabular-nums">
+                  {new Intl.NumberFormat(locale).format(selectedRecords.length)}{" "}
+                  {labels.selectedRows}
+                </span>
+                <button
+                  type="button"
+                  aria-label={labels.clearSelection}
+                  title={labels.clearSelection}
+                  onClick={() => setSelectedRowIds([])}
+                  className="grid size-7 cursor-pointer place-items-center text-[var(--adt-muted)] outline-none hover:text-[var(--adt-text)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/35"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ) : null}
+
+            {canExportExcel ? (
+              <DataButton
+                tone="secondary"
+                size="sm"
+                icon={<FileSpreadsheet size={14} />}
+                loading={exportBusy === "excel"}
+                disabled={
+                  !records.length || !exportColumns.length || Boolean(exportBusy)
+                }
+                title={
+                  selectedRecords.length
+                    ? `${labels.exportExcel} (${new Intl.NumberFormat(locale).format(selectedRecords.length)} ${labels.selectedRows})`
+                    : `${labels.exportExcel} (صفحه جاری)`
+                }
+                onClick={() => void runExport("excel")}
+              >
+                {labels.exportExcel}
+              </DataButton>
+            ) : null}
+
+            {canExportImage ? (
+              <DataButton
+                tone="secondary"
+                size="sm"
+                icon={<ImageDown size={14} />}
+                loading={exportBusy === "image"}
+                disabled={
+                  !records.length || !exportColumns.length || Boolean(exportBusy)
+                }
+                title={
+                  selectedRecords.length
+                    ? `${labels.exportImage} (${new Intl.NumberFormat(locale).format(selectedRecords.length)} ${labels.selectedRows})`
+                    : `${labels.exportImage} (صفحه جاری)`
+                }
+                onClick={() => void runExport("image")}
+              >
+                {labels.exportImage}
+              </DataButton>
+            ) : null}
+
             {columnVisibility?.enabled ? (
               <div className="w-full sm:w-[190px]">
                 <DataSelect
@@ -564,6 +747,16 @@ export function DynamicDataTable<
           columns={visibleColumns}
           records={records}
           getRowId={getRowId}
+          getRowLabel={getRowLabel}
+          selectionEnabled={selectionEnabled}
+          selectionMode={selectionMode}
+          isRowSelectable={isRowSelectable}
+          selectedRowIds={selectedRowIdSet}
+          hasSelectableRows={selectableRecords.length > 0}
+          allPageRowsSelected={allPageRowsSelected}
+          somePageRowsSelected={somePageRowsSelected}
+          onToggleRow={toggleRowSelection}
+          onToggleAllRows={toggleAllPageRows}
           sort={sort}
           onSort={toggleSort}
           hasRowActions={hasRowActions}
@@ -585,6 +778,11 @@ export function DynamicDataTable<
           columns={mobileColumns}
           mobile={mobile}
           getRowId={getRowId}
+          getRowLabel={getRowLabel}
+          selectionEnabled={selectionEnabled}
+          isRowSelectable={isRowSelectable}
+          selectedRowIds={selectedRowIdSet}
+          onToggleRow={toggleRowSelection}
           crud={crud}
           openDialog={setDialog}
           locale={locale}
@@ -667,6 +865,39 @@ export function DynamicDataTable<
   );
 }
 
+function SelectionCheckbox({
+  checked,
+  indeterminate = false,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  indeterminate?: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: () => void;
+}) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (inputRef.current) inputRef.current.indeterminate = indeterminate;
+  }, [indeterminate]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="checkbox"
+      checked={checked}
+      disabled={disabled}
+      aria-label={label}
+      aria-checked={indeterminate ? "mixed" : checked}
+      onChange={onChange}
+      className="size-4 shrink-0 cursor-pointer accent-[var(--adt-accent-strong)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/40 disabled:cursor-not-allowed disabled:opacity-40"
+    />
+  );
+}
+
 function DesktopTable<
   TRecord,
   TCreateValues extends DynamicFormValues,
@@ -675,6 +906,16 @@ function DesktopTable<
   columns,
   records,
   getRowId,
+  getRowLabel,
+  selectionEnabled,
+  selectionMode,
+  isRowSelectable,
+  selectedRowIds,
+  hasSelectableRows,
+  allPageRowsSelected,
+  somePageRowsSelected,
+  onToggleRow,
+  onToggleAllRows,
   sort,
   onSort,
   hasRowActions,
@@ -691,6 +932,16 @@ function DesktopTable<
   columns: DynamicColumn<TRecord>[];
   records: TRecord[];
   getRowId: (record: TRecord) => string;
+  getRowLabel?: (record: TRecord) => string;
+  selectionEnabled: boolean;
+  selectionMode: "single" | "multiple";
+  isRowSelectable?: (record: TRecord) => boolean;
+  selectedRowIds: Set<string>;
+  hasSelectableRows: boolean;
+  allPageRowsSelected: boolean;
+  somePageRowsSelected: boolean;
+  onToggleRow: (record: TRecord) => void;
+  onToggleAllRows: () => void;
   sort: DynamicSortRule[];
   onSort: (
     column: DynamicColumn<TRecord>,
@@ -721,6 +972,24 @@ function DesktopTable<
           <caption className="sr-only">جدول اطلاعات مدیریت</caption>
           <thead className="bg-[var(--adt-surface-muted)] text-[var(--adt-muted)] text-base  text-right">
             <tr className="bg-[var(--adt-surface-muted)] ">
+              {selectionEnabled ? (
+                <th
+                  scope="col"
+                  className="sticky right-0 z-20 h-12 w-[48px] border-b border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-center"
+                >
+                  {selectionMode === "multiple" ? (
+                    <SelectionCheckbox
+                      checked={allPageRowsSelected}
+                      indeterminate={somePageRowsSelected}
+                      disabled={!hasSelectableRows}
+                      label={labels.selectAllRows}
+                      onChange={onToggleAllRows}
+                    />
+                  ) : (
+                    <span className="sr-only">{labels.selectRow}</span>
+                  )}
+                </th>
+              ) : null}
               {columns.map((column) => {
                 const activeSort = sort.find((rule) => rule.id === column.id);
                 const sortIndex = sort.findIndex(
@@ -741,7 +1010,11 @@ function DesktopTable<
                     className={cx(
                       "h-12 border-b text-right border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-3 text-[14px]! text-right! font-bold text-[var(--adt-muted)] last:border-l-0",
                       alignClass(column.align),
-                      stickyColumnClass(column.sticky, true),
+                      stickyColumnClass(
+                        column.sticky,
+                        true,
+                        selectionEnabled,
+                      ),
                       column.headerClassName,
                     )}
                   >
@@ -786,24 +1059,52 @@ function DesktopTable<
           <tbody>
             {loading ? (
               <DesktopSkeleton
-                columns={columns.length + (hasRowActions ? 1 : 0)}
+                columns={
+                  columns.length +
+                  (selectionEnabled ? 1 : 0) +
+                  (hasRowActions ? 1 : 0)
+                }
               />
             ) : (
-              records.map((record, rowIndex) => (
-                <tr
-                  key={getRowId(record)}
-                  className="group border-b border-[var(--adt-border)] last:border-b-0 hover:bg-[var(--adt-surface-muted)]/65"
-                >
+              records.map((record, rowIndex) => {
+                const rowId = getRowId(record);
+                const selected = selectedRowIds.has(rowId);
+                const selectable = isRowSelectable?.(record) !== false;
+                return (
+                  <tr
+                    key={rowId}
+                    data-export-row-id={rowId}
+                    data-selected={selected || undefined}
+                    className={cx(
+                      "group border-b border-[var(--adt-border)] last:border-b-0 hover:bg-[var(--adt-surface-muted)]/65",
+                      selected && "bg-[var(--adt-accent)]/[0.07]",
+                    )}
+                  >
+                    {selectionEnabled ? (
+                      <td className="sticky right-0 z-10 h-[58px] border-l border-[var(--adt-border)] bg-inherit px-2 text-center group-hover:bg-[var(--adt-surface-muted)]">
+                        <SelectionCheckbox
+                          checked={selected}
+                          disabled={!selectable}
+                          label={`${labels.selectRow}: ${getRowLabel?.(record) ?? rowId}`}
+                          onChange={() => onToggleRow(record)}
+                        />
+                      </td>
+                    ) : null}
                   {columns.map((column) => {
                     const value = getColumnValue(column, record);
                     return (
                       <td
                         key={column.id}
+                        data-export-column-id={column.id}
                         style={columnStyle(column)}
                         className={cx(
                           "h-[58px] border-l border-[var(--adt-border)] bg-inherit px-3 text-[10px]! text-right! leading-5 text-[var(--adt-text)] group-hover:bg-[var(--adt-surface-muted)]/65 last:border-l-0",
                           alignClass(column.align),
-                          stickyColumnClass(column.sticky, false),
+                          stickyColumnClass(
+                            column.sticky,
+                            false,
+                            selectionEnabled,
+                          ),
                           column.cellClassName,
                         )}
                       >
@@ -824,8 +1125,9 @@ function DesktopTable<
                       />
                     </td>
                   ) : null}
-                </tr>
-              ))
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
@@ -852,6 +1154,11 @@ function MobileCards<
   columns,
   mobile,
   getRowId,
+  getRowLabel,
+  selectionEnabled,
+  isRowSelectable,
+  selectedRowIds,
+  onToggleRow,
   crud,
   openDialog,
   locale,
@@ -865,6 +1172,11 @@ function MobileCards<
   columns: DynamicColumn<TRecord>[];
   mobile?: DynamicDataTableProps<TRecord>["mobile"];
   getRowId: (record: TRecord) => string;
+  getRowLabel?: (record: TRecord) => string;
+  selectionEnabled: boolean;
+  isRowSelectable?: (record: TRecord) => boolean;
+  selectedRowIds: Set<string>;
+  onToggleRow: (record: TRecord) => void;
   crud?: DynamicCrudConfig<TRecord, TCreateValues, TEditValues>;
   openDialog: (state: DialogState<TRecord>) => void;
   locale: string;
@@ -892,19 +1204,35 @@ function MobileCards<
   return (
     <div className="grid min-w-0 gap-2 p-3 sm:grid-cols-2">
       {records.map((record) => {
+        const rowId = getRowId(record);
+        const selected = selectedRowIds.has(rowId);
+        const selectable = isRowSelectable?.(record) !== false;
         const first = columns[0];
         const defaultTitle = first
           ? formatUnknown(getColumnValue(first, record), locale)
           : getRowId(record);
         return (
           <article
-            key={getRowId(record)}
+            key={rowId}
+            data-selected={selected || undefined}
             className={cx(
               "min-w-0 border border-[var(--adt-border)] bg-[var(--adt-surface)]",
+              selected &&
+                "border-[var(--adt-accent)]/55 bg-[var(--adt-accent)]/[0.06]",
               mobile?.cardClassName,
             )}
           >
             <div className="flex min-w-0 items-start gap-3 border-b border-[var(--adt-border)] p-3.5">
+              {selectionEnabled ? (
+                <div className="mt-0.5 shrink-0">
+                  <SelectionCheckbox
+                    checked={selected}
+                    disabled={!selectable}
+                    label={`${labels.selectRow}: ${getRowLabel?.(record) ?? rowId}`}
+                    onChange={() => onToggleRow(record)}
+                  />
+                </div>
+              ) : null}
               {mobile?.media ? (
                 <div className="shrink-0">{mobile.media(record)}</div>
               ) : null}
@@ -1412,6 +1740,7 @@ function CrudDialogs<
           }
           description={crud.edit.description}
           size="lg"
+          closeOnBackdrop={false}
           busy={editMutation.isPending}
         >
           {state.type === "edit" ? (
@@ -1688,6 +2017,87 @@ function DesktopSkeleton({ columns }: { columns: number }) {
   );
 }
 
+function readDisplayedTableRows<TRecord>(
+  root: HTMLElement | null,
+  records: TRecord[],
+  columns: DynamicColumn<TRecord>[],
+  getRowId: (record: TRecord) => string,
+) {
+  if (!root) return undefined;
+
+  const valuesByRowId = new Map<string, Map<string, string>>();
+  root
+    .querySelectorAll<HTMLTableRowElement>("tr[data-export-row-id]")
+    .forEach((row) => {
+      const rowId = row.dataset.exportRowId;
+      if (!rowId) return;
+      const values = new Map<string, string>();
+      row
+        .querySelectorAll<HTMLTableCellElement>("td[data-export-column-id]")
+        .forEach((cell) => {
+          const columnId = cell.dataset.exportColumnId;
+          if (columnId) values.set(columnId, renderedCellText(cell));
+        });
+      valuesByRowId.set(rowId, values);
+    });
+
+  if (!valuesByRowId.size) return undefined;
+  return records.map((record) => {
+    const values = valuesByRowId.get(getRowId(record));
+    return columns.map((column) => values?.get(column.id));
+  });
+}
+
+function renderedCellText(cell: HTMLTableCellElement) {
+  let output = "";
+
+  function addBreak() {
+    output = output.trimEnd();
+    if (output && !output.endsWith("\n")) output += "\n";
+  }
+
+  function visit(node: Node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      output += (node.textContent ?? "").replace(/\s+/g, " ");
+      return;
+    }
+    if (!(node instanceof HTMLElement) && !(node instanceof SVGElement)) return;
+
+    if (node instanceof HTMLBRElement) {
+      addBreak();
+      return;
+    }
+
+    const style = window.getComputedStyle(node);
+    if (
+      style.display === "none" ||
+      style.visibility === "hidden" ||
+      node.getAttribute("aria-hidden") === "true" ||
+      node.classList.contains("sr-only")
+    ) {
+      return;
+    }
+    const display = style.display;
+    const separatesText =
+      node !== cell &&
+      (display === "block" ||
+        display === "flex" ||
+        display === "grid" ||
+        display === "table" ||
+        display === "list-item");
+    if (separatesText) addBreak();
+    node.childNodes.forEach(visit);
+    if (separatesText) addBreak();
+  }
+
+  cell.childNodes.forEach(visit);
+  return output
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
 function columnStyle<TRecord>(column: DynamicColumn<TRecord>): CSSProperties {
   return {
     width: column.width,
@@ -1701,10 +2111,15 @@ function alignClass(align?: "start" | "center" | "end") {
   return "text-right";
 }
 
-function stickyColumnClass(sticky?: "start" | "end", header = false) {
+function stickyColumnClass(
+  sticky?: "start" | "end",
+  header = false,
+  hasSelectionColumn = false,
+) {
   if (sticky === "start") {
     return cx(
-      "sticky right-0",
+      "sticky",
+      hasSelectionColumn ? "right-12" : "right-0",
       header ? "z-20" : "z-10",
       "shadow-[-1px_0_0_var(--adt-border)]",
     );

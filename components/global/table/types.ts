@@ -70,6 +70,13 @@ export type DynamicColumn<TRecord> = {
         record: TRecord;
         rowIndex: number;
     }) => ReactNode;
+    exportValue?: (args: {
+        value: unknown;
+        record: TRecord;
+        rowIndex: number;
+        locale: string;
+    }) => unknown;
+    exportable?: boolean;
     sortable?: boolean;
     sortKey?: string;
     align?: DataAlign;
@@ -479,6 +486,21 @@ export type DynamicColumnVisibilityConfig = {
     storageKey?: string;
 };
 
+export type DynamicRowSelectionConfig<TRecord> = {
+    enabled?: boolean;
+    mode?: "single" | "multiple";
+    isRowSelectable?: (record: TRecord) => boolean;
+};
+
+export type DynamicTableExportConfig = {
+    enabled?: boolean;
+    excel?: boolean;
+    image?: boolean;
+    fileName?: string;
+    sheetName?: string;
+    includeHiddenColumns?: boolean;
+};
+
 export type DynamicEmptyStateConfig = {
     title?: string;
     description?: string;
@@ -511,6 +533,14 @@ export type DynamicTableLabels = {
     createSave?: string;
     editSave?: string;
     noValue?: string;
+    selectRow?: string;
+    selectAllRows?: string;
+    selectedRows?: string;
+    clearSelection?: string;
+    exportExcel?: string;
+    exportImage?: string;
+    exportSuccess?: string;
+    exportError?: string;
 };
 
 export type DynamicDataTableProps<
@@ -534,6 +564,8 @@ export type DynamicDataTableProps<
     initialFilters?: TFilters;
     pagination?: DynamicPaginationConfig;
     columnVisibility?: DynamicColumnVisibilityConfig;
+    selection?: DynamicRowSelectionConfig<TRecord>;
+    exportOptions?: DynamicTableExportConfig;
     mobile?: DynamicMobileConfig<TRecord>;
     crud?: DynamicCrudConfig<TRecord, TCreateValues, TEditValues>;
     emptyState?: DynamicEmptyStateConfig;

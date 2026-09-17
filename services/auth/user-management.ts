@@ -14,6 +14,9 @@ import { User } from "@/models/auth/user";
 import { hashPassword } from "@/services/auth/password";
 
 const userStatusSchema = z.enum(["invited", "active", "suspended", "deleted"]);
+const singleUserRoleSchema = z
+  .array(staffRoleSchema)
+  .length(1, "برای هر کاربر باید دقیقاً یک نقش انتخاب شود.");
 
 const userCreateSchema = z.object({
   email: z.email().trim().toLowerCase(),
@@ -22,7 +25,7 @@ const userCreateSchema = z.object({
   lastName: z.string().trim().min(1).max(100),
   phone: z.string().trim().max(32).optional().default(""),
   avatarUrl: z.string().trim().max(2048).optional().default(""),
-  roles: z.array(staffRoleSchema).min(1).default(["customer"]),
+  roles: singleUserRoleSchema.default(["customer"]),
   permissions: z.array(staffPermissionSchema).default([]),
   allowedStoreIds: z.array(z.string().trim().min(1).max(100)).default([]),
   status: userStatusSchema.default("active"),

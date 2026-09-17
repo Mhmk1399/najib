@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Boxes,
   CalendarDays,
-  ChevronDown,
+  ChevronsUpDown,
   Crown,
   FileText,
   Grid2X2,
@@ -15,6 +15,7 @@ import {
   Menu,
   Moon,
   Package,
+  ShieldCheck,
   SlidersHorizontal,
   Sun,
   Users,
@@ -47,8 +48,18 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
   { label: "محتوای صفحات", href: "/admin/catalog/content", icon: FileText },
   { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
-  { label: "اطلاعات پایه کاتالوگ", href: "/admin/catalog/references", icon: SlidersHorizontal },
+  {
+    label: "اطلاعات پایه کاتالوگ",
+    href: "/admin/catalog/references",
+    icon: SlidersHorizontal,
+  },
 ];
+
+const USERS_NAV: NavItem = {
+  label: "کاربران",
+  href: "/admin/users",
+  icon: Users,
+};
 
 function useTehranClock() {
   const [now, setNow] = useState<Date | null>(null);
@@ -94,6 +105,13 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const [logoutOpen, setLogoutOpen] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const logoutOpenerRef = useRef<HTMLElement | null>(null);
+  const currentSection = useMemo(
+    () =>
+      [...PRIMARY_NAV, USERS_NAV].find((item) =>
+        isNavActive(pathname, item.href),
+      )?.label ?? "پنل مدیریت",
+    [pathname],
+  );
 
   useEffect(() => {
     let preferred: ThemeMode = "dark";
@@ -154,22 +172,26 @@ export function AdminShell({ children, staff }: AdminShellProps) {
       <div
         dir="rtl"
         data-theme={theme}
-        className="group/admin h-dvh overflow-hidden bg-[#080c10] text-[#f5f3ee] antialiased selection:bg-[#a87552]/40 data-[theme=light]:bg-[#ddd9d2] data-[theme=light]:text-[#1d1c1a]"
+        className="admin-workspace-shell group/admin h-dvh overflow-hidden bg-[var(--admin-shell-canvas)] text-[var(--admin-shell-text)] antialiased selection:bg-[var(--admin-shell-accent)]/35"
       >
         <div className="flex h-full min-w-0 flex-row">
-          <aside className="relative order-1 hidden h-dvh w-[238px] shrink-0 overflow-hidden border-r border-white/[0.075] bg-[#090d11] xl:flex 2xl:w-[252px] group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-[#e9e5de]">
-            <Sidebar
-              pathname={pathname}
-              staff={staffProfile}
-              imagePriority
-              onLogout={requestLogout}
-              onNavigate={() => undefined}
-            />
+          <aside className="admin-desktop-rail group/sidebar relative z-[60] order-1 hidden h-dvh w-[76px] shrink-0 xl:block">
+            <div className="admin-desktop-rail__panel absolute inset-y-0 right-0 w-[76px] overflow-hidden border-l border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]">
+              <Sidebar
+                pathname={pathname}
+                staff={staffProfile}
+                imagePriority
+                rail
+                onLogout={requestLogout}
+                onNavigate={() => undefined}
+              />
+            </div>
           </aside>
 
           <div className="order-2 flex min-w-0 flex-1 flex-col">
             <Topbar
               clock={clock}
+              currentSection={currentSection}
               staff={staffProfile}
               theme={theme}
               menuButtonRef={menuButtonRef}
@@ -185,7 +207,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
               data-lenis-prevent
               data-lenis-prevent-wheel
               data-lenis-prevent-touch
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#080c10] [scrollbar-gutter:stable] [scrollbar-width:thin] group-data-[theme=light]/admin:bg-[#ddd9d2]"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[var(--admin-shell-canvas)] [scrollbar-gutter:stable]"
             >
               {children}
             </main>
@@ -214,6 +236,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
 
 function Topbar({
   clock,
+  currentSection,
   staff,
   theme,
   menuButtonRef,
@@ -222,6 +245,7 @@ function Topbar({
   onRequestLogout,
 }: {
   clock: { date: string; time: string };
+  currentSection: string;
   staff: AdminStaffProfile;
   theme: ThemeMode;
   menuButtonRef: React.RefObject<HTMLButtonElement | null>;
@@ -255,13 +279,52 @@ function Topbar({
   }, [profileOpen]);
 
   return (
-    <header className="relative z-40 h-[72px] shrink-0 border-b border-white/[0.075] bg-[#090d11]/95 backdrop-blur-xl group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-[#e9e5de]/95">
-      <div
-        dir="ltr"
-        className="flex h-full min-w-0 items-center gap-3 px-3 sm:px-4 lg:px-5"
-      >
-        {/* LEFT: utility controls. Theme stays only here in the header. */}
+    <header className="relative z-40 h-[68px] shrink-0 border-b border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]/95 backdrop-blur-xl">
+      <div className="flex h-full min-w-0 items-center gap-2.5 px-3 sm:px-4 lg:px-5">
+        <button
+          ref={menuButtonRef}
+          type="button"
+          onClick={onOpenMenu}
+          aria-label="باز کردن منوی مدیریت"
+          className="grid size-10 shrink-0 cursor-pointer place-items-center border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-colors hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 xl:hidden"
+        >
+          <Menu size={18} strokeWidth={1.55} />
+        </button>
+
+        <div className="flex min-w-0 items-center gap-3">
+          <span
+            aria-hidden="true"
+            className="h-7 w-0.5 shrink-0 bg-[var(--admin-shell-accent)]"
+          />
+          <div className="min-w-0 text-right">
+            <span className="block text-[7px] font-semibold text-[var(--admin-shell-accent-soft)]">
+              فضای مدیریت
+            </span>
+            <strong className="mt-1 block max-w-[180px] truncate text-[11px] font-bold text-[var(--admin-shell-text)] sm:max-w-[260px]">
+              {currentSection}
+            </strong>
+          </div>
+        </div>
+
+        <div className="min-w-0 flex-1" />
+
         <div className="flex shrink-0 items-center gap-2">
+          <div className="hidden h-10 items-center gap-3 border-l border-[var(--admin-shell-border)] px-3 md:flex">
+            <CalendarDays
+              size={15}
+              className="text-[var(--admin-shell-accent-soft)]"
+              strokeWidth={1.45}
+            />
+            <div className="text-right">
+              <p className="text-[9px] font-medium text-[var(--admin-shell-text)]">
+                {clock.date}
+              </p>
+              <p className="mt-0.5 text-[7px] text-[var(--admin-shell-subtle)]">
+                ساعت {clock.time} · تهران
+              </p>
+            </div>
+          </div>
+
           <Button
             type="button"
             variant="outline"
@@ -272,33 +335,9 @@ function Topbar({
               theme === "dark" ? "فعال کردن تم روشن" : "فعال کردن تم تیره"
             }
             onClick={onToggleTheme}
-            className="!size-10 !border-white/[0.085] !bg-white/[0.02] !text-white/58 hover:!border-white/[0.14] hover:!bg-white/[0.045] hover:!text-white group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!bg-black/[0.02] group-data-[theme=light]/admin:!text-black/58"
+            className="!size-10 !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!border-[var(--admin-shell-accent)]/45 hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
           />
 
-          <div
-            dir="rtl"
-            className="hidden h-10 items-center gap-3 border border-white/[0.075] bg-white/[0.02] px-3 md:flex group-data-[theme=light]/admin:border-black/[0.08] group-data-[theme=light]/admin:bg-black/[0.02]"
-          >
-            <CalendarDays
-              size={15}
-              className="text-[#b08466]"
-              strokeWidth={1.45}
-            />
-            <div className="text-right">
-              <p className="text-[10px] font-medium text-white/78 group-data-[theme=light]/admin:text-black/72">
-                {clock.date}
-              </p>
-              <p className="mt-0.5 text-[8px] text-white/32 group-data-[theme=light]/admin:text-black/42">
-                ساعت {clock.time} · تهران
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="min-w-0 flex-1" />
-
-        {/* RIGHT: user identity and mobile navigation. */}
-        <div dir="rtl" className="ml-auto flex shrink-0 items-center gap-2">
           <ProfileDropdown
             refContainer={profileMenuRef}
             staff={staff}
@@ -309,16 +348,6 @@ function Topbar({
               onRequestLogout();
             }}
           />
-
-          <button
-            ref={menuButtonRef}
-            type="button"
-            onClick={onOpenMenu}
-            aria-label="باز کردن منوی مدیریت"
-            className="grid size-10 place-items-center border border-white/[0.085] bg-white/[0.025] text-white/66 transition-colors hover:bg-white/[0.055] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9d7357]/40 group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-black/[0.025] group-data-[theme=light]/admin:text-black/64 xl:hidden"
-          >
-            <Menu size={18} strokeWidth={1.5} />
-          </button>
         </div>
       </div>
     </header>
@@ -340,92 +369,87 @@ function ProfileDropdown({
 }) {
   const fullName =
     `${staff.firstName ?? ""} ${staff.lastName ?? ""}`.trim() || "کاربر مدیریت";
+  const initials =
+    `${staff.firstName?.charAt(0) ?? ""}${staff.lastName?.charAt(0) ?? ""}`.trim() ||
+    "N";
 
   return (
     <div ref={refContainer} className="relative">
-      <Button
+      <button
         type="button"
-        variant="outline"
-        size="md"
-        uppercase={false}
-        aria-label="باز کردن منوی کاربر"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls="admin-profile-menu"
+        aria-label={open ? "بستن منوی کاربر" : "باز کردن منوی کاربر"}
         onClick={onToggle}
-        align="center"
-        className="!min-h-11 !gap-2.5 !border-white/[0.085] !bg-white/[0.025] !px-1.5 !pr-1.5 !pl-3 !tracking-normal !text-white/86 hover:!border-white/[0.15] hover:!bg-white/[0.045] hover:!text-white group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!bg-black/[0.025] group-data-[theme=light]/admin:!text-black/82"
+        className="group/profile flex h-11 cursor-pointer items-center gap-2 border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] p-1 pl-1.5 pr-1 text-[var(--admin-shell-text)] outline-none transition-[background-color,border-color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35"
       >
-        <span className="relative size-9 overflow-hidden border border-white/12 bg-[#222] group-data-[theme=light]/admin:border-black/10">
-          <Image
-            src="/assets/images/suit.webp"
-            alt={fullName}
-            fill
-            sizes="36px"
-            className="object-cover object-[35%_25%]"
+        <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[10px] font-extrabold text-[var(--admin-shell-panel)]">
+          {initials}
+          <span
+            aria-hidden="true"
+            className="absolute bottom-0.5 right-0.5 size-1.5 rounded-full bg-[#58a67b] ring-2 ring-[var(--admin-shell-panel)]"
           />
         </span>
 
-        <span className="hidden min-w-0 text-right sm:block">
-          <strong className="block max-w-[110px] truncate text-[10px] font-semibold">
+        <span className="hidden min-w-0 px-1 text-right md:block">
+          <strong className="block max-w-[118px] truncate text-[9px] font-bold">
             {fullName}
           </strong>
-          <small className="mt-0.5 block text-[7px] text-white/34 group-data-[theme=light]/admin:text-black/42">
+          <small className="mt-1 block max-w-[118px] truncate text-[7px] text-[var(--admin-shell-subtle)]">
             {staff.displayRole}
           </small>
         </span>
 
-        <ChevronDown
-          size={13}
-          className={`hidden text-white/28 transition-transform duration-200 sm:block group-data-[theme=light]/admin:text-black/32 ${
-            open ? "rotate-180" : ""
-          }`}
-        />
-      </Button>
+        <span className="grid size-7 shrink-0 place-items-center border-r border-[var(--admin-shell-border)] text-[var(--admin-shell-subtle)] transition-colors group-hover/profile:text-[var(--admin-shell-accent-soft)]">
+          <ChevronsUpDown size={13} strokeWidth={1.6} />
+        </span>
+      </button>
 
-      <div
-        role="menu"
-        aria-hidden={!open}
-        className={`absolute right-0 top-[calc(100%+10px)] z-[80] w-[286px] border border-white/[0.10] bg-[#0c1117] p-3 shadow-[0_26px_70px_-28px_rgba(0,0,0,0.96)] transition-[opacity,transform] duration-180 group-data-[theme=light]/admin:border-black/[0.10] group-data-[theme=light]/admin:bg-[#f0ede7] ${
-          open
-            ? "pointer-events-auto translate-y-0 opacity-100"
-            : "pointer-events-none -translate-y-1 opacity-0"
-        }`}
-      >
-        <div className="flex items-center gap-3 border-b border-white/[0.075] pb-3 group-data-[theme=light]/admin:border-black/[0.08]">
-          <span className="relative size-12 shrink-0 overflow-hidden border border-white/[0.10] bg-[#222] group-data-[theme=light]/admin:border-black/[0.10]">
-            <Image
-              src="/assets/images/suit.webp"
-              alt={fullName}
-              fill
-              sizes="48px"
-              className="object-cover object-[35%_25%]"
-            />
-          </span>
-
-          <div className="min-w-0 flex-1 text-right">
-            <strong className="block truncate text-[12px] font-semibold text-white/88 group-data-[theme=light]/admin:text-black/84">
-              {fullName}
-            </strong>
-            <span className="mt-1 block truncate text-[8px] text-white/38 group-data-[theme=light]/admin:text-black/46">
-              {staff.displayRole}
+      {open ? (
+        <div
+          id="admin-profile-menu"
+          role="menu"
+          className="admin-profile-menu absolute left-0 top-[calc(100%+9px)] z-[80] w-[292px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-2.5 shadow-[0_26px_70px_-28px_rgba(0,0,0,0.72)]"
+        >
+          <div className="flex items-center gap-3 border-b border-[var(--admin-shell-border)] p-2 pb-3">
+            <span className="grid size-11 shrink-0 place-items-center border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[12px] font-extrabold text-[var(--admin-shell-panel)]">
+              {initials}
             </span>
-          </div>
-        </div>
 
-        <div className="pt-3">
-          <Button
+            <div className="min-w-0 flex-1 text-right">
+              <span className="mb-1 block text-[6px] font-semibold text-[var(--admin-shell-accent-soft)]">
+                حساب مدیریت
+              </span>
+              <strong className="block truncate text-[11px] font-bold text-[var(--admin-shell-text)]">
+                {fullName}
+              </strong>
+              <span className="mt-1 block truncate text-[8px] text-[var(--admin-shell-subtle)]">
+                {staff.displayRole}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 border-b border-[var(--admin-shell-border)] px-2 py-3 text-[8px] text-[var(--admin-shell-muted)]">
+            <ShieldCheck
+              size={15}
+              strokeWidth={1.5}
+              className="text-[#58a67b]"
+            />
+            <span>نشست امن و فعال</span>
+          </div>
+
+          <button
             type="button"
-            variant="outline"
-            size="md"
-            fullWidth
-            uppercase={false}
-            icon={<LogOut size={15} strokeWidth={1.45} />}
-            iconPosition="right"
+            role="menuitem"
             onClick={onLogout}
-            className="!justify-center !gap-2 !border-[#a7554c]/30 !bg-[#a7554c]/[0.06] !tracking-normal !text-[#df8178] hover:!border-[#a7554c]/50 hover:!bg-[#a7554c]/[0.12] hover:!text-[#f0aaa4]"
+            className="mt-2 flex h-10 w-full cursor-pointer items-center justify-between border border-transparent px-3 text-[9px] font-semibold text-[#d8766d] outline-none transition-colors hover:border-[#a7554c]/35 hover:bg-[#a7554c]/10 hover:text-[#efa39b] focus-visible:ring-2 focus-visible:ring-[#a7554c]/35"
           >
-            خروج از حساب
-          </Button>
+            <span>خروج از حساب</span>
+            <LogOut size={15} strokeWidth={1.5} />
+          </button>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
@@ -434,20 +458,26 @@ function Sidebar({
   pathname,
   staff,
   imagePriority = false,
+  rail = false,
   onLogout,
   onNavigate,
 }: {
   pathname: string;
   staff: AdminStaffProfile;
   imagePriority?: boolean;
+  rail?: boolean;
   onLogout: () => void;
   onNavigate: () => void;
 }) {
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
+    <div
+      className={`admin-sidebar relative flex h-full min-h-0 w-full flex-col overflow-hidden ${
+        rail ? "admin-sidebar--rail" : ""
+      }`}
+    >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[245px] overflow-hidden opacity-[0.16] group-data-[theme=light]/admin:opacity-[0.08]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[220px] overflow-hidden opacity-[0.12]"
       >
         <Image
           src="/assets/images/suit.webp"
@@ -455,27 +485,27 @@ function Sidebar({
           fill
           priority={imagePriority}
           sizes="252px"
-          className="object-cover object-[42%_22%] grayscale"
+          className="object-cover object-[42%_18%] grayscale"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#090d11]/15 via-[#090d11]/72 to-[#090d11] group-data-[theme=light]/admin:from-[#e9e5de]/20 group-data-[theme=light]/admin:via-[#e9e5de]/78 group-data-[theme=light]/admin:to-[#e9e5de]" />
+        <div className="absolute inset-0 bg-[var(--admin-shell-brand-wash)]" />
       </div>
 
-      <div className="relative z-10 flex h-[76px] shrink-0 items-center justify-center border-b border-white/[0.075] px-5 group-data-[theme=light]/admin:border-black/[0.08]">
+      <div className="relative z-10 flex h-[68px] shrink-0 items-center border-b border-[var(--admin-shell-border)] px-[17px]">
         <Link
           href="/admin"
           aria-label="پنل مدیریت نجیب‌زاده"
-          className="group/brand flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#9d7357]/40"
+          className="admin-sidebar-brand flex min-w-0 items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
         >
-          <span className="text-right">
-            <strong className="block text-[15px] font-semibold tracking-[0.23em] text-[#eee9e2] group-data-[theme=light]/admin:text-[#25221f]">
+          <span className="admin-sidebar-brand__mark grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[17px] font-extrabold text-[var(--admin-shell-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+            N
+          </span>
+          <span className="admin-sidebar-brand__copy min-w-0 text-right">
+            <strong className="block whitespace-nowrap text-[13px] font-semibold tracking-[0.2em] text-[var(--admin-shell-text)]">
               NAJIBZADEH
             </strong>
-            <small className="mt-1 block text-[5px] font-medium uppercase tracking-[0.34em] text-[#a98368]">
-              Modern Menswear
+            <small className="mt-1 block whitespace-nowrap text-[5px] font-semibold tracking-[0.3em] text-[var(--admin-shell-accent-soft)]">
+              Atelier Operations
             </small>
-          </span>
-          <span className="grid size-10 place-items-center rounded-[3px] border border-white/[0.11] bg-black/30 text-[18px] font-bold text-[#eee9e2] shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] group-data-[theme=light]/admin:border-black/[0.10] group-data-[theme=light]/admin:bg-black/[0.04] group-data-[theme=light]/admin:text-[#25221f]">
-            N
           </span>
         </Link>
       </div>
@@ -485,8 +515,11 @@ function Sidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 [scrollbar-width:thin]"
+        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4"
       >
+        <p className="admin-sidebar-section-label mb-2 px-2 text-[6px] font-semibold text-[var(--admin-shell-subtle)]">
+          ناوبری اصلی
+        </p>
         <div className="space-y-1">
           {PRIMARY_NAV.map((item) => (
             <SidebarLink
@@ -498,43 +531,40 @@ function Sidebar({
           ))}
         </div>
 
-        <div className="my-4 h-px bg-white/[0.07] group-data-[theme=light]/admin:bg-black/[0.075]" />
+        <div className="my-4 h-px bg-[var(--admin-shell-border)]" />
 
         {staff.permissions?.includes("staff.manage") ? (
           <SidebarLink
-            item={{ label: "کاربران", href: "/admin/users", icon: Users }}
+            item={USERS_NAV}
             active={isNavActive(pathname, "/admin/users")}
             onNavigate={onNavigate}
           />
         ) : null}
 
-        <Button
+        <button
           type="button"
-          variant="outline"
-          size="sm"
-          fullWidth
-          uppercase={false}
-          icon={<LogOut size={16} strokeWidth={1.4} />}
-          iconPosition="right"
           onClick={onLogout}
-          className="!mt-1 !h-[42px] !justify-between !border-transparent !px-3.5 !text-[10px] !tracking-normal !text-white/46 hover:!border-[#a7554c]/25 hover:!bg-[#a7554c]/8 hover:!text-[#df8178] group-data-[theme=light]/admin:!text-black/52"
+          className="admin-sidebar-link admin-sidebar-logout mt-1 flex h-11 w-full cursor-pointer items-center gap-3 border border-transparent px-3 text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-colors hover:border-[#a7554c]/30 hover:bg-[#a7554c]/10 hover:text-[#df8178] focus-visible:ring-2 focus-visible:ring-[#a7554c]/35"
         >
-          خروج
-        </Button>
+          <span className="admin-sidebar-link__icon grid size-6 shrink-0 place-items-center">
+            <LogOut size={16} strokeWidth={1.5} />
+          </span>
+          <span className="admin-sidebar-link__label whitespace-nowrap">
+            خروج از حساب
+          </span>
+        </button>
       </nav>
 
-      <div className="relative z-10 shrink-0 border-t border-white/[0.075] px-5 py-5 text-center group-data-[theme=light]/admin:border-black/[0.08]">
-        <Crown
-          size={14}
-          strokeWidth={1.35}
-          className="mx-auto text-[#9d7357]"
-        />
-        <p className="mt-2 text-[6px] font-medium uppercase tracking-[0.28em] text-white/30 group-data-[theme=light]/admin:text-black/34">
-          مدیریت نجیب‌زاده
-        </p>
-        <p className="mt-1 text-[5px] uppercase tracking-[0.25em] text-[#9d7357]/75">
-          فضای امن کارکنان
-        </p>
+      <div className="admin-sidebar-footer relative z-10 flex h-[68px] shrink-0 items-center gap-3 border-t border-[var(--admin-shell-border)] px-[22px]">
+        <Crown size={15} strokeWidth={1.4} className="shrink-0 text-[var(--admin-shell-accent-soft)]" />
+        <span className="admin-sidebar-footer__copy min-w-0 text-right">
+          <strong className="block whitespace-nowrap text-[7px] font-semibold text-[var(--admin-shell-muted)]">
+            مدیریت نجیب‌زاده
+          </strong>
+          <small className="mt-1 block whitespace-nowrap text-[5px] text-[var(--admin-shell-accent-soft)]">
+            فضای امن کارکنان
+          </small>
+        </span>
       </div>
     </div>
   );
@@ -556,18 +586,30 @@ function SidebarLink({
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      className={`group/nav relative flex h-[42px] items-center justify-between rounded-[3px] border px-3.5 text-[10px] font-medium transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9d7357]/40 ${
+      className={`admin-sidebar-link group/nav relative flex h-11 items-center gap-3 rounded-[3px] border px-3 text-[9px] font-semibold outline-none transition-[background-color,border-color,color] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
         active
-          ? "border-[#a87959]/60 bg-[linear-gradient(90deg,rgba(157,104,70,0.48),rgba(157,104,70,0.24))] text-[#f4ede7] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_28px_-18px_rgba(141,93,62,0.9)] group-data-[theme=light]/admin:text-[#2b241f]"
-          : "border-transparent text-white/52 hover:translate-x-[-1px] hover:border-white/[0.075] hover:bg-white/[0.035] hover:text-white/88 group-data-[theme=light]/admin:text-black/56 group-data-[theme=light]/admin:hover:border-black/[0.075] group-data-[theme=light]/admin:hover:bg-black/[0.03] group-data-[theme=light]/admin:hover:text-black/86"
+          ? "border-[var(--admin-shell-active-border)] bg-[var(--admin-shell-active)] text-[var(--admin-shell-text)]"
+          : "border-transparent text-[var(--admin-shell-muted)] hover:border-[var(--admin-shell-border)] hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)]"
       }`}
     >
-      <span>{item.label}</span>
-      <Icon
-        size={16}
-        strokeWidth={1.4}
-        className={active ? "text-[#d0a181]" : "text-current"}
-      />
+      {active ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 right-0 w-0.5 bg-[var(--admin-shell-accent)]"
+        />
+      ) : null}
+      <span className="admin-sidebar-link__icon grid size-6 shrink-0 place-items-center">
+        <Icon
+          size={16}
+          strokeWidth={1.5}
+          className={
+            active ? "text-[var(--admin-shell-accent-soft)]" : "text-current"
+          }
+        />
+      </span>
+      <span className="admin-sidebar-link__label whitespace-nowrap">
+        {item.label}
+      </span>
     </Link>
   );
 }
@@ -622,7 +664,7 @@ function MobileSidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className={`absolute inset-y-0 right-0 flex w-[min(88vw,330px)] flex-col overflow-hidden border-l border-white/[0.09] bg-[#090d11] shadow-[-28px_0_90px_-36px_rgba(0,0,0,0.92)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#e9e5de] ${
+        className={`absolute inset-y-0 right-0 flex w-[min(88vw,330px)] flex-col overflow-hidden border-l border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-panel)] shadow-[-28px_0_90px_-36px_rgba(0,0,0,0.72)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
@@ -635,10 +677,15 @@ function MobileSidebar({
             icon={<X size={17} />}
             onClick={onClose}
             aria-label="بستن منو"
-            className="!size-9 !border-white/[0.09] !bg-white/[0.025] !text-white/58 group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!bg-black/[0.025] group-data-[theme=light]/admin:!text-black/58"
+            className="!size-9 !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
           />
         </div>
-        <Sidebar staff={staff} pathname={pathname} onLogout={onLogout} onNavigate={onClose} />
+        <Sidebar
+          staff={staff}
+          pathname={pathname}
+          onLogout={onLogout}
+          onNavigate={onClose}
+        />
       </aside>
     </div>
   );

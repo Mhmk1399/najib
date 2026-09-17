@@ -411,6 +411,8 @@ type DynamicDataTableProps<
   initialFilters?: TFilters;
   pagination?: DynamicPaginationConfig;
   columnVisibility?: DynamicColumnVisibilityConfig;
+  selection?: DynamicRowSelectionConfig<TRecord>;
+  exportOptions?: DynamicTableExportConfig;
   mobile?: DynamicMobileConfig<TRecord>;
   crud?: DynamicCrudConfig<TRecord, TCreateValues, TEditValues>;
   emptyState?: DynamicEmptyStateConfig;
@@ -449,6 +451,8 @@ type DynamicDataTableProps<
 | `initialFilters` | No | Initial committed filter object. |
 | `pagination` | No | Page size and page-number behavior. |
 | `columnVisibility` | No | Column selector and persistence behavior. |
+| `selection` | No | Row selection behavior. Enabled by default and supports one or multiple selected rows. |
+| `exportOptions` | No | Excel/image export behavior. Enabled by default for the current page or selected rows. |
 | `mobile` | No | Mobile card presentation. |
 | `crud` | No | Create/View/Edit/Delete/extra-action definitions. |
 | `emptyState` | No | Custom empty/no-results copy. |
@@ -714,6 +718,13 @@ type DynamicColumn<TRecord> = {
     record: TRecord;
     rowIndex: number;
   }) => ReactNode;
+  exportValue?: (args: {
+    value: unknown;
+    record: TRecord;
+    rowIndex: number;
+    locale: string;
+  }) => unknown;
+  exportable?: boolean;
   sortable?: boolean;
   sortKey?: string;
   align?: "start" | "center" | "end";
@@ -760,6 +771,8 @@ cell: ({ record }) => (
   <StatusBadge status={record.status} />
 )
 ```
+
+Excel and image exports read the rendered text of visible desktop cells, so localized labels such as category names and statuses match the table instead of exporting raw IDs. `exportValue` is a fallback for non-rendered/hidden columns. Set `exportable: false` to omit a column from every export.
 
 ## Visibility
 
@@ -808,6 +821,25 @@ columnVisibility={{
   storageKey: "admin-products-columns",
 }}
 ```
+
+## 15.1 Row selection and exports
+
+Selection and both exports are enabled by default. One or more rows can be selected with the row checkboxes; the header checkbox selects all selectable rows on the current page.
+
+```tsx
+selection={{
+  mode: "multiple",
+  isRowSelectable: (record) => record.status !== "deleted",
+}}
+exportOptions={{
+  excel: true,
+  image: true,
+  fileName: "محصولات",
+  sheetName: "محصولات",
+}}
+```
+
+When at least one row is selected, exports contain only those rows. With no selection, exports contain the current page. The Excel workbook is Unicode `.xlsx` with an RTL worksheet when the table direction is `rtl`; the PNG renderer uses the same displayed cell text and does not depend on the horizontally visible portion of the table.
 
 When persistence is enabled, selected column IDs are stored in `localStorage`.
 
@@ -2777,10 +2809,6 @@ The following are not automatic core features in v3.2.1:
 ### URL search-parameter persistence
 
 Use `onStateChange` and parent initialization if required.
-
-### Bulk row selection / bulk actions
-
-The grid currently provides row-level actions and column selection, but no generic selected-row/bulk-action state.
 
 ### Server permission enforcement
 

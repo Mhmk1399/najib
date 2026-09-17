@@ -49,4 +49,6 @@ Use black and white for primary structure, cream for editorial page backgrounds,
 
 Product browsing should prioritize large photography, tight metadata, and compact controls. Quick actions may use glass panels over imagery, but they should stay legible, compact, and below 8px radius.
 
+The admin workspace uses a 76px desktop navigation rail so operational tables and forms retain maximum width. The rail expands to 268px as an overlay on pointer hover or keyboard focus-within; expansion must never resize the active workspace. Route identity remains visible through icons and a narrow copper active marker, while labels return in the expanded state. Mobile keeps the existing modal navigation drawer rather than the desktop rail behavior.
+
 Avoid one-note warm palettes, oversized marketing cards, nested cards, decorative gradient blobs, and explanatory UI copy. Controls should use familiar icons and stable dimensions so product grids do not jump during hover, selection, or loading states.

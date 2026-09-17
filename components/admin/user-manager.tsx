@@ -158,7 +158,7 @@ function formPayload(values: UserFormValues, includePassword: boolean) {
     lastName: values.lastName,
     phone: values.phone,
     avatarUrl: values.avatarUrl,
-    roles: values.roles,
+    roles: values.roles.slice(0, 1),
     permissions: values.permissions,
     allowedStoreIds: splitStoreIds(values.allowedStoreIdsText),
     status: values.status,
@@ -192,7 +192,7 @@ function userToForm(user: AdminUser): UserFormValues {
     lastName: user.lastName,
     phone: user.phone,
     avatarUrl: user.avatarUrl,
-    roles: user.roles,
+    roles: user.roles.length === 1 ? user.roles : [],
     permissions: user.permissions,
     allowedStoreIdsText: user.allowedStoreIds.join(", "),
     status: user.status,
@@ -271,13 +271,23 @@ function buildUserSchema(edit: boolean): DynamicFormSchema<UserFormValues> {
         autoComplete: "tel",
       },
       {
-        kind: "multi-select",
+        kind: "select",
         name: "roles",
-        label: "نقش‌ها",
+        label: "نقش",
         options: roleOptions,
         required: true,
         searchable: true,
-        allowSelectAll: false,
+        clearable: false,
+        helperText: "برای هر کاربر فقط یک نقش قابل انتخاب است.",
+        format: (value) =>
+          Array.isArray(value) && value.length === 1
+            ? String(value[0])
+            : null,
+        parse: (value) => (typeof value === "string" ? [value] : []),
+        validate: (value) =>
+          Array.isArray(value) && value.length === 1
+            ? null
+            : "برای هر کاربر باید دقیقاً یک نقش انتخاب شود.",
       },
       {
         kind: "multi-select",
@@ -404,7 +414,7 @@ export function UserManager() {
       },
       {
         id: "roles",
-        label: "نقش‌ها",
+        label: "نقش",
         minWidth: 190,
         accessor: "roles",
         cell: ({ record }) => record.roles.map(userRoleLabel).join("، "),
@@ -615,7 +625,7 @@ export function UserManager() {
               },
               {
                 id: "roles",
-                label: "نقش‌ها",
+                label: "نقش",
                 render: ({ record }) => record.roles.map(userRoleLabel).join("، "),
               },
               {
