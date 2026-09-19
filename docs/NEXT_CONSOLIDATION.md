@@ -57,6 +57,10 @@ MONGODB_URI=mongodb://127.0.0.1:27017/najib
 AUTH_ACCESS_TOKEN_SECRET=replace-with-a-long-random-secret
 ```
 
+The application intentionally refuses to create or verify access tokens in
+production when `AUTH_ACCESS_TOKEN_SECRET` is missing. The built-in fallback is
+for local development only.
+
 Optional:
 
 ```bash

@@ -1711,10 +1711,12 @@ body {
    -webkit-font-smoothing: antialiased;
 }
 button,
-input {
-  font: inherit;
+input,
+select,
+textarea {
+  font-family: inherit;
 }
-button {
+button:not([class]) {
   color: inherit;
 }
 button,

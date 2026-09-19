@@ -8,13 +8,13 @@ import {
   CalendarDays,
   ChevronsUpDown,
   Crown,
-  FileText,
   Grid2X2,
   Images,
   LogOut,
   Menu,
   Moon,
   Package,
+  Warehouse,
   ShieldCheck,
   SlidersHorizontal,
   Sun,
@@ -35,6 +35,7 @@ type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  permission?: string;
 };
 
 type AdminShellProps = {
@@ -46,11 +47,17 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
   { label: "محصولات", href: "/admin/catalog/products", icon: Package },
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
-   { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
+  { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
   {
     label: "اطلاعات پایه کاتالوگ",
     href: "/admin/catalog/references",
     icon: SlidersHorizontal,
+  },
+  {
+    label: "مدیریت موجودی",
+    href: "/admin/inventory",
+    icon: Warehouse,
+    permission: "inventory.read",
   },
 ];
 
@@ -520,7 +527,9 @@ function Sidebar({
           ناوبری اصلی
         </p>
         <div className="space-y-1">
-          {PRIMARY_NAV.map((item) => (
+          {PRIMARY_NAV.filter(
+            (item) => !item.permission || staff.permissions?.includes(item.permission),
+          ).map((item) => (
             <SidebarLink
               key={item.href}
               item={item}

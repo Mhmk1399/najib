@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { PersianDateRangeValue } from "../global/table/types";
@@ -170,7 +169,7 @@ export function PersianDatePicker({
   autoClose = true,
   className,
 }: PersianDatePickerProps) {
-  const initialParts = useMemo(() => {
+  const [initialParts] = useState(() => {
     const iso =
       typeof value === "string"
         ? value
@@ -178,7 +177,7 @@ export function PersianDatePicker({
           ? (value.from ?? value.to)
           : null;
     return iso ? persianPartsUtc(dateFromIso(iso)) : persianToday();
-  }, []); // Initial viewport intentionally stays stable while selecting a range.
+  }); // Initial viewport intentionally stays stable while selecting a range.
 
   const [view, setView] = useState({
     year: initialParts.year,
@@ -193,11 +192,12 @@ export function PersianDatePicker({
 
   useEffect(() => {
     if (mode !== "range") return;
-    if (!value || typeof value === "string") {
-      setRangeDraft({ from: null, to: null });
-      return;
-    }
-    setRangeDraft({ from: value.from ?? null, to: value.to ?? null });
+    const nextRange =
+      !value || typeof value === "string"
+        ? { from: null, to: null }
+        : { from: value.from ?? null, to: value.to ?? null };
+    const frame = requestAnimationFrame(() => setRangeDraft(nextRange));
+    return () => cancelAnimationFrame(frame);
   }, [mode, value]);
 
   const firstDate = useMemo(

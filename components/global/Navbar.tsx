@@ -155,25 +155,25 @@ function localizeBadge(label?: string) {
 const QUICK_LINKS: QuickLink[] = [
   {
     label: "وبلاگ",
-    href: "/journal",
+    href: "/blog",
     icon: <JournalIcon />,
   },
 
   {
     label: "داستان ما",
-    href: "/our-story",
+    href: "/about-us",
     icon: <StoryIcon />,
   },
 
   {
     label: "درباره ما",
-    href: "/about",
+    href: "/about-us",
     icon: <AboutIcon />,
   },
 
   {
     label: "تماس با ما",
-    href: "/contact",
+    href: "/contact-us",
     icon: <ContactIcon />,
   },
 

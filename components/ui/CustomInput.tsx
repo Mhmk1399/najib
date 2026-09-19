@@ -519,8 +519,6 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(
        CURRENT VALIDATION
     ----------------------------------------------------------------------- */
 
-    const validation = validateValue(currentValue, type, mergedRules);
-
     /* ----------------------------------------------------------------------
        STATUS
     ----------------------------------------------------------------------- */
@@ -666,7 +664,7 @@ export const CustomInput = forwardRef<CustomInputHandle, CustomInputProps>(
         setInternalValue(nextValue);
       }
 
-      let result = validateValue(nextValue, type, mergedRules);
+      const result = validateValue(nextValue, type, mergedRules);
 
       if (validateOn === "change") {
         setTouched(true);

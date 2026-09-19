@@ -58,10 +58,10 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
     id: "house",
     title: "خانه نجیب‌زاده",
     links: [
-      { label: "داستان ما", href: "/our-story" },
+      { label: "داستان ما", href: "/about-us" },
       { label: "هنر خیاطی", href: "/craftsmanship" },
       { label: "میراث نجیب‌زاده", href: "/heritage" },
-      { label: "مجله", href: "/journal" },
+      { label: "مجله", href: "/blog" },
       { label: "کمپین‌ها", href: "/campaigns" },
     ],
   },
@@ -69,10 +69,10 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
     id: "information",
     title: "اطلاعات",
     links: [
-      { label: "تماس با ما", href: "/contact" },
+      { label: "تماس با ما", href: "/contact-us" },
       { label: "سوالات متداول", href: "/faq" },
       { label: "حریم خصوصی", href: "/privacy" },
-      { label: "قوانین و مقررات", href: "/terms" },
+      { label: "قوانین و مقررات", href: "/terms-conditions" },
       { label: "سیاست کوکی‌ها", href: "/cookies" },
     ],
   },
@@ -494,84 +494,6 @@ function WordmarkStage() {
         </Link>
       </div>
     </section>
-  );
-}
-
-/* =============================================================================
-   SERVICE PANEL
-============================================================================= */
-
-function ServicePanel({
-  index,
-  eyebrow,
-  title,
-  description,
-  href,
-  linkLabel,
-  internal = false,
-  linkDirection = "rtl",
-}: {
-  index: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  href: string;
-  linkLabel: string;
-  internal?: boolean;
-  linkDirection?: "rtl" | "ltr";
-}) {
-  const content = (
-    <>
-      <div className="flex items-center justify-between gap-6">
-        <span className="text-[8px] font-semibold tracking-[0.08em] text-white/[0.46]">
-          {eyebrow}
-        </span>
-        <span className="text-[8px] font-medium tabular-nums text-white/[0.30]">
-          {index}
-        </span>
-      </div>
-
-      <div className="mt-8 flex items-end justify-between gap-6 sm:mt-9 sm:gap-8">
-        <div className="min-w-0 text-right">
-          <h3 className="text-[24px] font-bold tracking-[-0.025em] text-white sm:text-[27px]">
-            {title}
-          </h3>
-          <p className="mt-2 max-w-[390px] text-[10px] leading-6 text-white/[0.52]">
-            {description}
-          </p>
-          <p
-            dir={linkDirection}
-            className={cx(
-              "mt-5 text-[9px] font-semibold text-white/[0.72]",
-              linkDirection === "ltr" && "break-all text-left sm:break-normal",
-            )}
-          >
-            {linkLabel}
-          </p>
-        </div>
-
-        <span className="grid size-11 shrink-0 place-items-center border border-white/[0.18] text-white/[0.70] transition-[background-color,color,border-color,transform] duration-[250ms] group-hover:-translate-x-0.5 group-hover:border-white group-hover:bg-white group-hover:text-black motion-reduce:transform-none">
-          <ArrowLeftIcon />
-        </span>
-      </div>
-    </>
-  );
-
-  const className =
-    "group block border-b border-white/10 p-6 transition-colors duration-300 last:border-b-0 hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/[0.65] sm:p-7 lg:p-8 xl:p-9";
-
-  if (internal) {
-    return (
-      <Link href={href} className={className}>
-        {content}
-      </Link>
-    );
-  }
-
-  return (
-    <a href={href} className={className}>
-      {content}
-    </a>
   );
 }
 

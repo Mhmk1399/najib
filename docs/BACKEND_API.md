@@ -32,7 +32,9 @@ The customer workspace at `/customer-dashboard` uses these protected endpoints:
 - `GET /api/account/summary`
 - `GET /api/account/orders?page=1&limit=10&status=confirmed`
 - `GET /api/account/orders/:id`
-- `GET /api/account/cart`
+- `GET|DELETE /api/account/cart`
+- `POST /api/account/cart/items`
+- `PATCH|DELETE /api/account/cart/items/:id`
 - `GET|PATCH /api/account/profile`
 
 These routes accept only an active, database-backed customer session and always
@@ -45,6 +47,13 @@ Customer order responses contain display-safe status, totals, timestamps, and
 immutable item snapshots. Localized snapshot names resolve Persian first, then
 English or Arabic. Internal correlation, idempotency, payment, inventory, policy,
 and audit fields are not exposed.
+
+Cart writes accept only an exact `variantId` and quantity. Product status, variant,
+color, size, currency, and price are resolved again on the server; clients cannot
+submit or override prices. Adding the same variant increases its quantity up to
+99, quantity changes refresh the server price, and only the active cart owned by
+the authenticated customer can be changed. Adding to a cart does not reserve
+stock; exact stock is reserved by the checkout orchestration step.
 
 `PATCH /api/account/profile` accepts only `firstName`, `lastName`, `phone`, and
 `preferredLocale`. Email, roles, permissions, account status, credentials, and
@@ -68,6 +77,38 @@ Operational Admin routes are also available:
 - `GET /api/admin/abandoned-checkouts`
 - `GET|PATCH /api/admin/abandoned-checkouts/:id`
 - `GET /api/admin/audit`
+
+Inventory Admin routes require `inventory.read` or `inventory.write`:
+
+- `GET|POST /api/admin/inventory/cities`
+- `GET|PATCH /api/admin/inventory/cities/:id`
+- The same list/create/detail/update contract for `stores`, `pools`, and
+  `locations`
+- `GET /api/admin/inventory/balances`
+- `GET /api/admin/inventory/movements`
+- `POST /api/admin/inventory/adjustments`
+- `GET|POST /api/admin/inventory/reservations`
+- `GET|PATCH /api/admin/inventory/reservations/:id`
+- `GET|POST /api/admin/inventory/transfers`
+
+Inventory lists accept `page`, `limit`, and resource-specific filters. Add
+`include=references` only when the caller needs related city, store, pool,
+location, or variant data. The default responses keep references as IDs for a
+smaller and faster payload.
+
+`POST /adjustments`, `/reservations`, and `/transfers` require an idempotency
+key. Reservation actions are explicit: `commit`, `release`, or `expire`.
+Balances cannot be written directly; every change goes through a transactional
+operation and creates an immutable movement record.
+
+The storefront can read aggregate exact-variant stock without seeing internal
+warehouse data:
+
+- `GET /api/storefront/inventory/availability?variantId=:id`
+- Optional filters: `storeId` and `cityId`
+
+The response is `{ variantId, available, inStock }` and uses `no-store` because
+availability changes during checkout.
 
 List routes support validated pagination, search, status, store, city, and user
 filters appropriate to their resource. Order writes expose explicit actions

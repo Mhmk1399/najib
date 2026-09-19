@@ -92,15 +92,21 @@ function withSharedFilters(query: Record<string, unknown>) {
   return filter;
 }
 
-async function audit(actorId: string, action: string, targetId: string, reason: string) {
-  await StaffAudit.create({
+async function audit(
+  actorId: string,
+  action: string,
+  targetId: string,
+  reason: string,
+  session?: mongoose.ClientSession,
+) {
+  await StaffAudit.create([{
     userId: actorId,
     action,
     outcome: "success",
     reason,
     targetType: action.split(".")[0],
     targetId,
-  });
+  }], { session });
 }
 
 export const commerceOperationsService = {
@@ -137,38 +143,40 @@ export const commerceOperationsService = {
   async actOnOrder(id: string, value: unknown, actorId: string) {
     const input = orderActionSchema.parse(value);
     await connectToDatabase();
-    const order = await Order.findById(parseId(id));
-    if (!order) notFound("سفارش پیدا نشد.");
+    return mongoose.connection.transaction(async (session) => {
+      const order = await Order.findById(parseId(id)).session(session);
+      if (!order) notFound("سفارش پیدا نشد.");
 
-    const allowed: Record<typeof input.action, readonly string[]> = {
-      cancel: ["pending_inventory", "pending_payment", "payment_failed"],
-      retry_payment: ["payment_failed"],
-      mark_fulfilled: ["confirmed"],
-    };
-    if (!allowed[input.action].includes(order.status)) {
-      conflict(`عملیات ${input.action} برای وضعیت ${order.status} مجاز نیست.`);
-    }
+      const allowed: Record<typeof input.action, readonly string[]> = {
+        cancel: ["pending_inventory", "pending_payment", "payment_failed"],
+        retry_payment: ["payment_failed"],
+        mark_fulfilled: ["confirmed"],
+      };
+      if (!allowed[input.action].includes(order.status)) {
+        conflict(`عملیات ${input.action} برای وضعیت ${order.status} مجاز نیست.`);
+      }
 
-    const nextStatus = input.action === "cancel"
-      ? "cancelled"
-      : input.action === "retry_payment"
-        ? "pending_payment"
-        : "fulfilled";
-    order.status = nextStatus;
-    if (nextStatus === "cancelled") order.cancelledAt = new Date();
-    await order.save();
+      const nextStatus = input.action === "cancel"
+        ? "cancelled"
+        : input.action === "retry_payment"
+          ? "pending_payment"
+          : "fulfilled";
+      order.status = nextStatus;
+      if (nextStatus === "cancelled") order.cancelledAt = new Date();
+      await order.save({ session });
 
-    await Promise.all([
-      audit(actorId, `order.${input.action}`, order.id, input.reason),
-      Outbox.create({
-        eventId: randomUUID(),
-        eventType: input.action === "cancel" ? "OrderCancelled" : input.action === "mark_fulfilled" ? "OrderFulfilled" : "OrderPaymentRetryRequested",
-        correlationId: order.correlationId,
-        destination: "events",
-        payload: { orderId: order.id, orderNumber: order.orderNumber, status: order.status, actorId, reason: input.reason },
-      }),
-    ]);
-    return order.toObject();
+      await Promise.all([
+        audit(actorId, `order.${input.action}`, order.id, input.reason, session),
+        Outbox.create([{
+          eventId: randomUUID(),
+          eventType: input.action === "cancel" ? "OrderCancelled" : input.action === "mark_fulfilled" ? "OrderFulfilled" : "OrderPaymentRetryRequested",
+          correlationId: order.correlationId,
+          destination: "events",
+          payload: { orderId: order.id, orderNumber: order.orderNumber, status: order.status, actorId, reason: input.reason },
+        }], { session }),
+      ]);
+      return order.toObject();
+    });
   },
 
   async listCarts(query: z.infer<typeof cartListQuerySchema>) {
@@ -197,15 +205,17 @@ export const commerceOperationsService = {
   async actOnCart(id: string, value: unknown, actorId: string) {
     const input = cartActionSchema.parse(value);
     await connectToDatabase();
-    const cart = await Cart.findById(parseId(id));
-    if (!cart) notFound("سبد خرید پیدا نشد.");
-    if (!["active", "checkout_started"].includes(cart.status)) {
-      conflict(`تغییر وضعیت سبد ${cart.status} مجاز نیست.`);
-    }
-    cart.status = input.action === "expire" ? "expired" : "abandoned";
-    await cart.save();
-    await audit(actorId, `cart.${input.action}`, cart.id, input.reason);
-    return cart.toObject();
+    return mongoose.connection.transaction(async (session) => {
+      const cart = await Cart.findById(parseId(id)).session(session);
+      if (!cart) notFound("سبد خرید پیدا نشد.");
+      if (!["active", "checkout_started"].includes(cart.status)) {
+        conflict(`تغییر وضعیت سبد ${cart.status} مجاز نیست.`);
+      }
+      cart.status = input.action === "expire" ? "expired" : "abandoned";
+      await cart.save({ session });
+      await audit(actorId, `cart.${input.action}`, cart.id, input.reason, session);
+      return cart.toObject();
+    });
   },
 
   async listCheckouts(query: z.infer<typeof checkoutListQuerySchema>) {
@@ -257,14 +267,16 @@ export const commerceOperationsService = {
   async updateAbandoned(id: string, value: unknown, actorId: string) {
     const input = abandonedActionSchema.parse(value);
     await connectToDatabase();
-    const item = await AbandonedCheckout.findById(parseId(id));
-    if (!item) notFound("checkout رهاشده پیدا نشد.");
-    if (["recovered", "expired"].includes(item.recoveryStatus)) {
-      conflict("وضعیت نهایی checkout رهاشده قابل تغییر نیست.");
-    }
-    item.recoveryStatus = input.recoveryStatus;
-    await item.save();
-    await audit(actorId, `abandoned_checkout.${input.recoveryStatus}`, item.id, input.reason);
-    return item.toObject();
+    return mongoose.connection.transaction(async (session) => {
+      const item = await AbandonedCheckout.findById(parseId(id)).session(session);
+      if (!item) notFound("checkout رهاشده پیدا نشد.");
+      if (["recovered", "expired"].includes(item.recoveryStatus)) {
+        conflict("وضعیت نهایی checkout رهاشده قابل تغییر نیست.");
+      }
+      item.recoveryStatus = input.recoveryStatus;
+      await item.save({ session });
+      await audit(actorId, `abandoned_checkout.${input.recoveryStatus}`, item.id, input.reason, session);
+      return item.toObject();
+    });
   },
 };

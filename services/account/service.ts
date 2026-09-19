@@ -1,10 +1,10 @@
 import "server-only";
 
-import mongoose from "mongoose";
+import mongoose, { type ClientSession } from "mongoose";
 import { z } from "zod";
 
 import { connectToDatabase } from "@/lib/server/db";
-import { notFound } from "@/lib/server/errors";
+import { conflict, notFound } from "@/lib/server/errors";
 import { User } from "@/models/auth/user";
 import { Cart } from "@/models/catalog/cart";
 import { Color } from "@/models/catalog/color";
@@ -28,13 +28,111 @@ export const accountProfileUpdateSchema = z.object({
   message: "حداقل یک فیلد برای ویرایش لازم است.",
 });
 
+const objectIdSchema = z.string().regex(/^[a-f\d]{24}$/i, "شناسه معتبر نیست.");
+
+export const addCartItemSchema = z.object({
+  variantId: objectIdSchema,
+  quantity: z.number().int().min(1).max(99).default(1),
+}).strict();
+
+export const updateCartItemSchema = z.object({
+  quantity: z.number().int().min(1).max(99),
+}).strict();
+
+const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 type LocalizedText = { fa?: string; en?: string; ar?: string } | null | undefined;
+
+type AddressRecord = {
+  _id: unknown;
+  label?: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  line1: string;
+  line2?: string;
+  city: string;
+  region?: string;
+  postalCode: string;
+  countryCode: string;
+  isDefault?: boolean;
+};
+
+type ProfileRecord = {
+  _id: unknown;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  preferredLocale?: string;
+  addresses?: AddressRecord[];
+};
+
+type OrderItemRecord = {
+  _id: unknown;
+  productId: string;
+  variantId: string;
+  productName?: LocalizedText;
+  sku: string;
+  colorName?: LocalizedText;
+  sizeName?: LocalizedText;
+  unitPriceMinor: number;
+  taxMinor: number;
+  discountMinor: number;
+  quantity: number;
+  lineTotalMinor: number;
+};
+
+type OrderRecord = {
+  _id: unknown;
+  orderNumber: string;
+  status: string;
+  currency: string;
+  subtotalMinor: number;
+  taxMinor: number;
+  discountMinor: number;
+  shippingMinor: number;
+  totalMinor: number;
+  items?: OrderItemRecord[];
+  contact?: { firstName: string; lastName: string; email: string; phone?: string };
+  createdAt?: Date;
+  updatedAt?: Date;
+  confirmedAt?: Date;
+  cancelledAt?: Date;
+};
+
+type CartItemRecord = {
+  _id: unknown;
+  variantId: unknown;
+  quantity: number;
+  unitPriceMinor: number;
+};
+
+type CartRecord = {
+  _id: unknown;
+  status: string;
+  currency: string;
+  expiresAt: Date;
+  items: CartItemRecord[];
+};
+
+type SellableVariantRecord = {
+  productId: unknown;
+  colorId: unknown;
+  sizeId: unknown;
+  priceOverrideMinor?: number;
+};
+
+type SellableProductRecord = {
+  basePriceMinor: number;
+  currency: string;
+};
 
 function localized(value: LocalizedText, fallback: string) {
   return value?.fa || value?.en || value?.ar || fallback;
 }
 
-function safeProfile(user: Record<string, any>) {
+function safeProfile(user: ProfileRecord) {
   return {
     id: String(user._id),
     email: user.email,
@@ -42,7 +140,7 @@ function safeProfile(user: Record<string, any>) {
     lastName: user.lastName,
     phone: user.phone ?? "",
     preferredLocale: user.preferredLocale ?? "fa",
-    addresses: (user.addresses ?? []).map((address: Record<string, any>) => ({
+    addresses: (user.addresses ?? []).map((address) => ({
       id: String(address._id),
       label: address.label ?? "نشانی",
       firstName: address.firstName,
@@ -59,7 +157,7 @@ function safeProfile(user: Record<string, any>) {
   };
 }
 
-function safeOrder(order: Record<string, any>, includeItems = false) {
+function safeOrder(order: OrderRecord, includeItems = false) {
   return {
     id: String(order._id),
     orderNumber: order.orderNumber,
@@ -71,7 +169,7 @@ function safeOrder(order: Record<string, any>, includeItems = false) {
     shippingMinor: order.shippingMinor,
     totalMinor: order.totalMinor,
     itemCount: (order.items ?? []).reduce(
-      (total: number, item: Record<string, any>) => total + Number(item.quantity || 0),
+      (total, item) => total + Number(item.quantity || 0),
       0,
     ),
     createdAt: order.createdAt,
@@ -86,7 +184,7 @@ function safeOrder(order: Record<string, any>, includeItems = false) {
             email: order.contact?.email,
             phone: order.contact?.phone ?? "",
           },
-          items: (order.items ?? []).map((item: Record<string, any>) => ({
+          items: (order.items ?? []).map((item) => ({
             id: String(item._id),
             productId: item.productId,
             variantId: item.variantId,
@@ -110,7 +208,37 @@ async function loadProfile(accountId: string) {
     .select("email firstName lastName phone preferredLocale addresses")
     .lean();
   if (!user) notFound("حساب کاربری پیدا نشد.");
-  return safeProfile(user as unknown as Record<string, any>);
+  return safeProfile(user as unknown as ProfileRecord);
+}
+
+function cartExpiry() {
+  return new Date(Date.now() + CART_TTL_MS);
+}
+
+async function loadSellableVariant(variantId: string, session: ClientSession) {
+  const variant = await ProductVariant.findOne({ _id: variantId, isActive: true })
+    .session(session)
+    .lean() as unknown as SellableVariantRecord | null;
+  if (!variant) notFound("تنوع فعال محصول پیدا نشد.");
+
+  const [product, color, size] = await Promise.all([
+    Product.findOne({ _id: variant.productId, status: "active" })
+      .select("basePriceMinor currency")
+      .session(session)
+      .lean() as unknown as Promise<SellableProductRecord | null>,
+    Color.exists({ _id: variant.colorId, isActive: true }).session(session),
+    Size.exists({ _id: variant.sizeId, isActive: true }).session(session),
+  ]);
+  if (!product || !color || !size) notFound("این تنوع در حال حاضر قابل فروش نیست.");
+
+  return {
+    currency: product.currency.toUpperCase(),
+    unitPriceMinor: variant.priceOverrideMinor ?? product.basePriceMinor,
+  };
+}
+
+async function loadMutableCart(accountId: string, session: ClientSession) {
+  return Cart.findOne({ userId: accountId, status: "active" }).session(session);
 }
 
 export const accountService = {
@@ -141,7 +269,7 @@ export const accountService = {
           .lean(),
       ]);
 
-    const activeCart = cart as unknown as Record<string, any> | null;
+    const activeCart = cart as unknown as CartRecord | null;
 
     return {
       profile: { ...profile, addresses: undefined, addressCount: profile.addresses.length },
@@ -151,15 +279,15 @@ export const accountService = {
         ? {
             id: String(activeCart._id),
             status: activeCart.status,
-            itemCount: activeCart.items.reduce((sum: number, item: Record<string, any>) => sum + item.quantity, 0),
+            itemCount: activeCart.items.reduce((sum, item) => sum + item.quantity, 0),
             subtotalMinor: activeCart.items.reduce(
-              (sum: number, item: Record<string, any>) => sum + item.quantity * item.unitPriceMinor,
+              (sum, item) => sum + item.quantity * item.unitPriceMinor,
               0,
             ),
             currency: activeCart.currency,
           }
         : null,
-      recentOrders: recentOrders.map((order) => safeOrder(order as unknown as Record<string, any>)),
+      recentOrders: recentOrders.map((order) => safeOrder(order as unknown as OrderRecord)),
     };
   },
 
@@ -175,7 +303,7 @@ export const accountService = {
       Order.countDocuments(filter),
     ]);
     return {
-      items: items.map((order) => safeOrder(order as unknown as Record<string, any>)),
+      items: items.map((order) => safeOrder(order as unknown as OrderRecord)),
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -190,19 +318,19 @@ export const accountService = {
     if (!mongoose.Types.ObjectId.isValid(orderId)) notFound("سفارش پیدا نشد.");
     const order = await Order.findOne({ _id: orderId, userId: accountId }).lean();
     if (!order) notFound("سفارش پیدا نشد.");
-    return safeOrder(order as unknown as Record<string, any>, true);
+    return safeOrder(order as unknown as OrderRecord, true);
   },
 
   async getCart(accountId: string) {
     await connectToDatabase();
-    const cart = await Cart.findOne({
-      userId: accountId,
-      status: { $in: ["active", "checkout_started"] },
-    }).sort({ updatedAt: -1 }).lean();
+    const cart = await Cart.findOne({ userId: accountId, status: "active" }).lean()
+      ?? await Cart.findOne({ userId: accountId, status: "checkout_started" })
+        .sort({ updatedAt: -1 })
+        .lean();
     if (!cart) return null;
-    const activeCart = cart as unknown as Record<string, any>;
+    const activeCart = cart as unknown as CartRecord;
 
-    const variantIds = activeCart.items.map((item: Record<string, any>) => item.variantId);
+    const variantIds = activeCart.items.map((item) => item.variantId);
     const variants = await ProductVariant.find({ _id: { $in: variantIds } }).lean();
     const variantMap = new Map(variants.map((variant) => [String(variant._id), variant]));
     const [products, colors, sizes] = await Promise.all([
@@ -225,12 +353,12 @@ export const accountService = {
       status: activeCart.status,
       currency: activeCart.currency,
       expiresAt: activeCart.expiresAt,
-      itemCount: activeCart.items.reduce((sum: number, item: Record<string, any>) => sum + item.quantity, 0),
+      itemCount: activeCart.items.reduce((sum, item) => sum + item.quantity, 0),
       subtotalMinor: activeCart.items.reduce(
-        (sum: number, item: Record<string, any>) => sum + item.quantity * item.unitPriceMinor,
+        (sum, item) => sum + item.quantity * item.unitPriceMinor,
         0,
       ),
-      items: activeCart.items.map((item: Record<string, any>) => {
+      items: activeCart.items.map((item) => {
         const variant = variantMap.get(String(item.variantId));
         const product = variant ? productMap.get(String(variant.productId)) : undefined;
         const color = variant ? colorMap.get(String(variant.colorId)) : undefined;
@@ -252,6 +380,100 @@ export const accountService = {
     };
   },
 
+  async addCartItem(accountId: string, value: unknown) {
+    const input = addCartItemSchema.parse(value);
+    await connectToDatabase();
+
+    await mongoose.connection.transaction(async (session) => {
+      const sellable = await loadSellableVariant(input.variantId, session);
+      let cart = await loadMutableCart(accountId, session);
+
+      if (!cart) {
+        [cart] = await Cart.create([{
+          userId: accountId,
+          currency: sellable.currency,
+          status: "active",
+          expiresAt: cartExpiry(),
+          items: [],
+        }], { session });
+      }
+      if (cart.currency !== sellable.currency) {
+        conflict("محصولات با ارز متفاوت نمی‌توانند در یک سبد قرار بگیرند.");
+      }
+
+      const existing = cart.items.find(
+        (item: { variantId: unknown }) => String(item.variantId) === input.variantId,
+      );
+      if (existing) {
+        const nextQuantity = existing.quantity + input.quantity;
+        if (nextQuantity > 99) conflict("تعداد این کالا در سبد نمی‌تواند بیشتر از ۹۹ باشد.");
+        existing.quantity = nextQuantity;
+        existing.unitPriceMinor = sellable.unitPriceMinor;
+      } else {
+        cart.items.push({
+          variantId: new mongoose.Types.ObjectId(input.variantId),
+          quantity: input.quantity,
+          unitPriceMinor: sellable.unitPriceMinor,
+          addedAt: new Date(),
+        });
+      }
+      cart.expiresAt = cartExpiry();
+      await cart.save({ session });
+    });
+
+    return this.getCart(accountId);
+  },
+
+  async updateCartItem(accountId: string, itemId: string, value: unknown) {
+    if (!mongoose.Types.ObjectId.isValid(itemId)) notFound("آیتم سبد پیدا نشد.");
+    const input = updateCartItemSchema.parse(value);
+    await connectToDatabase();
+
+    await mongoose.connection.transaction(async (session) => {
+      const cart = await Cart.findOne({
+        userId: accountId,
+        status: "active",
+        "items._id": itemId,
+      }).session(session);
+      if (!cart) notFound("آیتم سبد پیدا نشد.");
+      const item = cart.items.id(itemId);
+      if (!item) notFound("آیتم سبد پیدا نشد.");
+
+      const sellable = await loadSellableVariant(String(item.variantId), session);
+      if (sellable.currency !== cart.currency) conflict("ارز محصول با ارز سبد هماهنگ نیست.");
+      item.quantity = input.quantity;
+      item.unitPriceMinor = sellable.unitPriceMinor;
+      cart.expiresAt = cartExpiry();
+      await cart.save({ session });
+    });
+
+    return this.getCart(accountId);
+  },
+
+  async removeCartItem(accountId: string, itemId: string) {
+    if (!mongoose.Types.ObjectId.isValid(itemId)) notFound("آیتم سبد پیدا نشد.");
+    await connectToDatabase();
+    const cart = await Cart.findOne({
+      userId: accountId,
+      status: "active",
+      "items._id": itemId,
+    });
+    if (!cart) notFound("آیتم سبد پیدا نشد.");
+    cart.items.pull({ _id: itemId });
+    cart.expiresAt = cartExpiry();
+    await cart.save();
+    return this.getCart(accountId);
+  },
+
+  async clearCart(accountId: string) {
+    await connectToDatabase();
+    await Cart.updateOne(
+      { userId: accountId, status: "active" },
+      { $set: { items: [], expiresAt: cartExpiry() } },
+    );
+    return this.getCart(accountId);
+  },
+
   async getProfile(accountId: string) {
     await connectToDatabase();
     return loadProfile(accountId);
@@ -268,6 +490,6 @@ export const accountService = {
       .select("email firstName lastName phone preferredLocale addresses")
       .lean();
     if (!user) notFound("حساب کاربری پیدا نشد.");
-    return safeProfile(user as unknown as Record<string, any>);
+    return safeProfile(user as unknown as ProfileRecord);
   },
 };

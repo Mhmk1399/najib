@@ -104,7 +104,7 @@ export function WhyChooseUsSection({
   features = DEFAULT_FEATURES,
   action = {
     label: "داستان نجیب‌زاده",
-    href: "/our-story",
+    href: "/about-us",
   },
   className = "",
 }: WhyChooseUsSectionProps) {

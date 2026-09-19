@@ -87,7 +87,7 @@ export default async function Page() {
         description="هر قطعه با دقت، تجربه و توجه به تناسب ساخته می‌شود؛ از انتخاب پارچه تا آخرین دوخت."
         primaryAction={{
           label: "کشف داستان ما",
-          href: "/our-story",
+          href: "/about-us",
         }}
         secondaryAction={{
           label: "مشاهده مجموعه",
@@ -103,11 +103,11 @@ export default async function Page() {
         description="خیاطی ماندگار، رایحه‌های متمایز و انتخاب‌هایی سنجیده؛ برای سبک زندگی‌ای که کیفیت را در جزئیات تعریف می‌کند"
         primaryAction={{
           label: "مشاهده مجموعه",
-          href: "/collections",
+          href: "/shop",
         }}
         secondaryAction={{
           label: "کشف خانه نجیب‌زاده",
-          href: "/our-story",
+          href: "/about-us",
         }}
         mobileImagePosition="62% center"
         desktopImagePosition="center"

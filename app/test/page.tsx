@@ -6,10 +6,9 @@ import { useToast } from "@/components/ui/CustomToast";
 import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import { useState } from "react";
 
-const page = () => {
+export default function TestPage() {
   const [name, setName] = useState("");
   const toast = useToast();
-  const loading = true;
   return (
     <>
       {" "}
@@ -273,6 +272,4 @@ const page = () => {
       </div>
     </>
   );
-};
-
-export default page;
+}

@@ -3,6 +3,19 @@
 This file is the source of truth for backend delivery order. Update it whenever
 an API task is completed or its contract changes.
 
+## Quality gate
+
+- Next.js is pinned to `16.3.5`; the dependency audit currently reports zero
+  known vulnerabilities.
+- Production requires Node.js `20.19.0` or newer and an explicit
+  `AUTH_ACCESS_TOKEN_SECRET`.
+- `npm run typecheck`, `npm run lint`, `npm run build`, and
+  `npm run test:api` must pass before a delivery batch is marked complete.
+- Admin order, cart, and abandoned-checkout mutations write their domain
+  change and audit/outbox records in one MongoDB transaction.
+- Inventory adjustment, reservation, commit/release/expire, and transfer
+  operations are transactional and protected by idempotency keys.
+
 ## Delivery order
 
 1. Admin dashboard APIs required to operate existing data.
@@ -12,6 +25,12 @@ an API task is completed or its contract changes.
 5. Activity, recommendations, policy, and integration APIs.
 
 ## Admin APIs
+
+This table tracks backend routes and notes their Admin UI state. The current
+Admin UI exposes dashboard, users, catalog, categories, references, images, and
+the Persian Inventory control center. Operational pages for orders, carts,
+checkout sessions, abandoned checkouts, and audit history still need to be
+added to the Admin navigation and interface.
 
 | Area | Routes | Status |
 | --- | --- | --- |
@@ -25,7 +44,7 @@ an API task is completed or its contract changes.
 | Checkout sessions | `/api/admin/checkouts`, `/api/admin/checkouts/:id` | Complete, read-only operational view |
 | Abandoned checkouts | `/api/admin/abandoned-checkouts`, `/api/admin/abandoned-checkouts/:id` | Complete for list/detail and recovery workflow status |
 | Audit history | `/api/admin/audit` | Complete |
-| Inventory | Cities, stores, locations, balances, movements, adjustments, transfers, reservations | Next admin API phase |
+| Inventory | `/api/admin/inventory/*`, `/admin/inventory` | Complete for Persian Admin UI, cities, stores, pools, locations, balances, movement ledger, adjustments, transfers, and reservation lifecycle |
 | Payments | Intents, attempts, captures, refunds, reconciliation | After inventory contracts |
 | Policies | Draft/version/approval/evaluation history | Pending |
 | AI reports | Recommendation and tool-use reports | Pending |
@@ -38,7 +57,7 @@ an API task is completed or its contract changes.
 | Protected dashboard | `/customer-dashboard` | Complete; server-verified customer session with staff redirect to Admin |
 | Account summary | `GET /api/account/summary` | Complete; safe profile, real order totals, spending, active cart, address count, and recent orders |
 | Customer orders | `GET /api/account/orders`, `GET /api/account/orders/:id` | Complete; validated filters/pagination and ownership enforced in database queries |
-| Current cart | `GET /api/account/cart` | Complete; customer-owned active cart with resilient catalog labels |
+| Current cart | `GET/DELETE /api/account/cart`, `POST /api/account/cart/items`, `PATCH/DELETE /api/account/cart/items/:id` | Complete for customer-owned read, add, quantity update, item removal, and clear operations; sellability and server-side prices are revalidated on every write |
 | Customer profile | `GET/PATCH /api/account/profile` | Complete; full saved-address read and strict whitelist for editable profile fields |
 
 All customer account responses are private and use `Cache-Control: no-store`.
@@ -60,16 +79,36 @@ foreign-order fixtures and remove them after ownership and whitelist checks.
 - Recovered abandoned checkouts are system-owned; Admin can only mark contacted,
   suppressed, or expired.
 
+## Inventory contracts
+
+- Balances use one unique row per exact `variantId + locationId`.
+- Availability is calculated as `onHand - reserved - safetyStock` and never
+  exposed as a negative value.
+- Public availability returns only the aggregate sellable quantity; internal
+  warehouse details stay behind `inventory.read`.
+- Master records use localized `fa`, `en`, and `ar` names. The Admin interface
+  itself remains Persian-only.
+- Related documents are populated only when `include=references` is requested,
+  keeping normal list calls small.
+- Every stock mutation writes an immutable movement ledger record. Transfers
+  write matching source and destination movements in the same transaction.
+- Duplicate mutation requests with the same idempotency key do not apply stock
+  twice.
+
 ## Next implementation batch
 
-The next batch must add the Inventory domain before payment/checkout completion:
+Before starting a new domain, keep `npm run typecheck`, `npm run lint`,
+`npm run build`, and `npm run test:api` green. Production also requires an
+explicit `AUTH_ACCESS_TOKEN_SECRET` of at least 32 bytes.
 
-1. City, store, inventory pool, and location models.
-2. Exact `variantId + locationId` balances.
-3. Availability read API.
-4. Idempotent reserve, commit, release, and expire operations.
-5. Admin adjustments, movements, and transfers.
-6. Inventory cards and alerts in the Admin dashboard.
+The Inventory backend contract and authenticated customer cart mutations are
+complete. The next batch is:
+
+1. Connect checkout orchestration to reserve exact variants and commit or
+   release reservations.
+2. Add payment intent, attempt, capture, refund, and reconciliation APIs.
+3. Add operational Admin pages for orders, carts, checkout sessions, abandoned
+   checkouts, and audit history.
 
 Payment intent and refund APIs follow only after reservation contracts exist, so
 the system cannot report a paid order without controlling exact-variant stock.

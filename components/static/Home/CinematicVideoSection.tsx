@@ -82,8 +82,8 @@ export function CinematicVideoSection({
     if (!section) return;
 
     if (!("IntersectionObserver" in window)) {
-      setShouldMountVideo(true);
-      return;
+      const frame = requestAnimationFrame(() => setShouldMountVideo(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(

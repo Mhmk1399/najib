@@ -473,7 +473,8 @@ export function BlogListingPage({
   ------------------------------------------------------------------------- */
 
   useEffect(() => {
-    setCurrentPage(1);
+    const frame = requestAnimationFrame(() => setCurrentPage(1));
+    return () => cancelAnimationFrame(frame);
   }, [search, activeCategory, sort]);
 
   /* ------------------------------------------------------------------------
@@ -2364,9 +2365,8 @@ function useRevealOnce<T extends HTMLElement>() {
     }
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setVisible(true);
-
-      return;
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(

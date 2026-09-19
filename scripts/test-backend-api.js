@@ -66,6 +66,9 @@ const checks = [
     ["admin checkouts are protected", "/api/admin/checkouts"],
     ["admin abandoned checkouts are protected", "/api/admin/abandoned-checkouts"],
     ["admin audit history is protected", "/api/admin/audit"],
+    ["admin inventory is protected", "/api/admin/inventory/cities"],
+    ["admin inventory reservations are protected", "/api/admin/inventory/reservations"],
+    ["admin inventory transfers are protected", "/api/admin/inventory/transfers"],
   ].map(([name, path]) => ({
     name,
     path,
@@ -142,6 +145,14 @@ async function runAuthFlow() {
   let ownedOrderId;
   let foreignOrderId;
   let cartId;
+  let cartProductId;
+  let cartColorId;
+  let cartSizeGroupId;
+  let cartSizeId;
+  let cartVariantId;
+  let inventoryVariantId;
+  const inventoryIds = [];
+  const inventoryKeyPrefix = `inventory-test-${suffix}`;
 
   try {
     const anonymousMe = await apiRequest("/api/auth/me");
@@ -188,6 +199,11 @@ async function runAuthFlow() {
     ownedOrderId = new mongoose.Types.ObjectId();
     foreignOrderId = new mongoose.Types.ObjectId();
     cartId = new mongoose.Types.ObjectId();
+    cartProductId = new mongoose.Types.ObjectId();
+    cartColorId = new mongoose.Types.ObjectId();
+    cartSizeGroupId = new mongoose.Types.ObjectId();
+    cartSizeId = new mongoose.Types.ObjectId();
+    cartVariantId = new mongoose.Types.ObjectId();
     const orderBase = {
       orderNumber: `TEST-${suffix}`.toUpperCase(),
       idempotencyKey: `test-${suffix}`,
@@ -243,6 +259,59 @@ async function runAuthFlow() {
         createdAt: now,
         updatedAt: now,
       }),
+      db.collection("products").insertOne({
+        _id: cartProductId,
+        name: { fa: "پیراهن تست سبد", en: "Cart test shirt", ar: "قميص اختبار السلة" },
+        slug: `cart-test-${suffix}`,
+        description: { fa: "تست", en: "Test", ar: "اختبار" },
+        categoryId: new mongoose.Types.ObjectId(),
+        subcategoryId: new mongoose.Types.ObjectId(),
+        collectionIds: [],
+        colorIds: [cartColorId],
+        sizeIds: [cartSizeId],
+        basePriceMinor: 900_000,
+        currency: "IRR",
+        status: "active",
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("colors").insertOne({
+        _id: cartColorId,
+        name: { fa: "آبی تست", en: "Test blue", ar: "أزرق اختباري" },
+        slug: `cart-test-blue-${suffix}`,
+        family: { fa: "آبی", en: "Blue", ar: "أزرق" },
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("sizegroups").insertOne({
+        _id: cartSizeGroupId,
+        name: { fa: "سایز تست", en: "Test size", ar: "مقاس اختبار" },
+        code: `CART-${suffix}`.toUpperCase(),
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("sizes").insertOne({
+        _id: cartSizeId,
+        sizeGroupId: cartSizeGroupId,
+        name: { fa: "متوسط", en: "Medium", ar: "متوسط" },
+        code: `M-${suffix}`.toUpperCase(),
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("productvariants").insertOne({
+        _id: cartVariantId,
+        productId: cartProductId,
+        colorId: cartColorId,
+        sizeId: cartSizeId,
+        sku: `CART-${suffix}`.toUpperCase(),
+        priceOverrideMinor: 850_000,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
       db.collection("users").updateOne({ _id: userId }, { $set: { addresses: [{ _id: new mongoose.Types.ObjectId(), label: "خانه", firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567", line1: "نشانی آزمایشی", city: "تهران", postalCode: "1234567890", countryCode: "IR", isDefault: true }] } }),
     ]);
 
@@ -285,6 +354,39 @@ async function runAuthFlow() {
       "customer cart is scoped to the session account",
       accountCart.response.status === 200 && accountCart.body?.id === String(cartId) && accountCart.body?.itemCount === 2,
       String(accountCart.response.status),
+    );
+
+    const addCartItem = await apiRequest("/api/account/cart/items", {
+      method: "POST",
+      jar: customerCookies,
+      body: { variantId: String(cartVariantId), quantity: 2 },
+    });
+    const addedItem = addCartItem.body?.items?.find((item) => item.variantId === String(cartVariantId));
+    const updateCartItem = await apiRequest(`/api/account/cart/items/${addedItem?.id}`, {
+      method: "PATCH",
+      jar: customerCookies,
+      body: { quantity: 3 },
+    });
+    const rejectedClientPrice = await apiRequest("/api/account/cart/items", {
+      method: "POST",
+      jar: customerCookies,
+      body: { variantId: String(cartVariantId), quantity: 1, unitPriceMinor: 1 },
+    });
+    const removeCartItem = await apiRequest(`/api/account/cart/items/${addedItem?.id}`, {
+      method: "DELETE",
+      jar: customerCookies,
+    });
+    const clearCart = await apiRequest("/api/account/cart", {
+      method: "DELETE",
+      jar: customerCookies,
+    });
+    failed += result(
+      "customer cart mutations use server price and enforce ownership",
+      addCartItem.response.status === 200 && addedItem?.unitPriceMinor === 850_000 &&
+        updateCartItem.response.status === 200 && updateCartItem.body?.itemCount === 5 &&
+        rejectedClientPrice.response.status === 400 && removeCartItem.response.status === 200 &&
+        removeCartItem.body?.itemCount === 2 && clearCart.response.status === 200 && clearCart.body?.itemCount === 0,
+      `${addCartItem.response.status}/${updateCartItem.response.status}/${rejectedClientPrice.response.status}/${removeCartItem.response.status}/${clearCart.response.status}`,
     );
 
     const safeProfileUpdate = await apiRequest("/api/account/profile", {
@@ -367,6 +469,170 @@ async function runAuthFlow() {
       String(adminMe.response.status),
     );
 
+    inventoryVariantId = new mongoose.Types.ObjectId();
+    await db.collection("productvariants").insertOne({
+      _id: inventoryVariantId,
+      productId: new mongoose.Types.ObjectId(),
+      colorId: new mongoose.Types.ObjectId(),
+      sizeId: new mongoose.Types.ObjectId(),
+      sku: `INV-${suffix}`.toUpperCase(),
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const localizedName = (fa, en, ar) => ({ fa, en, ar });
+    const cityCreate = await apiRequest("/api/admin/inventory/cities", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        code: `city_${suffix}`,
+        name: localizedName("شهر تست", "Test city", "مدينة اختبار"),
+        countryCode: "IR",
+        isActive: true,
+      },
+    });
+    const cityId = cityCreate.body?._id;
+    if (cityId) inventoryIds.push(cityId);
+    const poolCreate = await apiRequest("/api/admin/inventory/pools", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        code: `pool_${suffix}`,
+        name: localizedName("استخر تست", "Test pool", "مجموعة اختبار"),
+        cityId,
+        isActive: true,
+      },
+    });
+    const poolId = poolCreate.body?._id;
+    if (poolId) inventoryIds.push(poolId);
+    const storeCreate = await apiRequest("/api/admin/inventory/stores", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        code: `store_${suffix}`,
+        name: localizedName("فروشگاه تست", "Test store", "متجر اختبار"),
+        cityId,
+        isActive: true,
+      },
+    });
+    const storeId = storeCreate.body?._id;
+    if (storeId) inventoryIds.push(storeId);
+    const sourceCreate = await apiRequest("/api/admin/inventory/locations", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        code: `source_${suffix}`,
+        name: localizedName("انبار تست", "Test warehouse", "مستودع اختبار"),
+        type: "warehouse",
+        cityId,
+        poolId,
+        isActive: true,
+      },
+    });
+    const sourceLocationId = sourceCreate.body?._id;
+    if (sourceLocationId) inventoryIds.push(sourceLocationId);
+    const destinationCreate = await apiRequest("/api/admin/inventory/locations", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        code: `destination_${suffix}`,
+        name: localizedName("شعبه تست", "Test branch", "فرع اختبار"),
+        type: "store",
+        cityId,
+        poolId,
+        storeId,
+        isActive: true,
+      },
+    });
+    const destinationLocationId = destinationCreate.body?._id;
+    if (destinationLocationId) inventoryIds.push(destinationLocationId);
+    failed += result(
+      "admin creates localized inventory hierarchy",
+      [cityCreate, poolCreate, storeCreate, sourceCreate, destinationCreate].every(({ response }) => response.status === 201) &&
+        Boolean(cityId && poolId && storeId && sourceLocationId && destinationLocationId),
+      [cityCreate, poolCreate, storeCreate, sourceCreate, destinationCreate].map(({ response }) => response.status).join("/"),
+    );
+
+    const adjustmentBody = {
+      idempotencyKey: `${inventoryKeyPrefix}:adjust`,
+      variantId: String(inventoryVariantId),
+      locationId: sourceLocationId,
+      delta: 10,
+      safetyStock: 0,
+      reason: "isolated inventory adjustment test",
+    };
+    const adjustment = await apiRequest("/api/admin/inventory/adjustments", {
+      method: "POST",
+      jar: adminCookies,
+      body: adjustmentBody,
+    });
+    const adjustmentRetry = await apiRequest("/api/admin/inventory/adjustments", {
+      method: "POST",
+      jar: adminCookies,
+      body: adjustmentBody,
+    });
+    const adjustmentKeyConflict = await apiRequest("/api/admin/inventory/adjustments", {
+      method: "POST",
+      jar: adminCookies,
+      body: { ...adjustmentBody, delta: 11 },
+    });
+    const initialAvailability = await apiRequest(`/api/storefront/inventory/availability?variantId=${inventoryVariantId}`);
+    failed += result(
+      "inventory adjustment is atomic and idempotent",
+      adjustment.response.status === 201 && adjustment.body?.balance?.available === 10 &&
+        adjustmentRetry.response.status === 201 && adjustmentRetry.body?.idempotent === true &&
+        adjustmentKeyConflict.response.status === 409 &&
+        initialAvailability.response.status === 200 && initialAvailability.body?.available === 10,
+      `${adjustment.response.status}/${adjustmentRetry.response.status}/${adjustmentKeyConflict.response.status}/${initialAvailability.body?.available}`,
+    );
+
+    const reservation = await apiRequest("/api/admin/inventory/reservations", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        idempotencyKey: `${inventoryKeyPrefix}:reserve`,
+        items: [{ variantId: String(inventoryVariantId), locationId: sourceLocationId, quantity: 3 }],
+        expiresAt: new Date(Date.now() + 600_000).toISOString(),
+      },
+    });
+    const reservationId = reservation.body?.reservation?._id;
+    const reservedAvailability = await apiRequest(`/api/storefront/inventory/availability?variantId=${inventoryVariantId}`);
+    const commitReservation = await apiRequest(`/api/admin/inventory/reservations/${reservationId}`, {
+      method: "PATCH",
+      jar: adminCookies,
+      body: { action: "commit", reason: "isolated checkout completion test" },
+    });
+    const committedAvailability = await apiRequest(`/api/storefront/inventory/availability?variantId=${inventoryVariantId}`);
+    failed += result(
+      "reservation reduces availability and commit consumes stock",
+      reservation.response.status === 201 && reservedAvailability.body?.available === 7 &&
+        commitReservation.response.status === 200 && commitReservation.body?.reservation?.status === "committed" &&
+        committedAvailability.body?.available === 7,
+      `${reservation.response.status}/${reservedAvailability.body?.available}/${commitReservation.response.status}/${committedAvailability.body?.available}`,
+    );
+
+    const transfer = await apiRequest("/api/admin/inventory/transfers", {
+      method: "POST",
+      jar: adminCookies,
+      body: {
+        idempotencyKey: `${inventoryKeyPrefix}:transfer`,
+        sourceLocationId,
+        destinationLocationId,
+        items: [{ variantId: String(inventoryVariantId), quantity: 2 }],
+        reason: "isolated inventory transfer test",
+      },
+    });
+    const balances = await apiRequest(`/api/admin/inventory/balances?variantId=${inventoryVariantId}&include=references`, { jar: adminCookies });
+    const movements = await apiRequest(`/api/admin/inventory/movements?variantId=${inventoryVariantId}`, { jar: adminCookies });
+    const finalAvailability = await apiRequest(`/api/storefront/inventory/availability?variantId=${inventoryVariantId}`);
+    failed += result(
+      "inventory transfer preserves aggregate stock and writes ledger",
+      transfer.response.status === 201 && balances.response.status === 200 && balances.body?.items?.length === 2 &&
+        movements.body?.pagination?.total === 5 && finalAvailability.body?.available === 7,
+      `${transfer.response.status}/${balances.body?.items?.length}/${movements.body?.pagination?.total}/${finalAvailability.body?.available}`,
+    );
+
     for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile"]) {
       const staffAccount = await apiRequest(path, { jar: adminCookies });
       failed += result(`staff is isolated from ${path}`, staffAccount.response.status === 403, String(staffAccount.response.status));
@@ -386,6 +652,32 @@ async function runAuthFlow() {
         String(operationalList.response.status),
       );
     }
+
+    const fulfillOrder = await apiRequest(`/api/admin/orders/${ownedOrderId}`, {
+      method: "PATCH",
+      jar: adminCookies,
+      body: { action: "mark_fulfilled", reason: "isolated API transaction test" },
+    });
+    const [fulfilledOrder, fulfillmentAudit, fulfillmentEvent] = await Promise.all([
+      db.collection("orders").findOne({ _id: ownedOrderId }),
+      db.collection("staffaudits").findOne({
+        userId,
+        targetId: String(ownedOrderId),
+        action: "order.mark_fulfilled",
+      }),
+      db.collection("outboxes").findOne({
+        correlationId: `test-${suffix}`,
+        eventType: "OrderFulfilled",
+      }),
+    ]);
+    failed += result(
+      "admin order action commits status, audit, and outbox atomically",
+      fulfillOrder.response.status === 200 &&
+        fulfilledOrder?.status === "fulfilled" &&
+        Boolean(fulfillmentAudit) &&
+        Boolean(fulfillmentEvent),
+      String(fulfillOrder.response.status),
+    );
 
     const adminCustomer = await apiRequest("/customer-dashboard", { jar: adminCookies, redirect: "manual" });
     failed += result(
@@ -408,10 +700,25 @@ async function runAuthFlow() {
         db.collection("staffaudits").deleteMany({ userId }),
         db.collection("orders").deleteMany({ _id: { $in: [ownedOrderId, foreignOrderId].filter(Boolean) } }),
         db.collection("carts").deleteMany({ _id: { $in: [cartId].filter(Boolean) } }),
+        db.collection("productvariants").deleteMany({ _id: cartVariantId }),
+        db.collection("products").deleteMany({ _id: cartProductId }),
+        db.collection("sizes").deleteMany({ _id: cartSizeId }),
+        db.collection("sizegroups").deleteMany({ _id: cartSizeGroupId }),
+        db.collection("colors").deleteMany({ _id: cartColorId }),
+        db.collection("outboxes").deleteMany({ correlationId: `test-${suffix}` }),
+        db.collection("inventorymovements").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
+        db.collection("inventoryreservations").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
+        db.collection("inventorytransfers").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
+        db.collection("inventorybalances").deleteMany({ variantId: inventoryVariantId }),
+        db.collection("inventorylocations").deleteMany({ _id: { $in: inventoryIds } }),
+        db.collection("inventorypools").deleteMany({ _id: { $in: inventoryIds } }),
+        db.collection("stores").deleteMany({ _id: { $in: inventoryIds } }),
+        db.collection("cities").deleteMany({ _id: { $in: inventoryIds } }),
+        db.collection("productvariants").deleteMany({ _id: inventoryVariantId }),
         db.collection("users").deleteOne({ _id: userId }),
       ]).catch(() => undefined);
     }
-    if (mongoose?.connection.readyState !== 0) await mongoose.disconnect();
+    if (mongoose && mongoose.connection.readyState !== 0) await mongoose.disconnect();
   }
   return failed;
 }
@@ -425,7 +732,7 @@ async function main() {
     try {
       const response = await fetch(`${baseUrl}${check.path}`, {
         headers: { accept: "application/json" },
-        signal: AbortSignal.timeout(5_000),
+        signal: AbortSignal.timeout(10_000),
       });
       const body = await response.json();
       const duration = Math.round(performance.now() - startedAt);

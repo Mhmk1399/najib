@@ -855,7 +855,7 @@ function ComposerEditor({
                       پیش از ذخیره صفحه، کتابخانه تصاویر را تکمیل کنید.
                     </span>
                   </div>
-                  <Link href="/catalog/images">باز کردن تصاویر</Link>
+                  <Link href="/admin/catalog/images">باز کردن تصاویر</Link>
                 </div>
               )}
               <section className="composer-identity">

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Boxes, FileText, Images, Package, SlidersHorizontal } from "lucide-react";
+import { Boxes, Images, Package, SlidersHorizontal } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const destinations = [

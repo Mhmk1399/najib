@@ -393,14 +393,15 @@ export function CustomSelect({
       multiple,
     );
 
-  const selectedValues =
-    multiple
-      ? (normalizedValue as string[])
-      : normalizedValue
-        ? [
-            normalizedValue as string,
-          ]
-        : [];
+  const selectedValues = useMemo(
+    () =>
+      multiple
+        ? (normalizedValue as string[])
+        : normalizedValue
+          ? [normalizedValue as string]
+          : [],
+    [multiple, normalizedValue],
+  );
 
   /* ------------------------------------------------------------------------
      THEME
@@ -908,12 +909,13 @@ export function CustomSelect({
               !option.disabled,
           );
 
-    setActiveIndex(
-      nextIndex,
-    );
+    const frame = requestAnimationFrame(() => setActiveIndex(nextIndex));
+    return () => cancelAnimationFrame(frame);
   }, [
+    filteredOptions,
     open,
     searchable,
+    selectedValues,
   ]);
 
   /* ------------------------------------------------------------------------

@@ -10,3 +10,14 @@ export async function GET() {
     return jsonError(error);
   }
 }
+
+export async function DELETE() {
+  try {
+    const account = await requireCustomerApiAccount();
+    return jsonResponse(await accountService.clearCart(account.id), {
+      cache: "no-store",
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
+}

@@ -39,7 +39,11 @@ function sign(input: string, secret: string): string {
 }
 
 export function accessTokenSecret() {
-  const value = process.env.AUTH_ACCESS_TOKEN_SECRET?.trim() || "najib-local-development-secret-change-me-32";
+  const configuredValue = process.env.AUTH_ACCESS_TOKEN_SECRET?.trim();
+  if (!configuredValue && process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_ACCESS_TOKEN_SECRET must be configured in production.");
+  }
+  const value = configuredValue || "najib-local-development-secret-change-me-32";
   if (Buffer.byteLength(value) < 32) throw new Error("AUTH_ACCESS_TOKEN_SECRET must contain at least 32 bytes.");
   return value;
 }

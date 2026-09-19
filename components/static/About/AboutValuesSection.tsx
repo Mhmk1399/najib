@@ -418,9 +418,8 @@ function useRevealOnce<T extends HTMLElement>() {
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setRevealed(true);
-
-      return;
+      const frame = requestAnimationFrame(() => setRevealed(true));
+      return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(

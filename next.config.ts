@@ -62,6 +62,31 @@ const nextConfig: NextConfig = {
       remotePatternFromUrl(process.env.S3_ENDPOINT),
     ]),
   },
+  async redirects() {
+    return [
+      { source: "/about", destination: "/about-us", permanent: true },
+      { source: "/our-story", destination: "/about-us", permanent: true },
+      { source: "/craftsmanship", destination: "/about-us", permanent: false },
+      { source: "/heritage", destination: "/about-us", permanent: false },
+      { source: "/contact", destination: "/contact-us", permanent: true },
+      { source: "/appointments", destination: "/contact-us", permanent: false },
+      { source: "/stores", destination: "/contact-us", permanent: false },
+      { source: "/customer-care", destination: "/contact-us", permanent: false },
+      { source: "/shipping-returns", destination: "/terms-conditions", permanent: false },
+      { source: "/terms", destination: "/terms-conditions", permanent: true },
+      { source: "/privacy", destination: "/terms-conditions", permanent: false },
+      { source: "/cookies", destination: "/terms-conditions", permanent: false },
+      { source: "/journal", destination: "/blog", permanent: true },
+      { source: "/collections", destination: "/shop", permanent: false },
+      { source: "/campaigns", destination: "/shop", permanent: false },
+      { source: "/tailoring", destination: "/shop", permanent: false },
+      { source: "/fragrance", destination: "/shop", permanent: false },
+      { source: "/clothing", destination: "/shop", permanent: false },
+      { source: "/wishlist", destination: "/profile", permanent: false },
+      { source: "/checkout", destination: "/cart", permanent: false },
+      { source: "/catalog/images", destination: "/admin/catalog/images", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

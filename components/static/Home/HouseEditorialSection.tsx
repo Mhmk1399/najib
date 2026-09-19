@@ -60,7 +60,7 @@ const defaultFeatures: HouseFeature[] = [
     id: "story",
     title: "داستان ما",
     description: "نگاهی به ارزش‌ها، نگاه و جهان پشت خانه نجیب‌زاده.",
-    href: "/our-story",
+    href: "/about-us",
     icon: "story",
   },
 ];
@@ -91,11 +91,11 @@ export function HouseEditorialSection({
   description = "خیاطی ماندگار، رایحه‌های متمایز و انتخاب‌هایی سنجیده؛ برای سبک زندگی‌ای که کیفیت را در جزئیات تعریف می‌کند.",
   primaryAction = {
     label: "مشاهده مجموعه",
-    href: "/collections",
+    href: "/shop",
   },
   secondaryAction = {
     label: "کشف خانه نجیب‌زاده",
-    href: "/our-story",
+    href: "/about-us",
   },
   features = defaultFeatures,
   mobileImagePosition = "60% center",

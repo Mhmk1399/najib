@@ -21,6 +21,7 @@ import {
 import type {
   DataSelectOption,
   DynamicColumn,
+  DynamicCrudConfig,
   DynamicFilterDefinition,
   DynamicFormSchema,
   DynamicTableResult,
@@ -1076,7 +1077,9 @@ export function ImageStories({
   );
 
   const toastRef = useRef(toast);
-  toastRef.current = toast;
+  useEffect(() => {
+    toastRef.current = toast;
+  }, [toast]);
 
   const source = useMemo(
     () => ({
@@ -1158,7 +1161,9 @@ export function ImageStories({
     [],
   );
 
-  const crud = useMemo(
+  const crud = useMemo<
+    DynamicCrudConfig<ImageAsset, ImageFormValues, ImageFormValues>
+  >(
     () => ({
       create: {
         enabled: canWrite,
@@ -1174,7 +1179,7 @@ export function ImageStories({
             body: JSON.stringify(formPayload(values)),
           }),
         mapError: mapFormError,
-        onSuccess: (record: ImageAsset) => {
+        onSuccess: (record: ImageAsset | void) => {
           toastRef.current.success("تصویر ساخته شد", {
             description:
               record && "_id" in record
@@ -1196,7 +1201,7 @@ export function ImageStories({
             body: JSON.stringify(formPayload(values)),
           }),
         mapError: mapFormError,
-        onSuccess: (record: ImageAsset) => {
+        onSuccess: (record: ImageAsset | void) => {
           toastRef.current.success("تغییرات تصویر ذخیره شد", {
             description:
               record && "_id" in record
