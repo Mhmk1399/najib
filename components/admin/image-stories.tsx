@@ -1174,7 +1174,7 @@ export function ImageStories({
             body: JSON.stringify(formPayload(values)),
           }),
         mapError: mapFormError,
-        onSuccess: (record: ImageAsset) => {
+        onSuccess: (record: ImageAsset | void) => {
           toastRef.current.success("تصویر ساخته شد", {
             description:
               record && "_id" in record
@@ -1196,12 +1196,12 @@ export function ImageStories({
             body: JSON.stringify(formPayload(values)),
           }),
         mapError: mapFormError,
-        onSuccess: (record: ImageAsset) => {
+        onSuccess: (record: ImageAsset | void, original: ImageAsset) => {
           toastRef.current.success("تغییرات تصویر ذخیره شد", {
             description:
               record && "_id" in record
                 ? `${fa(record.alt)} به‌روزرسانی شد.`
-                : undefined,
+                : `${fa(original.alt)} به‌روزرسانی شد.`,
           });
         },
       },
@@ -1213,7 +1213,12 @@ export function ImageStories({
             label: "پیش‌نمایش",
             render: ({ record }: { record: ImageAsset }) => <ImageThumb asset={record} />,
           },
-          { id: "url", label: "آدرس تصویر", accessor: "url", colSpan: "full" },
+          {
+            id: "url",
+            label: "آدرس تصویر",
+            accessor: "url",
+            colSpan: "full" as const,
+          },
           {
             id: "alt",
             label: "متن جایگزین فارسی",

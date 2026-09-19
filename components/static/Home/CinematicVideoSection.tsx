@@ -23,6 +23,7 @@ type CinematicVideoSectionProps = {
   secondaryAction?: VideoAction;
   mobileVideoPosition?: string;
   desktopVideoPosition?: string;
+  posterStoryId?: string;
   className?: string;
 };
 
@@ -37,6 +38,7 @@ export function CinematicVideoSection({
   secondaryAction,
   mobileVideoPosition = "center top",
   desktopVideoPosition = "center",
+  posterStoryId,
   className = "",
 }: CinematicVideoSectionProps) {
   const sectionRef = useRef<HTMLElement | null>(null);
@@ -82,8 +84,8 @@ export function CinematicVideoSection({
     if (!section) return;
 
     if (!("IntersectionObserver" in window)) {
-      setShouldMountVideo(true);
-      return;
+      const timer = globalThis.setTimeout(() => setShouldMountVideo(true), 0);
+      return () => globalThis.clearTimeout(timer);
     }
 
     const observer = new IntersectionObserver(
@@ -144,6 +146,8 @@ export function CinematicVideoSection({
       dir="rtl"
       lang="fa"
       aria-labelledby={titleId}
+      data-image-story-id={posterStoryId}
+      data-image-story-url={posterSrc}
       style={themeVars}
       className={`relative isolate flex h-[86svh] min-h-[640px] max-h-[920px] w-full items-center justify-center overflow-hidden bg-[var(--video-black)] text-[var(--video-white)] sm:min-h-[680px] lg:h-[88svh] ${className}`}
     >

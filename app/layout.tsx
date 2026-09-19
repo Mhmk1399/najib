@@ -27,6 +27,8 @@ import { QueryProvider } from "@/components/providers/query-provider";
 import { ToastProvider } from "@/components/ui/CustomToast";
 import { SiteShell } from "@/components/global/site-shell";
 import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { DynamicImageIsland } from "@/components/storefront/dynamic-image-island";
+import { ContextualProductReveal } from "@/components/storefront/contextual-product-reveal";
 import { estedad } from "@/next-persian-fonts/estedad";
  
 export const metadata: Metadata = {
@@ -110,6 +112,8 @@ export default function RootLayout({
                   </ToastProvider>
                 </div>
               </SiteShell>
+              <ContextualProductReveal />
+              <DynamicImageIsland />
             </QueryProvider>
           </LenisProvider>
         </div>

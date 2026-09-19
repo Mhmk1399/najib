@@ -267,6 +267,7 @@ function buildCategoryPageData(
         fa(category.description, "کالکشن‌های منتخب نجیب‌زاده را مرور کنید."),
       ),
       image: imageUrl(imageMap, primaryImageId),
+      imageAssetId: idOf(primaryImageId),
       imageAlt: imageAlt(imageMap, primaryImageId, name),
       mobileImagePosition: imagePosition(
         imageMap,
@@ -405,6 +406,7 @@ function buildSubcategoryPageData(
         fa(subcategory.description, "محصولات منتخب این زیردسته را مرور کنید."),
       ),
       image: imageUrl(imageMap, primaryImageId),
+      imageAssetId: idOf(primaryImageId),
       imageAlt: imageAlt(imageMap, primaryImageId, name),
       mobileImagePosition: imagePosition(
         imageMap,

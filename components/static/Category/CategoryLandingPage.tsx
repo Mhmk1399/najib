@@ -108,6 +108,8 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
     <section
       ref={ref}
       aria-labelledby="category-hero-title"
+      data-image-story-id={hero.imageAssetId}
+      data-image-story-url={hero.image}
       style={
         {
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",

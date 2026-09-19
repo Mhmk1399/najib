@@ -39,6 +39,10 @@ components:
     backgroundColor: "rgb(17 17 17 / 0.42)"
     textColor: "{colors.surface}"
     rounded: "{rounded.lg}"
+  imageAssistantIsland:
+    backgroundColor: "rgb(11 11 11 / 0.58)"
+    textColor: "{colors.surface}"
+    rounded: "28px"
 ---
 
 # Najibzadeh Design Context
@@ -47,7 +51,7 @@ Najibzadeh is a luxury menswear commerce experience with a restrained editorial 
 
 Use black and white for primary structure, cream for editorial page backgrounds, and copper only as a small accent for badges, counts, and selected emphasis.
 
-Product browsing should prioritize large photography, tight metadata, and compact controls. Quick actions may use glass panels over imagery, but they should stay legible, compact, and below 8px radius.
+Product browsing should prioritize large photography, tight metadata, and compact controls. Quick actions may use glass panels over imagery, but they should stay legible, compact, and below 8px radius. The persistent contextual image island is the deliberate exception: it is a floating concierge control, not a product card. It may use a 28px outer radius, circular icon controls, a restrained internal highlight, and stronger backdrop blur so it reads as one tactile object above photography.
 
 The admin workspace uses a 76px desktop navigation rail so operational tables and forms retain maximum width. The rail expands to 268px as an overlay on pointer hover or keyboard focus-within; expansion must never resize the active workspace. Route identity remains visible through icons and a narrow copper active marker, while labels return in the expanded state. Mobile keeps the existing modal navigation drawer rather than the desktop rail behavior.
 

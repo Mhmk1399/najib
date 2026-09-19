@@ -18,6 +18,7 @@ export type EditorialProduct = {
   id: string;
   title: string;
   image: string;
+  imageAssetId?: string;
   href: string;
   eyebrow?: string;
   imageAlt?: string;
@@ -119,6 +120,7 @@ function productToEditorialItem(
     eyebrow: `محصول ${indexFormatter.format(index + 1)}`,
     href: `/shop/${product.slug}`,
     image: image?.url || FALLBACK_PRODUCT_IMAGE,
+    imageAssetId: image ? idOf(image._id) : undefined,
     imageAlt: fa(image?.alt, title),
     imagePosition:
       product.primaryImageObjectPosition ?? image?.objectPosition ?? "center",
@@ -243,6 +245,8 @@ function ProductCard({ product }: { product: EditorialProduct }) {
     <Link
       href={product.href}
       aria-label={`مشاهده محصول ${product.title}`}
+      data-image-story-id={product.imageAssetId}
+      data-image-story-url={product.image}
       className={`group relative isolate block overflow-hidden bg-black outline-none ${themeClasses.focusRing}`}
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[4/5] lg:aspect-[0.8/1]">

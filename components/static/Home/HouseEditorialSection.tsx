@@ -34,6 +34,7 @@ type HouseEditorialSectionProps = {
   features?: HouseFeature[];
   mobileImagePosition?: string;
   desktopImagePosition?: string;
+  imageStoryId?: string;
   className?: string;
 };
 
@@ -100,6 +101,7 @@ export function HouseEditorialSection({
   features = defaultFeatures,
   mobileImagePosition = "60% center",
   desktopImagePosition = "center",
+  imageStoryId,
   className = "",
 }: HouseEditorialSectionProps) {
   const visibleFeatures = features.slice(0, 3);
@@ -119,6 +121,8 @@ export function HouseEditorialSection({
       dir="rtl"
       lang="fa"
       aria-labelledby={headingId}
+      data-image-story-id={imageStoryId}
+      data-image-story-url={imageSrc}
       style={themeVars}
       className={`relative isolate w-full overflow-hidden bg-[var(--house-black)] text-[var(--house-white)] ${className}`}
     >

@@ -78,6 +78,8 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
     <section
       ref={ref}
       aria-labelledby="subcategory-hero-title"
+      data-image-story-id={hero.imageAssetId}
+      data-image-story-url={hero.image}
       style={
         {
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",

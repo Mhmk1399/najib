@@ -43,6 +43,8 @@ export type CategoryHero = {
 
     image: string;
 
+    imageAssetId?: string;
+
     imageAlt?: string;
 
     mobileImagePosition?: string;

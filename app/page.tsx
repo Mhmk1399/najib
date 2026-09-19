@@ -5,9 +5,11 @@ import {
   getHomeCategoryShowcaseItems,
 } from "@/components/static/Home/CategoryShowcase";
 import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
+import { DynamicIslandExperienceSections } from "@/components/static/Home/DynamicIslandExperienceSections";
 import { HeroSection } from "@/components/static/Home/HeroSection";
 import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSection";
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
+import { ShoppableImageBanner } from "@/components/static/Home/ShoppableImageBanner";
 import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
 
 export const dynamic = "force-dynamic";
@@ -112,6 +114,8 @@ export default async function Page() {
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />
+      <ShoppableImageBanner />
+      <DynamicIslandExperienceSections />
       <ProductEditorialGrid />
       <FAQ
         eyebrow={FAQ_DEMO_CONTENT.eyebrow}
