@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ArrowLeft,
+  ArrowRight,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -17,6 +18,8 @@ import {
 } from "lucide-react";
 import {
   type CSSProperties,
+  type TouchEvent,
+  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -57,11 +60,25 @@ type CatalogTaxonomyRecord = {
   slug: string;
 };
 
+type CatalogColorRecord = {
+  _id: string;
+  name: ImageStoryLocalizedText;
+  hex?: string;
+};
+
+type CatalogSizeRecord = {
+  _id: string;
+  name: ImageStoryLocalizedText;
+  code?: string;
+};
+
 type ProductDetailPayload = {
   product: CatalogProductRecord;
   category?: CatalogTaxonomyRecord | null;
   subcategory?: CatalogTaxonomyRecord | null;
   images: CatalogImageAsset[];
+  colors?: CatalogColorRecord[];
+  sizes?: CatalogSizeRecord[];
 };
 
 type RevealState = {
@@ -192,21 +209,14 @@ function ensureRevealMount(request: ImageStoryProductRevealRequest) {
   const source = resolveRevealSource(request);
   if (!source) return null;
 
-  const anchor = source.matches("section")
-    ? source
-    : (Element.prototype.closest.call(source, "section") ?? source);
-  const adjacentMount = anchor.nextElementSibling;
-
-  if (
-    adjacentMount instanceof HTMLElement &&
-    adjacentMount.dataset.contextualProductReveal === "true"
-  ) {
-    return adjacentMount;
-  }
+  const existingMount = document.querySelector<HTMLElement>(
+    '[data-contextual-product-reveal="true"]',
+  );
+  if (existingMount) return existingMount;
 
   const mount = document.createElement("div");
   mount.dataset.contextualProductReveal = "true";
-  anchor.insertAdjacentElement("afterend", mount);
+  document.body.appendChild(mount);
 
   return mount;
 }
@@ -303,26 +313,27 @@ function imageLayout(index: number, count: number) {
   return "aspect-[4/5] min-h-[180px] sm:min-h-[205px]";
 }
 
-function scrollToReveal(element: HTMLElement) {
+function scrollToSource(element: HTMLElement) {
   const reduceMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
   ).matches;
   const lenis = (window as LenisWindow).__lenis;
 
   if (lenis && !reduceMotion) {
-    lenis.scrollTo(element, { offset: -88, duration: 0.82 });
+    lenis.scrollTo(element, { offset: -104, duration: 0.72 });
     return;
   }
 
   element.scrollIntoView({
     behavior: reduceMotion ? "auto" : "smooth",
-    block: "start",
+    block: "center",
   });
 }
 
 export function ContextualProductReveal() {
   const pathname = usePathname();
   const sectionRef = useRef<HTMLElement>(null);
+  const exitButtonRef = useRef<HTMLButtonElement>(null);
   const revealRef = useRef<RevealState | null>(null);
   const [reveal, setReveal] = useState<RevealState | null>(null);
 
@@ -371,8 +382,6 @@ export function ContextualProductReveal() {
   );
 
   const activeReveal = reveal?.pathname === pathname ? reveal : null;
-  const activeMount = activeReveal?.mount;
-  const activeProductSlug = activeReveal?.request.product.slug;
   const slug = activeReveal?.request.product.slug ?? "";
   const productQuery = useQuery({
     queryKey: ["storefront", "product-detail", slug],
@@ -385,26 +394,70 @@ export function ContextualProductReveal() {
   });
 
   useEffect(() => {
-    if (!activeMount || !activeProductSlug) return;
+    if (!activeReveal) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousHtmlOverscroll =
+      document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overscrollBehavior = "none";
 
     const frame = window.requestAnimationFrame(() => {
-      if (sectionRef.current) scrollToReveal(sectionRef.current);
+      exitButtonRef.current?.focus({ preventScroll: true });
     });
 
-    return () => window.cancelAnimationFrame(frame);
-  }, [activeMount, activeProductSlug]);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.documentElement.style.overscrollBehavior =
+        previousHtmlOverscroll;
+    };
+  }, [activeReveal]);
 
   const images = useMemo(
     () => productImages(productQuery.data, activeReveal?.request.product.image),
     [activeReveal?.request.product.image, productQuery.data],
   );
 
-  function closeReveal() {
-    const current = revealRef.current;
-    revealRef.current = null;
-    setReveal(null);
-    window.requestAnimationFrame(() => current?.mount.remove());
-  }
+  const closeReveal = useCallback(
+    (options: { returnToSource?: boolean } = {}) => {
+      const current = revealRef.current;
+      const source = current ? resolveRevealSource(current.request) : null;
+      const scrollY = window.scrollY;
+      revealRef.current = null;
+      setReveal(null);
+      window.requestAnimationFrame(() => {
+        current?.mount.remove();
+
+        if (options.returnToSource && source?.isConnected) {
+          window.requestAnimationFrame(() => scrollToSource(source));
+        } else if (!options.returnToSource || !source?.isConnected) {
+          window.requestAnimationFrame(() => window.scrollTo(0, scrollY));
+        }
+      });
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!activeReveal) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeReveal({ returnToSource: true });
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeReveal, closeReveal]);
 
   if (!activeReveal) return null;
 
@@ -424,83 +477,145 @@ export function ContextualProductReveal() {
     : "";
   const isLoading = productQuery.isLoading && !productQuery.data;
   const detailsHref = requestedProduct.href || `/shop/${requestedProduct.slug}`;
+  const colors = productQuery.data?.colors ?? [];
+  const sizes = productQuery.data?.sizes ?? [];
+  const sourceImageUrl =
+    activeReveal.request.storyUrl ||
+    requestedProduct.image?.url ||
+    FALLBACK_IMAGE;
 
   const revealPanel = (
     <section
       ref={sectionRef}
       dir="rtl"
       lang="fa"
+      role="dialog"
+      aria-modal="true"
+      aria-live="polite"
+      data-contextual-reveal="true"
       aria-labelledby="contextual-product-reveal-title"
-      className="relative isolate scroll-mt-24 overflow-hidden bg-[#0A0908] px-3 py-7 text-white sm:scroll-mt-28 sm:px-5 sm:py-10 lg:px-8 lg:py-14"
+      tabIndex={-1}
+      className="fixed inset-0 z-[2147483600] isolate h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-auto overscroll-contain bg-[#080706] px-0 py-0 text-white outline-none [scrollbar-gutter:stable]"
     >
-      <div
+      <Image
+        src={sourceImageUrl}
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="pointer-events-none scale-[1.08] object-cover object-center blur-[14px] opacity-[0.42] saturate-[0.82]"
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-30 bg-[linear-gradient(180deg,#11100E_0%,#080706_100%)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -right-24 -top-44 -z-20 size-[520px] rounded-full bg-[#B7835A]/[0.12] blur-[110px]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,6,5,0.70)_0%,rgba(7,6,5,0.40)_28%,rgba(7,6,5,0.58)_66%,rgba(7,6,5,0.96)_100%)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute -bottom-52 -left-20 -z-20 size-[560px] rounded-full bg-white/[0.055] blur-[140px]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-[linear-gradient(180deg,transparent,rgba(8,7,6,0.82)_58%,#080706_100%)]"
       />
 
-      <div className="relative mx-auto w-full max-w-[1500px] overflow-hidden rounded-[30px] border border-white/[0.16] bg-[#11100F]/[0.56] shadow-[0_34px_120px_rgba(0,0,0,0.42),0_8px_28px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-[32px] backdrop-saturate-[160%] sm:rounded-[34px]">
+      <div className="relative z-10 mx-auto flex min-h-full w-full max-w-[1500px] flex-col overflow-x-hidden px-3 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] sm:px-7 sm:pb-10 sm:pt-7 lg:px-10 lg:pt-9">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,rgba(255,255,255,0.12)_0%,rgba(255,255,255,0.038)_22%,transparent_48%,rgba(183,131,90,0.045)_100%)]"
+          className="pointer-events-none absolute inset-x-10 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.32),rgba(183,131,90,0.78),rgba(255,255,255,0.32),transparent)]"
         />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-10 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.35),rgba(183,131,90,0.94),rgba(255,255,255,0.35),transparent)]"
-        />
+        <div className="sticky top-[max(10px,env(safe-area-inset-top))] z-40 mb-4 flex w-full items-center justify-between gap-3 rounded-[24px] border border-white/[0.12] bg-[#0A0908]/[0.58] p-2 shadow-[0_18px_54px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-[30px] backdrop-saturate-[145%] sm:top-4 sm:mb-6 sm:rounded-full sm:px-3">
+          <span className="min-w-0 truncate px-2 text-[9px] font-medium text-white/72 sm:px-3 sm:text-[10px]">
+            پیش‌نمایش انتخاب‌شده
+          </span>
+          <button
+            ref={exitButtonRef}
+            type="button"
+            onClick={() => closeReveal({ returnToSource: true })}
+            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2.5 rounded-full border border-white/[0.24] bg-white/[0.10] px-5 text-[10px] font-semibold text-white shadow-[0_12px_34px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-2xl transition-[border-color,background-color,color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#D7B28E]/75 hover:bg-[#B7835A]/[0.24] hover:shadow-[0_16px_42px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E7C8A8]/85 active:translate-y-0"
+            aria-label="خروج از پیش‌نمایش محصول"
+          >
+            <X className="size-4" aria-hidden="true" />
+            خروج از حالت نمایش
+          </button>
+        </div>
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          <header className="mx-auto flex w-full max-w-[1320px] flex-col items-stretch gap-5 text-right md:flex-row md:items-end md:justify-between md:gap-6">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-3 text-[9px] font-medium text-[#C69A73] sm:text-[10px]">
+                <span className="h-px w-7 bg-[#B7835A]/80" aria-hidden="true" />
+                {
+                  "\u0627\u0646\u062a\u062e\u0627\u0628 \u0627\u0632 \u0647\u0645\u06cc\u0646 \u062a\u0635\u0648\u06cc\u0631"
+                }
+              </div>
 
-        <div className="relative z-10 px-4 py-7 sm:px-7 sm:py-9 lg:px-10 lg:py-11">
-          <header className="mx-auto flex max-w-[920px] flex-col items-center text-center">
-            <div className="flex items-center justify-center gap-3 text-[9px] font-medium text-[#C69A73] sm:text-[10px]">
-              <span className="h-px w-7 bg-[#B7835A]/80" aria-hidden="true" />
-              {
-                "\u0627\u0646\u062a\u062e\u0627\u0628 \u0627\u0632 \u0647\u0645\u06cc\u0646 \u062a\u0635\u0648\u06cc\u0631"
-              }
-              <span className="h-px w-7 bg-[#B7835A]/80" aria-hidden="true" />
+              <h2
+                id="contextual-product-reveal-title"
+                className="mt-2 max-w-[260px] text-balance text-[clamp(1.35rem,5vw,2.4rem)] font-semibold leading-[1.04] tracking-[-0.025em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.42)] sm:max-w-[420px] sm:text-[clamp(1.8rem,3.2vw,3rem)]"
+              >
+                {title}
+              </h2>
+
+              {category ? (
+                <p className="mt-2 text-[10px] leading-5 text-white/64 sm:text-[11px]">
+                  {fa(category.name, category.slug)}
+                </p>
+              ) : null}
+
+              {description ? (
+                <p className="sr-only">{description}</p>
+              ) : (
+                <p className="sr-only">
+                  {
+                    "\u062a\u0635\u0627\u0648\u06cc\u0631 \u0648 \u062c\u0632\u0626\u06cc\u0627\u062a \u0627\u06cc\u0646 \u0627\u0646\u062a\u062e\u0627\u0628 \u0631\u0627 \u062f\u0631 \u0627\u062f\u0627\u0645\u0647 \u0628\u0628\u06cc\u0646\u06cc\u062f."
+                  }
+                </p>
+              )}
+
+              {colors.length || sizes.length ? (
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {colors.slice(0, 5).map((color) => (
+                    <span
+                      key={color._id}
+                      title={fa(color.name)}
+                      aria-label={fa(color.name)}
+                      className="size-6 rounded-full border border-white/40 bg-white/[0.06] p-1 shadow-[0_4px_16px_rgba(0,0,0,0.24)]"
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="block size-full rounded-full border border-black/20"
+                        style={{ backgroundColor: color.hex ?? "#8b8178" }}
+                      />
+                    </span>
+                  ))}
+                  {sizes.slice(0, 5).map((size) => (
+                    <span
+                      key={size._id}
+                      title={fa(size.name, size.code ?? "سایز")}
+                      className="inline-flex min-h-6 items-center rounded-full border border-white/[0.15] bg-black/[0.2] px-2.5 text-[8px] text-white/64 backdrop-blur-xl"
+                    >
+                      {fa(size.name, size.code ?? "سایز")}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
             </div>
 
-            <h2
-              id="contextual-product-reveal-title"
-              className="mt-4 max-w-[780px] text-balance text-[clamp(2rem,8vw,3.6rem)] font-semibold leading-[1.12] tracking-[-0.035em] text-white sm:mt-5 lg:text-[clamp(2.8rem,4.1vw,4.4rem)]"
-            >
-              {title}
-            </h2>
-
-            {category ? (
-              <p className="mt-2 text-[10px] leading-5 text-white/44 sm:text-[11px]">
-                {fa(category.name, category.slug)}
-              </p>
-            ) : null}
-
-            {description ? (
-              <p className="mt-4 max-w-[660px] text-pretty text-[11px] leading-7 text-white/56 sm:text-[12px] sm:leading-7">
-                {description}
-              </p>
-            ) : (
-              <p className="mt-4 max-w-[560px] text-[11px] leading-7 text-white/48 sm:text-[12px]">
-                {
-                  "\u062a\u0635\u0627\u0648\u06cc\u0631 \u0648 \u062c\u0632\u0626\u06cc\u0627\u062a \u0627\u06cc\u0646 \u0627\u0646\u062a\u062e\u0627\u0628 \u0631\u0627 \u062f\u0631 \u0627\u062f\u0627\u0645\u0647 \u0628\u0628\u06cc\u0646\u06cc\u062f."
-                }
-              </p>
-            )}
-
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:max-w-[52%] md:shrink-0 md:justify-end">
               {price ? (
                 <span className="inline-flex min-h-10 items-center rounded-full border border-white/[0.14] bg-white/[0.055] px-4 text-[10px] text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
                   {price}
                 </span>
               ) : null}
 
+              <button
+                type="button"
+                onClick={() => closeReveal({ returnToSource: true })}
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-white/[0.16] bg-black/[0.24] px-3 text-[9px] font-medium text-white/72 backdrop-blur-xl transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75 active:translate-y-0"
+              >
+                <ArrowRight className="size-3.5" aria-hidden="true" />
+                بازگشت به تصویر
+              </button>
+
               <Link
                 href={detailsHref}
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#B7835A]/65 bg-[#B7835A]/[0.14] px-4 text-[10px] font-semibold text-[#E5C6A7] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D5B08D]/80 hover:bg-[#B7835A]/[0.22] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75 active:translate-y-0"
+                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#B7835A]/70 bg-[#B7835A]/[0.24] px-3 text-[9px] font-semibold text-[#E5C6A7] backdrop-blur-xl transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D5B08D]/90 hover:bg-[#B7835A]/[0.34] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75 active:translate-y-0"
               >
                 {
                   "\u0635\u0641\u062d\u0647 \u062c\u0632\u0626\u06cc\u0627\u062a \u0645\u062d\u0635\u0648\u0644"
@@ -510,14 +625,14 @@ export function ContextualProductReveal() {
 
               <button
                 type="button"
-                className="grid size-10 cursor-pointer place-items-center rounded-full border border-white/[0.14] bg-white/[0.045] text-white/58 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,color] duration-200 hover:border-white/32 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+                className="hidden"
                 aria-label={
                   "\u0628\u0633\u062a\u0646 \u067e\u06cc\u0634\u200c\u0646\u0645\u0627\u06cc\u0634 \u0645\u062d\u0635\u0648\u0644"
                 }
                 title={
                   "\u0628\u0633\u062a\u0646 \u067e\u06cc\u0634\u200c\u0646\u0645\u0627\u06cc\u0634"
                 }
-                onClick={closeReveal}
+                onClick={() => closeReveal()}
               >
                 <X className="size-4" aria-hidden="true" />
               </button>
@@ -532,9 +647,10 @@ export function ContextualProductReveal() {
             isError={productQuery.isError}
             detailsHref={detailsHref}
             productTitle={title}
+            presentation="image-led"
           />
 
-          <div className="mx-auto mt-7 flex max-w-[1240px] flex-col items-center justify-between gap-3 border-t border-white/[0.09] pt-5 text-[9.5px] text-white/42 sm:mt-9 sm:flex-row sm:text-[10px]">
+          <div className="mx-auto mt-7 flex max-w-[1240px] flex-col items-center justify-between gap-3 border-t border-white/[0.09] pt-5 text-[9.5px] text-white/62 sm:mt-9 sm:flex-row sm:text-[10px]">
             <span>
               {numberFormatter.format(images.length)}{" "}
               {"\u062a\u0635\u0648\u06cc\u0631 \u0645\u062d\u0635\u0648\u0644"}
@@ -563,6 +679,7 @@ type ProductGalleryProps = {
   isError: boolean;
   detailsHref: string;
   productTitle: string;
+  presentation?: "default" | "image-led";
 };
 
 function ProductGallery({
@@ -571,15 +688,16 @@ function ProductGallery({
   isError,
   detailsHref,
   productTitle,
+  presentation = "default",
 }: ProductGalleryProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
-  const modalImage = modalIndex === null ? null : (images[modalIndex] ?? null);
-
-  useEffect(() => {
-    if (modalIndex === null) return;
-    if (modalIndex < images.length) return;
-    setModalIndex(images.length ? images.length - 1 : null);
-  }, [images.length, modalIndex]);
+  const safeModalIndex =
+    modalIndex === null
+      ? null
+      : Math.min(modalIndex, Math.max(images.length - 1, 0));
+  const modalImage =
+    safeModalIndex === null ? null : (images[safeModalIndex] ?? null);
+  const imageLed = presentation === "image-led";
 
   if (isLoading) {
     return (
@@ -631,12 +749,21 @@ function ProductGallery({
 
   return (
     <>
-      <div className="mx-auto mt-5 grid max-w-[1240px] grid-cols-2 gap-2.5 sm:mt-7 sm:grid-cols-4 sm:gap-3">
+      <div
+        className={
+          "mx-auto grid w-full grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 " +
+          (imageLed
+            ? "mt-0 max-w-[900px] lg:max-w-[980px]"
+            : "mt-5 max-w-[1240px] sm:mt-7")
+        }
+      >
         {images.map((image, index) => (
           <figure
             key={image.id}
             className={
-              "group relative overflow-hidden rounded-[22px] border border-white/[0.12] bg-white/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl " +
+              (imageLed
+                ? "group relative overflow-hidden rounded-[16px] border border-white/[0.2] bg-black/[0.22] shadow-[0_18px_44px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl "
+                : "group relative overflow-hidden rounded-[22px] border border-white/[0.12] bg-white/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl ") +
               imageLayout(index, images.length)
             }
           >
@@ -688,7 +815,7 @@ function ProductGallery({
         ? createPortal(
             <ProductImageModal
               images={images}
-              activeIndex={modalIndex ?? 0}
+              activeIndex={safeModalIndex ?? 0}
               productTitle={productTitle}
               onChange={setModalIndex}
               onClose={() => setModalIndex(null)}
@@ -722,14 +849,19 @@ function ProductImageModal({
   const imagesLengthRef = useRef(images.length);
   const onChangeRef = useRef(onChange);
   const onCloseRef = useRef(onClose);
-  const [imageLoaded, setImageLoaded] = useState(false);
+  const touchStartXRef = useRef<number | null>(null);
+  const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
   const activeImage = images[activeIndex] ?? images[0];
   const hasMultiple = images.length > 1;
 
-  activeIndexRef.current = activeIndex;
-  imagesLengthRef.current = images.length;
-  onChangeRef.current = onChange;
-  onCloseRef.current = onClose;
+  const imageLoaded = loadedImageUrl === activeImage?.url;
+
+  useEffect(() => {
+    activeIndexRef.current = activeIndex;
+    imagesLengthRef.current = images.length;
+    onChangeRef.current = onChange;
+    onCloseRef.current = onClose;
+  }, [activeIndex, images.length, onChange, onClose]);
 
   function previousImage() {
     if (!hasMultiple) return;
@@ -741,9 +873,20 @@ function ProductImageModal({
     onChange((activeIndex + 1) % images.length);
   }
 
-  useEffect(() => {
-    setImageLoaded(false);
-  }, [activeIndex, activeImage?.url]);
+  function handleTouchStart(event: TouchEvent<HTMLDivElement>) {
+    touchStartXRef.current = event.touches[0]?.clientX ?? null;
+  }
+
+  function handleTouchEnd(event: TouchEvent<HTMLDivElement>) {
+    const startX = touchStartXRef.current;
+    touchStartXRef.current = null;
+    if (startX === null || !hasMultiple) return;
+
+    const deltaX = (event.changedTouches[0]?.clientX ?? startX) - startX;
+    if (Math.abs(deltaX) < 48) return;
+    if (deltaX > 0) previousImage();
+    else nextImage();
+  }
 
   useEffect(() => {
     previousFocusRef.current =
@@ -826,10 +969,12 @@ function ProductImageModal({
       aria-describedby="product-image-modal-description"
       dir="rtl"
       lang="fa"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-[1001000000000000000000000] flex items-center justify-center bg-black/[0.82] px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] backdrop-blur-[26px] sm:px-5 sm:py-5"
+      className="fixed inset-0 z-[2147483640] flex items-center justify-center bg-black/[0.84] px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] backdrop-blur-[26px] touch-pan-y sm:px-5 sm:py-5"
     >
       <div className="relative flex h-[calc(100dvh-20px)] w-full max-w-[1380px] flex-col overflow-hidden rounded-[28px] border border-white/[0.15] bg-[#0B0B0B]/[0.64] shadow-[0_42px_160px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-[38px] backdrop-saturate-[150%] sm:h-[min(92dvh,920px)] sm:rounded-[34px]">
         <div
@@ -864,9 +1009,9 @@ function ProductImageModal({
             onClick={onClose}
             aria-label="بستن نمایش تصویر"
             title="بستن"
-            className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.18] bg-black/[0.30] text-black/99 shadow-[0_8px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/42 hover:bg-white/[0.10] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75 active:scale-[0.96] sm:right-5"
+            className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.18] bg-black/[0.30] text-white shadow-[0_8px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/42 hover:bg-white/[0.10] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75 active:scale-[0.96] sm:right-5"
           >
-            <X className="size-4 text-white"  aria-hidden="true" />
+            <X className="size-4 text-white" aria-hidden="true" />
           </button>
 
           <a
@@ -901,7 +1046,7 @@ function ProductImageModal({
               fill
               priority
               sizes="100vw"
-              onLoad={() => setImageLoaded(true)}
+              onLoad={() => setLoadedImageUrl(activeImage.url)}
               className="select-none object-contain"
               style={{ objectPosition: "center" }}
             />
@@ -914,7 +1059,10 @@ function ProductImageModal({
                   aria-label="تصویر قبلی"
                   className="absolute right-3 top-1/2 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.16]  text-white shadow-[0_8px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.96] sm:right-5"
                 >
-                  <ChevronRight className="size-5 text-white" aria-hidden="true"  />
+                  <ChevronRight
+                    className="size-5 text-white"
+                    aria-hidden="true"
+                  />
                 </button>
                 <button
                   type="button"
@@ -922,7 +1070,10 @@ function ProductImageModal({
                   aria-label="تصویر بعدی"
                   className="absolute left-3 top-1/2 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.16]  text-white shadow-[0_8px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.96] sm:left-5"
                 >
-                  <ChevronLeft className="size-5 text-white" aria-hidden="true" />
+                  <ChevronLeft
+                    className="size-5 text-white"
+                    aria-hidden="true"
+                  />
                 </button>
               </>
             ) : null}

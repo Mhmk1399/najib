@@ -36,6 +36,11 @@ type StoryImage = {
   id: string;
   url: string;
   alt?: LocalizedText;
+  storyTitle?: LocalizedText;
+  storyDescription?: LocalizedText;
+  storyCtaLabel?: LocalizedText;
+  storyProductLimit?: number;
+  storyRevealEnabled?: boolean;
   objectFit?: string;
   objectPosition?: string;
   focalPointX?: number;
@@ -61,8 +66,13 @@ type StoryProduct = {
 type ImageStory = {
   id: string;
   kind: string;
+  storyTitle?: LocalizedText;
+  storyDescription?: LocalizedText;
+  storyCtaLabel?: LocalizedText;
   image: StoryImage;
   linkedProducts: StoryProduct[];
+  storyProductLimit?: number;
+  storyRevealEnabled?: boolean;
 };
 
 type ImageStoriesPayload = {
@@ -89,7 +99,7 @@ const queryOptions = {
 
 const numberFormatter = new Intl.NumberFormat("fa-IR");
 const quickPrompts = ["کت رسمی", "استایل مهمانی", "عطر مردانه"];
-const glassSurface = "backdrop-blur-[22px] backdrop-saturate-[160%]";
+const glassSurface = "backdrop-blur-[32px] backdrop-saturate-[145%]";
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
@@ -192,7 +202,9 @@ function targetScore(entry: IntersectionObserverEntry) {
     1 - horizontalDistance / Math.max(window.innerWidth, 1),
   );
 
-  return entry.intersectionRatio + verticalScore * 0.68 + horizontalScore * 0.32;
+  return (
+    entry.intersectionRatio + verticalScore * 0.68 + horizontalScore * 0.32
+  );
 }
 
 function nodeContainsStoryTarget(node: Node) {
@@ -356,6 +368,7 @@ export function DynamicImageIsland() {
     let mutationFrame = 0;
 
     const updateActive = () => {
+      if (touchOpen) return;
       window.cancelAnimationFrame(frame);
       frame = window.requestAnimationFrame(() => {
         let bestElement: HTMLElement | null = null;
@@ -417,7 +430,8 @@ export function DynamicImageIsland() {
       if (needsRefresh) scheduleObservation();
     });
 
-    mutationObserver.observe(document.body, {
+    const observationRoot = document.querySelector("main") ?? document.body;
+    mutationObserver.observe(observationRoot, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -430,7 +444,7 @@ export function DynamicImageIsland() {
       observer?.disconnect();
       mutationObserver.disconnect();
     };
-  }, [enabled, pathname, storiesData?.stories.length]);
+  }, [enabled, pathname, storiesData?.stories.length, touchOpen]);
 
   useEffect(() => {
     if (!enabled || !storiesData?.stories.length) return;
@@ -465,7 +479,22 @@ export function DynamicImageIsland() {
   const panelOpen =
     interactionPath === pathname &&
     (finePointer ? hoverOpen || focusOpen : touchOpen);
-  const products = activeStory?.linkedProducts.slice(0, 3) ?? [];
+  const productLimit = Math.max(
+    1,
+    Math.min(
+      6,
+      activeStory?.storyProductLimit ??
+        activeStory?.image.storyProductLimit ??
+        3,
+    ),
+  );
+  const products = activeStory?.linkedProducts.slice(0, productLimit) ?? [];
+  const configuredTitle =
+    activeStory?.storyTitle ?? activeStory?.image.storyTitle;
+  const configuredDescription =
+    activeStory?.storyDescription ?? activeStory?.image.storyDescription;
+  const configuredCtaLabel =
+    activeStory?.storyCtaLabel ?? activeStory?.image.storyCtaLabel;
   const activeTitle = activeStory
     ? fa(activeStory.image.alt, "انتخاب‌های این تصویر")
     : "دستیار انتخاب نجیب‌زاده";
@@ -569,6 +598,15 @@ export function DynamicImageIsland() {
   function revealProduct(product: StoryProduct) {
     if (!activeStory) return;
 
+    if (
+      activeStory.storyRevealEnabled === false ||
+      activeStory.image.storyRevealEnabled === false
+    ) {
+      router.push(product.href);
+      closeIsland();
+      return;
+    }
+
     dispatchImageStoryProductReveal({
       storyId: activeStory.id,
       storyUrl: activeStory.image.url,
@@ -601,6 +639,8 @@ export function DynamicImageIsland() {
     >
       <section
         ref={islandRef}
+        data-island-state={panelOpen ? "open" : "collapsed"}
+        aria-live="polite"
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
         onFocusCapture={() => {
@@ -618,19 +658,19 @@ export function DynamicImageIsland() {
             return;
           setFocusOpen(false);
         }}
-        className={`pointer-events-auto relative isolate origin-bottom overflow-hidden border text-white ${glassSurface} shadow-[0_24px_90px_rgba(0,0,0,0.42),0_8px_28px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[width,max-width,border-color,box-shadow,background-color,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+        className={`pointer-events-auto relative isolate origin-bottom overflow-hidden border text-white [text-rendering:geometricPrecision] ${glassSurface} shadow-[0_24px_90px_rgba(0,0,0,0.42),0_8px_28px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[width,max-width,border-color,box-shadow,background-color,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
           panelOpen
-            ? "w-[calc(100vw-20px)] max-w-[540px] rounded-[30px] border-white/[0.18] bg-[#0E0D0C]/[0.54] sm:w-[540px]"
-            : "w-[min(88vw,392px)] max-w-[392px] rounded-[30px] border-white/[0.16] bg-[#0C0B0A]/[0.48] hover:border-[#B7835A]/50 hover:shadow-[0_26px_92px_rgba(0,0,0,0.45),0_8px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.18)]"
+            ? "w-[calc(100vw-16px)] max-w-[560px] rounded-[26px] border-white/[0.26] bg-[#090807]/[0.88] sm:w-[560px] sm:rounded-[30px]"
+            : "w-[min(90vw,392px)] max-w-[392px] rounded-[26px] border-white/[0.24] bg-[#090807]/[0.84] hover:border-[#D0AA86]/65 hover:shadow-[0_26px_92px_rgba(0,0,0,0.58),0_8px_30px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.22)] sm:rounded-[30px]"
         }`}
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.075)_8%,rgba(255,255,255,0.028)_28%,rgba(0,0,0,0.16)_100%)]"
+          className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.075)_9%,rgba(8,7,6,0.26)_32%,rgba(6,5,4,0.62)_100%)]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.14),transparent_24%),radial-gradient(circle_at_82%_4%,rgba(183,131,90,0.18),transparent_28%),radial-gradient(circle_at_50%_120%,rgba(255,255,255,0.05),transparent_34%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_-8%,rgba(255,255,255,0.20),transparent_27%),radial-gradient(circle_at_84%_2%,rgba(194,145,103,0.20),transparent_30%),radial-gradient(circle_at_50%_115%,rgba(0,0,0,0.42),transparent_44%)]"
         />
         <div
           aria-hidden="true"
@@ -701,25 +741,25 @@ export function DynamicImageIsland() {
           >
             <span className="flex min-w-0 items-center gap-2.5">
               <span className="min-w-0 flex-1">
-                <span className="flex items-center gap-2 text-[8px] font-medium leading-4 text-[#B98A63] sm:text-[8.5px]">
+                <span className="flex items-center gap-2 text-[8px] font-medium leading-4 text-[#E1B994] [text-shadow:0_1px_10px_rgba(0,0,0,0.95)] sm:text-[8.5px]">
                   <span
-                    className="h-px w-4 bg-[#B7835A]/75"
+                    className="h-px w-4 bg-[#D6AA82]/85"
                     aria-hidden="true"
                   />
                   {activeKicker}
                 </span>
-                <strong className="mt-0.5 block truncate text-[11px] font-semibold leading-5 text-white/92 sm:text-[12px]">
-                  {activeTitle}
+                <strong className="mt-0.5 block truncate text-[11px] font-semibold leading-5 text-white [text-shadow:0_1px_12px_rgba(0,0,0,0.96)] sm:text-[12px]">
+                  {fa(configuredTitle, activeTitle)}
                 </strong>
                 {panelOpen ? (
-                  <span className="hidden truncate text-[9px] leading-4 text-white/42 sm:block">
-                    {activeDescription}
+                  <span className="hidden truncate text-[9px] leading-4 text-white/82 [text-shadow:0_1px_10px_rgba(0,0,0,0.94)] sm:block">
+                    {fa(configuredDescription, activeDescription)}
                   </span>
                 ) : null}
               </span>
 
               {products.length ? (
-                <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.06] py-1 pe-2 ps-1.5 text-[8px] text-white/68 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
+                <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.18] bg-black/[0.32] py-1 pe-2 ps-1.5 text-[8px] text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
                   <span
                     aria-hidden="true"
                     className="flex items-center -space-x-2 space-x-reverse"
@@ -748,11 +788,11 @@ export function DynamicImageIsland() {
                     ))}
                   </span>
                   <span className="tabular-nums">
-                    +{numberFormatter.format(Math.max(products.length - 2, 0))}
+                    {numberFormatter.format(products.length)} محصول
                   </span>
                 </span>
               ) : (
-                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/[0.09] text-white/38">
+                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/[0.18] bg-black/[0.34] text-white/82">
                   <Search className="size-3.5" aria-hidden="true" />
                 </span>
               )}
@@ -780,7 +820,7 @@ export function DynamicImageIsland() {
             >
               {activeStory ? (
                 <div className="grid gap-2.5 sm:grid-cols-[158px_minmax(0,1fr)] sm:gap-3">
-                  <figure className="relative hidden min-h-[220px] overflow-hidden rounded-[20px] border border-white/[0.14] bg-white/[0.055] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] sm:block">
+                  <figure className="relative min-h-[132px] overflow-hidden rounded-[18px] border border-white/[0.18] bg-black/[0.34] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] sm:min-h-[220px] sm:rounded-[20px]">
                     <Image
                       src={activeStory.image.url}
                       alt={fa(activeStory.image.alt, activeTitle)}
@@ -802,18 +842,18 @@ export function DynamicImageIsland() {
                     </span>
                   </figure>
 
-                  <div className="min-w-0 overflow-hidden rounded-[20px] border border-white/[0.12] bg-black/[0.18] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                    <div className="flex min-h-10 items-center justify-between gap-3 border-b border-white/[0.09] px-3.5">
-                      <span className="text-[9px] font-medium text-white/68">
+                  <div className="min-w-0 overflow-hidden rounded-[20px] border border-white/[0.16] bg-black/[0.42] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <div className="flex min-h-10 items-center justify-between gap-3 border-b border-white/[0.12] px-3.5">
+                      <span className="text-[9px] font-semibold text-white/94">
                         محصولات مرتبط
                       </span>
-                      <span className="text-[8px] text-[#B98A63]">
+                      <span className="text-[8px] font-medium text-[#E3BC96]">
                         انتخاب برای پیش‌نمایش
                       </span>
                     </div>
 
                     {products.length ? (
-                      <div className="divide-y divide-white/[0.075]">
+                      <div className="max-h-[min(38vh,280px)] divide-y divide-white/[0.075] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible">
                         {products.map((product, index) => {
                           const title = fa(
                             product.label,
@@ -837,7 +877,7 @@ export function DynamicImageIsland() {
                                   ? `${index * 45}ms`
                                   : "0ms",
                               }}
-                              className="group flex min-h-[60px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-right transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#D2B08D]/75"
+                              className="group flex min-h-[64px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-right transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#D2B08D]/75"
                             >
                               <span className="relative aspect-[4/5] w-10 shrink-0 overflow-hidden rounded-[7px] border border-white/[0.08] bg-white/[0.05]">
                                 {product.image?.url ? (
@@ -859,11 +899,11 @@ export function DynamicImageIsland() {
                               </span>
 
                               <span className="min-w-0 flex-1">
-                                <strong className="block truncate text-[10.5px] font-semibold leading-4 text-white/88 sm:text-[11px]">
+                                <strong className="block truncate text-[10.5px] font-semibold leading-4 text-white/96 sm:text-[11px]">
                                   {title}
                                 </strong>
                                 {price ? (
-                                  <span className="mt-0.5 block truncate text-[8.5px] leading-4 text-white/44">
+                                  <span className="mt-0.5 block truncate text-[8.5px] leading-4 text-white/78">
                                     {price}
                                   </span>
                                 ) : null}
@@ -880,7 +920,7 @@ export function DynamicImageIsland() {
                         })}
                       </div>
                     ) : (
-                      <div className="flex min-h-[108px] items-center justify-center px-4 text-center text-[10px] leading-5 text-white/44">
+                      <div className="flex min-h-[108px] items-center justify-center px-4 text-center text-[10px] leading-5 text-white/82">
                         برای این تصویر هنوز محصولی ثبت نشده است.
                       </div>
                     )}
@@ -890,7 +930,7 @@ export function DynamicImageIsland() {
                 <div className="grid gap-2.5">
                   <form
                     noValidate
-                    className="flex h-11 items-center gap-2 rounded-full border border-white/[0.14] bg-black/[0.22] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-[border-color,background-color,box-shadow] duration-300 focus-within:border-[#B7835A]/60 focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(183,131,90,0.07)] motion-reduce:transition-none"
+                    className="flex h-11 items-center gap-2 rounded-full border border-white/[0.14] bg-black/[0.44] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-[border-color,background-color,box-shadow] duration-300 focus-within:border-[#B7835A]/60 focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(183,131,90,0.07)] motion-reduce:transition-none"
                     role="search"
                     aria-label="جست‌وجوی محصولات"
                     onKeyDown={(event) => {
@@ -907,7 +947,7 @@ export function DynamicImageIsland() {
                     }}
                   >
                     <Search
-                      className="size-3.5 shrink-0 text-white/36"
+                      className="size-3.5 shrink-0 text-white/64"
                       aria-hidden="true"
                     />
                     <label className="sr-only" htmlFor={`${panelId}-search`}>
@@ -920,7 +960,7 @@ export function DynamicImageIsland() {
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       autoComplete="off"
-                      className="min-w-0 flex-1 bg-transparent text-right text-[10.5px] leading-6 text-white outline-none placeholder:text-white/32"
+                      className="min-w-0 flex-1 bg-transparent text-right text-[10.5px] leading-6 text-white outline-none placeholder:text-white/72"
                       placeholder="جست‌وجوی محصولات مرتبط..."
                       enterKeyHint="search"
                     />
@@ -953,7 +993,7 @@ export function DynamicImageIsland() {
                       <button
                         key={prompt}
                         type="button"
-                        className="shrink-0 cursor-pointer rounded-full border border-white/[0.10] bg-white/[0.025] px-2.5 py-1.5 text-[8.5px] text-white/54 transition-[border-color,color,background-color] duration-200 hover:border-[#B7835A]/45 hover:bg-[#B7835A]/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+                        className="shrink-0 cursor-pointer rounded-full border border-white/[0.18] bg-black/[0.30] px-2.5 py-1.5 text-[8.5px] text-white/86 transition-[border-color,color,background-color] duration-200 hover:border-[#B7835A]/55 hover:bg-[#B7835A]/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
                         onClick={() => {
                           setQuery(prompt);
                           submitSearch(prompt);
@@ -965,9 +1005,9 @@ export function DynamicImageIsland() {
                     <Link
                       href="/shop"
                       onClick={closeIsland}
-                      className="ms-auto inline-flex shrink-0 items-center gap-1 px-1.5 py-1.5 text-[8.5px] text-[#B98A63] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+                      className="ms-auto inline-flex shrink-0 items-center gap-1 px-1.5 py-1.5 text-[8.5px] font-medium text-[#E1B994] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
                     >
-                      همه محصولات
+                      {fa(configuredCtaLabel, "همه محصولات")}
                       <ArrowLeft className="size-3" aria-hidden="true" />
                     </Link>
                   </div>
