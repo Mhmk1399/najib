@@ -687,6 +687,8 @@ function CategoryCard({
   return (
     <Link
       href={category.href}
+      data-image-story-id={category.imageAssetId}
+      data-image-story-url={category.image}
       className="
         group
         block
@@ -881,6 +883,8 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
   return (
     <section
       aria-labelledby="category-feature-title"
+      data-image-story-id={feature.imageAssetId}
+      data-image-story-url={feature.image}
       style={
         {
           "--feature-mobile-position": feature.mobileImagePosition ?? "center",
@@ -1079,6 +1083,8 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
       "
     >
       <div
+        data-image-story-id={cta.imageAssetId}
+        data-image-story-url={cta.image}
         className="
           mx-auto
 

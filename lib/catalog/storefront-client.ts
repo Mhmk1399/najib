@@ -223,6 +223,7 @@ function toSubcategoryCard(
     title: fallbackTitle,
     href: `/${category.slug}/${subcategory.slug}`,
     image: imageUrl(imageMap, imageId),
+    imageAssetId: idOf(imageId),
     imageAlt: imageAlt(imageMap, imageId, fallbackTitle),
     imagePosition: imagePosition(
       imageMap,
@@ -301,6 +302,7 @@ function buildCategoryPageData(
         fa(secondaryDescription.body, "جزئیات انتخاب ویژه این دسته به‌زودی تکمیل می‌شود."),
       ),
       image: imageUrl(imageMap, secondaryImageId),
+      imageAssetId: idOf(secondaryImageId),
       imageAlt: imageAlt(imageMap, secondaryImageId, name),
       mobileImagePosition: imagePosition(
         imageMap,
@@ -321,6 +323,7 @@ function buildCategoryPageData(
         fa(secondaryBanner.body, "برای دیدن محصولات این دسته وارد فروشگاه شوید."),
       ),
       image: imageUrl(imageMap, secondaryImageId),
+      imageAssetId: idOf(secondaryImageId),
       imageAlt: imageAlt(imageMap, secondaryImageId, name),
       imagePosition: imagePosition(
         imageMap,
@@ -352,6 +355,7 @@ function productCard(
     subtitle: firstSentence(fa(product.description), 70),
     href: `/shop/${product.slug}`,
     image: imageUrl(imageMap, imageId, FALLBACK_PRODUCT_IMAGE),
+    imageAssetId: idOf(imageId),
     imageAlt: imageAlt(imageMap, imageId, title),
     imagePosition: imagePosition(
       imageMap,
@@ -440,6 +444,7 @@ function buildSubcategoryPageData(
         fa(secondaryDescription.body, "جزئیات انتخاب ویژه این زیردسته به‌زودی تکمیل می‌شود."),
       ),
       image: imageUrl(imageMap, secondaryImageId),
+      imageAssetId: idOf(secondaryImageId),
       imageAlt: imageAlt(imageMap, secondaryImageId, name),
       mobileImagePosition: imagePosition(
         imageMap,
@@ -460,6 +465,7 @@ function buildSubcategoryPageData(
         fa(secondaryBanner.body, "همه محصولات این زیردسته را در فروشگاه ببینید."),
       ),
       image: imageUrl(imageMap, secondaryImageId),
+      imageAssetId: idOf(secondaryImageId),
       imageAlt: imageAlt(imageMap, secondaryImageId, name),
       imagePosition: imagePosition(
         imageMap,
