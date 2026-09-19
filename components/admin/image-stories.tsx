@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import {
   Copy,
   Crosshair,
@@ -159,8 +159,11 @@ const objectPositionOptions: DataSelectOption[] = [
 
 const emptyProducts: Product[] = [];
 const emptyVariants: Variant[] = [];
-const numberFormatter = new Intl.NumberFormat("fa-IR", {
-  useGrouping: false,
+const emptySelectOptions: DataSelectOption[] = [];
+const FA_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
+const dateFormatter = new Intl.DateTimeFormat("fa-IR", {
+  dateStyle: "medium",
+  timeStyle: "short",
 });
 
 function labelKind(kind: Kind) {
@@ -243,17 +246,12 @@ function formPayload(values: ImageFormValues) {
 
 function formatDigits(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === "") return "—";
-  return String(value).replace(/\d/g, (digit) =>
-    numberFormatter.format(Number(digit)),
-  );
+  return String(value).replace(/\d/g, (digit) => FA_DIGITS[Number(digit)] ?? digit);
 }
 
 function formatDate(value?: string) {
   if (!value) return "—";
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(value));
+  return dateFormatter.format(new Date(value));
 }
 
 function toTableResult<T>(data: List<T>): DynamicTableResult<T> {
@@ -264,6 +262,14 @@ function toTableResult<T>(data: List<T>): DynamicTableResult<T> {
     pageSize: data.pagination.limit,
     pageCount: data.pagination.pages,
   };
+}
+
+function getImageRowId(record: ImageAsset) {
+  return record._id;
+}
+
+function getImageRowLabel(record: ImageAsset) {
+  return fa(record.alt);
 }
 
 function fieldErrorPath(path: Array<string | number> | undefined) {
@@ -477,13 +483,15 @@ function buildSchema({
         colSpan: "full",
         render: ({ value, values, setValue, error, disabled, readOnly }) => (
           <HotspotComposer
-            image={values}
+            imageUrl={values.url}
+            objectFit={values.objectFit}
+            objectPosition={values.objectPosition}
             links={Array.isArray(value) ? (value as ProductLink[]) : []}
             products={products}
             variants={variants}
             error={error}
             disabled={disabled || readOnly}
-            onChange={(next) => setValue(next)}
+            onChange={setValue}
           />
         ),
       },
@@ -535,34 +543,48 @@ function statusBadge(active: boolean) {
   );
 }
 
-function assetBackground(
-  asset: Pick<ImageAsset, "url" | "objectFit" | "objectPosition">,
-) {
-  return {
-    backgroundImage: `url("${asset.url}")`,
-    backgroundPosition: asset.objectPosition ?? "center",
-    backgroundSize: asset.objectFit === "contain" ? "contain" : "cover",
-    backgroundRepeat: "no-repeat",
-  };
-}
-
-function ImageThumb({
+const ImageThumb = memo(function ImageThumb({
   asset,
 }: {
   asset?: Pick<ImageAsset, "url" | "objectFit" | "objectPosition">;
 }) {
   return (
-    <span
-      className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]"
-      style={asset?.url ? assetBackground(asset) : undefined}
-    >
-      {asset?.url ? null : <ImageOff size={18} />}
+    <span className="relative grid size-12 shrink-0 place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]">
+      {asset?.url ? (
+        <img
+          src={asset.url}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          className="absolute inset-0 h-full w-full"
+          style={{
+            objectFit: asset.objectFit ?? "cover",
+            objectPosition: asset.objectPosition ?? "center",
+          }}
+        />
+      ) : (
+        <ImageOff size={18} />
+      )}
     </span>
   );
+});
+
+function useDebouncedValue<T>(value: T, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), delay);
+    return () => window.clearTimeout(timer);
+  }, [value, delay]);
+
+  return debounced;
 }
 
-function HotspotComposer({
-  image,
+const HotspotComposer = memo(function HotspotComposer({
+  imageUrl,
+  objectFit,
+  objectPosition,
   links,
   products,
   variants,
@@ -570,7 +592,9 @@ function HotspotComposer({
   disabled,
   onChange,
 }: {
-  image: ImageFormValues;
+  imageUrl: string;
+  objectFit: ImageObjectFit;
+  objectPosition: ImageObjectPosition;
   links: ProductLink[];
   products: Product[];
   variants: Variant[];
@@ -580,6 +604,11 @@ function HotspotComposer({
 }) {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [placing, setPlacing] = useState(false);
+  const debouncedImageUrl = useDebouncedValue(imageUrl, 350);
+  const previewUrl =
+    debouncedImageUrl && validImageUrl(debouncedImageUrl)
+      ? debouncedImageUrl
+      : "";
 
   const productOptions = useMemo<DataSelectOption[]>(
     () =>
@@ -590,6 +619,17 @@ function HotspotComposer({
       })),
     [products],
   );
+
+  const variantsByProduct = useMemo(() => {
+    const map = new Map<string, DataSelectOption[]>();
+    for (const variant of variants) {
+      const current = map.get(variant.productId);
+      const option = { value: variant._id, label: variant.sku };
+      if (current) current.push(option);
+      else map.set(variant.productId, [option]);
+    }
+    return map;
+  }, [variants]);
 
   function updateLink(index: number, patch: Partial<ProductLink>) {
     onChange(
@@ -642,20 +682,25 @@ function HotspotComposer({
           className={`relative aspect-[4/5] min-h-[320px] overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] ${
             placing ? "cursor-crosshair ring-2 ring-[var(--adt-accent)]/30" : ""
           }`}
-          style={
-            image.url && validImageUrl(image.url)
-              ? assetBackground(image)
-              : undefined
-          }
         >
-          {!image.url || !validImageUrl(image.url) ? (
+          {previewUrl ? (
+            <img
+              src={previewUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+              className="pointer-events-none absolute inset-0 h-full w-full select-none"
+              style={{ objectFit, objectPosition }}
+            />
+          ) : (
             <div className="grid h-full place-items-center text-center text-[10px] text-[var(--adt-muted)]">
               <span>
                 <Images className="mx-auto mb-2" size={24} />
                 آدرس معتبر تصویر را وارد کنید
               </span>
             </div>
-          ) : null}
+          )}
 
           {links.map((link, index) =>
             link.hotspotX !== undefined && link.hotspotY !== undefined ? (
@@ -699,9 +744,8 @@ function HotspotComposer({
         ) : null}
 
         {links.map((link, index) => {
-          const variantOptions = variants
-            .filter((variant) => variant.productId === link.productId)
-            .map((variant) => ({ value: variant._id, label: variant.sku }));
+          const variantOptions =
+            variantsByProduct.get(link.productId) ?? emptySelectOptions;
 
           return (
             <article
@@ -888,7 +932,7 @@ function HotspotComposer({
       </div>
     </div>
   );
-}
+});
 
 export function ImageStories({
   canRead,
@@ -904,12 +948,22 @@ export function ImageStories({
     queryFn: () =>
       fetchJson<List<Product>>("/api/catalog/products?limit=100&status=active"),
     enabled: canRead,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 
   const variantsQuery = useQuery({
     queryKey: ["catalog", "variants", "image-story-options"],
     queryFn: () => fetchJson<List<Variant>>("/api/catalog/variants?limit=100"),
     enabled: canRead,
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 
   const products = productsQuery.data?.items ?? emptyProducts;
@@ -1021,6 +1075,263 @@ export function ImageStories({
     [],
   );
 
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
+  const source = useMemo(
+    () => ({
+      queryKey: ["catalog", "images"],
+      fetchPage: async ({
+        page,
+        pageSize,
+        search,
+        filters: activeFilters,
+        signal,
+      }: {
+        page: number;
+        pageSize: number;
+        search?: string | null;
+        filters: ImageFilters;
+        signal?: AbortSignal;
+      }) => {
+        const params = new URLSearchParams({
+          page: String(page),
+          limit: String(pageSize),
+        });
+        if (search) params.set("search", search);
+        if (activeFilters.kind) params.set("kind", String(activeFilters.kind));
+        if (activeFilters.isActive) {
+          params.set("isActive", String(activeFilters.isActive));
+        }
+        return toTableResult(
+          await fetchJson<List<ImageAsset>>(
+            `/api/catalog/images?${params.toString()}`,
+            { signal },
+          ),
+        );
+      },
+      fetchOne: async ({ id, signal }: { id: string; signal?: AbortSignal }) =>
+        fetchJson<ImageAsset>(`/api/catalog/images/${id}`, { signal }),
+    }),
+    [],
+  );
+
+  const searchConfig = useMemo(
+    () => ({
+      placeholder: "جستجو با متن جایگزین یا آدرس تصویر...",
+      debounceMs: 450,
+    }),
+    [],
+  );
+
+  const initialFilters = useMemo<ImageFilters>(
+    () => ({ kind: null, isActive: null }),
+    [],
+  );
+
+  const pagination = useMemo(
+    () => ({
+      initialPageSize: 12,
+      pageSizeOptions: [12, 24, 48],
+      showPageNumbers: true,
+    }),
+    [],
+  );
+
+  const columnVisibility = useMemo(
+    () => ({
+      enabled: true,
+      persist: true,
+      storageKey: "admin-image-stories-columns",
+    }),
+    [],
+  );
+
+  const mobile = useMemo(
+    () => ({
+      title: (record: ImageAsset) => fa(record.alt),
+      subtitle: (record: ImageAsset) => record.url,
+      badge: (record: ImageAsset) => statusBadge(record.isActive),
+      fieldIds: ["kind", "linkedProducts", "focal", "isActive"],
+      maxFields: 4,
+    }),
+    [],
+  );
+
+  const crud = useMemo(
+    () => ({
+      create: {
+        enabled: canWrite,
+        label: "تصویر جدید",
+        title: "افزودن تصویر",
+        description:
+          "تصویر با URL ذخیره می‌شود؛ برای نقاط خریدپذیر، محصول را در بخش پیوند محصول وصل کنید.",
+        schema,
+        initialValues: emptyForm,
+        mutationFn: async ({ values }: { values: ImageFormValues }) =>
+          fetchJson<ImageAsset>("/api/catalog/images", {
+            method: "POST",
+            body: JSON.stringify(formPayload(values)),
+          }),
+        mapError: mapFormError,
+        onSuccess: (record: ImageAsset) => {
+          toastRef.current.success("تصویر ساخته شد", {
+            description:
+              record && "_id" in record
+                ? `${fa(record.alt)} به کتابخانه اضافه شد.`
+                : undefined,
+          });
+        },
+      },
+      edit: {
+        enabled: canWrite,
+        title: (record: ImageAsset) => `ویرایش ${fa(record.alt)}`,
+        description:
+          "متن جایگزین، نوع تصویر، نحوه نمایش و نقاط خریدپذیر را ویرایش کنید.",
+        schema,
+        toInitialValues: imageToForm,
+        mutationFn: async ({ id, values }: { id: string; values: ImageFormValues }) =>
+          fetchJson<ImageAsset>(`/api/catalog/images/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify(formPayload(values)),
+          }),
+        mapError: mapFormError,
+        onSuccess: (record: ImageAsset) => {
+          toastRef.current.success("تغییرات تصویر ذخیره شد", {
+            description:
+              record && "_id" in record
+                ? `${fa(record.alt)} به‌روزرسانی شد.`
+                : undefined,
+          });
+        },
+      },
+      view: {
+        title: (record: ImageAsset) => `مشاهده ${fa(record.alt)}`,
+        fields: [
+          {
+            id: "preview",
+            label: "پیش‌نمایش",
+            render: ({ record }: { record: ImageAsset }) => <ImageThumb asset={record} />,
+          },
+          { id: "url", label: "آدرس تصویر", accessor: "url", colSpan: "full" },
+          {
+            id: "alt",
+            label: "متن جایگزین فارسی",
+            render: ({ record }: { record: ImageAsset }) => fa(record.alt),
+          },
+          {
+            id: "kind",
+            label: "نوع",
+            render: ({ record }: { record: ImageAsset }) => labelKind(record.kind),
+          },
+          {
+            id: "status",
+            label: "وضعیت",
+            render: ({ record }: { record: ImageAsset }) => statusBadge(record.isActive),
+          },
+          {
+            id: "links",
+            label: "پیوند محصول",
+            render: ({ record }: { record: ImageAsset }) =>
+              formatDigits(record.linkedProducts?.length ?? 0),
+          },
+          {
+            id: "focal",
+            label: "نقطه تمرکز",
+            render: ({ record }: { record: ImageAsset }) =>
+              `${formatDigits(record.focalPointX)} / ${formatDigits(record.focalPointY)}`,
+          },
+          {
+            id: "updatedAt",
+            label: "آخرین ویرایش",
+            render: ({ record }: { record: ImageAsset }) => formatDate(record.updatedAt),
+          },
+        ],
+        sections: [
+          {
+            id: "identity",
+            title: "تصویر",
+            fieldIds: ["preview", "url", "alt", "kind", "status"],
+          },
+          {
+            id: "behavior",
+            title: "نمایش و اتصال",
+            fieldIds: ["links", "focal", "updatedAt"],
+          },
+        ],
+      },
+      delete: {
+        enabled: canWrite,
+        title: (record: ImageAsset) => `غیرفعال کردن ${fa(record.alt)}`,
+        description: (record: ImageAsset) => (
+          <>
+            تصویر <strong>{fa(record.alt)}</strong> حذف فیزیکی نمی‌شود؛ فقط از
+            استفاده فعال خارج می‌شود.
+          </>
+        ),
+        dangerLevel: "soft" as const,
+        confirmLabel: "غیرفعال کردن",
+        mutationFn: async ({ id }: { id: string }) => {
+          await fetchJson(`/api/catalog/images/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ isActive: false }),
+          });
+        },
+        mapError: (error: unknown) =>
+          error instanceof Error
+            ? error.message
+            : "غیرفعال‌سازی تصویر انجام نشد. دوباره تلاش کنید.",
+        onSuccess: (record: ImageAsset) => {
+          toastRef.current.warning("تصویر غیرفعال شد", {
+            description: `${fa(record.alt)} دیگر به عنوان تصویر فعال نمایش داده نمی‌شود.`,
+          });
+        },
+      },
+      extraRowActions: [
+        {
+          id: "copy-url",
+          label: "کپی آدرس",
+          icon: <Copy size={14} />,
+          onClick: async (record: ImageAsset) => {
+            await navigator.clipboard.writeText(record.url);
+            toastRef.current.info("آدرس تصویر کپی شد", {
+              description: record.url,
+            });
+          },
+        },
+      ],
+    }),
+    [canWrite, schema],
+  );
+
+  const labels = useMemo(
+    () => ({
+      filters: "فیلتر تصاویر",
+      clearFilters: "پاک کردن فیلترها",
+      applyFilters: "اعمال فیلترها",
+      pendingFilters: "فیلتر فعال",
+      columns: "ستون‌ها",
+      create: "تصویر جدید",
+      view: "مشاهده",
+      edit: "ویرایش",
+      delete: "غیرفعال‌سازی",
+      actions: "عملیات",
+      rowsPerPage: "تعداد در صفحه",
+    }),
+    [],
+  );
+
+  const emptyState = useMemo(
+    () => ({
+      title: "هنوز تصویری ثبت نشده",
+      description:
+        "اولین تصویر را بسازید تا برای محصول، بنر یا ادیتوریال قابل استفاده باشد.",
+      filteredTitle: "تصویری با این شرایط پیدا نشد",
+      filteredDescription: "عبارت جستجو یا فیلترهای انتخاب‌شده را تغییر دهید.",
+    }),
+    [],
+  );
+
   if (!canRead) {
     return (
       <div className="min-w-0 p-3 sm:p-4 lg:p-5">
@@ -1050,227 +1361,19 @@ export function ImageStories({
         eyebrow="IMAGE STORIES"
         title="مدیریت تصاویر خریدپذیر"
         description="کتابخانه تصویر، نوع تصویر، متن جایگزین، نقطه تمرکز و اتصال محصول‌ها را از یک جدول واحد مدیریت کنید."
-        source={{
-          queryKey: ["catalog", "images"],
-          fetchPage: async ({
-            page,
-            pageSize,
-            search,
-            filters: activeFilters,
-            signal,
-          }) => {
-            const params = new URLSearchParams({
-              page: String(page),
-              limit: String(pageSize),
-            });
-            if (search) params.set("search", search);
-            if (activeFilters.kind)
-              params.set("kind", String(activeFilters.kind));
-            if (activeFilters.isActive) {
-              params.set("isActive", String(activeFilters.isActive));
-            }
-            return toTableResult(
-              await fetchJson<List<ImageAsset>>(
-                `/api/catalog/images?${params.toString()}`,
-                { signal },
-              ),
-            );
-          },
-          fetchOne: async ({ id, signal }) =>
-            fetchJson<ImageAsset>(`/api/catalog/images/${id}`, { signal }),
-        }}
+        source={source}
         columns={columns}
-        getRowId={(record) => record._id}
-        getRowLabel={(record) => fa(record.alt)}
-        search={{
-          placeholder: "جستجو با متن جایگزین یا آدرس تصویر...",
-          debounceMs: 320,
-        }}
+        getRowId={getImageRowId}
+        getRowLabel={getImageRowLabel}
+        search={searchConfig}
         filters={filters}
-        initialFilters={{ kind: null, isActive: null }}
-        pagination={{
-          initialPageSize: 12,
-          pageSizeOptions: [12, 24, 48, 96],
-          showPageNumbers: true,
-        }}
-        columnVisibility={{
-          enabled: true,
-          persist: true,
-          storageKey: "admin-image-stories-columns",
-        }}
-        mobile={{
-          title: (record) => fa(record.alt),
-          subtitle: (record) => record.url,
-          badge: (record) => statusBadge(record.isActive),
-          fieldIds: ["kind", "linkedProducts", "focal", "isActive"],
-          maxFields: 4,
-        }}
-        crud={{
-          create: {
-            enabled: canWrite,
-            label: "تصویر جدید",
-            title: "افزودن تصویر",
-            description:
-              "تصویر با URL ذخیره می‌شود؛ برای نقاط خریدپذیر، محصول را در بخش پیوند محصول وصل کنید.",
-            schema,
-            initialValues: emptyForm,
-            mutationFn: async ({ values }) =>
-              fetchJson<ImageAsset>("/api/catalog/images", {
-                method: "POST",
-                body: JSON.stringify(formPayload(values)),
-              }),
-            mapError: mapFormError,
-            onSuccess: (record) => {
-              toast.success("تصویر ساخته شد", {
-                description:
-                  record && "_id" in record
-                    ? `${fa(record.alt)} به کتابخانه اضافه شد.`
-                    : undefined,
-              });
-            },
-          },
-          edit: {
-            enabled: canWrite,
-            title: (record) => `ویرایش ${fa(record.alt)}`,
-            description:
-              "متن جایگزین، نوع تصویر، نحوه نمایش و نقاط خریدپذیر را ویرایش کنید.",
-            schema,
-            toInitialValues: imageToForm,
-            mutationFn: async ({ id, values }) =>
-              fetchJson<ImageAsset>(`/api/catalog/images/${id}`, {
-                method: "PATCH",
-                body: JSON.stringify(formPayload(values)),
-              }),
-            mapError: mapFormError,
-            onSuccess: (record) => {
-              toast.success("تغییرات تصویر ذخیره شد", {
-                description:
-                  record && "_id" in record
-                    ? `${fa(record.alt)} به‌روزرسانی شد.`
-                    : undefined,
-              });
-            },
-          },
-          view: {
-            title: (record) => `مشاهده ${fa(record.alt)}`,
-            fields: [
-              {
-                id: "preview",
-                label: "پیش‌نمایش",
-                render: ({ record }) => <ImageThumb asset={record} />,
-              },
-              {
-                id: "url",
-                label: "آدرس تصویر",
-                accessor: "url",
-                colSpan: "full",
-              },
-              {
-                id: "alt",
-                label: "متن جایگزین فارسی",
-                render: ({ record }) => fa(record.alt),
-              },
-              {
-                id: "kind",
-                label: "نوع",
-                render: ({ record }) => labelKind(record.kind),
-              },
-              {
-                id: "status",
-                label: "وضعیت",
-                render: ({ record }) => statusBadge(record.isActive),
-              },
-              {
-                id: "links",
-                label: "پیوند محصول",
-                render: ({ record }) =>
-                  formatDigits(record.linkedProducts?.length ?? 0),
-              },
-              {
-                id: "focal",
-                label: "نقطه تمرکز",
-                render: ({ record }) =>
-                  `${formatDigits(record.focalPointX)} / ${formatDigits(record.focalPointY)}`,
-              },
-              {
-                id: "updatedAt",
-                label: "آخرین ویرایش",
-                render: ({ record }) => formatDate(record.updatedAt),
-              },
-            ],
-            sections: [
-              {
-                id: "identity",
-                title: "تصویر",
-                fieldIds: ["preview", "url", "alt", "kind", "status"],
-              },
-              {
-                id: "behavior",
-                title: "نمایش و اتصال",
-                fieldIds: ["links", "focal", "updatedAt"],
-              },
-            ],
-          },
-          delete: {
-            enabled: canWrite,
-            title: (record) => `غیرفعال کردن ${fa(record.alt)}`,
-            description: (record) => (
-              <>
-                تصویر <strong>{fa(record.alt)}</strong> حذف فیزیکی نمی‌شود؛ فقط
-                از استفاده فعال خارج می‌شود.
-              </>
-            ),
-            dangerLevel: "soft",
-            confirmLabel: "غیرفعال کردن",
-            mutationFn: async ({ id }) => {
-              await fetchJson(`/api/catalog/images/${id}`, {
-                method: "PATCH",
-                body: JSON.stringify({ isActive: false }),
-              });
-            },
-            mapError: (error) =>
-              error instanceof Error
-                ? error.message
-                : "غیرفعال‌سازی تصویر انجام نشد. دوباره تلاش کنید.",
-            onSuccess: (record) => {
-              toast.warning("تصویر غیرفعال شد", {
-                description: `${fa(record.alt)} دیگر به عنوان تصویر فعال نمایش داده نمی‌شود.`,
-              });
-            },
-          },
-          extraRowActions: [
-            {
-              id: "copy-url",
-              label: "کپی آدرس",
-              icon: <Copy size={14} />,
-              onClick: async (record) => {
-                await navigator.clipboard.writeText(record.url);
-                toast.info("آدرس تصویر کپی شد", { description: record.url });
-              },
-            },
-          ],
-        }}
-        labels={{
-          filters: "فیلتر تصاویر",
-          clearFilters: "پاک کردن فیلترها",
-          applyFilters: "اعمال فیلترها",
-          pendingFilters: "فیلتر فعال",
-          columns: "ستون‌ها",
-          create: "تصویر جدید",
-          view: "مشاهده",
-          edit: "ویرایش",
-          delete: "غیرفعال‌سازی",
-          actions: "عملیات",
-          rowsPerPage: "تعداد در صفحه",
-        }}
-        emptyState={{
-          title: "هنوز تصویری ثبت نشده",
-          description:
-            "اولین تصویر را بسازید تا برای محصول، بنر یا ادیتوریال قابل استفاده باشد.",
-          filteredTitle: "تصویری با این شرایط پیدا نشد",
-          filteredDescription:
-            "عبارت جستجو یا فیلترهای انتخاب‌شده را تغییر دهید.",
-        }}
+        initialFilters={initialFilters}
+        pagination={pagination}
+        columnVisibility={columnVisibility}
+        mobile={mobile}
+        crud={crud}
+        labels={labels}
+        emptyState={emptyState}
       />
     </div>
   );
