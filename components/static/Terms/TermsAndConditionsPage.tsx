@@ -4,7 +4,7 @@ import Image from "next/image";
 
 import { type CSSProperties, useEffect, useState } from "react";
 
-import { brandColors, darkTokens, fontTokens } from "@/theme/theme-colors";
+import { brandColors, darkTokens } from "@/theme/theme-colors";
 
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
 
@@ -31,129 +31,88 @@ type TermsSection = {
 const TERMS_SECTIONS: TermsSection[] = [
   {
     id: "introduction",
-
-    title: "Introduction",
-
+    title: "مقدمه",
     paragraphs: [
-      "Welcome to Najibzadeh. These Terms & Conditions govern your access to and use of our website, digital services and any purchases made through our online experience.",
-
-      "By accessing or using this website, you acknowledge that you have read, understood and agreed to these terms.",
+      "به نجیب‌زاده خوش آمدید. این شرایط و ضوابط، نحوه دسترسی و استفاده شما از وب‌سایت، خدمات دیجیتال و خریدهایی را که از طریق تجربه آنلاین ما انجام می‌دهید، مشخص می‌کند.",
+      "با دسترسی به این وب‌سایت یا استفاده از آن، تأیید می‌کنید که این شرایط را مطالعه و درک کرده‌اید و با آن‌ها موافق هستید.",
     ],
   },
-
   {
     id: "use-of-site",
-
-    title: "Use of Our Site",
-
+    title: "استفاده از وب‌سایت",
     paragraphs: [
-      "You may use this website only for lawful purposes and in a manner that does not infringe the rights of others or restrict their ability to access and enjoy the Najibzadeh experience.",
-
-      "You may not misuse, reproduce, interfere with or attempt to gain unauthorised access to any part of our website, systems or services.",
+      "شما تنها می‌توانید برای اهداف قانونی از این وب‌سایت استفاده کنید و استفاده شما نباید حقوق دیگران را نقض کند یا دسترسی و بهره‌مندی آن‌ها از تجربه نجیب‌زاده را محدود سازد.",
+      "هرگونه سوءاستفاده، بازتولید غیرمجاز، ایجاد اختلال یا تلاش برای دسترسی بدون مجوز به هر بخش از وب‌سایت، سامانه‌ها یا خدمات ما مجاز نیست.",
     ],
   },
-
   {
     id: "products-orders",
-
-    title: "Products & Orders",
-
+    title: "محصولات و سفارش‌ها",
     paragraphs: [
-      "All products are subject to availability. We reserve the right to limit quantities, discontinue products or refuse an order where reasonably necessary.",
-
-      "An order is considered accepted only after you receive confirmation from Najibzadeh that the order has been processed.",
+      "تمام محصولات مشروط به موجودی هستند. در صورت ضرورت معقول، حق محدود کردن تعداد، توقف عرضه محصول یا نپذیرفتن یک سفارش برای نجیب‌زاده محفوظ است.",
+      "سفارش تنها زمانی پذیرفته‌شده محسوب می‌شود که تأیید پردازش سفارش را از نجیب‌زاده دریافت کنید.",
     ],
   },
-
   {
     id: "pricing-payment",
-
-    title: "Pricing & Payment",
-
+    title: "قیمت‌گذاری و پرداخت",
     paragraphs: [
-      "Prices displayed on our website are shown in the applicable currency and may include taxes where required by law.",
-
-      "We take reasonable care to ensure pricing information is accurate. If an error is identified before fulfilment, we may contact you before proceeding with the order.",
+      "قیمت‌های نمایش‌داده‌شده در وب‌سایت با ارز مربوط ارائه می‌شوند و در مواردی که قانون الزام کند، ممکن است شامل مالیات باشند.",
+      "ما برای صحت اطلاعات قیمت‌گذاری دقت معقولی به کار می‌بریم. اگر پیش از انجام سفارش خطایی شناسایی شود، ممکن است پیش از ادامه فرایند با شما تماس بگیریم.",
     ],
   },
-
   {
     id: "shipping-delivery",
-
-    title: "Shipping & Delivery",
-
+    title: "ارسال و تحویل",
     paragraphs: [
-      "Estimated delivery times are provided as guidance and may vary depending on destination, product availability and circumstances outside our reasonable control.",
-
-      "Risk in purchased products passes in accordance with the applicable delivery arrangements and local consumer law.",
+      "زمان‌های تخمینی تحویل صرفاً به‌عنوان راهنما ارائه می‌شوند و ممکن است بر اساس مقصد، موجودی محصول و شرایط خارج از کنترل معقول ما تغییر کنند.",
+      "انتقال ریسک محصولات خریداری‌شده مطابق ترتیبات تحویل مربوط و قوانین حمایت از مصرف‌کننده در حوزه قضایی شما انجام می‌شود.",
     ],
   },
-
   {
     id: "returns-exchanges",
-
-    title: "Returns & Exchanges",
-
+    title: "مرجوعی و تعویض",
     paragraphs: [
-      "Eligible products may be returned or exchanged within the period specified in our Returns Policy, provided they remain unused, unworn and in their original condition.",
-
-      "Certain personalised, made-to-order or hygiene-sensitive products may be excluded from return where permitted by law.",
+      "محصولات واجد شرایط را می‌توان در بازه زمانی مشخص‌شده در سیاست مرجوعی ما بازگرداند یا تعویض کرد؛ مشروط بر اینکه استفاده یا پوشیده نشده باشند و در وضعیت اولیه خود باقی مانده باشند.",
+      "برخی محصولات شخصی‌سازی‌شده، سفارشی یا حساس از نظر بهداشتی، در مواردی که قانون اجازه دهد، ممکن است مشمول مرجوعی نباشند.",
     ],
   },
-
   {
     id: "intellectual-property",
-
-    title: "Intellectual Property",
-
+    title: "مالکیت فکری",
     paragraphs: [
-      "All content appearing on this website, including trademarks, photography, designs, text, graphics, video and brand elements, is owned by or licensed to Najibzadeh.",
-
-      "No content may be copied, reproduced, distributed or commercially exploited without prior written permission.",
+      "تمام محتوای موجود در این وب‌سایت، از جمله علائم تجاری، تصاویر، طراحی‌ها، متن، گرافیک، ویدئو و عناصر هویتی برند، متعلق به نجیب‌زاده است یا با مجوز در اختیار آن قرار دارد.",
+      "هیچ بخشی از محتوا بدون دریافت اجازه کتبی قبلی نباید کپی، بازتولید، توزیع یا به‌صورت تجاری بهره‌برداری شود.",
     ],
   },
-
   {
     id: "limitation-liability",
-
-    title: "Limitation of Liability",
-
+    title: "محدودیت مسئولیت",
     paragraphs: [
-      "Nothing in these terms excludes or limits liability that cannot lawfully be excluded. To the extent permitted by law, Najibzadeh is not responsible for indirect or consequential loss arising from use of this website.",
-
-      "We endeavour to maintain an accurate and uninterrupted digital experience but do not guarantee that the website will always be available or free from technical error.",
+      "هیچ بخشی از این شرایط، مسئولیتی را که طبق قانون قابل حذف یا محدود کردن نیست، مستثنا یا محدود نمی‌کند. تا حدی که قانون اجازه می‌دهد، نجیب‌زاده مسئول زیان‌های غیرمستقیم یا تبعی ناشی از استفاده از این وب‌سایت نیست.",
+      "ما برای ارائه تجربه‌ای دیجیتال، دقیق و پایدار تلاش می‌کنیم، اما تضمین نمی‌کنیم که وب‌سایت همواره در دسترس یا عاری از خطاهای فنی باشد.",
     ],
   },
-
   {
     id: "governing-law",
-
-    title: "Governing Law",
-
+    title: "قانون حاکم",
     paragraphs: [
-      "These terms are governed by the laws applicable to the Najibzadeh entity responsible for your transaction, subject to any mandatory consumer protections available in your jurisdiction.",
+      "این شرایط تابع قوانینی است که بر واحد نجیب‌زاده مسئول تراکنش شما اعمال می‌شود؛ با رعایت هرگونه حمایت الزامی از مصرف‌کننده که در حوزه قضایی شما در دسترس است.",
     ],
   },
-
   {
     id: "changes",
-
-    title: "Changes to These Terms",
-
+    title: "تغییرات این شرایط",
     paragraphs: [
-      "We may update these Terms & Conditions from time to time to reflect changes to our services, operations or legal obligations.",
-
-      "The version published on this page at the time of your visit will be the current version.",
+      "ممکن است برای انعکاس تغییرات خدمات، عملیات یا تعهدات قانونی، این شرایط و ضوابط را هر از گاهی به‌روزرسانی کنیم.",
+      "نسخه منتشرشده در این صفحه در زمان مراجعه شما، نسخه جاری محسوب می‌شود.",
     ],
   },
-
   {
     id: "contact",
-
-    title: "Contact Us",
-
+    title: "تماس با ما",
     paragraphs: [
-      "If you have questions regarding these Terms & Conditions, an order or your experience with Najibzadeh, our Client Services team will be pleased to assist you.",
+      "اگر درباره این شرایط و ضوابط، سفارش خود یا تجربه‌تان با نجیب‌زاده پرسشی دارید، تیم خدمات مشتریان ما با خرسندی همراه شما خواهد بود.",
     ],
   },
 ];
@@ -179,7 +138,7 @@ export function TermsAndConditionsPage({
 
   heroImagePosition = "center",
 
-  lastUpdated = "August 2026",
+  lastUpdated = "اوت ۲۰۲۶",
 }: TermsAndConditionsPageProps) {
   const [activeSection, setActiveSection] = useState(TERMS_SECTIONS[0].id);
 
@@ -274,11 +233,8 @@ export function TermsAndConditionsPage({
 
   return (
     <main
-      style={{
-        ...themeVars,
-
-        fontFamily: fontTokens.english,
-      }}
+      style={themeVars}
+      dir="rtl"
       className="
         min-h-screen
 
@@ -374,7 +330,7 @@ export function TermsAndConditionsPage({
                 inset-0
                 -z-20
 
-                bg-[linear-gradient(90deg,rgb(var(--legal-black-rgb)/0.96)_0%,rgb(var(--legal-black-rgb)/0.84)_34%,rgb(var(--legal-black-rgb)/0.32)_62%,rgb(var(--legal-black-rgb)/0.08)_100%)]
+                bg-[linear-gradient(90deg,rgb(var(--legal-black-rgb)/0.62)_0%,rgb(var(--legal-black-rgb)/0.38)_50%,rgb(var(--legal-black-rgb)/0.62)_100%)]
               "
             />
 
@@ -397,10 +353,13 @@ export function TermsAndConditionsPage({
               className="
                 absolute
 
-                right-6
+                left-1/2
                 top-7
+                -translate-x-1/2
 
                 hidden
+
+                text-center
 
                 text-[8px]
                 font-medium
@@ -411,11 +370,10 @@ export function TermsAndConditionsPage({
                 text-white/45
 
                 md:block
-                md:right-10
                 md:top-10
               "
             >
-              Najibzadeh
+              نجیب‌زاده
             </div>
 
             {/* HERO CONTENT */}
@@ -427,6 +385,7 @@ export function TermsAndConditionsPage({
                 min-h-[400px]
 
                 items-end
+                justify-center
 
                 px-6
 
@@ -449,7 +408,9 @@ export function TermsAndConditionsPage({
             >
               <div
                 className="
+                  mx-auto
                   max-w-[620px]
+                  text-center
                 "
               >
                 {/* eyebrow */}
@@ -460,6 +421,7 @@ export function TermsAndConditionsPage({
 
                     flex
                     items-center
+                    justify-center
                     gap-3
 
                     text-[7px]
@@ -473,7 +435,9 @@ export function TermsAndConditionsPage({
                     sm:text-[8px]
                   "
                 >
-                  <span>Legal / Najibzadeh</span>
+                  <span className="h-px w-6 bg-[var(--legal-copper)]" />
+
+                  <span>حقوقی / نجیب‌زاده</span>
 
                   <span
                     className="
@@ -487,7 +451,7 @@ export function TermsAndConditionsPage({
 
                 <h1
                   className="
-                    font-serif
+                     
 
                     text-[clamp(3.1rem,11vw,5rem)]
                     font-normal
@@ -495,21 +459,22 @@ export function TermsAndConditionsPage({
                     leading-[0.94]
                     tracking-[-0.055em]
 
+                    text-center
                     text-white
 
                     md:text-[clamp(4.5rem,6vw,6.4rem)]
                   "
                 >
-                  Terms &amp;
-                  <br />
-                  Conditions
+                  شرایط و ضوابط
                 </h1>
 
                 <p
                   className="
+                    mx-auto
                     mt-6
 
-                    max-w-[390px]
+                    max-w-[430px]
+                    text-center
 
                     text-[9px]
 
@@ -520,8 +485,7 @@ export function TermsAndConditionsPage({
                     sm:text-[10px]
                   "
                 >
-                  These terms govern your use of the Najibzadeh website and the
-                  services and products available through it.
+                  این شرایط، نحوه استفاده شما از وب‌سایت نجیب‌زاده و خدمات و محصولات ارائه‌شده از طریق آن را مشخص می‌کند.
                 </p>
 
                 <div
@@ -532,6 +496,7 @@ export function TermsAndConditionsPage({
                     flex-wrap
 
                     items-center
+                    justify-center
                     gap-x-5
                     gap-y-3
                   "
@@ -547,7 +512,7 @@ export function TermsAndConditionsPage({
                       text-white/35
                     "
                   >
-                    Last updated
+                    آخرین به‌روزرسانی
                   </span>
 
                   <span
@@ -596,7 +561,8 @@ export function TermsAndConditionsPage({
                 list-none
 
                 items-center
-                justify-between
+                justify-center
+                gap-3
 
                 px-5
 
@@ -611,13 +577,13 @@ export function TermsAndConditionsPage({
                 [&::-webkit-details-marker]:hidden
               "
             >
-              <span>On this page</span>
+              <span>در این صفحه</span>
 
               <MenuListIcon />
             </summary>
 
             <nav
-              aria-label="Terms sections"
+              aria-label="بخش‌های شرایط و ضوابط"
               className="
                 grid
 
@@ -638,13 +604,14 @@ export function TermsAndConditionsPage({
                       min-h-[54px]
 
                       items-center
+                      justify-center
 
                       border-b
                       border-white/10
 
                       px-5
 
-                      text-left
+                      text-center
 
                       transition-colors
 
@@ -664,7 +631,10 @@ export function TermsAndConditionsPage({
                         text-white/25
                       "
                   >
-                    {String(index + 1).padStart(2, "0")}
+                    {new Intl.NumberFormat("fa-IR", {
+            minimumIntegerDigits: 2,
+            useGrouping: false,
+          }).format(index + 1)}
                   </span>
 
                   <span
@@ -704,7 +674,7 @@ export function TermsAndConditionsPage({
 
                 hidden
 
-                border-r
+                border-l
                 border-white/10
 
                 lg:block
@@ -749,6 +719,7 @@ export function TermsAndConditionsPage({
                   className="
                     mb-6
 
+                    text-center
                     text-[7px]
                     font-semibold
 
@@ -758,12 +729,12 @@ export function TermsAndConditionsPage({
                     text-[var(--legal-copper)]
                   "
                 >
-                  On this page
+                  در این صفحه
                 </p>
 
                 {/* nav */}
 
-                <nav aria-label="Terms sections">
+                <nav aria-label="بخش‌های شرایط و ضوابط">
                   <ol className="space-y-0.5">
                     {TERMS_SECTIONS.map((section, index) => {
                       const active = activeSection === section.id;
@@ -784,8 +755,9 @@ export function TermsAndConditionsPage({
                                 w-full
 
                                 items-center
+                                justify-center
 
-                                text-left
+                                text-center
 
                                 cursor-pointer
 
@@ -819,7 +791,10 @@ export function TermsAndConditionsPage({
                                   text-white/35
                                 "
                             >
-                              {String(index + 1).padStart(2, "0")}
+                              {new Intl.NumberFormat("fa-IR", {
+            minimumIntegerDigits: 2,
+            useGrouping: false,
+          }).format(index + 1)}
                             </span>
 
                             <span
@@ -837,7 +812,7 @@ export function TermsAndConditionsPage({
                               className={`
                                   absolute
 
-                                  -left-7
+                                  -right-7
                                   top-1/2
 
                                   h-px
@@ -849,7 +824,7 @@ export function TermsAndConditionsPage({
                                   transition-[width,opacity]
                                   duration-300
 
-                                  xl:-left-9
+                                  xl:-right-9
 
                                   ${
                                     active ? "w-4 opacity-100" : "w-0 opacity-0"
@@ -882,8 +857,10 @@ export function TermsAndConditionsPage({
                       group
 
                       flex
+                      w-full
 
                       items-center
+                      justify-center
                       gap-3
 
                       text-[7px]
@@ -908,7 +885,7 @@ export function TermsAndConditionsPage({
                     "
                   >
                     <PrintIcon />
-                    Print / Save PDF
+                    چاپ / ذخیره PDF
                   </button>
                 </div>
               </div>
@@ -923,6 +900,7 @@ export function TermsAndConditionsPage({
                 px-5
 
                 py-4
+                text-center
 
                 sm:px-8
 
@@ -969,6 +947,7 @@ export function TermsAndConditionsPage({
                 <div
                   className="
                     p-6
+                    text-center
 
                     sm:p-8
 
@@ -982,6 +961,7 @@ export function TermsAndConditionsPage({
                       flex
 
                       items-center
+                      justify-center
                       gap-3
 
                       text-[7px]
@@ -993,7 +973,9 @@ export function TermsAndConditionsPage({
                       text-[var(--legal-copper)]
                     "
                   >
-                    <span>Client Services</span>
+                    <span className="h-px w-5 bg-[var(--legal-copper)]" />
+
+                    <span>خدمات مشتریان</span>
 
                     <span
                       className="
@@ -1007,7 +989,7 @@ export function TermsAndConditionsPage({
 
                   <h2
                     className="
-                      font-serif
+                       
 
                       text-[clamp(2.2rem,6vw,3.4rem)]
                       font-normal
@@ -1016,14 +998,16 @@ export function TermsAndConditionsPage({
                       tracking-[-0.045em]
                     "
                   >
-                    We&apos;re here for you.
+                    در کنار شما هستیم.
                   </h2>
 
                   <p
                     className="
+                      mx-auto
                       mt-4
 
                       max-w-[480px]
+                      text-center
 
                       text-[9px]
 
@@ -1034,9 +1018,7 @@ export function TermsAndConditionsPage({
                       sm:text-[10px]
                     "
                   >
-                    If you have questions about these terms, an order or your
-                    experience with Najibzadeh, our team will be pleased to
-                    assist.
+                    اگر درباره این شرایط، سفارش خود یا تجربه‌تان با نجیب‌زاده پرسشی دارید، تیم ما با خرسندی همراه شما خواهد بود.
                   </p>
                 </div>
 
@@ -1059,7 +1041,7 @@ export function TermsAndConditionsPage({
                     icon={<ArrowRightIcon />}
                     fullWidth
                   >
-                    Contact Us
+                    تماس با ما
                   </Button>
 
                   <a
@@ -1080,7 +1062,7 @@ export function TermsAndConditionsPage({
                       hover:text-black
                     "
                   >
-                    clientservices@ najibzadeh.com
+                    clientservices@najibzadeh.com
                   </a>
                 </div>
               </div>
@@ -1110,14 +1092,18 @@ export function TermsAndConditionsPage({
 
             text-white/25
 
+            items-center
+            justify-center
+            text-center
+
             sm:flex-row
             sm:items-center
-            sm:justify-between
+            sm:justify-center
           "
         >
-          <span>© {new Date().getFullYear()} Najibzadeh</span>
+          <span>© {new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(new Date().getFullYear())} نجیب‌زاده</span>
 
-          <span>Terms & Conditions / Legal</span>
+          <span>شرایط و ضوابط / حقوقی</span>
         </div>
       </div>
     </main>
@@ -1143,18 +1129,18 @@ function LegalSection({
       className="
         scroll-mt-28
 
-        grid
+        flex
+        flex-col
+        items-center
 
         border-b
         border-white/10
 
         py-8
 
-        sm:grid-cols-[60px_minmax(0,1fr)]
+        text-center
 
         sm:py-9
-
-        lg:grid-cols-[80px_minmax(0,1fr)]
         lg:py-10
       "
     >
@@ -1163,13 +1149,11 @@ function LegalSection({
       <div
         className="
           mb-4
-
-          sm:mb-0
         "
       >
         <span
           className="
-            font-serif
+             
 
             text-[22px]
 
@@ -1180,7 +1164,10 @@ function LegalSection({
             lg:text-[26px]
           "
         >
-          {String(index + 1).padStart(2, "0")}
+          {new Intl.NumberFormat("fa-IR", {
+            minimumIntegerDigits: 2,
+            useGrouping: false,
+          }).format(index + 1)}
         </span>
       </div>
 
@@ -1188,12 +1175,14 @@ function LegalSection({
 
       <div
         className="
+          mx-auto
           max-w-[880px]
+          text-center
         "
       >
         <h2
           className="
-            font-serif
+             
 
             text-[22px]
             font-normal
@@ -1223,8 +1212,10 @@ function LegalSection({
             <p
               key={paragraphIndex}
               className="
+                  mx-auto
                   max-w-[820px]
 
+                  text-center
                   text-[9px]
 
                   leading-[1.85]

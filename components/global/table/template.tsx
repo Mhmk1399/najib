@@ -609,6 +609,7 @@ export function DataGridV3Showcase() {
           enabled: true,
           persist: true,
           storageKey: "demo-products-v3-columns",
+          
         }}
         mobile={{
           title: (record) => record.name,

@@ -198,7 +198,7 @@ export function ProductEditorialGrid({
 
         <h2
           id="editorial-selection-title"
-          className="mt-4 max-w-[720px] font-serif text-[clamp(2.7rem,11vw,4.2rem)] font-normal leading-[0.96] tracking-[-0.05em] text-[var(--grid-text)] sm:text-[clamp(3.2rem,7vw,4.8rem)] lg:text-[clamp(3.7rem,4.4vw,5.2rem)]"
+          className="mt-4 max-w-[720px]   text-[clamp(2.7rem,11vw,4.2rem)] font-normal leading-[0.96] tracking-[-0.05em] text-[var(--grid-text)] sm:text-[clamp(3.2rem,7vw,4.8rem)] lg:text-[clamp(3.7rem,4.4vw,5.2rem)]"
         >
           {title}
         </h2>
@@ -274,7 +274,7 @@ function ProductCard({ product }: { product: EditorialProduct }) {
             </p>
           ) : null}
 
-          <h3 className="mt-2 max-w-[92%] font-serif text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-[clamp(2.2rem,3vw,3.55rem)]">
+          <h3 className="mt-2 max-w-[92%]   text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-[clamp(2.2rem,3vw,3.55rem)]">
             {product.title}
           </h3>
 

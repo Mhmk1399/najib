@@ -47,19 +47,19 @@ const DEFAULT_METHODS: ContactMethod[] = [
   {
     id: "appointment",
 
-    title: "Private Appointment",
+    title: "قرار ملاقات خصوصی",
 
     description: (
       <>
-        Experience our collections in an intimate and considered setting.
+        کالکشن‌های نجیب‌زاده را در فضایی خصوصی، آرام و اختصاصی تجربه کنید.
         <br />
         <br />
-        By appointment only.
+        پذیرش تنها با رزرو قبلی انجام می‌شود.
       </>
     ),
 
     action: {
-      label: "Book Appointment",
+      label: "رزرو قرار ملاقات",
       href: "/appointments",
     },
 
@@ -69,17 +69,17 @@ const DEFAULT_METHODS: ContactMethod[] = [
   {
     id: "services",
 
-    title: "Client Services",
+    title: "خدمات مشتریان",
 
     description: (
       <>
-        Our team is here to assist with product enquiries, style guidance,
-        orders and aftercare.
+        تیم ما برای پاسخ‌گویی درباره محصولات، راهنمایی استایل، سفارش‌ها و خدمات
+        پس از خرید در کنار شماست.
       </>
     ),
 
     action: {
-      label: "Client Services",
+      label: "خدمات مشتریان",
       href: "/customer-care",
     },
 
@@ -89,22 +89,22 @@ const DEFAULT_METHODS: ContactMethod[] = [
   {
     id: "location",
 
-    title: "Visit the House",
+    title: "دیدار از خانه نجیب‌زاده",
 
     description: (
       <>
-        NAJIBZADEH Atelier
+        آتلیه نجیب‌زاده
         <br />
-        74 Mount Street
+        ۷۴ ماونت استریت
         <br />
-        Mayfair, London
+        می‌فر، لندن
         <br />
-        United Kingdom
+        بریتانیا
       </>
     ),
 
     action: {
-      label: "Directions",
+      label: "مشاهده مسیر",
       href: "/stores",
     },
 
@@ -114,7 +114,7 @@ const DEFAULT_METHODS: ContactMethod[] = [
   {
     id: "contact",
 
-    title: "Email / Phone",
+    title: "ایمیل و تلفن",
 
     description: (
       <>
@@ -123,14 +123,14 @@ const DEFAULT_METHODS: ContactMethod[] = [
         +44 (0)20 4571 8900
         <br />
         <br />
-        Monday — Friday
+        دوشنبه تا جمعه
         <br />
-        10:00 — 18:00
+        ۱۰:۰۰ تا ۱۸:۰۰
       </>
     ),
 
     action: {
-      label: "Email Us",
+      label: "ارسال ایمیل",
       href: "mailto:info@najibzadeh.com",
       external: true,
     },
@@ -148,8 +148,7 @@ export function ContactServicesSection({
 
   methods = DEFAULT_METHODS,
 
-  footerNote = "We value your privacy. All enquiries are handled with the utmost discretion.",
-
+  footerNote = "حریم خصوصی شما برای ما اهمیت دارد. تمام درخواست‌ها با نهایت احترام و محرمانگی بررسی می‌شوند.",
   className = "",
 }: ContactServicesSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
@@ -169,6 +168,7 @@ export function ContactServicesSection({
   return (
     <section
       ref={ref}
+      dir="rtl"
       style={themeVars}
       className={`
         min-h-[100svh]
@@ -294,7 +294,7 @@ export function ContactServicesSection({
               text-white/55
             "
           >
-            Najibzadeh Private Services
+            خدمات اختصاصی نجیب‌زاده
           </div>
         </div>
 
@@ -344,8 +344,7 @@ export function ContactServicesSection({
                 text-[var(--services-copper)]
               "
             >
-              <span>Contact</span>
-
+              <span>ارتباط با ما</span>
               <span
                 className="
                   h-px
@@ -358,7 +357,7 @@ export function ContactServicesSection({
 
             <h2
               className="
-                font-serif
+                 
 
                 text-[clamp(2.7rem,10vw,4rem)]
 
@@ -366,7 +365,7 @@ export function ContactServicesSection({
                 tracking-[-0.05em]
               "
             >
-              Here when you need us.
+              هر زمان که نیاز داشته باشید، در کنار شما هستیم.{" "}
             </h2>
           </div>
 
@@ -422,25 +421,25 @@ export function ContactServicesSection({
 function ContactMethodCard({ method }: { method: ContactMethod }) {
   return (
     <article
-      className="
-        flex
+    className="
+  flex
+  min-h-[280px]
+  flex-col
+  items-center
 
-        min-h-[280px]
+  border-b
+  border-l
+  border-black/10
 
-        flex-col
+  p-6
+  text-center
 
-        border-b
-        border-r
-        border-black/10
+  sm:min-h-[310px]
+  sm:p-7
 
-        p-6
-
-        sm:min-h-[310px]
-        sm:p-7
-
-        lg:min-h-[320px]
-        lg:p-8
-      "
+  lg:min-h-[320px]
+  lg:p-8
+"
     >
       {/* ICON */}
 
@@ -478,17 +477,15 @@ function ContactMethodCard({ method }: { method: ContactMethod }) {
       {/* DESCRIPTION */}
 
       <div
-        className="
-          mt-4
-
-          max-w-[270px]
-
-          text-[10px]
-
-          leading-[1.8]
-
-          text-black/58
-        "
+       className="
+  mx-auto
+  mt-4
+  max-w-[270px]
+  text-center
+  text-[10px]
+  leading-[1.8]
+  text-black/58
+"
       >
         {method.description}
       </div>

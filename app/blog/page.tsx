@@ -7,35 +7,35 @@ export default function BlogPage() {
   return (
     <BlogListingPage
       hero={{
-        eyebrow: "The Najibzadeh Journal",
+        eyebrow: "ژورنال نجیب‌زاده",
 
-        title: "Stories of style, craft & character.",
+        title: "روایت‌هایی از سبک، هنر و شخصیت.",
 
         description:
-          "A considered perspective on clothing, material, craftsmanship and the world surrounding Najibzadeh.",
+          "نگاهی سنجیده به پوشاک، متریال، هنر ساخت و جهانی که هویت نجیب‌زاده را شکل می‌دهد.",
 
         image: "/assets/images/banner.webp",
 
-        imageAlt: "Najibzadeh editorial journal",
+        imageAlt: "ژورنال و روایت‌های نجیب‌زاده",
 
         desktopImagePosition: "center",
 
         mobileImagePosition: "62% center",
 
         action: {
-          label: "Explore Journal",
+          label: "مشاهده ژورنال",
 
           href: "#journal",
         },
       }}
       posts={fakeBlogPosts}
       newsletter={{
-        eyebrow: "Journal Notes",
+        eyebrow: "یادداشت‌های ژورنال",
 
-        title: "Stay close to the House.",
+        title: "همراه نجیب‌زاده بمانید.",
 
         description:
-          "New stories, collections and perspectives delivered occasionally.",
+          "روایت‌های تازه، کالکشن‌ها و نگاه‌های منتخب نجیب‌زاده را هر از گاهی دریافت کنید.",
       }}
       postsPerPage={6}
     />

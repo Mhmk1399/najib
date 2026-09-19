@@ -1,20 +1,17 @@
-
 import { AboutCraftSection } from "@/components/static/About/AboutCraftSection";
 import { AboutHeroSection } from "@/components/static/About/AboutHeroSection";
 import { AboutValuesSection } from "@/components/static/About/AboutValuesSection";
-
- 
 
 export default function Page() {
   return (
     <main>
       <AboutHeroSection
         imageSrc="/assets/images/banner.webp"
-        imageAlt="Najibzadeh tailoring house"
-        eyebrow="About Najibzadeh"
-        title="Rooted in heritage."
-        italicTitle="Defined by purpose."
-        description="Najibzadeh is a modern house of tailoring, fragrance and considered objects — shaped by craftsmanship, restraint and a quiet pursuit of lasting distinction."
+        imageAlt="خانه خیاطی نجیب‌زاده"
+        eyebrow="درباره نجیب‌زاده"
+        title="ریشه‌دار در میراث."
+        italicTitle="تعریف‌شده با هدف."
+        description="نجیب‌زاده خانه‌ای مدرن برای خیاطی، عطر و اشیای ماندگار است؛ شکل‌گرفته از هنر دست، ظرافت، اصالت و جست‌وجویی آرام برای خلق تمایزی ماندگار."
         mobileImagePosition="68% center"
         desktopImagePosition="center"
       />
@@ -55,10 +52,10 @@ export default function Page() {
 
       <AboutValuesSection
         imageSrc="/assets/images/banner.webp"
-        imageAlt="Najibzadeh timeless values"
-        eyebrow="Our Values"
-        title="Built on timeless values."
-        italicTitle="Guided by integrity."
+        imageAlt="ارزش‌های ماندگار نجیب‌زاده"
+        eyebrow="ارزش‌های ما"
+        title="ساخته‌شده بر پایه ارزش‌های ماندگار."
+        italicTitle="هدایت‌شده با اصالت."
         mobileImagePosition="68% center"
         desktopImagePosition="center"
       />

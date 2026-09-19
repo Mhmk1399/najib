@@ -17,12 +17,7 @@ const destinations = [
     detail: "دسته و زیردسته",
     icon: Boxes,
   },
-  {
-    href: "/admin/catalog/content",
-    label: "محتوای صفحات",
-    detail: "بنر و توضیحات",
-    icon: FileText,
-  },
+ 
   {
     href: "/admin/catalog/images",
     label: "تصاویر خریدپذیر",

@@ -105,22 +105,22 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "the-new-language-of-modern-dressing",
 
-    title: "The New Language of Modern Dressing",
+    title: "زبان تازه پوشش مدرن",
 
     excerpt:
-      "A considered approach to proportion, material and restraint — exploring how the modern wardrobe is becoming quieter, more personal and more enduring.",
+      "نگاهی سنجیده به تناسب، متریال و سادگی؛ روایتی از اینکه کمد لباس مدرن چگونه آرام‌تر، شخصی‌تر و ماندگارتر می‌شود.",
 
         image: "/assets/images/hero4.webp",
 
     imagePosition: "center 30%",
 
-    category: "Style Notes",
+    category: "یادداشت‌های استایل",
 
     publishedAt: "2026-08-24",
 
-    readingTime: "6 min read",
+    readingTime: "۶ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
 
     featured: true,
   },
@@ -130,20 +130,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "why-material-matters",
 
-    title: "Why Material Matters More Than Ever",
+    title: "چرا کیفیت متریال بیش از همیشه اهمیت دارد",
 
     excerpt:
-      "From cashmere to fine wool, the quality of a garment begins long before its silhouette takes shape.",
+      "از کشمیر تا پشم ظریف، کیفیت یک لباس مدت‌ها پیش از شکل‌گرفتن فرم نهایی آن آغاز می‌شود.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Craftsmanship",
+    category: "هنر ساخت",
 
     publishedAt: "2026-08-21",
 
-    readingTime: "5 min read",
+    readingTime: "۵ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -151,20 +151,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "building-a-timeless-wardrobe",
 
-    title: "Building a Wardrobe Beyond the Season",
+    title: "ساختن کمدی فراتر از فصل",
 
     excerpt:
-      "The pieces worth keeping are rarely the loudest. A study in versatility, longevity and considered design.",
+      "قطعاتی که ارزش نگه‌داشتن دارند، معمولاً پرهیاهوترین‌ها نیستند؛ نگاهی به انعطاف‌پذیری، ماندگاری و طراحی سنجیده.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Style Notes",
+    category: "یادداشت‌های استایل",
 
     publishedAt: "2026-08-18",
 
-    readingTime: "4 min read",
+    readingTime: "۴ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -172,20 +172,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "inside-the-atelier",
 
-    title: "Inside the Atelier: The Details You Never See",
+    title: "درون آتلیه؛ جزئیاتی که هرگز نمی‌بینید",
 
     excerpt:
-      "An intimate look at construction, finishing and the quiet decisions that define exceptional tailoring.",
+      "نگاهی نزدیک به ساخت، پرداخت نهایی و تصمیم‌های ظریفی که خیاطی ممتاز را شکل می‌دهند.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Inside The House",
+    category: "درون خانه",
 
     publishedAt: "2026-08-14",
 
-    readingTime: "8 min read",
+    readingTime: "۸ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -193,20 +193,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "the-art-of-quiet-luxury",
 
-    title: "Quiet Luxury Is Not About Being Invisible",
+    title: "تجمل آرام به معنای نامرئی بودن نیست",
 
     excerpt:
-      "True restraint is not absence. It is the confidence to know exactly what deserves attention.",
+      "سادگی واقعی به معنای حذف نیست؛ یعنی اطمینان از اینکه دقیقاً چه چیزی شایسته توجه است.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Perspectives",
+    category: "دیدگاه‌ها",
 
     publishedAt: "2026-08-09",
 
-    readingTime: "7 min read",
+    readingTime: "۷ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -214,20 +214,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "a-study-in-black",
 
-    title: "A Study in Black",
+    title: "مطالعه‌ای در سیاه",
 
     excerpt:
-      "Texture, shadow and proportion reveal how a single colour can carry an entire wardrobe.",
+      "بافت، سایه و تناسب نشان می‌دهند چگونه یک رنگ می‌تواند هویت یک کمد کامل را به دوش بکشد.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Inspiration",
+    category: "الهام",
 
     publishedAt: "2026-08-03",
 
-    readingTime: "3 min read",
+    readingTime: "۳ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -235,20 +235,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "care-for-cashmere",
 
-    title: "How to Care for Cashmere",
+    title: "چگونه از کشمیر مراقبت کنیم",
 
     excerpt:
-      "A practical guide to washing, storing and preserving one of the world's most refined natural fibres.",
+      "راهنمایی کاربردی برای شست‌وشو، نگهداری و حفظ یکی از ظریف‌ترین الیاف طبیعی جهان.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Care Guide",
+    category: "راهنمای نگهداری",
 
     publishedAt: "2026-07-29",
 
-    readingTime: "5 min read",
+    readingTime: "۵ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -256,20 +256,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "the-perfect-jacket",
 
-    title: "The Anatomy of the Perfect Jacket",
+    title: "آناتومی یک کت بی‌نقص",
 
     excerpt:
-      "Shoulder, lapel, balance and proportion — four details that transform tailoring from clothing into character.",
+      "سرشانه، یقه، تعادل و تناسب؛ چهار جزئیاتی که خیاطی را از یک پوشش ساده به شخصیت تبدیل می‌کنند.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Craftsmanship",
+    category: "هنر ساخت",
 
     publishedAt: "2026-07-23",
 
-    readingTime: "7 min read",
+    readingTime: "۷ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 
   {
@@ -277,20 +277,20 @@ export const fakeBlogPosts: BlogPost[] = [
 
     slug: "objects-with-character",
 
-    title: "Objects With Character",
+    title: "اشیایی با شخصیت",
 
     excerpt:
-      "Why the things we choose to live with should feel considered, tactile and increasingly personal over time.",
+      "چرا چیزهایی که برای زندگی انتخاب می‌کنیم باید سنجیده، ملموس و با گذر زمان شخصی‌تر شوند.",
 
         image: "/assets/images/banner.webp",
 
-    category: "Inspiration",
+    category: "الهام",
 
     publishedAt: "2026-07-18",
 
-    readingTime: "4 min read",
+    readingTime: "۴ دقیقه مطالعه",
 
-    author: "Najibzadeh Editorial",
+    author: "تحریریه نجیب‌زاده",
   },
 ];
 
@@ -303,17 +303,17 @@ type BlogSort = "latest" | "oldest" | "title";
 const SORT_OPTIONS: SelectOption[] = [
   {
     value: "latest",
-    label: "Latest",
+    label: "جدیدترین",
   },
 
   {
     value: "oldest",
-    label: "Oldest",
+    label: "قدیمی‌ترین",
   },
 
   {
     value: "title",
-    label: "A — Z",
+    label: "الفبا",
   },
 ];
 
@@ -329,12 +329,12 @@ export function BlogListingPage({
   categories,
 
   newsletter = {
-    eyebrow: "The Journal",
+    eyebrow: "ژورنال نجیب‌زاده",
 
-    title: "Stay close to the House.",
+    title: "نزدیک به خانه نجیب‌زاده بمانید.",
 
     description:
-      "Editorial stories, new collections and considered perspectives delivered occasionally.",
+      "روایت‌های تحریریه، کالکشن‌های تازه و نگاه‌های سنجیده را گاه‌به‌گاه دریافت کنید.",
   },
 
   loading = false,
@@ -345,7 +345,7 @@ export function BlogListingPage({
 }: BlogListingPageProps) {
   const [search, setSearch] = useState("");
 
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState("همه");
 
   const [sort, setSort] = useState<BlogSort>("latest");
 
@@ -382,7 +382,7 @@ export function BlogListingPage({
     const source =
       categories ?? Array.from(new Set(posts.map((post) => post.category)));
 
-    return ["All", ...source.filter((category) => category !== "All")];
+    return ["همه", ...source.filter((category) => category !== "همه" && category !== "All")];
   }, [categories, posts]);
 
   /* ------------------------------------------------------------------------
@@ -407,7 +407,7 @@ export function BlogListingPage({
        */
       if (
         !search &&
-        activeCategory === "All" &&
+        activeCategory === "همه" &&
         featuredPost &&
         post.id === featuredPost.id
       ) {
@@ -415,7 +415,7 @@ export function BlogListingPage({
       }
 
       const categoryMatch =
-        activeCategory === "All" || post.category === activeCategory;
+        activeCategory === "همه" || post.category === activeCategory;
 
       const searchMatch =
         !query ||
@@ -481,12 +481,13 @@ export function BlogListingPage({
   ------------------------------------------------------------------------- */
 
   const showFeatured = Boolean(
-    featuredPost && !search && activeCategory === "All" && safePage === 1,
+    featuredPost && !search && activeCategory === "همه" && safePage === 1,
   );
 
   return (
     <main
       style={themeVars}
+      dir="rtl"
       className={`
         w-full
         overflow-hidden
@@ -542,32 +543,34 @@ export function BlogListingPage({
         <div
           className="
             grid
-
+            justify-items-center
             gap-8
 
             border-b
             border-[var(--blog-border)]
 
             pb-10
+            text-center
 
-            lg:grid-cols-[minmax(0,1fr)_420px]
-            lg:items-end
-            lg:gap-16
+            lg:gap-10
             lg:pb-12
           "
         >
           <div
             className="
+              mx-auto
               max-w-[780px]
+              text-center
             "
           >
-            <Eyebrow>The Journal</Eyebrow>
+            <Eyebrow>ژورنال نجیب‌زاده</Eyebrow>
 
             <h2
               className="
+                mx-auto
                 mt-5
 
-                font-serif
+                 
 
                 text-[clamp(3rem,10vw,5.7rem)]
                 font-normal
@@ -578,13 +581,14 @@ export function BlogListingPage({
                 text-black
               "
             >
-              Ideas worth
+              ایده‌هایی که
               <br />
-              returning to.
+              ارزش بازگشت دارند.
             </h2>
 
             <p
               className="
+                mx-auto
                 mt-6
 
                 max-w-[570px]
@@ -598,8 +602,7 @@ export function BlogListingPage({
                 sm:text-[12px]
               "
             >
-              Perspectives on clothing, craftsmanship, material and the quieter
-              details that shape the Najibzadeh world.
+              نگاه‌هایی به پوشاک، هنر ساخت، متریال و جزئیات آرامی که جهان نجیب‌زاده را شکل می‌دهند.
             </p>
           </div>
 
@@ -607,15 +610,15 @@ export function BlogListingPage({
               SEARCH
           ============================================================ */}
 
-          <div>
+          <div className="mx-auto w-full max-w-[420px]">
             <CustomInput
               type="search"
               value={search}
               onChange={(value) => setSearch(value)}
-              placeholder="Search the journal"
+              placeholder="جست‌وجو در ژورنال"
               clearable
               leadingIcon={<SearchIcon />}
-              aria-label="Search journal"
+              aria-label="جست‌وجو در ژورنال"
             />
           </div>
         </div>
@@ -635,14 +638,14 @@ export function BlogListingPage({
           <div
             className="
               flex
-
               flex-col
-
+              items-center
+              justify-center
               gap-5
 
               lg:flex-row
               lg:items-center
-              lg:justify-between
+              lg:justify-center
             "
           >
             {/* =========================================================
@@ -652,6 +655,7 @@ export function BlogListingPage({
             <div
               className="
                 -mx-5
+                w-full
 
                 overflow-x-auto
 
@@ -672,11 +676,11 @@ export function BlogListingPage({
                 className="
                   group/categories
 
+                  mx-auto
                   flex
-
                   w-max
-
                   items-center
+                  justify-center
                 "
               >
                 {availableCategories.map((category) => {
@@ -722,7 +726,7 @@ export function BlogListingPage({
                           }
                         `}
                     >
-                      {category}
+                      {blogCategoryLabel(category)}
 
                       {active && (
                         <span
@@ -750,6 +754,7 @@ export function BlogListingPage({
 
             <div
               className="
+                mx-auto
                 w-full
 
                 lg:w-[190px]
@@ -760,7 +765,7 @@ export function BlogListingPage({
                 value={sort}
                 options={SORT_OPTIONS}
                 size="sm"
-                ariaLabel="Sort articles"
+                ariaLabel="مرتب‌سازی مقاله‌ها"
                 onChange={(value) => {
                   if (typeof value === "string") {
                     setSort(value as BlogSort);
@@ -778,11 +783,13 @@ export function BlogListingPage({
         <div
           className="
             flex
-
+            flex-col
             items-center
-            justify-between
+            justify-center
+            gap-2
 
             py-6
+            text-center
           "
         >
           <p
@@ -797,9 +804,9 @@ export function BlogListingPage({
             "
           >
             {loading
-              ? "Loading journal"
-              : `${filteredPosts.length} ${
-                  filteredPosts.length === 1 ? "Article" : "Articles"
+              ? "در حال بارگذاری ژورنال"
+              : `${new Intl.NumberFormat("fa-IR").format(filteredPosts.length)} ${
+                  filteredPosts.length === 1 ? "مقاله" : "مقاله"
                 }`}
           </p>
 
@@ -819,7 +826,7 @@ export function BlogListingPage({
                 sm:block
               "
             >
-              Results for &nbsp;
+              نتایج برای &nbsp;
               <span
                 className="
                   text-black
@@ -863,7 +870,7 @@ export function BlogListingPage({
             onReset={() => {
               setSearch("");
 
-              setActiveCategory("All");
+              setActiveCategory("همه");
             }}
           />
         )}
@@ -988,6 +995,7 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
           max-w-[1680px]
 
           items-end
+          justify-center
 
           px-5
 
@@ -1005,7 +1013,10 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
       >
         <div
           className="
+            mx-auto
+            w-full
             max-w-[760px]
+            text-center
           "
         >
           {hero.eyebrow && (
@@ -1015,6 +1026,7 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
 
                 flex
                 items-center
+                justify-center
 
                 gap-3
 
@@ -1029,13 +1041,20 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
                 sm:text-[8px]
               "
             >
+              <span
+                className="
+                  h-px
+                  w-7
+                  bg-[var(--blog-copper)]
+                "
+              />
+
               <span>{hero.eyebrow}</span>
 
               <span
                 className="
                   h-px
                   w-7
-
                   bg-[var(--blog-copper)]
                 "
               />
@@ -1044,9 +1063,10 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
 
           <h1
             className="
+              mx-auto
               max-w-[740px]
 
-              font-serif
+               
 
               text-[clamp(3.8rem,14vw,6rem)]
               font-normal
@@ -1065,6 +1085,7 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
           {hero.description && (
             <p
               className="
+                mx-auto
                 mt-7
 
                 max-w-[520px]
@@ -1087,6 +1108,7 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
           {hero.action && (
             <div
               className="
+                mx-auto
                 mt-8
 
                 hidden
@@ -1251,8 +1273,9 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
             className="
               absolute
 
-              left-5
+              left-1/2
               top-5
+              -translate-x-1/2
 
               bg-black
 
@@ -1268,7 +1291,7 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
               text-white
             "
           >
-            Featured Story
+            داستان ویژه
           </span>
         </Link>
 
@@ -1277,11 +1300,12 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
         <div
           className="
             flex
-
             flex-col
+            items-center
             justify-center
 
             bg-[var(--blog-bg)]
+            text-center
 
             px-6
             py-10
@@ -1292,16 +1316,17 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
             lg:px-12
           "
         >
-          <Eyebrow>{post.category}</Eyebrow>
+          <Eyebrow>{blogCategoryLabel(post.category)}</Eyebrow>
 
           <Link href={`/blog/${post.slug}`}>
             <h2
               className="
+                mx-auto
                 mt-6
 
                 max-w-[560px]
 
-                font-serif
+                 
 
                 text-[clamp(2.8rem,9vw,5rem)]
 
@@ -1321,6 +1346,7 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
 
           <p
             className="
+              mx-auto
               mt-6
 
               max-w-[480px]
@@ -1341,8 +1367,10 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
 
           <div
             className="
+              mx-auto
               mt-8
 
+              w-full
               max-w-[210px]
             "
           >
@@ -1354,7 +1382,7 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
               iconPosition="right"
               fullWidth
             >
-              Read Story
+              مطالعه مقاله
             </Button>
           </div>
         </div>
@@ -1388,6 +1416,7 @@ function BlogCard({
         group
 
         min-w-0
+        text-center
 
         border-black/10
 
@@ -1467,7 +1496,8 @@ function BlogCard({
             absolute
 
             bottom-4
-            right-4
+            left-1/2
+            -translate-x-1/2
 
             grid
             size-8
@@ -1482,7 +1512,7 @@ function BlogCard({
             text-black
           "
         >
-          {String(index + 1).padStart(2, "0")}
+          {new Intl.NumberFormat("fa-IR", { minimumIntegerDigits: 2, useGrouping: false }).format(index + 1)}
         </span>
       </Link>
 
@@ -1498,7 +1528,7 @@ function BlogCard({
             flex
 
             items-center
-            justify-between
+            justify-center
 
             gap-4
           "
@@ -1514,7 +1544,7 @@ function BlogCard({
               text-[var(--blog-copper)]
             "
           >
-            {post.category}
+            {blogCategoryLabel(post.category)}
           </p>
 
           {post.readingTime && (
@@ -1529,7 +1559,7 @@ function BlogCard({
                 text-black/30
               "
             >
-              {post.readingTime}
+              {formatReadingTime(post.readingTime)}
             </span>
           )}
         </div>
@@ -1537,11 +1567,12 @@ function BlogCard({
         <Link href={`/blog/${post.slug}`}>
           <h3
             className="
+              mx-auto
               mt-4
 
               max-w-[480px]
 
-              font-serif
+               
 
               text-[26px]
 
@@ -1564,6 +1595,7 @@ function BlogCard({
 
         <p
           className="
+            mx-auto
             mt-4
 
             line-clamp-3
@@ -1587,9 +1619,9 @@ function BlogCard({
             flex
 
             items-center
-            justify-between
+            justify-center
 
-            gap-4
+            gap-6
 
             border-t
             border-black/10
@@ -1614,7 +1646,7 @@ function BlogCard({
 
           <Link
             href={`/blog/${post.slug}`}
-            aria-label={`Read ${post.title}`}
+            aria-label={`مطالعه ${post.title}`}
             className="
               flex
 
@@ -1635,8 +1667,8 @@ function BlogCard({
               hover:text-black
             "
           >
-            Read
-            <span>→</span>
+            مطالعه
+            <span>←</span>
           </Link>
         </div>
       </div>
@@ -1664,6 +1696,7 @@ function ArticleMeta({
 
         flex-wrap
         items-center
+        justify-center
 
         gap-x-4
         gap-y-2
@@ -1691,7 +1724,7 @@ function ArticleMeta({
             "
           />
 
-          <span>{post.readingTime}</span>
+          <span>{formatReadingTime(post.readingTime)}</span>
         </>
       )}
 
@@ -1705,7 +1738,7 @@ function ArticleMeta({
             "
           />
 
-          <span>{post.author}</span>
+          <span>{formatAuthor(post.author)}</span>
         </>
       )}
     </div>
@@ -1733,14 +1766,15 @@ function Pagination({
 
   return (
     <nav
-      aria-label="Blog pagination"
+      aria-label="صفحه‌بندی وبلاگ"
       className="
         mt-16
 
         flex
 
         items-center
-        justify-between
+        justify-center
+        gap-5
 
         border-t
         border-[var(--blog-border)]
@@ -1775,7 +1809,7 @@ function Pagination({
           disabled:opacity-20
         "
       >
-        ← Previous
+        قبلی
       </button>
 
       {/* NUMBERS */}
@@ -1842,7 +1876,7 @@ function Pagination({
                   }
                 `}
             >
-              {page}
+              {new Intl.NumberFormat("fa-IR").format(page)}
             </button>
           );
         })}
@@ -1873,7 +1907,7 @@ function Pagination({
           disabled:opacity-20
         "
       >
-        Next →
+        بعدی
       </button>
     </nav>
   );
@@ -1917,8 +1951,9 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
           mx-auto
 
           grid
+          justify-items-center
 
-          max-w-[1680px]
+          max-w-[900px]
 
           gap-10
 
@@ -1929,8 +1964,6 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
           sm:px-8
           sm:py-18
 
-          lg:grid-cols-[minmax(0,1fr)_480px]
-          lg:items-end
           lg:px-10
           lg:py-20
 
@@ -1941,7 +1974,9 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
 
         <div
           className="
+            mx-auto
             max-w-[760px]
+            text-center
           "
         >
           {data.eyebrow && (
@@ -1949,6 +1984,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
               className="
                 flex
                 items-center
+                justify-center
 
                 gap-3
 
@@ -1961,13 +1997,20 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                 text-[var(--blog-copper)]
               "
             >
+              <span
+                className="
+                  h-px
+                  w-6
+                  bg-[var(--blog-copper)]
+                "
+              />
+
               {data.eyebrow}
 
               <span
                 className="
                   h-px
                   w-6
-
                   bg-[var(--blog-copper)]
                 "
               />
@@ -1978,7 +2021,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
             className="
               mt-5
 
-              font-serif
+               
 
               text-[clamp(3rem,10vw,5.8rem)]
 
@@ -1992,6 +2035,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
           {data.description && (
             <p
               className="
+                mx-auto
                 mt-5
 
                 max-w-[530px]
@@ -2012,7 +2056,10 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
 
         {/* FORM */}
 
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          className="mx-auto w-full max-w-[480px] text-center"
+        >
           {submitted ? (
             <div
               className="
@@ -2024,12 +2071,12 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
             >
               <p
                 className="
-                  font-serif
+                   
 
                   text-[24px]
                 "
               >
-                You're on the list.
+                عضویت شما ثبت شد.
               </p>
 
               <p
@@ -2041,7 +2088,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                   text-white/40
                 "
               >
-                Thank you for joining the Najibzadeh Journal.
+                از همراهی شما با ژورنال نجیب‌زاده سپاسگزاریم.
               </p>
             </div>
           ) : (
@@ -2055,7 +2102,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                 tone="dark"
                 value={email}
                 onChange={(value) => setEmail(value)}
-                placeholder="Email address"
+                placeholder="آدرس ایمیل"
                 autoComplete="email"
                 required
               />
@@ -2068,7 +2115,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                 iconPosition="right"
                 fullWidth
               >
-                Subscribe
+                عضویت
               </Button>
 
               <p
@@ -2080,8 +2127,7 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                   text-white/25
                 "
               >
-                By subscribing, you agree to receive occasional editorial
-                communications from Najibzadeh.
+                با عضویت، با دریافت گاه‌به‌گاه مطالب تحریریه نجیب‌زاده موافقت می‌کنید.
               </p>
             </div>
           )}
@@ -2122,14 +2168,14 @@ function EmptyState({ onReset }: { onReset: () => void }) {
         className="
           mt-6
 
-          font-serif
+           
 
           text-[36px]
 
           tracking-[-0.045em]
         "
       >
-        Nothing found.
+        نتیجه‌ای پیدا نشد.
       </p>
 
       <p
@@ -2145,7 +2191,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
           text-[var(--blog-muted)]
         "
       >
-        Try another search or explore all stories from the journal.
+        عبارت دیگری جست‌وجو کنید یا همه داستان‌های ژورنال را ببینید.
       </p>
 
       <div
@@ -2163,7 +2209,7 @@ function EmptyState({ onReset }: { onReset: () => void }) {
           onClick={onReset}
           fullWidth
         >
-          Reset Filters
+          پاک‌کردن فیلترها
         </Button>
       </div>
     </div>
@@ -2282,29 +2328,21 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
     <div
       className="
         flex
-
         items-center
+        justify-center
         gap-3
 
+        text-center
         text-[7px]
         font-semibold
-
-        uppercase
-        tracking-[0.22em]
+        tracking-[0.12em]
 
         text-[var(--blog-copper)]
       "
     >
-      <span
-        className="
-          h-px
-          w-6
-
-          bg-[var(--blog-copper)]
-        "
-      />
-
+      <span className="h-px w-6 bg-[var(--blog-copper)]" />
       <span>{children}</span>
+      <span className="h-px w-6 bg-[var(--blog-copper)]" />
     </div>
   );
 }
@@ -2412,6 +2450,40 @@ function createPageRange(
 }
 
 /* ==========================================================================
+   LOCALIZATION HELPERS
+============================================================================ */
+
+function blogCategoryLabel(category: string) {
+  const labels: Record<string, string> = {
+    "All": "همه",
+    "Style Notes": "یادداشت‌های استایل",
+    "Craftsmanship": "هنر ساخت",
+    "Inside The House": "درون خانه",
+    "Perspectives": "دیدگاه‌ها",
+    "Inspiration": "الهام",
+    "Care Guide": "راهنمای نگهداری",
+  };
+
+  return labels[category] ?? category;
+}
+
+function formatReadingTime(value?: string) {
+  if (!value) return "";
+
+  const minutes = value.match(/(\d+)\s*min/i)?.[1];
+
+  if (!minutes) return value;
+
+  return `${new Intl.NumberFormat("fa-IR").format(Number(minutes))} دقیقه مطالعه`;
+}
+
+function formatAuthor(value?: string) {
+  if (!value) return "";
+
+  return value === "Najibzadeh Editorial" ? "تحریریه نجیب‌زاده" : value;
+}
+
+/* ==========================================================================
    DATE
 ============================================================================ */
 
@@ -2422,7 +2494,7 @@ function formatDate(date: string) {
     return date;
   }
 
-  return new Intl.DateTimeFormat("en-GB", {
+  return new Intl.DateTimeFormat("fa-IR", {
     day: "2-digit",
 
     month: "short",

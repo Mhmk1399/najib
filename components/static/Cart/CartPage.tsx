@@ -451,7 +451,7 @@ export function CartPage() {
             <div>
               <h1
                 className="
-                  font-serif
+                   
 
                   text-[clamp(3.1rem,10vw,5.8rem)]
                   font-normal
@@ -766,7 +766,7 @@ function CartRow({
             className="
               max-w-[340px]
 
-              font-serif
+               
 
               text-[19px]
               font-normal
@@ -814,7 +814,7 @@ function CartRow({
             className="
               mt-4
 
-              font-serif
+               
 
               text-[16px]
 
@@ -937,7 +937,7 @@ function CartRow({
       >
         <p
           className="
-            font-serif
+             
 
             text-[18px]
 
@@ -1217,7 +1217,7 @@ function OrderSummary({
 
           <h2
             className="
-              font-serif
+               
 
               text-[27px]
               font-normal
@@ -1274,7 +1274,7 @@ function OrderSummary({
         >
           <span
             className="
-              font-serif
+               
 
               text-[22px]
 
@@ -1309,7 +1309,7 @@ function OrderSummary({
 
             <span
               className="
-                font-serif
+                 
 
                 text-[32px]
 
@@ -1587,7 +1587,7 @@ function GiftNote({
 
           <span
             className="
-              font-serif
+               
 
               text-[16px]
 
@@ -1821,7 +1821,7 @@ function Recommendations({ products }: { products: Recommendation[] }) {
 
           <h2
             className="
-              font-serif
+               
 
               text-[28px]
 
@@ -1954,7 +1954,7 @@ function RecommendationCard({ product }: { product: Recommendation }) {
       >
         <p
           className="
-            font-serif
+             
 
             text-[15px]
 
@@ -2134,7 +2134,7 @@ function EmptyCart({ themeVars }: { themeVars: CSSProperties }) {
             className="
               mt-4
 
-              font-serif
+               
 
               text-[clamp(3rem,11vw,5.4rem)]
 

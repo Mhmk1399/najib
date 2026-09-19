@@ -103,7 +103,7 @@ function CatalogState({
         <p className="text-[8px] font-semibold uppercase tracking-[0.22em] text-black/40">
           Najibzadeh Catalog
         </p>
-        <h1 className="mt-4 font-serif text-[clamp(2.8rem,12vw,4.8rem)] leading-[0.92] tracking-[-0.05em]">
+        <h1 className="mt-4   text-[clamp(2.8rem,12vw,4.8rem)] leading-[0.92] tracking-[-0.05em]">
           {title}
         </h1>
         <p className="mx-auto mt-5 max-w-[360px] text-[11px] leading-7 text-black/50">

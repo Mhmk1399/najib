@@ -229,7 +229,7 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
             className="
               whitespace-pre-line
 
-              font-serif
+               
 
               text-[clamp(3.6rem,14vw,5.5rem)]
               font-normal
@@ -364,7 +364,7 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
             className="
               max-w-[720px]
 
-              font-serif
+               
 
               text-[clamp(2.5rem,9vw,4.4rem)]
 
@@ -541,7 +541,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
             "
           >
             <div>
-              <p className="font-serif text-[42px] tracking-[-0.05em]">
+              <p className="  text-[42px] tracking-[-0.05em]">
                 هنوز محصولی برای این زیردسته ثبت نشده است.
               </p>
               <p className="mt-4 max-w-[420px] text-[10px] leading-[1.8] text-black/45">
@@ -712,7 +712,7 @@ function ProductCard({
               className="
                 max-w-[310px]
 
-                font-serif
+                 
 
                 text-[clamp(2.15rem,7vw,3.35rem)]
 
@@ -932,7 +932,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
               flex
               flex-col
 
-              font-serif
+               
 
               text-[clamp(3.3rem,12vw,5rem)]
 
@@ -1058,7 +1058,7 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
             className="
               max-w-[540px]
 
-              font-serif
+               
 
               text-[clamp(2.8rem,9vw,4.8rem)]
 

@@ -290,7 +290,7 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
             className="
               whitespace-pre-line
 
-              font-serif
+               
 
               text-[clamp(3.6rem,14vw,5.5rem)]
               font-normal
@@ -473,7 +473,7 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
             className="
               max-w-[720px]
 
-              font-serif
+               
 
               text-[clamp(2.5rem,9vw,4.4rem)]
 
@@ -804,7 +804,7 @@ function CategoryCard({
         <div>
           <h3
             className="
-              font-serif
+               
 
               text-[clamp(2.3rem,8vw,4rem)]
 
@@ -1000,7 +1000,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
               flex
               flex-col
 
-              font-serif
+               
 
               text-[clamp(3.3rem,12vw,5rem)]
 
@@ -1149,7 +1149,7 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
             className="
               max-w-[540px]
 
-              font-serif
+               
 
               text-[clamp(2.8rem,9vw,4.8rem)]
 

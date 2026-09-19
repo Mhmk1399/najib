@@ -378,7 +378,10 @@ function mapStorefrontProduct({
   };
 }
 
-function getColorMeta(colorId: string, colorMap?: Map<string, ShopColorOption>) {
+function getColorMeta(
+  colorId: string,
+  colorMap?: Map<string, ShopColorOption>,
+) {
   return (
     colorMap?.get(colorId) ??
     COLOR_OPTIONS.find((c) => c.id === colorId) ?? {
@@ -673,20 +676,22 @@ export function ShopPage() {
   ]);
 
   const colorFilterOptions = useMemo<ShopColorOption[]>(() => {
-    const dynamic = productsQuery.data?.colors?.map((color) => ({
-      id: idOf(color._id),
-      label: fa(color.name, color.slug),
-      value: color.hex || "#111111",
-    })) ?? [];
+    const dynamic =
+      productsQuery.data?.colors?.map((color) => ({
+        id: idOf(color._id),
+        label: fa(color.name, color.slug),
+        value: color.hex || "#111111",
+      })) ?? [];
 
     return dynamic.length ? dynamic : COLOR_OPTIONS;
   }, [productsQuery.data?.colors]);
 
   const sizeFilterOptions = useMemo<ShopSizeOption[]>(() => {
-    const dynamic = productsQuery.data?.sizes?.map((size) => ({
-      id: idOf(size._id),
-      label: fa(size.name, size.code),
-    })) ?? [];
+    const dynamic =
+      productsQuery.data?.sizes?.map((size) => ({
+        id: idOf(size._id),
+        label: fa(size.name, size.code),
+      })) ?? [];
 
     return dynamic.length
       ? dynamic
@@ -968,7 +973,6 @@ export function ShopPage() {
                     مرتب‌سازی
                   </span>
                   <DesktopSortControl value={sort} onChange={setSort} />
-                
                 </div>
               </div>
             </div>
@@ -1122,23 +1126,23 @@ function ShopHero({
 
       <div className="mx-auto flex h-full max-w-[1920px] items-end justify-between px-5 pb-7 pt-[94px] sm:px-7 sm:pb-8 lg:px-10 lg:pb-10 lg:pt-[108px] xl:px-12">
         <div className="text-right">
-          <h1 className="font-serif text-[44px] font-normal leading-[0.9] tracking-[-0.045em] sm:text-[52px] lg:text-[62px]">
-            Shop
+          <h1 className="  text-[44px] font-normal leading-[0.9] tracking-[-0.045em] sm:text-[52px] lg:text-[62px]">
+             فروشگاه 
           </h1>
-          <p className="mt-2 font-serif text-[15px] italic leading-[1.2] text-white/80 sm:text-[17px] lg:text-[19px]">
-            Refined selections for a considered life.
+          <p className="mt-2   text-[15px] italic leading-[1.2] text-white/80 sm:text-[17px] lg:text-[19px]">
+             پرفروش‌ترین محصولات برند نجیب‌زاده
           </p>
         </div>
 
         <div className="mb-1 hidden border-r border-white/20 pr-5 text-right lg:block">
           <span className="block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-            Quality
+             کیفیت
           </span>
           <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-            Craftsmanship
+            دست دوز
           </span>
           <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-            Character
+            شخصیت
           </span>
         </div>
       </div>
@@ -1915,7 +1919,7 @@ function DesktopInterleavedGrid({ content }: { content: InterleavedItem[] }) {
                   key={product.id}
                   product={product}
                   preload={index < 4}
-                  panelSide={cardIndex % 2 === 0 ? "right" : "left"}
+                  panelSide={cardIndex % 2 === 0 ? "left" : "right"}
                 />
               ))}
             </div>
@@ -2455,7 +2459,7 @@ function ProductCard({
         >
           {product.title}
         </h2>
-        <div
+        {/* <div
           className={`mt-1.5 flex flex-col gap-1 ${
             panelOnLeft ? "items-end" : "items-start"
           }`}
@@ -2472,7 +2476,7 @@ function ProductCard({
               compact ? "mt-1 h-px w-4" : "mt-1.5 h-[1.5px] w-5"
             }`}
           />
-        </div>
+        </div> */}
       </div>
 
       {/* ══════ OPTICAL ATELIER GLASS PANEL ══════ */}
@@ -2844,6 +2848,7 @@ function ProductCard({
             </div>
 
             {/* CTA */}
+            {/* CTA */}
             <div
               className={`flex-none border-t border-white/10 ${
                 compact ? "p-3" : "p-3"
@@ -2851,12 +2856,14 @@ function ProductCard({
             >
               <Button
                 type="button"
-                variant="cream"
+                variant="copper"
                 size="sm"
                 fullWidth
                 loading={cartState === "adding"}
                 disabled={cartState !== "idle"}
                 onClick={addToBag}
+                align="center"
+                aria-label="add to cart"
               >
                 {cartState === "added" ? (
                   <span className="inline-flex items-center gap-2">
@@ -2864,16 +2871,11 @@ function ProductCard({
                     اضافه شد
                   </span>
                 ) : (
-                  "Add to Bag"
+                  <span>{money(product.price, product.currency)} خرید</span>
                 )}
               </Button>
-              <span className="sr-only" aria-live="polite">
-                {cartState === "adding"
-                  ? "Adding item to bag"
-                  : cartState === "added"
-                    ? "Item added to bag"
-                    : ""}
-              </span>
+
+              {/* بقیه کد بدون تغییر */}
             </div>
           </div>
         </div>
@@ -3338,8 +3340,9 @@ function SizeSelector({
   onChange: (v: string[]) => void;
   dark?: boolean;
 }) {
-  const items =
-    options?.length ? options : SIZE_OPTIONS.map((size) => ({ id: size, label: size }));
+  const items = options?.length
+    ? options
+    : SIZE_OPTIONS.map((size) => ({ id: size, label: size }));
 
   function toggle(v: string) {
     onChange(
@@ -3574,7 +3577,7 @@ function ShopProductsState({
       <div className="mb-5 grid size-14 place-items-center border border-black/8">
         <SearchIcon className="size-5 text-black/28" />
       </div>
-      <p className="font-serif text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
+      <p className="  text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
         {title}
       </p>
       <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
@@ -3590,7 +3593,7 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
       <div className="mb-5 grid size-14 place-items-center border border-black/8">
         <SearchIcon className="size-5 text-black/28" />
       </div>
-      <p className="font-serif text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
+      <p className="  text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
         محصولی پیدا نشد
       </p>
       <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
@@ -3651,7 +3654,7 @@ function InterstitialBanner({ banner }: { banner: ShopBanner }) {
               {banner.subtitle}
             </p>
             <h3
-              className={`mt-3 font-serif text-[38px] font-normal leading-[1.04] tracking-[-0.025em] xl:text-[46px] ${
+              className={`mt-3   text-[38px] font-normal leading-[1.04] tracking-[-0.025em] xl:text-[46px] ${
                 isDark ? "text-white" : "text-black"
               }`}
             >
@@ -3718,7 +3721,7 @@ function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
               {banner.subtitle}
             </p>
             <h3
-              className={`mt-2 font-serif text-[30px] font-normal leading-[1.06] tracking-[-0.02em] sm:text-[36px] ${
+              className={`mt-2   text-[30px] font-normal leading-[1.06] tracking-[-0.02em] sm:text-[36px] ${
                 isDark ? "text-white" : "text-black"
               }`}
             >

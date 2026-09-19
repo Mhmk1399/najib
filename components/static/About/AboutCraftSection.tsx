@@ -8,11 +8,8 @@ import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 type CraftImage = {
   id: string;
-
   src: string;
-
   alt?: string;
-
   position?: string;
 };
 
@@ -20,11 +17,8 @@ type AboutCraftSectionProps = {
   images: CraftImage[];
 
   eyebrow?: string;
-
   title?: string;
-
   description?: string;
-
   secondaryDescription?: string;
 
   className?: string;
@@ -33,25 +27,22 @@ type AboutCraftSectionProps = {
 const CRAFT_VALUES = [
   {
     id: "materials",
-    title: "Exceptional Materials",
+    title: "بهترین متریال",
     icon: "material",
   },
-
   {
     id: "precision",
-    title: "Precision Tailoring",
+    title: "دوخت دقیق",
     icon: "precision",
   },
-
   {
     id: "finishing",
-    title: "Refined Finishing",
+    title: "پرداخت ظریف",
     icon: "finishing",
   },
-
   {
     id: "lasting",
-    title: "Made to Endure",
+    title: "ساخته‌شده برای ماندگاری",
     icon: "lasting",
   },
 ] as const;
@@ -59,13 +50,13 @@ const CRAFT_VALUES = [
 export function AboutCraftSection({
   images,
 
-  eyebrow = "Our Craft",
+  eyebrow = "هنر ما",
 
-  title = "Where craftsmanship meets modern excellence.",
+  title = "جایی که هنر دست با ظرافت مدرن پیوند می‌خورد.",
 
-  description = "Every piece begins with intention. From the first material selected to the final stitch, each decision is shaped by discipline, proportion and respect for the craft.",
+  description = "هر قطعه با یک هدف آغاز می‌شود. از انتخاب نخستین متریال تا آخرین بخیه، هر تصمیم با دقت، تناسب و احترام به هنر خیاطی شکل می‌گیرد.",
 
-  secondaryDescription = "The result is clothing and objects made to be lived in, remembered and valued beyond the moment.",
+  secondaryDescription = "نتیجه، پوشاک و اشیایی است که برای زندگی‌کردن، به‌یادماندن و ارزشمند ماندن فراتر از یک لحظه ساخته شده‌اند.",
 
   className = "",
 }: AboutCraftSectionProps) {
@@ -75,13 +66,9 @@ export function AboutCraftSection({
 
   const themeVars = {
     "--craft-bg": lightTokens.surfaceBrand,
-
     "--craft-text": brandColors.black.hex,
-
     "--craft-muted": lightTokens.textMuted,
-
     "--craft-border": lightTokens.border,
-
     "--craft-copper": brandColors.copper.hex,
   } as CSSProperties;
 
@@ -89,37 +76,30 @@ export function AboutCraftSection({
     <section
       ref={ref}
       style={themeVars}
+      dir="rtl"
       className={`
         w-full
-
         bg-[var(--craft-bg)]
         text-[var(--craft-text)]
-
         ${className}
       `}
     >
       <div
         className="
           mx-auto
-
           grid
           w-full
           max-w-[1600px]
-
           gap-12
-
           px-6
-
           py-16
 
           sm:px-8
           sm:py-20
 
           lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]
-
           lg:items-center
           lg:gap-16
-
           lg:px-12
           lg:py-28
 
@@ -134,23 +114,17 @@ export function AboutCraftSection({
         <div
           className={`
             grid
-
             h-[500px]
-
             grid-cols-3
-
             overflow-hidden
-
             border
             border-[var(--craft-border)]
 
             transition-[opacity,transform]
             duration-[900ms]
-
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             sm:h-[620px]
-
             lg:h-[680px]
 
             ${
@@ -164,15 +138,12 @@ export function AboutCraftSection({
             <div
               key={image.id}
               className="
-                  relative
-
-                  overflow-hidden
-
-                  border-r
-                  border-black/10
-
-                  last:border-r-0
-                "
+                relative
+                overflow-hidden
+                border-l
+                border-black/10
+                last:border-l-0
+              "
             >
               <Image
                 src={image.src}
@@ -185,51 +156,45 @@ export function AboutCraftSection({
                   objectPosition: image.position ?? "center",
                 }}
                 className="
-                    object-cover
-
-                    scale-[1.01]
-
-                    transition-transform
-                    duration-[1200ms]
-
-                    ease-[cubic-bezier(0.22,1,0.36,1)]
-
-                    hover:scale-[1.04]
-                  "
+                  scale-[1.01]
+                  object-cover
+                  transition-transform
+                  duration-[1200ms]
+                  ease-[cubic-bezier(0.22,1,0.36,1)]
+                  hover:scale-[1.04]
+                "
               />
 
               <div
                 aria-hidden="true"
                 className="
-                    pointer-events-none
-
-                    absolute
-                    inset-0
-
-                    bg-gradient-to-t
-
-                    from-black/22
-                    via-transparent
-                    to-black/[0.04]
-                  "
+                  pointer-events-none
+                  absolute
+                  inset-0
+                  bg-gradient-to-t
+                  from-black/22
+                  via-transparent
+                  to-black/[0.04]
+                "
               />
 
               <span
                 className="
-                    absolute
-
-                    bottom-4
-                    left-4
-
-                    text-[6px]
-                    font-medium
-
-                    tracking-[0.2em]
-
-                    text-white/55
-                  "
+                  absolute
+                  bottom-4
+                  left-1/2
+                  -translate-x-1/2
+                  text-center
+                  text-[6px]
+                  font-medium
+                  tracking-[0.12em]
+                  text-white/55
+                "
               >
-                0{index + 1}
+                {new Intl.NumberFormat("fa-IR", {
+                  minimumIntegerDigits: 2,
+                  useGrouping: false,
+                }).format(index + 1)}
               </span>
             </div>
           ))}
@@ -241,9 +206,10 @@ export function AboutCraftSection({
 
         <div
           className={`
+            text-center
+
             transition-[opacity,transform]
             duration-[900ms]
-
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             ${
@@ -258,29 +224,31 @@ export function AboutCraftSection({
           <div
             className="
               mb-5
-
               flex
               items-center
+              justify-center
               gap-3
-
               text-[7px]
               font-semibold
-
-              uppercase
-              tracking-[0.22em]
-
+              tracking-[0.12em]
               text-[var(--craft-copper)]
-
               sm:text-[8px]
             "
           >
+            <span
+              className="
+                h-px
+                w-6
+                bg-[var(--craft-copper)]
+              "
+            />
+
             <span>{eyebrow}</span>
 
             <span
               className="
                 h-px
                 w-6
-
                 bg-[var(--craft-copper)]
               "
             />
@@ -290,37 +258,34 @@ export function AboutCraftSection({
 
           <h2
             className="
+              mx-auto
               max-w-[620px]
-
-              font-serif
-
+              text-center
+               
               text-[clamp(2.8rem,10vw,4.5rem)]
               font-normal
-
-              leading-[0.96]
-              tracking-[-0.05em]
-
+              leading-[1.05]
+              tracking-[-0.04em]
               text-[var(--craft-text)]
 
               sm:text-[clamp(3.4rem,7vw,5rem)]
-
               lg:text-[clamp(3.8rem,4.5vw,5.5rem)]
             "
           >
             {title}
           </h2>
 
+          {/* DESCRIPTION */}
+
           <p
             className="
+              mx-auto
               mt-7
-
               max-w-[510px]
-
+              text-center
               text-[10px]
-              leading-[1.8]
-
+              leading-[2]
               text-[var(--craft-muted)]
-
               sm:text-[11px]
             "
           >
@@ -329,15 +294,13 @@ export function AboutCraftSection({
 
           <p
             className="
+              mx-auto
               mt-4
-
               max-w-[510px]
-
+              text-center
               text-[10px]
-              leading-[1.8]
-
+              leading-[2]
               text-[var(--craft-muted)]
-
               sm:text-[11px]
             "
           >
@@ -351,14 +314,11 @@ export function AboutCraftSection({
           <div
             className="
               mt-10
-
               grid
               grid-cols-2
-
-              border-l
+              border-r
               border-t
               border-black/10
-
               lg:grid-cols-4
             "
           >
@@ -366,46 +326,42 @@ export function AboutCraftSection({
               <div
                 key={item.id}
                 className="
-                    min-h-[135px]
-
-                    border-b
-                    border-r
-                    border-black/10
-
-                    px-4
-                    py-5
-                  "
+                  flex
+                  min-h-[135px]
+                  flex-col
+                  items-center
+                  justify-center
+                  border-b
+                  border-l
+                  border-black/10
+                  px-4
+                  py-5
+                  text-center
+                "
               >
                 <span
                   className="
-                      grid
-
-                      size-8
-
-                      place-items-center
-
-                      text-black/65
-                    "
+                    grid
+                    size-8
+                    place-items-center
+                    text-black/65
+                  "
                 >
                   <CraftIcon type={item.icon} />
                 </span>
 
                 <p
                   className="
-                      mt-5
-
-                      max-w-[100px]
-
-                      text-[7px]
-                      font-semibold
-
-                      uppercase
-                      tracking-[0.12em]
-
-                      leading-[1.6]
-
-                      text-black/60
-                    "
+                    mx-auto
+                    mt-5
+                    max-w-[120px]
+                    text-center
+                    text-[7px]
+                    font-semibold
+                    leading-[1.8]
+                    tracking-[0.06em]
+                    text-black/60
+                  "
                 >
                   {item.title}
                 </p>

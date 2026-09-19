@@ -46,8 +46,7 @@ const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
   { label: "محصولات", href: "/admin/catalog/products", icon: Package },
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
-  { label: "محتوای صفحات", href: "/admin/catalog/content", icon: FileText },
-  { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
+   { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
   {
     label: "اطلاعات پایه کاتالوگ",
     href: "/admin/catalog/references",

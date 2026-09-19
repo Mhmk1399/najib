@@ -815,7 +815,7 @@ function ProductPurchasePanel({
 
           max-w-[650px]
 
-          font-serif
+           
 
           text-2xl
           font-normal
@@ -837,7 +837,7 @@ function ProductPurchasePanel({
         className="
           mt-6
 
-          font-serif
+           
 
           text-[26px]
           font-normal
@@ -1541,7 +1541,7 @@ function MobileProductSheet({
 
                 truncate
 
-                font-serif
+                 
 
                 text-[21px]
 
@@ -1571,7 +1571,7 @@ function MobileProductSheet({
 
                 pt-1
 
-                font-serif
+                 
 
                 text-[18px]
 
@@ -1898,7 +1898,7 @@ function ProductDetailsSections({
             className="
               mt-5
 
-              font-serif
+               
 
               text-[clamp(2.8rem,8vw,5rem)]
 
@@ -2128,7 +2128,7 @@ function RelatedProductsSection({
               className="
                 mt-3
 
-                font-serif
+                 
 
                 text-[36px]
 
@@ -2260,7 +2260,7 @@ function RelatedProductCard({ product }: { product: RelatedProductItem }) {
         <div>
           <p
             className="
-              font-serif
+               
 
               text-[18px]
 

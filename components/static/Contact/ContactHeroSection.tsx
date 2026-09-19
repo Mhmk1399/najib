@@ -8,21 +8,13 @@ import { brandColors } from "@/theme/theme-colors";
 
 type ContactHeroSectionProps = {
   imageSrc: string;
-
   imageAlt?: string;
-
   eyebrow?: string;
-
   title?: string;
-
   italicTitle?: string;
-
   description?: string;
-
   mobileImagePosition?: string;
-
   desktopImagePosition?: string;
-
   className?: string;
 };
 
@@ -31,13 +23,13 @@ export function ContactHeroSection({
 
   imageAlt = "",
 
-  eyebrow = "Contact Najibzadeh",
+  eyebrow = "ارتباط با نجیب‌زاده",
 
-  title = "Begin the conversation.",
+  title = "آغاز یک گفت‌وگو.",
 
-  italicTitle = "We are here to guide every detail.",
+  italicTitle = "برای همراهی شما در تمام جزئیات اینجاییم.",
 
-  description = "From private appointments to tailored guidance, our team is dedicated to providing a discreet and considered experience.",
+  description = "از قرارهای ملاقات خصوصی تا راهنمایی‌های اختصاصی، تیم نجیب‌زاده آماده است تا تجربه‌ای دقیق، آرام و متناسب با نیاز شما فراهم کند.",
 
   mobileImagePosition = "68% center",
 
@@ -49,13 +41,9 @@ export function ContactHeroSection({
 
   const themeVars = {
     "--contact-black": brandColors.black.hex,
-
     "--contact-black-rgb": brandColors.black.rgb,
-
     "--contact-copper": brandColors.copper.hex,
-
     "--contact-mobile-position": mobileImagePosition,
-
     "--contact-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
@@ -63,25 +51,20 @@ export function ContactHeroSection({
     <section
       ref={ref}
       style={themeVars}
+      dir="rtl"
       className={`
         relative
         isolate
-
         min-h-[100svh]
-        md:min-h-[100svh]
-
         w-full
         overflow-hidden
-
         bg-[var(--contact-black)]
         text-white
-
+        md:min-h-[100svh]
         ${className}
       `}
     >
-      {/* =====================================================
-          BACKGROUND
-      ====================================================== */}
+      {/* BACKGROUND */}
 
       <Image
         src={imageSrc}
@@ -92,69 +75,53 @@ export function ContactHeroSection({
         draggable={false}
         className="
           -z-30
-
           object-cover
-
           object-[var(--contact-mobile-position)]
-
           md:object-[var(--contact-desktop-position)]
         "
       />
 
-      {/* =====================================================
-          LEFT DARK GRADIENT
-      ====================================================== */}
+      {/* OVERLAY */}
 
       <div
         aria-hidden="true"
         className="
           pointer-events-none
-
           absolute
           inset-0
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--contact-black-rgb)/0.98)_0%,rgb(var(--contact-black-rgb)/0.91)_28%,rgb(var(--contact-black-rgb)/0.48)_48%,rgb(var(--contact-black-rgb)/0.06)_76%,rgb(var(--contact-black-rgb)/0.12)_100%)]
+          bg-[linear-gradient(180deg,rgb(var(--contact-black-rgb)/0.14)_0%,rgb(var(--contact-black-rgb)/0.28)_45%,rgb(var(--contact-black-rgb)/0.92)_100%)]
 
-          max-md:bg-[linear-gradient(180deg,rgb(var(--contact-black-rgb)/0.12)_0%,rgb(var(--contact-black-rgb)/0.16)_37%,rgb(var(--contact-black-rgb)/0.92)_100%)]
+          md:bg-[linear-gradient(90deg,rgb(var(--contact-black-rgb)/0.58)_0%,rgb(var(--contact-black-rgb)/0.32)_50%,rgb(var(--contact-black-rgb)/0.58)_100%)]
         "
       />
-
-      {/* vignette */}
 
       <div
         aria-hidden="true"
         className="
           pointer-events-none
-
           absolute
           inset-0
           -z-10
-
-          bg-[radial-gradient(circle_at_center,transparent_35%,rgb(var(--contact-black-rgb)/0.28)_120%)]
+          bg-[radial-gradient(circle_at_center,transparent_28%,rgb(var(--contact-black-rgb)/0.38)_120%)]
         "
       />
 
-      {/* =====================================================
-          HOUSE MARK
-      ====================================================== */}
+      {/* HOUSE MARK */}
 
       <div
         className={`
           absolute
-
-          right-[7vw]
+          left-1/2
           top-[16vh]
-
           z-10
-
           hidden
-
+          -translate-x-1/2
+          text-center
           transition-[opacity,transform]
           duration-700
-
           md:block
-
           ${revealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
         `}
       >
@@ -162,35 +129,25 @@ export function ContactHeroSection({
           className="
             text-[12px]
             font-medium
-
-            uppercase
-            tracking-[0.5em]
-
+            tracking-[0.16em]
             text-white/70
           "
         >
-          NAJIBZADEH
+          نجیب‌زاده
         </p>
       </div>
 
-      {/* =====================================================
-          CONTENT
-      ====================================================== */}
+      {/* CONTENT */}
 
       <div
         className="
           relative
           z-10
-
           flex
-
           min-h-[100svh]
-          md:min-h-[100svh]
-
           items-end
-
+          justify-center
           px-6
-
           pb-14
           pt-32
 
@@ -198,7 +155,6 @@ export function ContactHeroSection({
           sm:pb-16
 
           md:items-center
-
           md:px-[7vw]
           md:pb-0
           md:pt-20
@@ -206,12 +162,13 @@ export function ContactHeroSection({
       >
         <div
           className={`
+            mx-auto
             w-full
-            max-w-[620px]
+            max-w-[680px]
+            text-center
 
             transition-[opacity,transform]
             duration-[900ms]
-
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             ${
@@ -221,58 +178,42 @@ export function ContactHeroSection({
             }
           `}
         >
-          {/* =================================================
-              EYEBROW
-          ================================================= */}
+          {/* EYEBROW */}
 
           <div
             className="
               mb-6
-
               flex
               items-center
+              justify-center
               gap-3
-
               text-[7px]
               font-semibold
-
-              uppercase
-              tracking-[0.24em]
-
+              tracking-[0.12em]
               text-[var(--contact-copper)]
-
               sm:text-[8px]
             "
           >
+            <span className="h-px w-7 bg-[var(--contact-copper)]" />
+
             <span>{eyebrow}</span>
 
-            <span
-              className="
-                h-px
-                w-6
-
-                bg-[var(--contact-copper)]
-              "
-            />
+            <span className="h-px w-7 bg-[var(--contact-copper)]" />
           </div>
 
-          {/* =================================================
-              TITLE
-          ================================================= */}
+          {/* TITLE */}
 
           <h1
             className="
               flex
               flex-col
-
-              font-serif
-
+              items-center
+              text-center
+               
               text-[clamp(3.1rem,12vw,5rem)]
               font-normal
-
-              leading-[0.95]
-              tracking-[-0.055em]
-
+              leading-[1.02]
+              tracking-[-0.045em]
               text-white
 
               md:text-[clamp(4.5rem,5.8vw,6.8rem)]
@@ -283,11 +224,7 @@ export function ContactHeroSection({
             <span
               className="
                 mt-[0.12em]
-
-                max-w-[580px]
-
-                italic
-
+                max-w-[620px]
                 text-white/78
               "
             >
@@ -295,41 +232,32 @@ export function ContactHeroSection({
             </span>
           </h1>
 
-          {/* =================================================
-              SMALL LINE
-          ================================================= */}
+          {/* SMALL LINE */}
 
           <span
             aria-hidden="true"
             className="
+              mx-auto
               mt-8
-
               block
-
               h-px
-              w-8
-
+              w-10
               bg-[var(--contact-copper)]
             "
           />
 
-          {/* =================================================
-              DESCRIPTION
-          ================================================= */}
+          {/* DESCRIPTION */}
 
           <p
             className="
+              mx-auto
               mt-7
-
-              max-w-[430px]
-
+              max-w-[460px]
+              text-center
               text-[10px]
               font-normal
-
-              leading-[1.85]
-
+              leading-[2]
               text-white/58
-
               sm:text-[11px]
             "
           >
@@ -338,69 +266,34 @@ export function ContactHeroSection({
         </div>
       </div>
 
-      {/* =====================================================
-          BOTTOM DETAIL
-      ====================================================== */}
+      {/* BOTTOM DETAIL */}
 
       <div
         aria-hidden="true"
         className="
           absolute
-
           inset-x-[7vw]
           bottom-6
-
           hidden
-
           items-center
+          justify-center
           gap-4
-
           md:flex
         "
       >
-        <span
-          className="
-            text-[6px]
-            font-medium
-
-            uppercase
-            tracking-[0.22em]
-
-            text-white/30
-          "
-        >
-          Private Client Services
+        <span className="text-[6px] font-medium tracking-[0.1em] text-white/30">
+          خدمات اختصاصی مشتریان
         </span>
 
-        <span
-          className="
-            h-px
-            flex-1
+        <span className="h-px flex-1 bg-white/12" />
 
-            bg-white/12
-          "
-        />
-
-        <span
-          className="
-            text-[6px]
-
-            uppercase
-            tracking-[0.22em]
-
-            text-white/30
-          "
-        >
-          Najibzadeh
+        <span className="text-[6px] tracking-[0.1em] text-white/30">
+          نجیب‌زاده
         </span>
       </div>
     </section>
   );
 }
-
-/* ==========================================================================
-   REVEAL
-============================================================================ */
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
@@ -419,9 +312,7 @@ function useRevealOnce<T extends HTMLElement>() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
+        if (!entry?.isIntersecting) return;
 
         requestAnimationFrame(() => {
           setRevealed(true);

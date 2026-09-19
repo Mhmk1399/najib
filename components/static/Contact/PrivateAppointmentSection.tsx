@@ -39,13 +39,13 @@ export function PrivateAppointmentSection({
 
   imageAlt = "",
 
-  eyebrow = "Let us assist you personally",
+  eyebrow = "اجازه دهید شخصاً همراه شما باشیم",
 
-  title = "Book a Private Appointment.",
+  title = "رزرو قرار ملاقات خصوصی.",
 
-  italicTitle = "Tailored to you.",
+  italicTitle = "تجربه‌ای متناسب با شما.",
 
-  description = "Share a few details and our team will be in touch to confirm your appointment.",
+  description = "چند جزئیات کوتاه با ما در میان بگذارید تا تیم نجیب‌زاده برای هماهنگی و تأیید قرار ملاقات با شما در ارتباط باشد.",
 
   mobileImagePosition = "68% center",
 
@@ -78,6 +78,7 @@ export function PrivateAppointmentSection({
 
   return (
     <section
+      dir="rtl"
       ref={ref}
       style={themeVars}
       className={`
@@ -182,20 +183,17 @@ export function PrivateAppointmentSection({
       >
         <div
           className={`
-            w-full
-            max-w-[610px]
+  mx-auto
+  w-full
+  max-w-[610px]
+  text-center
 
-            transition-[opacity,transform]
-            duration-[900ms]
+  transition-[opacity,transform]
+  duration-[900ms]
+  ease-[cubic-bezier(0.22,1,0.36,1)]
 
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }
-          `}
+  ${revealed ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}
+`}
         >
           {/* =================================================
               EYEBROW
@@ -203,33 +201,23 @@ export function PrivateAppointmentSection({
 
           <div
             className="
-              mb-5
-
-              flex
-              items-center
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.23em]
-
-              text-[var(--appointment-copper)]
-
-              sm:text-[8px]
-            "
+    mb-5
+    flex
+    items-center
+    justify-center
+    gap-3
+    text-[7px]
+    font-semibold
+    tracking-[0.12em]
+    text-[var(--appointment-copper)]
+    sm:text-[8px]
+  "
           >
+            <span className="h-px w-7 bg-[var(--appointment-copper)]" />
+
             <span>{eyebrow}</span>
 
-            <span
-              className="
-                h-px
-                w-7
-
-                bg-[var(--appointment-copper)]
-              "
-            />
+            <span className="h-px w-7 bg-[var(--appointment-copper)]" />
           </div>
 
           {/* =================================================
@@ -238,35 +226,22 @@ export function PrivateAppointmentSection({
 
           <h2
             className="
-              flex
-              flex-col
-
-              font-serif
-
-              text-[clamp(3rem,11vw,4.5rem)]
-              font-normal
-
-              leading-[0.94]
-              tracking-[-0.05em]
-
-              text-white
-
-              md:text-[clamp(4rem,5vw,5.7rem)]
-            "
+    flex
+    flex-col
+    items-center
+    text-center
+     
+    text-[clamp(3rem,11vw,4.5rem)]
+    font-normal
+    leading-[1.04]
+    tracking-[-0.04em]
+    text-white
+    md:text-[clamp(4rem,5vw,5.7rem)]
+  "
           >
             <span>{title}</span>
 
-            <span
-              className="
-                mt-[0.1em]
-
-                italic
-
-                text-white/76
-              "
-            >
-              {italicTitle}
-            </span>
+            <span className="mt-[0.1em] text-white/76">{italicTitle}</span>
           </h2>
 
           {/* =================================================
@@ -275,18 +250,15 @@ export function PrivateAppointmentSection({
 
           <p
             className="
-              mt-6
-
-              max-w-[390px]
-
-              text-[9px]
-
-              leading-[1.8]
-
-              text-white/55
-
-              sm:text-[10px]
-            "
+    mx-auto
+    mt-6
+    max-w-[420px]
+    text-center
+    text-[9px]
+    leading-[2]
+    text-white/55
+    sm:text-[10px]
+  "
           >
             {description}
           </p>
@@ -314,14 +286,14 @@ export function PrivateAppointmentSection({
             <Field
               id="full-name"
               name="fullName"
-              label="Full Name"
+              label="نام و نام خانوادگی"
               autoComplete="name"
             />
 
             <Field
               id="email"
               name="email"
-              label="Email Address"
+              label="آدرس ایمیل"
               type="email"
               autoComplete="email"
             />
@@ -329,25 +301,23 @@ export function PrivateAppointmentSection({
             <Field
               id="phone"
               name="phone"
-              label="Phone Number"
+              label="شماره تماس"
               type="tel"
               autoComplete="tel"
-              className="
-                sm:col-span-2
-              "
+              className="sm:col-span-2"
             />
 
             <Field
               id="date"
               name="preferredDate"
-              label="Preferred Date"
+              label="تاریخ مورد نظر"
               type="date"
             />
 
             <Field
               id="time"
               name="preferredTime"
-              label="Preferred Time"
+              label="ساعت مورد نظر"
               type="time"
             />
 
@@ -372,7 +342,7 @@ export function PrivateAppointmentSection({
                   text-white/55
                 "
               >
-                Your Message
+                پیام شما
               </label>
 
               <textarea
@@ -429,57 +399,11 @@ export function PrivateAppointmentSection({
                 icon={<ArrowRightIcon />}
                 fullWidth
               >
-                Submit Request
+                ارسال درخواست
               </Button>
             </div>
           </form>
         </div>
-      </div>
-
-      {/* =====================================================
-          DESKTOP DETAIL
-      ====================================================== */}
-
-      <div
-        aria-hidden="true"
-        className="
-          absolute
-
-          bottom-7
-          right-[7vw]
-
-          hidden
-
-          md:block
-        "
-      >
-        <p
-          className="
-            text-[6px]
-            font-medium
-
-            uppercase
-            tracking-[0.22em]
-
-            text-white/28
-          "
-        >
-          Private / Discreet / Personal
-        </p>
-
-        <span
-          className="
-            mt-3
-
-            ml-auto
-            block
-
-            h-px
-            w-14
-
-            bg-white/18
-          "
-        />
       </div>
     </section>
   );
@@ -521,16 +445,13 @@ function Field({
       <label
         htmlFor={id}
         className="
-          block
-
-          text-[7px]
-          font-semibold
-
-          uppercase
-          tracking-[0.17em]
-
-          text-white/55
-        "
+  block
+  text-center
+  text-[7px]
+  font-semibold
+  tracking-[0.1em]
+  text-white/55
+"
       >
         {label}
       </label>
@@ -541,30 +462,29 @@ function Field({
         type={type}
         autoComplete={autoComplete}
         className="
-          mt-2
+  mt-2
+  h-9
+  w-full
 
-          h-9
-          w-full
+  border-0
+  border-b
+  border-white/25
 
-          border-0
-          border-b
-          border-white/25
+  bg-transparent
 
-          bg-transparent
+  text-center
+  text-[11px]
+  text-white
 
-          text-[11px]
+  outline-none
 
-          text-white
+  transition-colors
+  duration-200
 
-          outline-none
+  focus:border-white
 
-          transition-colors
-          duration-200
-
-          focus:border-white
-
-          [color-scheme:dark]
-        "
+  [color-scheme:dark]
+"
       />
     </div>
   );

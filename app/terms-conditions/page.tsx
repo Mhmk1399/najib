@@ -4,10 +4,9 @@ export default function TermsPage() {
   return (
     <TermsAndConditionsPage
       heroImage="/assets/images/banner.webp"
-      heroImageAlt="Najibzadeh Terms Conditions"
+      heroImageAlt="شرایط و ضوابط نجیب‌زاده"
       heroImagePosition="center"
-      lastUpdated="August 2026"
-
+      lastUpdated="اوت ۲۰۲۶"
     />
   );
 }

@@ -42,17 +42,17 @@ export function AboutValuesSection({
 
   imageAlt = "",
 
-  eyebrow = "Our Values",
+  eyebrow = "ارزش‌های ما",
 
-  title = "Built on timeless values.",
+  title = "ساخته‌شده بر پایه ارزش‌های ماندگار.",
 
-  italicTitle = "Guided by integrity.",
+  italicTitle = "هدایت‌شده با اصالت.",
 
-  description = "At Najibzadeh, we believe true luxury is quiet. It is found in integrity, thoughtful choices and the discipline to create only what deserves to exist.",
+  description = "در نجیب‌زاده باور داریم که تجمل واقعی، آرام و بی‌ادعاست؛ در صداقت، انتخاب‌های سنجیده و تعهد به خلق چیزهایی معنا پیدا می‌کند که شایسته ماندگاری هستند.",
 
-  quote = "We create with respect — for people, for craft and for the world around us.",
+  quote = "ما با احترام خلق می‌کنیم؛ احترام به انسان، هنر، اصالت و جهانی که پیرامون ماست.",
 
-  signature = "Najibzadeh",
+  signature = "نجیب‌زاده",
 
   action,
 
@@ -80,20 +80,16 @@ export function AboutValuesSection({
     <section
       ref={ref}
       style={themeVars}
+      dir="rtl"
       className={`
         relative
         isolate
-
         min-h-[100svh]
-
         w-full
         overflow-hidden
-
         bg-[var(--values-black)]
         text-white
-
         md:min-h-[100svh]
-
         ${className}
       `}
     >
@@ -110,11 +106,8 @@ export function AboutValuesSection({
         draggable={false}
         className="
           -z-30
-
           object-cover
-
           object-[var(--mobile-position)]
-
           md:object-[var(--desktop-position)]
         "
       />
@@ -127,14 +120,11 @@ export function AboutValuesSection({
         aria-hidden="true"
         className="
           pointer-events-none
-
           absolute
           inset-0
           -z-20
-
-          bg-[linear-gradient(90deg,rgb(var(--values-black-rgb)/0.90)_0%,rgb(var(--values-black-rgb)/0.68)_36%,rgb(var(--values-black-rgb)/0.16)_70%,rgb(var(--values-black-rgb)/0.30)_100%)]
-
-          max-md:bg-[linear-gradient(180deg,rgb(var(--values-black-rgb)/0.10)_0%,rgb(var(--values-black-rgb)/0.20)_38%,rgb(var(--values-black-rgb)/0.90)_100%)]
+          bg-[linear-gradient(180deg,rgb(var(--values-black-rgb)/0.18)_0%,rgb(var(--values-black-rgb)/0.34)_45%,rgb(var(--values-black-rgb)/0.90)_100%)]
+          md:bg-[linear-gradient(90deg,rgb(var(--values-black-rgb)/0.55)_0%,rgb(var(--values-black-rgb)/0.30)_50%,rgb(var(--values-black-rgb)/0.55)_100%)]
         "
       />
 
@@ -142,12 +132,10 @@ export function AboutValuesSection({
         aria-hidden="true"
         className="
           pointer-events-none
-
           absolute
           inset-0
           -z-10
-
-          bg-[radial-gradient(circle_at_center,transparent_36%,rgb(var(--values-black-rgb)/0.32)_120%)]
+          bg-[radial-gradient(circle_at_center,transparent_28%,rgb(var(--values-black-rgb)/0.38)_120%)]
         "
       />
 
@@ -159,15 +147,11 @@ export function AboutValuesSection({
         className="
           relative
           z-10
-
           flex
-
           min-h-[76svh]
-
           items-end
-
+          justify-center
           px-6
-
           pb-14
           pt-28
 
@@ -175,19 +159,19 @@ export function AboutValuesSection({
 
           md:min-h-[82svh]
           md:items-center
-
           md:px-[7vw]
           md:pb-0
         "
       >
         <div
           className={`
+            mx-auto
             w-full
             max-w-[600px]
+            text-center
 
             transition-[opacity,transform]
             duration-[900ms]
-
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             ${
@@ -202,29 +186,35 @@ export function AboutValuesSection({
           <div
             className="
               mb-5
-
               flex
               items-center
+              justify-center
               gap-3
 
+              text-center
               text-[7px]
               font-semibold
-
-              uppercase
-              tracking-[0.23em]
+              tracking-[0.12em]
 
               text-[var(--values-copper)]
 
               sm:text-[8px]
             "
           >
+            <span
+              className="
+                h-px
+                w-7
+                bg-[var(--values-copper)]
+              "
+            />
+
             <span>{eyebrow}</span>
 
             <span
               className="
                 h-px
                 w-7
-
                 bg-[var(--values-copper)]
               "
             />
@@ -236,14 +226,17 @@ export function AboutValuesSection({
             className="
               flex
               flex-col
+              items-center
 
-              font-serif
+              text-center
+
+               
 
               text-[clamp(3rem,12vw,4.8rem)]
               font-normal
 
-              leading-[0.93]
-              tracking-[-0.055em]
+              leading-[1.02]
+              tracking-[-0.045em]
 
               text-white
 
@@ -255,9 +248,6 @@ export function AboutValuesSection({
             <span
               className="
                 mt-[0.1em]
-
-                italic
-
                 text-white/75
               "
             >
@@ -265,19 +255,21 @@ export function AboutValuesSection({
             </span>
           </h2>
 
+          {/* DESCRIPTION */}
+
           <p
             className="
+              mx-auto
               mt-7
-
               max-w-[430px]
 
+              text-center
               text-[9px]
-              leading-[1.8]
+              leading-[2]
 
               text-white/58
 
               sm:text-[10px]
-
               md:text-[11px]
             "
           >
@@ -288,58 +280,72 @@ export function AboutValuesSection({
 
           <div
             className="
-              mt-7
-
+              mx-auto
+              mt-8
               max-w-[430px]
-
-              border-l
-              border-white/20
-
-              pl-5
+              text-center
             "
           >
+            <span
+              aria-hidden="true"
+              className="
+                mx-auto
+                mb-5
+                block
+                h-px
+                w-12
+                bg-white/20
+              "
+            />
+
             <p
               className="
-                font-serif
-
+                 
                 text-[17px]
-                italic
-
-                leading-[1.5]
-
+                leading-[1.8]
                 text-white/78
 
                 sm:text-[19px]
               "
             >
-              “{quote}”
+              «{quote}»
             </p>
+
+            <span
+              aria-hidden="true"
+              className="
+                mx-auto
+                mt-5
+                block
+                h-px
+                w-12
+                bg-white/20
+              "
+            />
           </div>
 
           {/* SIGNATURE */}
 
           <p
             className="
-              mt-7
-
-              font-serif
-
+              mt-6
+              text-center
+               
               text-[17px]
-              italic
-
-              tracking-[-0.03em]
-
+              tracking-[-0.02em]
               text-white/55
             "
           >
             {signature}
           </p>
 
+          {/* ACTION */}
+
           {action && (
             <div
               className="
+                mx-auto
                 mt-8
-
                 w-full
                 max-w-[240px]
               "
@@ -359,48 +365,40 @@ export function AboutValuesSection({
       </div>
 
       {/* =====================================================
-          CORNER DETAIL
+          BOTTOM DETAIL
       ====================================================== */}
 
       <div
         aria-hidden="true"
         className="
           absolute
-
           bottom-7
-          right-[7vw]
-
+          left-1/2
           hidden
-
-          text-right
-
+          -translate-x-1/2
+          text-center
           md:block
         "
       >
         <p
           className="
+            whitespace-nowrap
             text-[6px]
             font-medium
-
-            uppercase
-            tracking-[0.22em]
-
+            tracking-[0.1em]
             text-white/30
           "
         >
-          Purpose / Craft / Character
+          هدف / هنر / شخصیت
         </p>
 
         <span
           className="
+            mx-auto
             mt-3
-            ml-auto
-
             block
-
             h-px
             w-16
-
             bg-white/20
           "
         />
@@ -421,6 +419,7 @@ function useRevealOnce<T extends HTMLElement>() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setRevealed(true);
+
       return;
     }
 
