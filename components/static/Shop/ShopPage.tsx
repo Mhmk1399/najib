@@ -457,6 +457,10 @@ export function ShopPage() {
 
   const selectedSubcategorySlug = searchParams.get("subcategory") ?? "";
   const selectedCategorySlug = searchParams.get("category") ?? "";
+  const searchQuery = (searchParams.get("search") ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
   const category: ProductCategory = selectedSubcategorySlug || "all";
   const sort = validSort(searchParams.get("sort"));
   const selectedSizes = useMemo(
@@ -725,6 +729,25 @@ export function ShopPage() {
 
   const products = useMemo(() => {
     let r = [...mappedProducts];
+    if (searchQuery) {
+      r = r.filter((product) => {
+        const haystack = [
+          product.title,
+          product.subtitle,
+          product.description,
+          product.categoryLabel,
+          product.origin,
+          ...(product.materials ?? []),
+          ...(product.colorSwatches?.map((color) => color.label) ?? []),
+          ...(product.sizeOptions?.map((size) => size.label) ?? []),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        return haystack.includes(searchQuery);
+      });
+    }
     if (selectedSizes.length)
       r = r.filter((p) => p.sizes?.some((s) => selectedSizes.includes(s)));
     if (selectedColors.length)
@@ -742,6 +765,7 @@ export function ShopPage() {
     return r;
   }, [
     mappedProducts,
+    searchQuery,
     sort,
     selectedSizes,
     selectedColors,

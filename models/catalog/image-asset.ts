@@ -40,6 +40,11 @@ const imageAssetSchema = new Schema(
   {
     url: { type: String, required: true, trim: true, maxlength: 2000 },
     alt: { type: createLocalizedTextSchema(500), required: true },
+    storyTitle: { type: createLocalizedTextSchema(160, false) },
+    storyDescription: { type: createLocalizedTextSchema(360, false) },
+    storyCtaLabel: { type: createLocalizedTextSchema(80, false) },
+    storyProductLimit: { type: Number, min: 1, max: 6, default: 3 },
+    storyRevealEnabled: { type: Boolean, default: true },
     kind: {
       type: String,
       enum: [

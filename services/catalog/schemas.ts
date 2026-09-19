@@ -240,6 +240,11 @@ const imageSchema = z
         "Use an HTTP(S) or root-relative image URL",
       ),
     alt: localizedTextSchema(500),
+    storyTitle: localizedTextSchema(160, 0).optional(),
+    storyDescription: localizedTextSchema(360, 0).optional(),
+    storyCtaLabel: localizedTextSchema(80, 0).optional(),
+    storyProductLimit: z.number().int().min(1).max(6).default(3),
+    storyRevealEnabled: active,
     kind: z.enum([
       "product",
       "category_banner",

@@ -59,6 +59,11 @@ type ImageAsset = {
   _id: string;
   url: string;
   alt: LocalizedText;
+  storyTitle?: LocalizedText;
+  storyDescription?: LocalizedText;
+  storyCtaLabel?: LocalizedText;
+  storyProductLimit?: number;
+  storyRevealEnabled?: boolean;
   kind: Kind;
   width?: number | null;
   height?: number | null;
@@ -75,6 +80,11 @@ type ImageAsset = {
 type ImageFormValues = {
   url: string;
   alt: LocalizedText;
+  storyTitle: LocalizedText;
+  storyDescription: LocalizedText;
+  storyCtaLabel: LocalizedText;
+  storyProductLimit: number;
+  storyRevealEnabled: boolean;
   kind: Kind;
   width?: number | null;
   height?: number | null;
@@ -182,6 +192,11 @@ function emptyForm(): ImageFormValues {
   return {
     url: "",
     alt: emptyLocalizedText(),
+    storyTitle: emptyLocalizedText(),
+    storyDescription: emptyLocalizedText(),
+    storyCtaLabel: emptyLocalizedText(),
+    storyProductLimit: 3,
+    storyRevealEnabled: true,
     kind: "editorial",
     width: null,
     height: null,
@@ -198,6 +213,11 @@ function imageToForm(asset: ImageAsset): ImageFormValues {
   return {
     url: asset.url,
     alt: asset.alt,
+    storyTitle: asset.storyTitle ?? emptyLocalizedText(),
+    storyDescription: asset.storyDescription ?? emptyLocalizedText(),
+    storyCtaLabel: asset.storyCtaLabel ?? emptyLocalizedText(),
+    storyProductLimit: asset.storyProductLimit ?? 3,
+    storyRevealEnabled: asset.storyRevealEnabled ?? true,
     kind: asset.kind,
     width: asset.width ?? null,
     height: asset.height ?? null,
@@ -233,6 +253,11 @@ function formPayload(values: ImageFormValues) {
   return {
     url: values.url.trim(),
     alt: trimLocalized(values.alt),
+    storyTitle: trimLocalized(values.storyTitle),
+    storyDescription: trimLocalized(values.storyDescription),
+    storyCtaLabel: trimLocalized(values.storyCtaLabel),
+    storyProductLimit: Math.max(1, Math.min(6, Number(values.storyProductLimit) || 3)),
+    storyRevealEnabled: values.storyRevealEnabled,
     kind: values.kind,
     width: values.width ? Number(values.width) : null,
     height: values.height ? Number(values.height) : null,
@@ -410,6 +435,41 @@ function buildSchema({
         rows: 3,
       },
       {
+        kind: "textarea",
+        name: "storyTitle.fa",
+        label: "عنوان داینامیک آیلند فارسی",
+        rows: 2,
+      },
+      {
+        kind: "textarea",
+        name: "storyDescription.fa",
+        label: "توضیح داینامیک آیلند فارسی",
+        rows: 2,
+      },
+      {
+        kind: "textarea",
+        name: "storyCtaLabel.fa",
+        label: "متن دکمه داینامیک آیلند",
+        rows: 2,
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "storyProductLimit",
+        label: "تعداد محصول در داینامیک آیلند",
+        min: 1,
+        max: 6,
+        step: 1,
+        inputMode: "numeric",
+      },
+      {
+        kind: "boolean",
+        name: "storyRevealEnabled",
+        label: "باز شدن پنل محصول",
+        onLabel: "فعال",
+        offLabel: "مستقیم به صفحه محصول",
+      },
+      {
         kind: "select",
         name: "kind",
         label: "نوع تصویر",
@@ -503,7 +563,19 @@ function buildSchema({
         title: "منبع و دسترس‌پذیری",
         description:
           "تصویر با URL ذخیره می‌شود و متن جایگزین برای هر سه زبان لازم است.",
-        fieldNames: ["url", "alt.fa", "alt.en", "alt.ar", "kind", "isActive"],
+        fieldNames: [
+          "url",
+          "alt.fa",
+          "alt.en",
+          "alt.ar",
+          "storyTitle.fa",
+          "storyDescription.fa",
+          "storyCtaLabel.fa",
+          "storyProductLimit",
+          "storyRevealEnabled",
+          "kind",
+          "isActive",
+        ],
       },
       {
         id: "presentation",
@@ -517,6 +589,8 @@ function buildSchema({
           "height",
           "focalPointX",
           "focalPointY",
+          "storyProductLimit",
+          "storyRevealEnabled",
         ],
       },
       {
@@ -1201,12 +1275,12 @@ export function ImageStories({
             body: JSON.stringify(formPayload(values)),
           }),
         mapError: mapFormError,
-        onSuccess: (record: ImageAsset | void) => {
+        onSuccess: (record: ImageAsset | void, original: ImageAsset) => {
           toastRef.current.success("تغییرات تصویر ذخیره شد", {
             description:
               record && "_id" in record
                 ? `${fa(record.alt)} به‌روزرسانی شد.`
-                : undefined,
+                : `${fa(original.alt)} به‌روزرسانی شد.`,
           });
         },
       },
@@ -1218,7 +1292,12 @@ export function ImageStories({
             label: "پیش‌نمایش",
             render: ({ record }: { record: ImageAsset }) => <ImageThumb asset={record} />,
           },
-          { id: "url", label: "آدرس تصویر", accessor: "url", colSpan: "full" },
+          {
+            id: "url",
+            label: "آدرس تصویر",
+            accessor: "url",
+            colSpan: "full" as const,
+          },
           {
             id: "alt",
             label: "متن جایگزین فارسی",

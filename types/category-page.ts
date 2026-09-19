@@ -7,6 +7,8 @@ export type CategorySubcategory = {
 
     image: string;
 
+    imageAssetId?: string;
+
     imageAlt?: string;
 
     imagePosition?: string;
@@ -22,6 +24,8 @@ export type CategoryProduct = {
     href: string;
 
     image: string;
+
+    imageAssetId?: string;
 
     imageAlt?: string;
 
@@ -42,6 +46,8 @@ export type CategoryHero = {
     description: string;
 
     image: string;
+
+    imageAssetId?: string;
 
     imageAlt?: string;
 
@@ -75,6 +81,8 @@ export type CategoryFeatureSection = {
 
     image: string;
 
+    imageAssetId?: string;
+
     imageAlt?: string;
 
     mobileImagePosition?: string;
@@ -90,6 +98,8 @@ export type CategoryFinalCTA = {
     description: string;
 
     image: string;
+
+    imageAssetId?: string;
 
     imageAlt?: string;
 

@@ -78,6 +78,8 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
     <section
       ref={ref}
       aria-labelledby="subcategory-hero-title"
+      data-image-story-id={hero.imageAssetId}
+      data-image-story-url={hero.image}
       style={
         {
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",
@@ -579,6 +581,8 @@ function ProductCard({
   return (
     <Link
       href={product.href}
+      data-image-story-id={product.imageAssetId}
+      data-image-story-url={product.image}
       className="
         group
         block
@@ -824,6 +828,8 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
   return (
     <section
       aria-labelledby="subcategory-feature-title"
+      data-image-story-id={feature.imageAssetId}
+      data-image-story-url={feature.image}
       style={
         {
           "--feature-mobile-position": feature.mobileImagePosition ?? "center",
@@ -997,6 +1003,8 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
       "
     >
       <div
+        data-image-story-id={cta.imageAssetId}
+        data-image-story-url={cta.image}
         className="
           mx-auto
 

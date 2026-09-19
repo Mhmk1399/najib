@@ -15,6 +15,7 @@ export type CategoryItem = {
   name: string;
   href: string;
   image: string;
+  imageAssetId?: string;
   imageAlt?: string;
   imageFit?: CSSProperties["objectFit"];
   imagePosition?: string;
@@ -111,6 +112,7 @@ export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
       name,
       href: `/${category.slug}`,
       image: image?.url || FALLBACK_IMAGE,
+      imageAssetId: image ? idOf(image._id) : undefined,
       imageAlt: fa(image?.alt, name),
       imageFit: imageFitOf(
         category.thumbnailObjectFit ?? banner?.objectFit ?? image?.objectFit,
@@ -223,6 +225,8 @@ function CategoryCard({ category }: { category: CategoryItem }) {
     <Link
       href={category.href}
       aria-label={`مشاهده دسته ${category.name}`}
+      data-image-story-id={category.imageAssetId}
+      data-image-story-url={category.image}
       className="group relative isolate mx-auto block aspect-[4/5] w-full max-w-[620px] overflow-hidden bg-[#0B0B0B] text-white outline-none focus-visible:ring-2 focus-visible:ring-black/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cat-bg)] sm:aspect-[3/4] lg:max-w-none"
     >
       <Image
