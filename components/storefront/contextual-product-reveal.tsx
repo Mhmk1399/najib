@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowLeft,
   ArrowRight,
   ChevronLeft,
   ChevronRight,
@@ -304,15 +303,6 @@ function productImages(
   ];
 }
 
-function imageLayout(index: number, count: number) {
-  if (count === 1) return "col-span-2 aspect-[4/3] sm:col-span-4";
-  if (index === 0) {
-    return "col-span-2 aspect-[4/3] sm:row-span-2 sm:aspect-auto sm:min-h-[420px]";
-  }
-
-  return "aspect-[4/5] min-h-[180px] sm:min-h-[205px]";
-}
-
 function scrollToSource(element: HTMLElement) {
   const reduceMotion = window.matchMedia(
     "(prefers-reduced-motion: reduce)",
@@ -469,16 +459,12 @@ export function ContextualProductReveal() {
         requestedProduct.label,
         fa(requestedProduct.name, requestedProduct.slug),
       );
-  const description = product ? fa(product.description) : "";
-  const category =
-    productQuery.data?.subcategory ?? productQuery.data?.category;
   const price = product
     ? formatMoney(product.basePriceMinor, product.currency)
     : "";
   const isLoading = productQuery.isLoading && !productQuery.data;
   const detailsHref = requestedProduct.href || `/shop/${requestedProduct.slug}`;
   const colors = productQuery.data?.colors ?? [];
-  const sizes = productQuery.data?.sizes ?? [];
   const sourceImageUrl =
     activeReveal.request.storyUrl ||
     requestedProduct.image?.url ||
@@ -495,7 +481,7 @@ export function ContextualProductReveal() {
       data-contextual-reveal="true"
       aria-labelledby="contextual-product-reveal-title"
       tabIndex={-1}
-      className="fixed inset-0 z-[2147483600] isolate h-[100dvh] w-full max-w-full overflow-x-hidden overflow-y-auto overscroll-contain bg-[#080706] px-0 py-0 text-white outline-none [scrollbar-gutter:stable]"
+      className="fixed inset-0 z-[2147483600] isolate h-[100dvh] w-[100dvw] overflow-hidden overscroll-none bg-[#080706] text-white outline-none"
     >
       <Image
         src={sourceImageUrl}
@@ -503,167 +489,122 @@ export function ContextualProductReveal() {
         fill
         priority
         sizes="100vw"
-        className="pointer-events-none scale-[1.08] object-cover object-center blur-[14px] opacity-[0.42] saturate-[0.82]"
+        className="pointer-events-none scale-[1.08] object-cover object-center blur-[18px] opacity-[0.38] saturate-[0.78]"
         aria-hidden="true"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,6,5,0.70)_0%,rgba(7,6,5,0.40)_28%,rgba(7,6,5,0.58)_66%,rgba(7,6,5,0.96)_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(5,4,3,0.76)_0%,rgba(7,6,5,0.48)_30%,rgba(6,5,4,0.68)_70%,rgba(5,4,3,0.96)_100%)]"
       />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[58%] bg-[linear-gradient(180deg,transparent,rgba(8,7,6,0.82)_58%,#080706_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(210,168,126,0.08),transparent_34%),radial-gradient(circle_at_50%_92%,rgba(183,131,90,0.07),transparent_30%)]"
       />
 
-      <div className="relative z-10 mx-auto flex min-h-full w-full max-w-[1500px] flex-col overflow-x-hidden px-3 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(12px,env(safe-area-inset-top))] sm:px-7 sm:pb-10 sm:pt-7 lg:px-10 lg:pt-9">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-10 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.32),rgba(183,131,90,0.78),rgba(255,255,255,0.32),transparent)]"
-        />
-        <div className="sticky top-[max(10px,env(safe-area-inset-top))] z-40 mb-4 flex w-full items-center justify-between gap-3 rounded-[24px] border border-white/[0.12] bg-[#0A0908]/[0.58] p-2 shadow-[0_18px_54px_rgba(0,0,0,0.32),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-[30px] backdrop-saturate-[145%] sm:top-4 sm:mb-6 sm:rounded-full sm:px-3">
-          <span className="min-w-0 truncate px-2 text-[9px] font-medium text-white/72 sm:px-3 sm:text-[10px]">
-            پیش‌نمایش انتخاب‌شده
-          </span>
-          <button
-            ref={exitButtonRef}
-            type="button"
-            onClick={() => closeReveal({ returnToSource: true })}
-            className="inline-flex min-h-12 shrink-0 items-center justify-center gap-2.5 rounded-full border border-white/[0.24] bg-white/[0.10] px-5 text-[10px] font-semibold text-white shadow-[0_12px_34px_rgba(0,0,0,0.30),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-2xl transition-[border-color,background-color,color,transform,box-shadow] duration-200 hover:-translate-y-0.5 hover:border-[#D7B28E]/75 hover:bg-[#B7835A]/[0.24] hover:shadow-[0_16px_42px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.18)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E7C8A8]/85 active:translate-y-0"
-            aria-label="خروج از پیش‌نمایش محصول"
-          >
-            <X className="size-4" aria-hidden="true" />
-            خروج از حالت نمایش
-          </button>
-        </div>
-        <div className="relative flex min-h-0 flex-1 flex-col">
-          <header className="mx-auto flex w-full max-w-[1320px] flex-col items-stretch gap-5 text-right md:flex-row md:items-end md:justify-between md:gap-6">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-3 text-[9px] font-medium text-[#C69A73] sm:text-[10px]">
-                <span className="h-px w-7 bg-[#B7835A]/80" aria-hidden="true" />
-                {
-                  "\u0627\u0646\u062a\u062e\u0627\u0628 \u0627\u0632 \u0647\u0645\u06cc\u0646 \u062a\u0635\u0648\u06cc\u0631"
-                }
-              </div>
+      <div className="relative z-10 grid h-full min-h-0 w-full grid-rows-[auto_minmax(0,1fr)] overflow-hidden">
+        <header className="shrink-0 "></header>
 
-              <h2
-                id="contextual-product-reveal-title"
-                className="mt-2 max-w-[260px] text-balance text-[clamp(1.35rem,5vw,2.4rem)] font-semibold leading-[1.04] tracking-[-0.025em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.42)] sm:max-w-[420px] sm:text-[clamp(1.8rem,3.2vw,3rem)]"
-              >
-                {title}
-              </h2>
-
-              {category ? (
-                <p className="mt-2 text-[10px] leading-5 text-white/64 sm:text-[11px]">
-                  {fa(category.name, category.slug)}
-                </p>
-              ) : null}
-
-              {description ? (
-                <p className="sr-only">{description}</p>
-              ) : (
-                <p className="sr-only">
-                  {
-                    "\u062a\u0635\u0627\u0648\u06cc\u0631 \u0648 \u062c\u0632\u0626\u06cc\u0627\u062a \u0627\u06cc\u0646 \u0627\u0646\u062a\u062e\u0627\u0628 \u0631\u0627 \u062f\u0631 \u0627\u062f\u0627\u0645\u0647 \u0628\u0628\u06cc\u0646\u06cc\u062f."
-                  }
-                </p>
-              )}
-
-              {colors.length || sizes.length ? (
-                <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                  {colors.slice(0, 5).map((color) => (
-                    <span
-                      key={color._id}
-                      title={fa(color.name)}
-                      aria-label={fa(color.name)}
-                      className="size-6 rounded-full border border-white/40 bg-white/[0.06] p-1 shadow-[0_4px_16px_rgba(0,0,0,0.24)]"
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="block size-full rounded-full border border-black/20"
-                        style={{ backgroundColor: color.hex ?? "#8b8178" }}
-                      />
-                    </span>
-                  ))}
-                  {sizes.slice(0, 5).map((size) => (
-                    <span
-                      key={size._id}
-                      title={fa(size.name, size.code ?? "سایز")}
-                      className="inline-flex min-h-6 items-center rounded-full border border-white/[0.15] bg-black/[0.2] px-2.5 text-[8px] text-white/64 backdrop-blur-xl"
-                    >
-                      {fa(size.name, size.code ?? "سایز")}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-
-            <div className="flex w-full flex-wrap items-center justify-start gap-2 md:w-auto md:max-w-[52%] md:shrink-0 md:justify-end">
-              {price ? (
-                <span className="inline-flex min-h-10 items-center rounded-full border border-white/[0.14] bg-white/[0.055] px-4 text-[10px] text-white/72 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
-                  {price}
-                </span>
-              ) : null}
-
+        <div className="mx-auto grid min-h-0 w-full max-w-[1600px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden px-3 pb-[max(10px,env(safe-area-inset-bottom))] pt-3 sm:px-6 sm:pb-4 sm:pt-4 lg:px-10 lg:pb-5 lg:pt-5">
+          <div className="shrink-0 text-center">
+            <h2
+              id="contextual-product-reveal-title"
+              className="mx-auto max-w-[760px] truncate text-[clamp(1.45rem,6vw,2.35rem)] font-semibold leading-[1.12] tracking-[-0.035em] text-white drop-shadow-[0_8px_28px_rgba(0,0,0,0.42)] lg:text-[clamp(1.85rem,2.7vw,2.75rem)]"
+            >
+              {title}
+            </h2>
+            <div className="relative mx-auto mt-3 lg:hidden min-h-10 w-full max-w-[760px] sm:mt-4 sm:min-h-11">
               <button
+                ref={exitButtonRef}
                 type="button"
                 onClick={() => closeReveal({ returnToSource: true })}
-                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-white/[0.16] bg-black/[0.24] px-3 text-[9px] font-medium text-white/72 backdrop-blur-xl transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75 active:translate-y-0"
+                className="absolute inset-y-0 right-0 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/[0.22] bg-black/[0.34] px-3.5 text-[9px] font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D8AE86]/75 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/80 active:translate-y-0 sm:min-h-11 sm:px-4 sm:text-[10px]"
+                aria-label="خروج از پیش‌نمایش محصول"
               >
-                <ArrowRight className="size-3.5" aria-hidden="true" />
-                بازگشت به تصویر
+                <X className="size-4" aria-hidden="true" />
+                <span className="  min-[390px]:inline">خروج</span>
               </button>
 
               <Link
                 href={detailsHref}
-                className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#B7835A]/70 bg-[#B7835A]/[0.24] px-3 text-[9px] font-semibold text-[#E5C6A7] backdrop-blur-xl transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D5B08D]/90 hover:bg-[#B7835A]/[0.34] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75 active:translate-y-0"
+                aria-label="مشاهده صفحه محصول"
+                title="مشاهده صفحه محصول"
+                className="absolute inset-y-0 left-0 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[#B7835A]/55 bg-[#B7835A]/[0.12] px-3 text-[8.5px] font-semibold text-[#E4BD97] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-[#D9AF87]/80 hover:bg-[#B7835A]/[0.22] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/75 sm:min-h-11 sm:px-4 sm:text-[9.5px]"
               >
-                {
-                  "\u0635\u0641\u062d\u0647 \u062c\u0632\u0626\u06cc\u0627\u062a \u0645\u062d\u0635\u0648\u0644"
-                }
+                <span className="  min-[430px]:inline">صفحه محصول</span>
                 <ExternalLink className="size-3.5" aria-hidden="true" />
               </Link>
-
-              <button
-                type="button"
-                className="hidden"
-                aria-label={
-                  "\u0628\u0633\u062a\u0646 \u067e\u06cc\u0634\u200c\u0646\u0645\u0627\u06cc\u0634 \u0645\u062d\u0635\u0648\u0644"
-                }
-                title={
-                  "\u0628\u0633\u062a\u0646 \u067e\u06cc\u0634\u200c\u0646\u0645\u0627\u06cc\u0634"
-                }
-                onClick={() => closeReveal()}
-              >
-                <X className="size-4" aria-hidden="true" />
-              </button>
             </div>
-          </header>
 
-          <div className="mx-auto mt-7 h-px max-w-[1020px] bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.11),transparent)] sm:mt-9" />
+            <div className="mt-2.5 flex min-h-9 flex-wrap items-center justify-center gap-3 sm:mt-3 sm:gap-4">
+              {colors.length ? (
+                <div
+                  className="flex items-center gap-2"
+                  aria-label="رنگ‌های محصول"
+                >
+                  <span className="text-[9px] text-white/[0.52] sm:text-[10px]">
+                    رنگ
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    {colors.slice(0, 5).map((color) => (
+                      <span
+                        key={color._id}
+                        title={fa(color.name)}
+                        aria-label={fa(color.name)}
+                        className="grid size-7 place-items-center rounded-full border border-white/[0.30] bg-black/[0.30] p-[4px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:size-8"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className="block size-full rounded-full border border-white/[0.26]"
+                          style={{ backgroundColor: color.hex ?? "#8b8178" }}
+                        />
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              ) : null}
 
-          <ProductGallery
-            images={images}
-            isLoading={isLoading}
-            isError={productQuery.isError}
-            detailsHref={detailsHref}
-            productTitle={title}
-            presentation="image-led"
-          />
+              {price ? (
+                <>
+                  {colors.length ? (
+                    <span
+                      aria-hidden="true"
+                      className="h-5 w-px bg-white/[0.13]"
+                    />
+                  ) : null}
+                  <strong className="text-[10px] font-semibold text-white/[0.9] sm:text-[11px]">
+                    {price}
+                  </strong>
+                </>
+              ) : null}
+            </div>
+          </div>
 
-          <div className="mx-auto mt-7 flex max-w-[1240px] flex-col items-center justify-between gap-3 border-t border-white/[0.09] pt-5 text-[9.5px] text-white/62 sm:mt-9 sm:flex-row sm:text-[10px]">
-            <span>
-              {numberFormatter.format(images.length)}{" "}
-              {"\u062a\u0635\u0648\u06cc\u0631 \u0645\u062d\u0635\u0648\u0644"}
-            </span>
+          <div className="min-h-0 py-3 sm:py-4 lg:py-5">
+            <ProductGallery
+              images={images}
+              isLoading={isLoading}
+              isError={productQuery.isError}
+              detailsHref={detailsHref}
+              productTitle={title}
+            />
+          </div>
+
+          <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-white/[0.09] pt-3 sm:mx-auto sm:w-full sm:max-w-[520px] sm:gap-3 sm:pt-4">
             <Link
               href={detailsHref}
-              className="inline-flex items-center gap-1.5 text-[#C99D76] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-[#B7835A]/70 bg-[#B7835A]/[0.22] px-3 text-[9px] font-semibold text-[#E8C39E] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-[#E1B587] hover:bg-[#B7835A]/[0.34] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E7C8A8]/80 active:translate-y-0 sm:min-h-12 sm:text-[10px]"
             >
-              {
-                "\u0627\u062f\u0627\u0645\u0647 \u062f\u0631 \u0635\u0641\u062d\u0647 \u0645\u062d\u0635\u0648\u0644"
-              }
-              <ArrowLeft className="size-3.5" aria-hidden="true" />
+              صفحه محصول
+              <ExternalLink className="size-3.5" aria-hidden="true" />
             </Link>
+            <button
+              type="button"
+              onClick={() => closeReveal({ returnToSource: true })}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.18] bg-black/[0.28] px-3 text-[9px] font-semibold text-white/[0.82] backdrop-blur-xl transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/65 active:translate-y-0 sm:min-h-12 sm:text-[10px]"
+            >
+              بازگشت
+              <ArrowRight className="size-3.5" aria-hidden="true" />
+            </button>
           </div>
         </div>
       </div>
@@ -679,7 +620,6 @@ type ProductGalleryProps = {
   isError: boolean;
   detailsHref: string;
   productTitle: string;
-  presentation?: "default" | "image-led";
 };
 
 function ProductGallery({
@@ -688,7 +628,6 @@ function ProductGallery({
   isError,
   detailsHref,
   productTitle,
-  presentation = "default",
 }: ProductGalleryProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const safeModalIndex =
@@ -697,113 +636,93 @@ function ProductGallery({
       : Math.min(modalIndex, Math.max(images.length - 1, 0));
   const modalImage =
     safeModalIndex === null ? null : (images[safeModalIndex] ?? null);
-  const imageLed = presentation === "image-led";
+  const columnCount = Math.max(images.length, 1);
 
   if (isLoading) {
     return (
       <div
         role="status"
-        aria-label={
-          "\u062f\u0631 \u062d\u0627\u0644 \u062f\u0631\u06cc\u0627\u0641\u062a \u062a\u0635\u0627\u0648\u06cc\u0631 \u0645\u062d\u0635\u0648\u0644"
-        }
-        className="mx-auto mt-5 flex min-h-[300px] max-w-[1240px] items-center justify-center overflow-hidden rounded-[24px] border border-white/[0.12] bg-white/[0.035] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl sm:mt-7 sm:min-h-[420px]"
+        aria-label="در حال دریافت تصاویر محصول"
+        className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[20px] border border-white/[0.11] bg-black/[0.18] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-2xl"
       >
-        <div className="flex flex-col items-center text-center">
-          <span className="relative grid size-14 place-items-center rounded-full border border-[#B7835A]/50 bg-[#B7835A]/[0.08] text-[#E2BE99] shadow-[0_12px_40px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.1)]">
-            <Sparkles className="size-5" aria-hidden="true" />
-            <Loader2
-              className="absolute size-8 animate-spin text-white/72"
-              aria-hidden="true"
-            />
-          </span>
-          <span className="mt-4 text-[10px] text-white/48">
-            {
-              "\u062f\u0631 \u062d\u0627\u0644 \u0622\u0645\u0627\u062f\u0647\u200c\u0633\u0627\u0632\u06cc \u06af\u0627\u0644\u0631\u06cc"
-            }
-          </span>
-        </div>
+        <span className="relative grid size-14 place-items-center rounded-full border border-[#B7835A]/55 bg-black/[0.30] text-[#E4BE99] shadow-[0_12px_40px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]">
+          <Sparkles className="size-5" aria-hidden="true" />
+          <Loader2
+            className="absolute size-8 animate-spin text-white/[0.62]"
+            aria-hidden="true"
+          />
+        </span>
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="mx-auto mt-7 flex min-h-[210px] max-w-[900px] flex-col items-center justify-center rounded-[24px] border border-white/[0.12] bg-white/[0.03] px-5 text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-2xl">
-        <p className="text-[12px] leading-7 text-white/56">
-          {
-            "\u0646\u0645\u0627\u06cc\u0634 \u06a9\u0627\u0645\u0644 \u062a\u0635\u0627\u0648\u06cc\u0631 \u062f\u0631 \u062d\u0627\u0644 \u062d\u0627\u0636\u0631 \u0645\u0645\u06a9\u0646 \u0646\u06cc\u0633\u062a."
-          }
+      <div className="flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/[0.11] bg-black/[0.18] px-5 text-center backdrop-blur-2xl">
+        <p className="text-[11px] leading-6 text-white/[0.62]">
+          نمایش تصاویر در حال حاضر ممکن نیست.
         </p>
         <Link
           href={detailsHref}
-          className="mt-4 inline-flex items-center gap-2 text-[10px] font-medium text-[#C99D76] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+          className="mt-3 inline-flex items-center gap-2 text-[9.5px] font-medium text-[#D0A179] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
         >
-          {
-            "\u0645\u0634\u0627\u0647\u062f\u0647 \u062f\u0631 \u0635\u0641\u062d\u0647 \u0645\u062d\u0635\u0648\u0644"
-          }
-          <ArrowLeft className="size-3.5" aria-hidden="true" />
+          صفحه محصول
+          <ExternalLink className="size-3.5" aria-hidden="true" />
         </Link>
       </div>
     );
   }
 
+  if (!images.length) return null;
+
   return (
     <>
       <div
-        className={
-          "mx-auto grid w-full grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-3 " +
-          (imageLed
-            ? "mt-0 max-w-[900px] lg:max-w-[980px]"
-            : "mt-5 max-w-[1240px] sm:mt-7")
-        }
+        className="grid h-full min-h-0 w-full gap-1.5 overflow-hidden sm:gap-2.5 lg:gap-3.5"
+        style={{
+          gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+        }}
       >
         {images.map((image, index) => (
           <figure
             key={image.id}
-            className={
-              (imageLed
-                ? "group relative overflow-hidden rounded-[16px] border border-white/[0.2] bg-black/[0.22] shadow-[0_18px_44px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-xl "
-                : "group relative overflow-hidden rounded-[22px] border border-white/[0.12] bg-white/[0.04] shadow-[0_12px_36px_rgba(0,0,0,0.16),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl ") +
-              imageLayout(index, images.length)
-            }
+            className="group relative h-full min-h-0 min-w-0 overflow-hidden rounded-[12px] border border-white/[0.14] bg-black/[0.24] shadow-[0_16px_40px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl sm:rounded-[16px] lg:rounded-[18px]"
           >
             <button
               type="button"
               onClick={() => setModalIndex(index)}
               aria-label={
-                "\u0645\u0634\u0627\u0647\u062f\u0647 \u06a9\u0627\u0645\u0644 \u062a\u0635\u0648\u06cc\u0631 " +
+                "مشاهده کامل تصویر " +
                 numberFormatter.format(index + 1) +
-                " \u0627\u0632 " +
+                " از " +
                 productTitle
               }
-              className="relative block size-full cursor-zoom-in overflow-hidden text-right outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D2B08D]/90"
+              className="relative block h-full w-full cursor-zoom-in overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E1B586]/90"
             >
               <Image
                 src={image.url}
                 alt={image.alt + " - " + numberFormatter.format(index + 1)}
                 fill
                 sizes={
-                  index === 0
-                    ? "(max-width: 639px) calc(100vw - 48px), (max-width: 1023px) 66vw, 50vw"
-                    : "(max-width: 639px) calc((100vw - 54px) / 2), (max-width: 1023px) 25vw, 18vw"
+                  "(max-width: 639px) " +
+                  Math.max(16, Math.floor(100 / columnCount)) +
+                  "vw, " +
+                  Math.max(14, Math.floor(100 / columnCount)) +
+                  "vw"
                 }
                 loading={index === 0 ? "eager" : "lazy"}
-                className="object-cover transition-transform duration-700 group-hover:scale-[1.035] motion-reduce:transition-none"
+                className="object-cover transition-transform duration-700 group-hover:scale-[1.025] motion-reduce:transition-none"
                 style={{
                   objectFit: imageFit(image.objectFit),
                   objectPosition: image.objectPosition ?? "center",
                 }}
               />
-
               <span
                 aria-hidden="true"
-                className="absolute inset-0 bg-[linear-gradient(180deg,transparent_54%,rgba(0,0,0,0.50)_100%)] opacity-60 transition-opacity duration-300 group-hover:opacity-90"
+                className="absolute inset-0 bg-[linear-gradient(180deg,transparent_62%,rgba(0,0,0,0.44)_100%)] opacity-45 transition-opacity duration-300 group-hover:opacity-80"
               />
-              <span className="absolute bottom-3 left-3 inline-flex min-h-8 items-center gap-1.5 rounded-full border border-white/[0.18] bg-black/[0.28] px-2.5 text-[8px] text-white/78 opacity-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl transition-[opacity,transform] duration-300 group-hover:opacity-100 group-focus-within:opacity-100 sm:text-[9px]">
-                <Maximize2 className="size-3" aria-hidden="true" />
-                {
-                  "\u0645\u0634\u0627\u0647\u062f\u0647 \u06a9\u0627\u0645\u0644"
-                }
+              <span className="absolute bottom-2 left-2 grid size-7 place-items-center rounded-full border border-white/[0.18] bg-black/[0.34] text-white/[0.76] opacity-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-xl transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 sm:bottom-3 sm:left-3 sm:size-8">
+                <Maximize2 className="size-3.5" aria-hidden="true" />
               </span>
             </button>
             <figcaption className="sr-only">{image.alt}</figcaption>
@@ -853,7 +772,7 @@ function ProductImageModal({
   const [loadedImageUrl, setLoadedImageUrl] = useState<string | null>(null);
   const activeImage = images[activeIndex] ?? images[0];
   const hasMultiple = images.length > 1;
-
+  const thumbColumnCount = Math.max(images.length, 1);
   const imageLoaded = loadedImageUrl === activeImage?.url;
 
   useEffect(() => {
@@ -894,8 +813,10 @@ function ProductImageModal({
         ? document.activeElement
         : null;
 
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
 
     const focusFrame = window.requestAnimationFrame(() => {
       closeButtonRef.current?.focus();
@@ -953,7 +874,8 @@ function ProductImageModal({
     return () => {
       window.cancelAnimationFrame(focusFrame);
       window.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousHtmlOverflow;
       previousFocusRef.current?.focus();
     };
   }, []);
@@ -974,31 +896,37 @@ function ProductImageModal({
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-[2147483640] flex items-center justify-center bg-black/[0.84] px-2.5 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] backdrop-blur-[26px] touch-pan-y sm:px-5 sm:py-5"
+      className="fixed inset-0 z-[2147483640] grid h-[100dvh] w-[100dvw] place-items-center overflow-hidden bg-black/[0.84] p-2.5 pb-[max(10px,env(safe-area-inset-bottom))] pt-[max(10px,env(safe-area-inset-top))] backdrop-blur-[28px] touch-pan-y sm:p-5"
     >
-      <div className="relative flex h-[calc(100dvh-20px)] w-full max-w-[1380px] flex-col overflow-hidden rounded-[28px] border border-white/[0.15] bg-[#0B0B0B]/[0.64] shadow-[0_42px_160px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.15)] backdrop-blur-[38px] backdrop-saturate-[150%] sm:h-[min(92dvh,920px)] sm:rounded-[34px]">
+      <div className="relative grid h-full w-full max-w-[1480px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[24px] border border-[#B7835A]/55 bg-[#090807]/[0.90] shadow-[0_46px_180px_rgba(0,0,0,0.72),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-[36px] backdrop-saturate-[145%] sm:h-[min(94dvh,940px)] sm:rounded-[30px]">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(255,255,255,0.105)_0%,rgba(255,255,255,0.025)_27%,transparent_54%,rgba(255,255,255,0.015)_100%)]"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-12 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.28),rgba(183,131,90,0.62),rgba(255,255,255,0.28),transparent)]"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_8%,rgba(183,131,90,0.09),transparent_26%),linear-gradient(145deg,rgba(255,255,255,0.055)_0%,transparent_38%)]"
         />
 
-        <header className="relative z-20 flex min-h-[68px] items-center justify-center border-b border-white/[0.09] px-16 sm:min-h-[74px] sm:px-28">
+        <header className="relative z-30 grid min-h-[72px] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-white/[0.08] px-3 py-3 sm:min-h-[82px] sm:px-6">
+          <a
+            href={activeImage.url}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#B7835A]/55 bg-black/[0.26] px-3 text-[8.5px] text-white/[0.74] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-[#D8AD84]/80 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/75 sm:min-h-11 sm:px-4 sm:text-[9.5px]"
+          >
+            <ExternalLink className="size-3.5" aria-hidden="true" />
+            <span className="hidden min-[390px]:inline">تصویر اصلی</span>
+          </a>
+
           <div className="min-w-0 text-center">
             <p
               id="product-image-modal-title"
-              className="truncate text-[11px] font-semibold text-white/90 sm:text-[12px]"
+              className="truncate text-[12px] font-semibold text-white/[0.94] sm:text-[15px]"
             >
               {productTitle}
             </p>
             <p
               id="product-image-modal-description"
-              className="mt-0.5 text-[8.5px] text-white/42 sm:text-[9px]"
+              className="mt-1 text-[8.5px] text-white/[0.48] sm:text-[9.5px]"
             >
-              تصویر {numberFormatter.format(activeIndex + 1)} از{" "}
+              {numberFormatter.format(activeIndex + 1)} /{" "}
               {numberFormatter.format(images.length)}
             </p>
           </div>
@@ -1009,47 +937,39 @@ function ProductImageModal({
             onClick={onClose}
             aria-label="بستن نمایش تصویر"
             title="بستن"
-            className="absolute right-3 top-1/2 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.18] bg-black/[0.30] text-white shadow-[0_8px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/42 hover:bg-white/[0.10] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/75 active:scale-[0.96] sm:right-5"
+            className="grid size-10 cursor-pointer place-items-center rounded-full border border-[#B7835A]/70 bg-black/[0.30] text-white shadow-[0_8px_28px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:size-11"
           >
-            <X className="size-4 text-white" aria-hidden="true" />
+            <X className="size-4.5" aria-hidden="true" />
           </button>
-
-          <a
-            href={activeImage.url}
-            target="_blank"
-            rel="noreferrer"
-            className="absolute left-3 top-1/2 hidden min-h-10 -translate-y-1/2 items-center gap-2 rounded-full border border-white/[0.14] bg-black/[0.24] px-3.5 text-[9px] text-white/64 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-white/34 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:left-5 sm:inline-flex"
-          >
-            باز کردن تصویر اصلی
-            <ExternalLink className="size-3.5" aria-hidden="true" />
-          </a>
         </header>
 
-        <div className="relative z-10 min-h-0 flex-1 p-2.5 sm:p-4">
-          <div className="relative size-full overflow-hidden rounded-[22px] border border-white/[0.09] bg-[radial-gradient(circle_at_50%_42%,rgba(255,255,255,0.045),rgba(0,0,0,0.18)_44%,rgba(0,0,0,0.36)_100%)] shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] sm:rounded-[26px]">
+        <div className="relative z-10 min-h-0 p-2.5 sm:p-4">
+          <div className="relative mx-auto flex h-full min-h-0 w-full max-w-[1280px] items-center justify-center overflow-hidden rounded-[20px] border border-white/[0.08] bg-black/[0.16] sm:rounded-[26px]">
             {!imageLoaded ? (
-              <div className="absolute inset-0 z-10 grid place-items-center">
-                <span className="relative grid size-14 place-items-center rounded-full border border-white/[0.16] bg-black/[0.30] text-white/80 shadow-[0_12px_40px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-xl">
+              <div className="absolute inset-0 z-20 grid place-items-center">
+                <span className="relative grid size-14 place-items-center rounded-full border border-[#B7835A]/55 bg-black/[0.34] text-[#E3B98F] shadow-[0_12px_40px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl">
                   <Sparkles className="size-5" aria-hidden="true" />
                   <Loader2
-                    className="absolute size-8 animate-spin text-white/58"
+                    className="absolute size-8 animate-spin text-white/55"
                     aria-hidden="true"
                   />
                 </span>
               </div>
             ) : null}
 
-            <Image
-              key={activeImage.id}
-              src={activeImage.url}
-              alt={activeImage.alt}
-              fill
-              priority
-              sizes="100vw"
-              onLoad={() => setLoadedImageUrl(activeImage.url)}
-              className="select-none object-contain"
-              style={{ objectPosition: "center" }}
-            />
+            <div className="relative h-full w-full max-w-[820px]">
+              <Image
+                key={activeImage.id}
+                src={activeImage.url}
+                alt={activeImage.alt}
+                fill
+                priority
+                sizes="(max-width: 639px) 100vw, 820px"
+                onLoad={() => setLoadedImageUrl(activeImage.url)}
+                className="select-none object-contain"
+                style={{ objectPosition: "center" }}
+              />
+            </div>
 
             {hasMultiple ? (
               <>
@@ -1057,80 +977,65 @@ function ProductImageModal({
                   type="button"
                   onClick={previousImage}
                   aria-label="تصویر قبلی"
-                  className="absolute right-3 top-1/2 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.16]  text-white shadow-[0_8px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.96] sm:right-5"
+                  className="absolute left-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:left-6 sm:size-12"
                 >
-                  <ChevronRight
-                    className="size-5 text-white"
-                    aria-hidden="true"
-                  />
+                  <ChevronLeft className="size-5" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   onClick={nextImage}
                   aria-label="تصویر بعدی"
-                  className="absolute left-3 top-1/2 z-20 grid size-11 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-white/[0.16]  text-white shadow-[0_8px_28px_rgba(0,0,0,0.22),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,color,transform] hover:border-white/40 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 active:scale-[0.96] sm:left-5"
+                  className="absolute right-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:right-6 sm:size-12"
                 >
-                  <ChevronLeft
-                    className="size-5 text-white"
-                    aria-hidden="true"
-                  />
+                  <ChevronRight className="size-5" aria-hidden="true" />
                 </button>
               </>
             ) : null}
           </div>
         </div>
 
-        <footer className="relative z-20 flex min-h-[74px] items-center justify-between gap-3 border-t border-white/[0.09] bg-black/[0.12] px-3 py-2 backdrop-blur-xl sm:px-5">
-          <div className="min-w-0 flex-1 overflow-x-auto">
-            <div className="flex w-max items-center gap-2">
-              {images.map((image, index) => {
-                const active = index === activeIndex;
+        <footer className="relative z-20 border-t border-white/[0.09] bg-black/[0.12] px-3 py-2.5 backdrop-blur-xl sm:px-6 sm:py-3">
+          <div
+            className="mx-auto grid w-full max-w-[430px] min-w-0 gap-2"
+            style={{
+              gridTemplateColumns: `repeat(${thumbColumnCount}, minmax(0, 1fr))`,
+            }}
+          >
+            {images.map((image, index) => {
+              const active = index === activeIndex;
 
-                return (
-                  <button
-                    key={image.id}
-                    type="button"
-                    onClick={() => onChange(index)}
-                    aria-label={`نمایش تصویر ${numberFormatter.format(index + 1)}`}
-                    aria-current={active ? "true" : undefined}
-                    className={
-                      "relative h-12 w-10 shrink-0 cursor-pointer overflow-hidden rounded-[9px] border bg-black/[0.22] transition-[border-color,opacity,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 " +
-                      (active
-                        ? "border-white/60 opacity-100 shadow-[0_0_0_1px_rgba(255,255,255,0.12)]"
-                        : "border-white/[0.10] opacity-[0.48] hover:border-white/30 hover:opacity-[0.88]")
-                    }
-                  >
+              return (
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => onChange(index)}
+                  aria-label={
+                    "نمایش تصویر " + numberFormatter.format(index + 1)
+                  }
+                  aria-current={active ? "true" : undefined}
+                  className={
+                    "relative min-w-0 cursor-pointer overflow-hidden rounded-[9px] border bg-black/[0.22] transition-[border-color,opacity,transform,box-shadow] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E7C39F]/75 " +
+                    (active
+                      ? "border-[#E0B487] opacity-100 shadow-[0_0_0_1px_rgba(224,180,135,0.28),0_0_24px_rgba(183,131,90,0.13)]"
+                      : "border-white/[0.10] opacity-[0.52] hover:border-white/[0.30] hover:opacity-[0.9]")
+                  }
+                >
+                  <span className="relative block aspect-[4/5] w-full">
                     <Image
                       src={image.url}
                       alt=""
                       fill
-                      sizes="40px"
+                      sizes="86px"
                       className="object-cover"
                       style={{
                         objectPosition: image.objectPosition ?? "center",
                       }}
                     />
-                    {active ? (
-                      <span
-                        aria-hidden="true"
-                        className="absolute inset-x-2 bottom-0 h-px bg-[#B7835A]/80"
-                      />
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
+                  </span>
+                </button>
+              );
+            })}
           </div>
-
-          <a
-            href={activeImage.url}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-white/[0.15] bg-white/[0.045] px-3 text-[8.5px] font-medium text-white/66 shadow-[inset_0_1px_0_rgba(255,255,255,0.065)] transition-[border-color,background-color,color] hover:border-white/34 hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 sm:hidden"
-          >
-            تصویر اصلی
-            <ExternalLink className="size-3" aria-hidden="true" />
-          </a>
         </footer>
       </div>
     </div>

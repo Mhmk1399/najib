@@ -59,8 +59,6 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
     title: "خانه نجیب‌زاده",
     links: [
       { label: "داستان ما", href: "/about-us" },
-      { label: "هنر خیاطی", href: "/craftsmanship" },
-      { label: "میراث نجیب‌زاده", href: "/heritage" },
       { label: "مجله", href: "/blog" },
       { label: "کمپین‌ها", href: "/shop?collection=new-season" },
     ],
@@ -70,7 +68,6 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
     title: "اطلاعات",
     links: [
       { label: "تماس با ما", href: "/contact-us" },
-      { label: "سوالات متداول", href: "/faq" },
       { label: "حریم خصوصی", href: "/privacy" },
       { label: "قوانین و مقررات", href: "/terms-conditions" },
       { label: "سیاست کوکی‌ها", href: "/cookies" },
