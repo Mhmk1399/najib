@@ -1,5 +1,13 @@
 import { type CSSProperties } from "react";
 
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 /* ==========================================================================
@@ -7,56 +15,31 @@ import { brandColors, lightTokens } from "@/theme/theme-colors";
 ============================================================================ */
 
 type BrandStorySectionProps = {
-  eyebrow?: string;
-  title?: string;
-  text?: string;
-  readMoreLabel?: string;
-  readLessLabel?: string;
+  copy: HomeCopy["brandStory"];
+  locale: Locale;
   defaultExpanded?: boolean;
   className?: string;
 };
-
-/* ==========================================================================
-   DEFAULT BRAND COPY
-============================================================================ */
-
-const DEFAULT_BRAND_TEXT = `
-نجیب‌زاده خانه‌ای معاصر است که بر یک باور ساده شکل گرفته: ظرافت واقعی هیچ‌وقت نیاز به هیاهو ندارد.
-
-جهان ما حول خیاطی سنجیده، رایحه‌های متمایز و اشیایی ساخته شده که به‌خاطر شخصیت، متریال و ماندگاری‌شان انتخاب می‌شوند.
-
-ما به قطعاتی علاقه‌مندیم که امروز معنادار باشند و پس از گذر فصل‌ها نیز ارزش خود را حفظ کنند. هر جزئیات با نیت آغاز می‌شود؛ از تناسب یک لباس و بافت پارچه تا حسی که یک رایحه در فضا باقی می‌گذارد.
-
-برای ما، تجمل در خویشتن‌داری، دقت و توانایی حذف هر چیزی است که ضرورتی ندارد. مهارت در ساخت را نه به‌عنوان تزئین، بلکه به‌عنوان پایه هر آنچه خلق می‌کنیم می‌بینیم.
-
-نگاه نجیب‌زاده دانش سنتی را با دیدگاهی امروزی کنار هم قرار می‌دهد تا فرم‌های آشنا دوباره تازه و معاصر احساس شوند. لباس قرار نیست فقط بخشی از کمد باشد؛ باید آرام‌آرام به بخشی از زندگی فرد تبدیل شود.
-
-عطر برای ما امتداد حضور است؛ چیزی که می‌تواند خاطره را در خود نگه دارد و بدون اغراق اثری ماندگار ایجاد کند. اشیای جهان نجیب‌زاده نیز با همان دقت در تعادل، کاربرد و زیبایی پایدار انتخاب می‌شوند.
-
-باور داریم سبک شخصی زمانی عمیق‌تر می‌شود که آهسته و آگاهانه ساخته شود. همین نگاه، انتخاب متریال، فرم، رنگ و تجربه پیرامون هر محصول را شکل می‌دهد.
-
-نجیب‌زاده با افراط یا تغییر دائمی تعریف نمی‌شود؛ بلکه با پیگیری مداوم کیفیت، شخصیت و جزئیاتی شناخته می‌شود که برای دیده‌شدن فریاد نمی‌زنند.
-
-هر آنچه می‌سازیم باید شخصی، ماندگار و بی‌نیاز از توضیح اضافه باشد.
-`.trim();
 
 /* ==========================================================================
    COMPONENT
 ============================================================================ */
 
 export function BrandStorySection({
-  eyebrow = "خانه نجیب‌زاده",
-  title = "جهان نجیب‌زاده.",
-  text = DEFAULT_BRAND_TEXT,
-  readMoreLabel = "ادامه داستان",
-  readLessLabel = "بستن داستان",
+  copy,
+  locale,
   defaultExpanded = false,
   className = "",
 }: BrandStorySectionProps) {
-  const paragraphs = splitStoryText(text);
+  const paragraphs = splitStoryText(copy.text);
 
   const previewParagraphs = paragraphs.slice(0, Math.min(2, paragraphs.length));
+
   const remainingParagraphs = paragraphs.slice(previewParagraphs.length);
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
 
   const themeVars = {
     "--story-bg": lightTokens.surfaceBrand,
@@ -68,37 +51,40 @@ export function BrandStorySection({
 
   return (
     <section
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       style={themeVars}
       aria-labelledby="brand-story-title"
       className={`relative w-full overflow-hidden bg-[var(--story-bg)] text-[var(--story-text)] ${className}`}
     >
-      {/* Quiet editorial rails — structural rather than decorative. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 right-[clamp(20px,4vw,56px)] hidden w-px bg-black/[0.055] lg:block"
       />
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-y-0 left-[clamp(20px,4vw,56px)] hidden w-px bg-black/[0.055] lg:block"
       />
 
       <div className="mx-auto w-full max-w-[1440px] px-5 py-20 sm:px-8 sm:py-24 lg:px-12 lg:py-28 xl:px-14 xl:py-32">
-        {/* ==============================================================
-            CENTERED EDITORIAL INTRO
-        ============================================================== */}
+        {/* ================================================================
+            EDITORIAL INTRO
+        ================================================================= */}
+
         <div className="mx-auto max-w-[900px] text-center">
           <header className="mx-auto flex max-w-[720px] flex-col items-center text-center">
-            {eyebrow ? (
+            {copy.eyebrow ? (
               <div className="flex items-center justify-center gap-3">
                 <span
                   aria-hidden="true"
                   className="h-px w-8 bg-[var(--story-copper)]"
                 />
+
                 <p className="text-[10px] font-medium leading-none text-[var(--story-copper)] sm:text-[11px]">
-                  {eyebrow}
+                  {copy.eyebrow}
                 </p>
+
                 <span
                   aria-hidden="true"
                   className="h-px w-8 bg-[var(--story-copper)]"
@@ -110,7 +96,7 @@ export function BrandStorySection({
               id="brand-story-title"
               className="mt-5 max-w-[720px] text-balance text-[clamp(2.9rem,10vw,4.65rem)] font-semibold leading-[1.08] tracking-[-0.045em] sm:mt-6 sm:text-[clamp(3.7rem,7vw,5.4rem)] lg:text-[clamp(4.15rem,5vw,6rem)]"
             >
-              {title}
+              {copy.title}
             </h2>
 
             <div
@@ -118,9 +104,11 @@ export function BrandStorySection({
               className="mt-7 flex items-center justify-center gap-3 text-[var(--story-copper)]/60 sm:mt-8"
             >
               <span className="h-px w-10 bg-current" />
+
               <span className="text-[7px] font-medium tracking-[0.22em]">
                 NAJIBZADEH
               </span>
+
               <span className="h-px w-10 bg-current" />
             </div>
           </header>
@@ -143,9 +131,10 @@ export function BrandStorySection({
           ) : null}
         </div>
 
-        {/* ==============================================================
+        {/* ================================================================
             EXPANDABLE STORY
-        ============================================================== */}
+        ================================================================= */}
+
         {remainingParagraphs.length ? (
           <details
             open={defaultExpanded}
@@ -155,14 +144,16 @@ export function BrandStorySection({
               <span className="grid size-8 shrink-0 place-items-center border border-black/[0.16] text-black/60 transition-[border-color,color,background-color] duration-300 group-hover:border-[var(--story-copper)]/55 group-hover:text-[var(--story-copper)]">
                 <span className="relative block size-3.5">
                   <span className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-current" />
+
                   <span className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:scale-y-0 motion-reduce:transition-none" />
                 </span>
               </span>
 
               <span className="text-[12px] font-semibold text-black/68 transition-colors duration-200 group-hover:text-black sm:text-[13px]">
-                <span className="group-open:hidden">{readMoreLabel}</span>
+                <span className="group-open:hidden">{copy.readMoreLabel}</span>
+
                 <span className="hidden group-open:inline">
-                  {readLessLabel}
+                  {copy.readLessLabel}
                 </span>
               </span>
             </summary>
@@ -195,7 +186,9 @@ export function BrandStorySection({
 function splitStoryText(text: string) {
   const normalized = text.trim();
 
-  if (!normalized) return [];
+  if (!normalized) {
+    return [];
+  }
 
   const explicitParagraphs = normalized
     .split(/\n\s*\n+/)

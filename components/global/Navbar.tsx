@@ -972,7 +972,7 @@ export default function Navbar({
               )}
             ></Button>
           </div>
-        </div>
+       
 
         <Link
           href={homeHref}
@@ -1027,6 +1027,7 @@ export default function Navbar({
             <BagIcon />
           </NavAction>
         </div>
+         </div>
       </header>
 
       {languageModalOpen && (

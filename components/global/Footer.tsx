@@ -497,7 +497,7 @@ function WordmarkStage({
           className="relative z-10 block w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/70"
         >
           <span
-            dir="ltr"
+            
             className="block whitespace-nowrap text-center text-[clamp(34px,9.6vw,205px)] font-medium uppercase leading-[0.78] tracking-[-0.07em] motion-reduce:transform-none"
             style={{
               transform: "scale(var(--wordmark-scale))",

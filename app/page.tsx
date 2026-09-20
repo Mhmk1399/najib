@@ -106,19 +106,21 @@ export default async function Page() {
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />
-      <ShoppableImageBanner />
-      <DynamicIslandExperienceSections />
-      <ProductEditorialGrid />
-      <FAQ
-        id="faq"
-        eyebrow={FAQ_DEMO_CONTENT.eyebrow}
-        title={FAQ_DEMO_CONTENT.title}
-        description={FAQ_DEMO_CONTENT.description}
-        items={FAQ_DEMO_ITEMS}
-        defaultOpenIds={["delivery"]}
-        allowMultiple={false}
+      <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
+      <DynamicIslandExperienceSections
+        copy={copy.dynamicIsland}
+        locale={locale}
       />
-      <BrandStorySection />
+      <ProductEditorialGrid copy={copy.productEditorial} locale={locale} />
+      <FAQ
+        locale={locale}
+        eyebrow={copy.faq.eyebrow}
+        title={copy.faq.title}
+        description={copy.faq.description}
+        items={copy.faq.items}
+        emptyState={copy.faq.emptyState}
+      />
+      <BrandStorySection copy={copy.brandStory} locale={locale} />{" "}
     </main>
   );
 }
