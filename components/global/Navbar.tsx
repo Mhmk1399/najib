@@ -775,16 +775,6 @@ export default function Navbar({
               </NavAction>
             </div>
 
-            <div className="hidden md:block">
-              <NavAction
-                href="/wishlist"
-                label="علاقه‌مندی‌ها"
-                onReadableSurface={readableNavbar}
-              >
-                <HeartIcon />
-              </NavAction>
-            </div>
-
             <NavAction
               href="/cart"
               label="سبد خرید"
@@ -1653,22 +1643,6 @@ function BagIcon() {
     >
       <path d="M5 8h14v12H5z" />
       <path d="M9 8V4h6v4" />
-    </svg>
-  );
-}
-
-function HeartIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.2"
-      strokeLinecap="square"
-      strokeLinejoin="miter"
-      aria-hidden="true"
-    >
-      <path d="M12 20 3 11V6l3-3h4l2 2 2-2h4l3 3v5Z" />
     </svg>
   );
 }
