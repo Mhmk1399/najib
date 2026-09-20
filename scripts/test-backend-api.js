@@ -581,7 +581,7 @@ async function runAuthFlow() {
         balanceAfterPayment?.onHand === 8 && balanceAfterPayment?.reserved === 0 &&
         convertedCart?.status === "converted" && completedCheckout?.status === "completed" &&
         storedPayment?.status === "succeeded" && createdOrder?.totalMinor === 1_700_000,
-      `${createPayment.response.status}/${failedPayment.body?.payment?.status}/${successfulPayment.body?.payment?.status}/${successfulPayment.body?.sms?.status}`,
+      `${createPayment.response.status}/${failedPayment.body?.payment?.status}/${successfulPayment.response.status}:${successfulPayment.body?.error || successfulPayment.body?.payment?.status}/${successfulPayment.body?.sms?.status}`,
     );
 
     const safeProfileUpdate = await apiRequest("/api/account/profile", {
@@ -899,7 +899,7 @@ async function runAuthFlow() {
         db.collection("carts").deleteMany({ _id: { $in: [cartId].filter(Boolean) } }),
         db.collection("checkoutsessions").deleteMany({ userId: String(userId) }),
         db.collection("paymentintents").deleteMany({ userId }),
-        db.collection("paymentattempts").deleteMany({ idempotencyKey: { $regex: `^payment-test-` } }),
+        db.collection("paymentattempts").deleteMany({ idempotencyKey: { $regex: `${suffix}$` } }),
         db.collection("productvariants").deleteMany({ _id: cartVariantId }),
         db.collection("products").deleteMany({ _id: cartProductId }),
         db.collection("sizes").deleteMany({ _id: cartSizeId }),

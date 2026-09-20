@@ -30,7 +30,6 @@ const paymentIntentSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "CheckoutSession",
       required: true,
-      index: true,
     },
     userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
     idempotencyKey: { type: String, required: true, trim: true, maxlength: 160 },
