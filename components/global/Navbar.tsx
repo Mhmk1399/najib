@@ -646,7 +646,7 @@ export default function Navbar({
       })),
     [copy],
   );
-   const cartQuery = useQuery({
+  const cartQuery = useQuery({
     queryKey: cartQueryKey,
     queryFn: ({ signal }) => fetchAccountCart(signal),
     retry: false,
@@ -972,61 +972,61 @@ export default function Navbar({
               )}
             ></Button>
           </div>
+        </div>
 
-          <Link
-            href={homeHref}
-            onClick={hideMenu}
-            aria-label={copy.navbar.homeAria}
-            className={cx(
-              "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
-              "transition-[opacity,transform,filter] duration-300",
-              "hover:scale-[1.025] hover:opacity-80",
-              readableNavbar
-                ? NAVBAR_SURFACE_CHROME_CLASSES
-                : NAVBAR_OVERLAY_CHROME_CLASSES,
-            )}
-          >
-            <Image
-              src={"/assets/images/logo.png"}
-              alt={copy.brandName}
-              width={84}
-              height={84}
-              priority
-              className="h-auto w-[66px] sm:w-[72px] md:w-[78px]"
-            />
-          </Link>
+        <Link
+          href={homeHref}
+          onClick={hideMenu}
+          aria-label={copy.navbar.homeAria}
+          className={cx(
+            "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
+            "transition-[opacity,transform,filter] duration-300",
+            "hover:scale-[1.025] hover:opacity-80",
+            readableNavbar
+              ? NAVBAR_SURFACE_CHROME_CLASSES
+              : NAVBAR_OVERLAY_CHROME_CLASSES,
+          )}
+        >
+          <Image
+            src={"/assets/images/logo.png"}
+            alt={copy.brandName}
+            width={84}
+            height={84}
+            priority
+            className="h-auto w-[66px] sm:w-[72px] md:w-[78px]"
+          />
+        </Link>
 
-          <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
-            <LanguageToggle
-              buttonRef={languageButtonRef}
-              currentLocale={locale}
-              onReadableSurface={readableNavbar}
-              label={languageCopy.openButton}
-              onClick={openLanguageModal}
-            />
+        <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
+          <LanguageToggle
+            buttonRef={languageButtonRef}
+            currentLocale={locale}
+            onReadableSurface={readableNavbar}
+            label={languageCopy.openButton}
+            onClick={openLanguageModal}
+          />
 
-            <div className="hidden sm:block">
-              <NavAction
-                href={toLocalizedHref("/profile")}
-                label={copy.navbar.profile}
-                onReadableSurface={readableNavbar}
-                locale={locale}
-              >
-                <ProfileIcon />
-              </NavAction>
-            </div>
-
+          <div className="hidden sm:block">
             <NavAction
-              href={toLocalizedHref("/cart")}
-              label={copy.navbar.cart}
-              badge={2}
-              href="/cart"
-              label="سبد خرید"
+              href={toLocalizedHref("/profile")}
+              label={copy.navbar.profile}
               onReadableSurface={readableNavbar}
-              locale={locale}>
-              <BagIcon />
+              locale={locale}
+            >
+              <ProfileIcon />
             </NavAction>
           </div>
+
+          <NavAction
+            href={toLocalizedHref("/cart")}
+            label={copy.navbar.cart}
+            badge={2}
+            onReadableSurface={readableNavbar}
+            locale={locale}
+          >
+            <BagIcon />
+          </NavAction>
+        </div>
       </header>
 
       {languageModalOpen && (
