@@ -58,6 +58,8 @@ added to the Admin navigation and interface.
 | Account summary | `GET /api/account/summary` | Complete; safe profile, real order totals, spending, active cart, address count, and recent orders |
 | Customer orders | `GET /api/account/orders`, `GET /api/account/orders/:id` | Complete; validated filters/pagination and ownership enforced in database queries |
 | Current cart | `GET/DELETE /api/account/cart`, `POST /api/account/cart/items`, `PATCH/DELETE /api/account/cart/items/:id` | Complete for customer-owned read, add, quantity update, item removal, and clear operations; sellability and server-side prices are revalidated on every write |
+| Checkout reservation | `POST /api/account/checkouts`, `GET/PATCH /api/account/checkouts/:id` | Complete for customer-owned start/read/cancel: reprices the cart, validates destination, reserves exact variants transactionally for 15 minutes, prevents duplicate reservation with an idempotency key, and releases stock on cancel |
+| Temporary payment | `POST /api/account/checkouts/:id/payment-intents`, `GET /api/account/payments/:id`, `POST /api/account/payments/:id/confirm` | Complete with development-only mock providers: failed attempts remain retryable; verified success atomically commits inventory, creates the order, completes checkout, converts the cart, and requests confirmation SMS |
 | Customer profile | `GET/PATCH /api/account/profile` | Complete; full saved-address read and strict whitelist for editable profile fields |
 
 All customer account responses are private and use `Cache-Control: no-store`.
@@ -101,13 +103,14 @@ Before starting a new domain, keep `npm run typecheck`, `npm run lint`,
 `npm run build`, and `npm run test:api` green. Production also requires an
 explicit `AUTH_ACCESS_TOKEN_SECRET` of at least 32 bytes.
 
-The Inventory backend contract and authenticated customer cart mutations are
-complete. The next batch is:
+The Inventory backend contract, customer cart/checkout flow, and temporary
+development Payment/SMS adapters are complete. The next batch is:
 
-1. Connect checkout orchestration to reserve exact variants and commit or
-   release reservations.
-2. Add payment intent, attempt, capture, refund, and reconciliation APIs.
-3. Add operational Admin pages for orders, carts, checkout sessions, abandoned
+1. Replace the temporary adapters when Payment and SMS provider credentials and
+   callback contracts are available.
+2. Add capture, refund, and reconciliation APIs after the real gateway is chosen.
+3. Add automatic checkout expiry/release and abandoned-checkout recovery.
+4. Add operational Admin pages for orders, carts, checkout sessions, abandoned
    checkouts, and audit history.
 
 Payment intent and refund APIs follow only after reservation contracts exist, so

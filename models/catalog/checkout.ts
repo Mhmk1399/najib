@@ -29,7 +29,7 @@ const checkoutSessionSchema = new Schema(
     items: { type: [checkoutItemSchema], required: true },
     status: {
       type: String,
-      enum: ["started", "reserved", "payment_pending", "completed", "failed", "expired"],
+      enum: ["started", "reserved", "payment_pending", "completed", "failed", "cancelled", "expired"],
       default: "started",
       index: true,
     },

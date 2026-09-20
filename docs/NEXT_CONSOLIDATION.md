@@ -69,6 +69,13 @@ AUTH_ACCESS_TOKEN_TTL_SECONDS=900
 AUTH_REFRESH_TOKEN_TTL_SECONDS=1209600
 ```
 
+Temporary local Payment/SMS providers (never selected implicitly in production):
+
+```bash
+PAYMENT_PROVIDER=mock
+SMS_PROVIDER=mock
+```
+
 S3-compatible uploads, including Liara Object Storage buckets:
 
 ```bash

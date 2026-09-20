@@ -37,7 +37,7 @@ export const cartListQuerySchema = paginationSchema.extend({
 });
 
 export const checkoutListQuerySchema = paginationSchema.extend({
-  status: z.enum(["started", "reserved", "payment_pending", "completed", "failed", "expired"]).optional(),
+  status: z.enum(["started", "reserved", "payment_pending", "completed", "failed", "cancelled", "expired"]).optional(),
   storeId: z.string().trim().max(100).optional(),
   cityId: z.string().trim().max(100).optional(),
   userId: z.string().trim().max(100).optional(),
