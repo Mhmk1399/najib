@@ -4,10 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
+import { Languages } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
   type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useMemo,
@@ -17,6 +19,25 @@ import {
 
 import { Button } from "@/components/ui/Button";
 import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  localeLabels,
+  locales,
+  type Locale,
+} from "@/lib/i18n/config";
+import {
+  getLocaleFromPathname,
+  localizedHref,
+  localizedPath,
+  splitLocalePathname,
+  switchLocalePath,
+} from "@/lib/i18n/routes";
+import {
+  formatShellNumber,
+  shellCopy,
+  translateShellText,
+} from "@/lib/i18n/shell-copy";
 import { themeClasses } from "@/theme/theme-colors";
 import { cartQueryKey, fetchAccountCart } from "@/lib/commerce/client";
 
@@ -130,24 +151,80 @@ function getClampedScrollY(scrollY: number) {
   return Math.min(scrollY, maxScrollY);
 }
 
-const PERSIAN_DIGITS = "۰۱۲۳۴۵۶۷۸۹";
-
-function formatPersianNumber(value: number | string, minimumLength = 0) {
-  return String(value)
-    .padStart(minimumLength, "0")
-    .replace(/\d/g, (digit) => PERSIAN_DIGITS[Number(digit)] ?? digit);
-}
-
-const BADGE_LABELS: Record<string, string> = {
-  New: "جدید",
-  جدید: "جدید",
-  Exclusive: "انحصاری",
-  Limited: "محدود",
+const BADGE_LABELS: Record<Locale, Record<string, string>> = {
+  fa: {
+    New: "جدید",
+    جدید: "جدید",
+    Exclusive: "انحصاری",
+    Limited: "محدود",
+  },
+  en: {
+    New: "New",
+    جدید: "New",
+    Exclusive: "Exclusive",
+    Limited: "Limited",
+  },
+  ar: {
+    New: "جديد",
+    جدید: "جديد",
+    Exclusive: "حصري",
+    Limited: "محدود",
+  },
 };
 
-function localizeBadge(label?: string) {
+const LANGUAGE_NATIVE_NAMES: Record<Locale, string> = {
+  fa: "فارسی",
+  en: "English",
+  ar: "العربية",
+};
+
+const LANGUAGE_MODAL_COPY: Record<
+  Locale,
+  {
+    openButton: string;
+    eyebrow: string;
+    title: string;
+    description: string;
+    current: string;
+    choose: string;
+    close: string;
+  }
+> = {
+  fa: {
+    openButton: "انتخاب زبان",
+    eyebrow: "زبان سایت",
+    title: "زبان تجربه خود را انتخاب کنید",
+    description:
+      "مسیر فعلی سایت حفظ می‌شود و فقط نسخه زبانی همان صفحه باز خواهد شد.",
+    current: "زبان فعلی",
+    choose: "انتخاب",
+    close: "بستن انتخاب زبان",
+  },
+  en: {
+    openButton: "Choose language",
+    eyebrow: "Site language",
+    title: "Choose your language",
+    description:
+      "Your current page is preserved while the language version changes.",
+    current: "Current",
+    choose: "Select",
+    close: "Close language selector",
+  },
+  ar: {
+    openButton: "اختيار اللغة",
+    eyebrow: "لغة الموقع",
+    title: "اختر لغة تجربتك",
+    description:
+      "سيتم الحفاظ على الصفحة الحالية وفتح النسخة اللغوية المناسبة لها.",
+    current: "اللغة الحالية",
+    choose: "اختيار",
+    close: "إغلاق اختيار اللغة",
+  },
+};
+
+function localizeBadge(label: string | undefined, locale: Locale) {
   if (!label) return undefined;
-  return BADGE_LABELS[label] ?? label;
+  return BADGE_LABELS[locale][label] ?? label;
 }
 
 /* ==========================================================================
@@ -289,8 +366,8 @@ const MENU_TEXT_TRANSLATIONS: Record<string, string> = {
   Stores: "فروشگاه‌ها",
 };
 
-function localizeMenuText(value: string) {
-  return MENU_TEXT_TRANSLATIONS[value] ?? value;
+function localizeMenuText(value: string, locale: Locale) {
+  return translateShellText(MENU_TEXT_TRANSLATIONS[value] ?? value, locale);
 }
 
 /* ==========================================================================
@@ -425,6 +502,79 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   stores: "فروشگاه‌ها",
 };
 
+const BREADCRUMB_LABELS_BY_LOCALE: Record<Locale, Record<string, string>> = {
+  fa: BREADCRUMB_LABELS,
+  en: {
+    shop: "Shop",
+    profile: "Account",
+    wishlist: "Wishlist",
+    cart: "Shopping bag",
+    "about-us": "About us",
+    about: "About us",
+    "contact-us": "Contact us",
+    contact: "Contact us",
+    blog: "Journal",
+    privacy: "Privacy policy",
+    "terms-conditions": "Terms and conditions",
+    cookies: "Cookie policy",
+    "customer-dashboard": "Customer dashboard",
+    auth: "Account access",
+    campaigns: "Campaigns",
+    lookbook: "Lookbook",
+    world: "Our world",
+    "best-sellers": "Best sellers",
+    icons: "Najibzadeh icons",
+    edits: "Edits",
+    new: "New",
+    collections: "Collections",
+    clothing: "Clothing",
+    fragrance: "Fragrance",
+    accessories: "Accessories",
+    house: "The house",
+    journal: "Journal",
+  },
+  ar: {
+    shop: "المتجر",
+    profile: "الحساب",
+    wishlist: "المفضلة",
+    cart: "سلة التسوق",
+    "about-us": "من نحن",
+    about: "من نحن",
+    "contact-us": "اتصل بنا",
+    contact: "اتصل بنا",
+    blog: "المدونة",
+    privacy: "سياسة الخصوصية",
+    "terms-conditions": "الشروط والأحكام",
+    cookies: "سياسة ملفات الارتباط",
+    "customer-dashboard": "لوحة العميل",
+    auth: "الدخول إلى الحساب",
+    campaigns: "الحملات",
+    lookbook: "لوك بوك",
+    world: "عالمنا",
+    "best-sellers": "الأكثر مبيعا",
+    icons: "أيقونات نجيب زاده",
+    edits: "مختارات",
+    new: "جديد",
+    collections: "المجموعات",
+    clothing: "الملابس",
+    fragrance: "العطور",
+    accessories: "الإكسسوارات",
+    house: "دار نجيب زاده",
+    journal: "المدونة",
+  },
+};
+
+function localizeBreadcrumbLabel(
+  segment: string,
+  generatedLabel: string,
+  locale: Locale,
+) {
+  return (
+    BREADCRUMB_LABELS_BY_LOCALE[locale][segment] ??
+    translateShellText(BREADCRUMB_LABELS[segment] ?? generatedLabel, locale)
+  );
+}
+
 /* ==========================================================================
    LUXURY NAVBAR V2
 ============================================================================ */
@@ -463,7 +613,40 @@ export default function Navbar({
   overlayTone?: "light" | "dark";
 }) {
   const pathname = usePathname();
-  const menuSections = useStorefrontMenuSections();
+  const locale = getLocaleFromPathname(pathname);
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+  const copy = shellCopy[locale];
+  const pathnameWithoutLocale = splitLocalePathname(
+    pathname ?? "/",
+  ).pathnameWithoutLocale;
+  const homeHref = localizedPath("/", locale);
+  const toLocalizedHref = useCallback(
+    (href: string) => localizedHref(href, locale),
+    [locale],
+  );
+  const menuSections = useStorefrontMenuSections(locale);
+  const languageCopy = LANGUAGE_MODAL_COPY[locale];
+  const languageOptions = useMemo(
+    () =>
+      locales.map((targetLocale) => ({
+        locale: targetLocale,
+        href: switchLocalePath(pathname ?? "/", targetLocale),
+        label: localeLabels[targetLocale],
+        nativeName: LANGUAGE_NATIVE_NAMES[targetLocale],
+        direction: getLocaleDirection(targetLocale),
+        htmlLang: getHtmlLang(targetLocale),
+      })),
+    [pathname],
+  );
+  const quickLinks = useMemo(
+    () =>
+      copy.navbar.quickLinks.map((link, index) => ({
+        ...link,
+        icon: QUICK_LINKS[index]?.icon ?? <ShopIcon />,
+      })),
+    [copy],
+  );
   const cartQuery = useQuery({
     queryKey: cartQueryKey,
     queryFn: ({ signal }) => fetchAccountCart(signal),
@@ -481,8 +664,11 @@ export default function Navbar({
   const [hoveredSubcategory, setHoveredSubcategory] = useState<string | null>(
     null,
   );
+  const [languageModalOpen, setLanguageModalOpen] = useState(false);
 
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const languageButtonRef = useRef<HTMLButtonElement>(null);
+  const languageCloseButtonRef = useRef<HTMLButtonElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const savedScrollPosition = useRef(0);
 
@@ -501,11 +687,15 @@ export default function Navbar({
       : (menuSections[0]?.id ?? EMPTY_MENU_SECTION.id);
 
   const breadcrumbs = useMemo(() => {
-    if (!pathname || pathname === "/") {
+    if (!pathname) {
       return [];
     }
 
-    const segments = pathname.split("/").filter(Boolean);
+    if (pathnameWithoutLocale === "/") {
+      return [];
+    }
+
+    const segments = pathnameWithoutLocale.split("/").filter(Boolean);
 
     return segments.map((segment, index) => {
       const href = "/" + segments.slice(0, index + 1).join("/");
@@ -518,11 +708,11 @@ export default function Navbar({
       }
 
       return {
-        href,
-        label: BREADCRUMB_LABELS[segment] ?? generatedLabel,
+        href: localizedPath(href, locale),
+        label: localizeBreadcrumbLabel(segment, generatedLabel, locale),
       };
     });
-  }, [pathname]);
+  }, [locale, pathname, pathnameWithoutLocale]);
 
   const showMenu = useCallback(() => {
     if (closeTimerRef.current) {
@@ -564,6 +754,24 @@ export default function Navbar({
     }
   }, [hideMenu, open, showMenu]);
 
+  const closeLanguageModal = useCallback((restoreFocus = true) => {
+    setLanguageModalOpen(false);
+
+    if (!restoreFocus) return;
+
+    requestAnimationFrame(() => {
+      languageButtonRef.current?.focus();
+    });
+  }, []);
+
+  const openLanguageModal = useCallback(() => {
+    if (open) {
+      hideMenu();
+    }
+
+    setLanguageModalOpen(true);
+  }, [hideMenu, open]);
+
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) {
@@ -571,6 +779,28 @@ export default function Navbar({
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (!languageModalOpen) return;
+
+    const frame = requestAnimationFrame(() => {
+      languageCloseButtonRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+
+      event.preventDefault();
+      closeLanguageModal();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeLanguageModal, languageModalOpen]);
 
   useEffect(() => {
     let frame: number | null = null;
@@ -693,17 +923,17 @@ export default function Navbar({
   const overlayBreadcrumbClass =
     overlayTone === "dark" ? "text-white" : "text-white";
   if (
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname.startsWith("/admin")
+    pathnameWithoutLocale === "/login" ||
+    pathnameWithoutLocale === "/signup" ||
+    pathnameWithoutLocale.startsWith("/admin")
   ) {
     return null;
   }
   return (
     <>
       <header
-        dir="rtl"
-        lang="fa"
+        dir={direction}
+        lang={htmlLang}
         className={cx(
           "fixed inset-x-0 top-0 z-[999999999]",
           "h-[70px] md:h-[78px]",
@@ -731,9 +961,9 @@ export default function Navbar({
               variant="outline"
               size="sm"
               uppercase={false}
-               aria-expanded={open}
+              aria-expanded={open}
               aria-controls="najibzadeh-luxury-menu"
-              aria-label={open ? "بستن منو" : "باز کردن منو"}
+              aria-label={open ? copy.navbar.closeMenu : copy.navbar.openMenu}
               onClick={toggleMenu}
               icon={open ? <CloseIcon /> : <MenuIcon />}
               iconPosition="right"
@@ -747,10 +977,9 @@ export default function Navbar({
                   ? NAVBAR_SURFACE_CHROME_CLASSES
                   : NAVBAR_OVERLAY_CHROME_CLASSES,
               )}
-            >
-            
-            </Button>
+            ></Button>
           </div>
+       
 
           <Link
             href="/"
@@ -792,29 +1021,54 @@ export default function Navbar({
                 label="حساب کاربری"
                 onReadableSurface={readableNavbar}
                 forceLightSurface={commerceLightSurface}
+                locale={locale}
               >
                 <ProfileIcon />
               </NavAction>
             </div>
 
+          <div className="hidden sm:block">
             <NavAction
-              href="/cart"
-              label="سبد خرید"
-              badge={cartQuery.data?.itemCount || undefined}
+              href={toLocalizedHref("/profile")}
+              label={copy.navbar.profile}
               onReadableSurface={readableNavbar}
               forceLightSurface={commerceLightSurface}
             >
-              <BagIcon />
+              <ProfileIcon />
             </NavAction>
           </div>
+
+          <NavAction
+            href={toLocalizedHref("/cart")}
+            label={copy.navbar.cart}
+            badge={2}
+            onReadableSurface={readableNavbar}
+            locale={locale}
+          >
+            <BagIcon />
+          </NavAction>
         </div>
+         </div>
       </header>
+
+      {languageModalOpen && (
+        <LanguageSelectorModal
+          closeButtonRef={languageCloseButtonRef}
+          currentLocale={locale}
+          copy={languageCopy}
+          direction={direction}
+          htmlLang={htmlLang}
+          onClose={() => closeLanguageModal()}
+          onSelect={() => closeLanguageModal(false)}
+          options={languageOptions}
+        />
+      )}
 
       {!menuMounted && breadcrumbs.length > 0 && (
         <nav
-          dir="rtl"
-          lang="fa"
-          aria-label="مسیر صفحه"
+          dir={direction}
+          lang={htmlLang}
+          aria-label={copy.navbar.breadcrumbAria}
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
             commerceSurface
@@ -828,10 +1082,10 @@ export default function Navbar({
             <ol className="flex items-center gap-2 whitespace-nowrap text-[11px] font-medium tracking-normal">
               <li>
                 <Link
-                  href="/"
+                  href={homeHref}
                   className="opacity-45 transition-opacity hover:opacity-100"
                 >
-                  خانه
+                  {copy.navbar.home}
                 </Link>
               </li>
 
@@ -869,11 +1123,11 @@ export default function Navbar({
       {menuMounted && (
         <div
           id="najibzadeh-luxury-menu"
-          dir="rtl"
-          lang="fa"
+          dir={direction}
+          lang={htmlLang}
           data-lenis-prevent=""
           aria-hidden={!open}
-          aria-label="منوی اصلی فروشگاه"
+          aria-label={copy.navbar.mainMenuAria}
           className={cx(
             "fixed inset-x-0 bottom-0 top-[70px] z-[990] md:top-[78px]",
             "transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
@@ -885,7 +1139,7 @@ export default function Navbar({
         >
           <button
             type="button"
-            aria-label="بستن منوی ناوبری"
+            aria-label={copy.navbar.closeNavigation}
             onClick={hideMenu}
             className={cx(
               "absolute inset-0 hidden bg-black/35 backdrop-blur-[3px] transition-opacity duration-300 lg:block",
@@ -907,10 +1161,10 @@ export default function Navbar({
               <aside className="flex min-h-0 flex-col bg-[#0C0C0C] text-white">
                 <div className="flex items-center justify-between border-b border-white/10 px-6 py-5 xl:px-7">
                   <p className="text-[9px] font-semibold tracking-[0.05em] text-white/45">
-                    مجموعه‌ها
+                    {copy.navbar.collections}
                   </p>
                   <span className="text-[8px] font-medium tabular-nums text-white/35">
-                    {formatPersianNumber(menuSections.length, 2)}
+                    {formatShellNumber(menuSections.length, locale, 2)}
                   </span>
                 </div>
 
@@ -933,7 +1187,7 @@ export default function Navbar({
                         onClick={() => setActiveId(section.id)}
                         aria-pressed={selected}
                         className={cx(
-                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-right",
+                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-start",
                           "transition-[background-color,transform] duration-300",
                           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-inset",
                           selected
@@ -943,24 +1197,26 @@ export default function Navbar({
                       >
                         <span
                           className={cx(
-                            "absolute inset-y-3 right-0 w-px bg-white transition-opacity duration-300",
+                            "absolute inset-y-3 start-0 w-px bg-white transition-opacity duration-300",
                             selected ? "opacity-100" : "opacity-0",
                           )}
                         />
 
                         <span className="w-6 shrink-0 text-[8px] font-medium tabular-nums tracking-[0.08em] text-white/35">
-                          {formatPersianNumber(index + 1, 2)}
+                          {formatShellNumber(index + 1, locale, 2)}
                         </span>
 
                         <span
                           className={cx(
                             "min-w-0 flex-1 text-[16px] font-semibold leading-7 tracking-[-0.015em] transition-all duration-300 xl:text-[18px]",
                             selected
-                              ? "-translate-x-1 text-white"
+                              ? direction === "rtl"
+                                ? "-translate-x-1 text-white"
+                                : "translate-x-1 text-white"
                               : "text-white/62 group-hover:text-white/90",
                           )}
                         >
-                          {localizeMenuText(section.title)}
+                          {localizeMenuText(section.title, locale)}
                         </span>
 
                         <span
@@ -968,7 +1224,9 @@ export default function Navbar({
                             "transition-[opacity,transform] duration-300",
                             selected
                               ? "translate-x-0 opacity-100"
-                              : "translate-x-1 opacity-0",
+                              : direction === "rtl"
+                                ? "translate-x-1 opacity-0"
+                                : "-translate-x-1 opacity-0",
                           )}
                         >
                           <ArrowIcon />
@@ -980,25 +1238,34 @@ export default function Navbar({
 
                 <div className="border-t border-white/10 p-5 xl:p-6">
                   <p className="mb-3 text-[9px] font-semibold tracking-[0.05em] text-white/35">
-                    خدمات مشتریان
+                    {copy.navbar.customerCare}
                   </p>
                   <div className="space-y-1">
-                    <DarkUtilityLink href="/contact-us#appointment" onClick={hideMenu}>
-                      رزرو وقت اختصاصی
+                    <DarkUtilityLink
+                      href={toLocalizedHref("/contact-us#appointment")}
+                      onClick={hideMenu}
+                    >
+                      {copy.navbar.bookAppointment}
                     </DarkUtilityLink>
-                    <DarkUtilityLink href="/contact-us#location" onClick={hideMenu}>
-                      یافتن فروشگاه
+                    <DarkUtilityLink
+                      href={toLocalizedHref("/contact-us#location")}
+                      onClick={hideMenu}
+                    >
+                      {copy.navbar.findStore}
                     </DarkUtilityLink>
-                    <DarkUtilityLink href="/contact-us#services" onClick={hideMenu}>
-                      پشتیبانی مشتریان
+                    <DarkUtilityLink
+                      href={toLocalizedHref("/contact-us#services")}
+                      onClick={hideMenu}
+                    >
+                      {copy.navbar.customerSupport}
                     </DarkUtilityLink>
                   </div>
                 </div>
               </aside>
 
               <section
-                aria-label="جزئیات مجموعه"
-                className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-right xl:px-12 xl:py-10"
+                aria-label={copy.navbar.collectionDetails}
+                className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-start xl:px-12 xl:py-10"
               >
                 <div
                   key={active.id}
@@ -1013,7 +1280,8 @@ export default function Navbar({
                             themeClasses.textAccent,
                           )}
                         >
-                          نجیب‌زاده / {localizeMenuText(active.title)}
+                          {copy.brandName} /{" "}
+                          {localizeMenuText(active.title, locale)}
                         </span>
                         <span className="h-px w-8 bg-current opacity-15" />
                       </div>
@@ -1024,7 +1292,7 @@ export default function Navbar({
                           themeClasses.textPrimary,
                         )}
                       >
-                        {localizeMenuText(active.title)}
+                        {localizeMenuText(active.title, locale)}
                       </h2>
 
                       <p
@@ -1033,12 +1301,12 @@ export default function Navbar({
                           themeClasses.textSecondary,
                         )}
                       >
-                        {localizeMenuText(active.subtitle)}
+                        {localizeMenuText(active.subtitle, locale)}
                       </p>
                     </div>
 
                     <Button
-                      href={active.href}
+                      href={toLocalizedHref(active.href)}
                       onClick={hideMenu}
                       variant="outline"
                       size="md"
@@ -1046,7 +1314,7 @@ export default function Navbar({
                       iconPosition="left"
                       className="mt-1 !tracking-normal !text-[10px]"
                     >
-                      مشاهده مجموعه
+                      {copy.navbar.viewCollection}
                     </Button>
                   </div>
 
@@ -1067,6 +1335,8 @@ export default function Navbar({
                         hovered={hoveredSubcategory}
                         setHovered={setHoveredSubcategory}
                         closeMenu={hideMenu}
+                        toLocalizedHref={toLocalizedHref}
+                        locale={locale}
                       />
                     ))}
                   </div>
@@ -1079,17 +1349,17 @@ export default function Navbar({
                           themeClasses.textSoft,
                         )}
                       >
-                        دسترسی سریع
+                        {copy.navbar.quickAccess}
                       </p>
 
                       <div className="flex flex-wrap justify-start gap-2">
-                        {QUICK_LINKS.map((item) => (
+                        {quickLinks.map((item, index) => (
                           <QuickAccessLink
-                            key={item.href}
-                            href={item.href}
+                            key={`${item.href}-${item.label}-${index}`}
+                            href={toLocalizedHref(item.href)}
                             onClick={hideMenu}
                           >
-                            {localizeMenuText(item.label)}
+                            {item.label}
                           </QuickAccessLink>
                         ))}
                       </div>
@@ -1098,18 +1368,21 @@ export default function Navbar({
                 </div>
               </section>
 
-              <aside className="min-h-0 border-r border-black/[0.08] bg-[#EFEBE4] p-4 dark:border-white/10 dark:bg-[#151515] xl:p-5">
+              <aside className="min-h-0 border-s border-black/[0.08] bg-[#EFEBE4] p-4 dark:border-white/10 dark:bg-[#151515] xl:p-5">
                 <LuxuryEditorialCard
                   key={active.image}
                   section={active}
                   onClick={hideMenu}
+                  href={toLocalizedHref(active.href)}
+                  locale={locale}
+                  editorialPickLabel={copy.navbar.editorialPick}
                 />
               </aside>
             </div>
 
             <div
               className={cx(
-                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-right sm:px-6 lg:hidden",
+                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-start sm:px-6 lg:hidden",
                 themeClasses.megaMenu,
               )}
             >
@@ -1121,7 +1394,7 @@ export default function Navbar({
                       themeClasses.textSoft,
                     )}
                   >
-                    منوی نجیب‌زاده
+                    {copy.navbar.mobileMenuTitle}
                   </p>
                   <p
                     className={cx(
@@ -1129,7 +1402,7 @@ export default function Navbar({
                       themeClasses.textPrimary,
                     )}
                   >
-                    مجموعه‌ها
+                    {copy.navbar.collections}
                   </p>
                 </div>
               </div>
@@ -1154,7 +1427,7 @@ export default function Navbar({
                           setActiveId(section.id);
                         }}
                         className={cx(
-                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-right sm:px-5",
+                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-start sm:px-5",
                           "transition-colors duration-300",
                           expanded
                             ? "bg-black/[0.025] dark:bg-white/[0.035]"
@@ -1168,7 +1441,7 @@ export default function Navbar({
                             themeClasses.textSoft,
                           )}
                         >
-                          {formatPersianNumber(index + 1, 2)}
+                          {formatShellNumber(index + 1, locale, 2)}
                         </span>
                         <span
                           className={cx(
@@ -1176,7 +1449,7 @@ export default function Navbar({
                             themeClasses.textPrimary,
                           )}
                         >
-                          {localizeMenuText(section.title)}
+                          {localizeMenuText(section.title, locale)}
                         </span>
                         <span
                           className={cx(
@@ -1200,13 +1473,16 @@ export default function Navbar({
                         <div className="overflow-hidden">
                           <div className="px-4 pb-6 sm:px-5">
                             <Link
-                              href={section.href}
+                              href={toLocalizedHref(section.href)}
                               onClick={hideMenu}
                               className="group relative block aspect-[16/8.5] overflow-hidden"
                             >
                               <Image
                                 src={section.image}
-                                alt={localizeMenuText(section.imageLabel)}
+                                alt={localizeMenuText(
+                                  section.imageLabel,
+                                  locale,
+                                )}
                                 fill
                                 sizes="(max-width: 1024px) 100vw, 50vw"
                                 className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025]"
@@ -1215,10 +1491,13 @@ export default function Navbar({
                               <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 text-white">
                                 <div>
                                   <p className="text-[9px] font-semibold tracking-[0.04em] text-white/55">
-                                    منتخب
+                                    {copy.navbar.curated}
                                   </p>
                                   <p className="mt-1 text-[18px] font-bold leading-7 tracking-[-0.015em]">
-                                    {localizeMenuText(section.imageLabel)}
+                                    {localizeMenuText(
+                                      section.imageLabel,
+                                      locale,
+                                    )}
                                   </p>
                                 </div>
                                 <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/30 bg-white/10 backdrop-blur-md">
@@ -1233,7 +1512,7 @@ export default function Navbar({
                                 themeClasses.textSecondary,
                               )}
                             >
-                              {localizeMenuText(section.subtitle)}
+                              {localizeMenuText(section.subtitle, locale)}
                             </p>
 
                             <div className="mt-6 grid gap-6 sm:grid-cols-2">
@@ -1242,6 +1521,8 @@ export default function Navbar({
                                   key={group.title}
                                   group={group}
                                   closeMenu={hideMenu}
+                                  toLocalizedHref={toLocalizedHref}
+                                  locale={locale}
                                 />
                               ))}
                             </div>
@@ -1254,19 +1535,19 @@ export default function Navbar({
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {QUICK_LINKS.map((item) => (
+                {quickLinks.map((item, index) => (
                   <Button
-                    key={item.href}
-                    href={item.href}
+                    key={`${item.href}-${item.label}-${index}`}
+                    href={toLocalizedHref(item.href)}
                     onClick={hideMenu}
                     variant="outline"
                     size="md"
                     fullWidth
-                     icon={item.icon}
+                    icon={item.icon}
                     iconPosition="right"
                     className="!min-h-[54px] !px-3 !text-[10px] !tracking-normal"
                   >
-                    {localizeMenuText(item.label)}
+                    {item.label}
                   </Button>
                 ))}
               </div>
@@ -1278,17 +1559,26 @@ export default function Navbar({
                     themeClasses.textSoft,
                   )}
                 >
-                  خدمات مشتریان
+                  {copy.navbar.customerCare}
                 </p>
                 <div className="grid gap-1 sm:grid-cols-3">
-                  <LightUtilityLink href="/contact-us#appointment" onClick={hideMenu}>
-                    رزرو وقت اختصاصی
+                  <LightUtilityLink
+                    href={toLocalizedHref("/contact-us#appointment")}
+                    onClick={hideMenu}
+                  >
+                    {copy.navbar.bookAppointment}
                   </LightUtilityLink>
-                  <LightUtilityLink href="/contact-us#location" onClick={hideMenu}>
-                    یافتن فروشگاه
+                  <LightUtilityLink
+                    href={toLocalizedHref("/contact-us#location")}
+                    onClick={hideMenu}
+                  >
+                    {copy.navbar.findStore}
                   </LightUtilityLink>
-                  <LightUtilityLink href="/contact-us#services" onClick={hideMenu}>
-                    پشتیبانی مشتریان
+                  <LightUtilityLink
+                    href={toLocalizedHref("/contact-us#services")}
+                    onClick={hideMenu}
+                  >
+                    {copy.navbar.customerSupport}
                   </LightUtilityLink>
                 </div>
               </div>
@@ -1306,15 +1596,21 @@ function LuxuryMenuGroup({
   hovered,
   setHovered,
   closeMenu,
+  toLocalizedHref,
+  locale,
 }: {
   group: MenuGroup;
   index: number;
   hovered: string | null;
   setHovered: (href: string | null) => void;
   closeMenu: () => void;
+  toLocalizedHref: (href: string) => string;
+  locale: Locale;
 }) {
+  const direction = getLocaleDirection(locale);
+
   return (
-    <div className="text-right">
+    <div className="text-start">
       <div className="mb-4 flex items-center gap-2">
         <span
           className={cx(
@@ -1322,7 +1618,7 @@ function LuxuryMenuGroup({
             themeClasses.textSoft,
           )}
         >
-          {formatPersianNumber(index + 1, 2)}
+          {formatShellNumber(index + 1, locale, 2)}
         </span>
         <p
           className={cx(
@@ -1330,7 +1626,7 @@ function LuxuryMenuGroup({
             themeClasses.textSoft,
           )}
         >
-          {localizeMenuText(group.title)}
+          {localizeMenuText(group.title, locale)}
         </p>
       </div>
 
@@ -1342,7 +1638,7 @@ function LuxuryMenuGroup({
           return (
             <li key={item.href}>
               <Link
-                href={item.href}
+                href={toLocalizedHref(item.href)}
                 onClick={closeMenu}
                 onMouseEnter={() => setHovered(item.href)}
                 onFocus={() => setHovered(item.href)}
@@ -1351,16 +1647,17 @@ function LuxuryMenuGroup({
                   "group inline-flex min-h-9 items-center gap-2 text-[13px] font-medium leading-6 tracking-normal",
                   "transition-[opacity,transform] duration-300",
                   dimmed ? "opacity-30" : "opacity-100",
-                  selected && "-translate-x-1",
+                  selected &&
+                    (direction === "rtl" ? "-translate-x-1" : "translate-x-1"),
                   themeClasses.textPrimary,
                   themeClasses.focusRing,
                 )}
               >
                 <span className="relative">
-                  {localizeMenuText(item.label)}
+                  {localizeMenuText(item.label, locale)}
                   <span
                     className={cx(
-                      "absolute -bottom-0.5 right-0 h-px bg-current transition-[width,opacity] duration-300",
+                      "absolute -bottom-0.5 start-0 h-px bg-current transition-[width,opacity] duration-300",
                       selected ? "w-full opacity-40" : "w-0 opacity-0",
                     )}
                   />
@@ -1373,13 +1670,15 @@ function LuxuryMenuGroup({
                       themeClasses.textAccent,
                     )}
                   >
-                    {localizeBadge(item.badge)}
+                    {localizeBadge(item.badge, locale)}
                   </span>
                 )}
 
                 <span
                   className={cx(
-                    "translate-x-1 opacity-0 transition-[opacity,transform] duration-300",
+                    direction === "rtl"
+                      ? "translate-x-1 opacity-0 transition-[opacity,transform] duration-300"
+                      : "-translate-x-1 opacity-0 transition-[opacity,transform] duration-300",
                     selected && "translate-x-0 opacity-100",
                   )}
                 >
@@ -1397,25 +1696,29 @@ function LuxuryMenuGroup({
 function MobileLuxuryGroup({
   group,
   closeMenu,
+  toLocalizedHref,
+  locale,
 }: {
   group: MenuGroup;
   closeMenu: () => void;
+  toLocalizedHref: (href: string) => string;
+  locale: Locale;
 }) {
   return (
-    <div className="text-right">
+    <div className="text-start">
       <p
         className={cx(
           "mb-2 text-[9px] font-semibold tracking-[0.04em]",
           themeClasses.textAccent,
         )}
       >
-        {localizeMenuText(group.title)}
+        {localizeMenuText(group.title, locale)}
       </p>
       <ul className="space-y-0.5">
         {group.items.map((item) => (
           <li key={item.href}>
             <Link
-              href={item.href}
+              href={toLocalizedHref(item.href)}
               onClick={closeMenu}
               className={cx(
                 "flex min-h-9 items-center gap-2 text-[12px] font-medium",
@@ -1423,7 +1726,7 @@ function MobileLuxuryGroup({
                 themeClasses.focusRing,
               )}
             >
-              {localizeMenuText(item.label)}
+              {localizeMenuText(item.label, locale)}
               {item.badge && (
                 <span
                   className={cx(
@@ -1431,7 +1734,7 @@ function MobileLuxuryGroup({
                     themeClasses.textAccent,
                   )}
                 >
-                  {localizeBadge(item.badge)}
+                  {localizeBadge(item.badge, locale)}
                 </span>
               )}
             </Link>
@@ -1445,16 +1748,22 @@ function MobileLuxuryGroup({
 function LuxuryEditorialCard({
   section,
   onClick,
+  href,
+  locale,
+  editorialPickLabel,
 }: {
   section: MenuSection;
   onClick: () => void;
+  href: string;
+  locale: Locale;
+  editorialPickLabel: string;
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const failed = failedSrc === section.image;
 
   return (
     <Link
-      href={section.href}
+      href={href}
       onClick={onClick}
       className={cx(
         "group relative flex h-full min-h-[510px] overflow-hidden",
@@ -1464,7 +1773,7 @@ function LuxuryEditorialCard({
       {!failed ? (
         <Image
           src={section.image}
-          alt={localizeMenuText(section.imageLabel)}
+          alt={localizeMenuText(section.imageLabel, locale)}
           fill
           sizes="(min-width: 1280px) 450px, 390px"
           loading="eager"
@@ -1477,10 +1786,10 @@ function LuxuryEditorialCard({
       )}
 
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/15 to-black/5" />
-      <div className="absolute inset-x-0 bottom-0 p-6 text-right text-white xl:p-7">
+      <div className="absolute inset-x-0 bottom-0 p-6 text-start text-white xl:p-7">
         <div className="mb-3 flex items-center gap-3">
           <span className="text-[9px] font-semibold tracking-[0.05em] text-white/55">
-            انتخاب سردبیری
+            {editorialPickLabel}
           </span>
           <span className="h-px w-8 bg-white/30" />
         </div>
@@ -1488,10 +1797,10 @@ function LuxuryEditorialCard({
         <div className="flex items-end justify-between gap-6">
           <div>
             <h3 className="max-w-[300px] text-[27px] font-bold leading-[1.25] tracking-[-0.02em] xl:text-[31px]">
-              {localizeMenuText(section.imageLabel)}
+              {localizeMenuText(section.imageLabel, locale)}
             </h3>
             <p className="mt-3 max-w-[320px] text-[11px] leading-6 text-white/62">
-              {localizeMenuText(section.subtitle)}
+              {localizeMenuText(section.subtitle, locale)}
             </p>
           </div>
 
@@ -1504,12 +1813,196 @@ function LuxuryEditorialCard({
   );
 }
 
+type LanguageOption = {
+  locale: Locale;
+  href: string;
+  label: string;
+  nativeName: string;
+  direction: "rtl" | "ltr";
+  htmlLang: string;
+};
+
+type LanguageModalCopy = (typeof LANGUAGE_MODAL_COPY)[Locale];
+
+function LanguageToggle({
+  buttonRef,
+  currentLocale,
+  onReadableSurface,
+  label,
+  onClick,
+}: {
+  buttonRef: RefObject<HTMLButtonElement | null>;
+  currentLocale: Locale;
+  onReadableSurface: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cx(
+        "cursor-pointer",
+        "inline-flex h-11 min-w-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-current transition-[opacity,background-color] duration-200 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 md:min-w-11",
+        onReadableSurface
+          ? NAVBAR_SURFACE_CHROME_CLASSES
+          : NAVBAR_OVERLAY_CHROME_CLASSES,
+      )}
+    >
+      <Languages className="size-4" aria-hidden="true" />
+      <span
+        dir="ltr"
+        className="text-[9px] font-semibold uppercase leading-none tracking-normal"
+      >
+        {currentLocale}
+      </span>
+    </button>
+  );
+}
+
+function LanguageSelectorModal({
+  closeButtonRef,
+  currentLocale,
+  copy,
+  direction,
+  htmlLang,
+  onClose,
+  onSelect,
+  options,
+}: {
+  closeButtonRef: RefObject<HTMLButtonElement | null>;
+  currentLocale: Locale;
+  copy: LanguageModalCopy;
+  direction: "rtl" | "ltr";
+  htmlLang: string;
+  onClose: () => void;
+  onSelect: () => void;
+  options: LanguageOption[];
+}) {
+  return (
+    <div
+      dir={direction}
+      lang={htmlLang}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="navbar-language-title"
+      className="fixed inset-0 z-[1000000000]"
+    >
+      <button
+        type="button"
+        aria-label={copy.close}
+        onClick={onClose}
+        className="absolute inset-0 cursor-default bg-transparent"
+      />
+
+      <section
+        className={cx(
+          "absolute top-[calc(70px+8px)] isolate w-[min(330px,calc(100vw-24px))] overflow-hidden rounded-[22px] border border-white/[0.18] bg-[#0B0B0B]/[0.88] p-2.5 text-white shadow-[0_22px_70px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.16)] backdrop-blur-[24px] backdrop-saturate-[160%] md:top-[calc(78px+10px)]",
+          direction === "rtl"
+            ? "left-3 sm:left-6 lg:left-8 xl:left-10"
+            : "right-3 sm:right-6 lg:right-8 xl:right-10",
+        )}
+      >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.14)_0%,rgba(255,255,255,0.05)_28%,rgba(0,0,0,0.22)_100%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_20%_0%,rgba(255,255,255,0.14),transparent_32%),radial-gradient(circle_at_86%_8%,rgba(193,84,39,0.20),transparent_34%)]"
+        />
+
+        <div className="flex items-start justify-between gap-3 px-1.5 pb-2.5 pt-1">
+          <div className="min-w-0 text-start">
+            <p className="flex items-center gap-2 text-[8px] font-semibold tracking-[0.06em] text-[#D8AE86]">
+              <span className="h-px w-5 bg-[#D8AE86]/75" aria-hidden="true" />
+              {copy.eyebrow}
+            </p>
+            <h2
+              id="navbar-language-title"
+              className="mt-1 text-[15px] font-semibold leading-6 tracking-[-0.01em] text-white"
+            >
+              {copy.title}
+            </h2>
+            <p className="mt-1 max-w-[230px] text-[9px] leading-5 text-white/56">
+              {copy.description}
+            </p>
+          </div>
+
+          <button
+            ref={closeButtonRef}
+            type="button"
+            aria-label={copy.close}
+            title={copy.close}
+            onClick={onClose}
+            className="grid size-8 shrink-0 cursor-pointer place-items-center rounded-full border border-white/[0.16] bg-white/[0.06] text-white/72 transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D8AE86]/70 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8AE86]/80 active:translate-y-0 [&>svg]:size-4"
+          >
+            <CloseIcon />
+          </button>
+        </div>
+
+        <div className="grid gap-1.5">
+          {options.map((option) => {
+            const selected = option.locale === currentLocale;
+
+            return (
+              <Link
+                key={option.locale}
+                href={option.href}
+                hrefLang={option.htmlLang}
+                lang={option.htmlLang}
+                dir={option.direction}
+                aria-current={selected ? "true" : undefined}
+                onClick={onSelect}
+                className={cx(
+                  "group relative flex min-h-[52px] items-center gap-2.5 overflow-hidden rounded-[16px] border px-3 text-start transition-[border-color,background-color,transform,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8AE86]/80",
+                  selected
+                    ? "border-[#D8AE86]/70 bg-[#D8AE86]/[0.13] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                    : "border-white/[0.12] bg-white/[0.055] hover:-translate-y-0.5 hover:border-white/[0.28] hover:bg-white/[0.09]",
+                )}
+              >
+                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/[0.14] bg-black/[0.24] text-[9px] font-semibold uppercase tracking-[0.08em] text-white/88">
+                  {option.locale}
+                </span>
+
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-semibold leading-5 text-white">
+                    {option.nativeName}
+                  </span>
+                  <span className="block text-[8px] leading-4 text-white/52">
+                    {option.label}
+                  </span>
+                </span>
+
+                <span
+                  className={cx(
+                    "inline-flex min-h-7 shrink-0 items-center justify-center rounded-full border px-2.5 text-[8px] font-semibold transition-colors duration-200",
+                    selected
+                      ? "border-[#D8AE86]/70 bg-[#D8AE86]/[0.16] text-[#F0D0B3]"
+                      : "border-white/[0.12] text-white/48 group-hover:border-[#D8AE86]/55 group-hover:text-white/88",
+                  )}
+                >
+                  {selected ? copy.current : copy.choose}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function NavAction({
   href,
   label,
   badge,
   onReadableSurface,
   forceLightSurface,
+  locale,
   children,
 }: {
   href: string;
@@ -1517,6 +2010,7 @@ function NavAction({
   badge?: number;
   onReadableSurface: boolean;
   forceLightSurface?: boolean;
+  locale: Locale;
   children: ReactNode;
 }) {
   return (
@@ -1550,7 +2044,7 @@ function NavAction({
               : "bg-white text-black",
           )}
         >
-          {formatPersianNumber(badge)}
+          {formatShellNumber(badge, locale)}
         </span>
       )}
     </span>
@@ -1592,7 +2086,7 @@ function DarkUtilityLink({
     <Link
       href={href}
       onClick={onClick}
-      className="group flex min-h-8 w-fit items-center gap-2 text-right text-[10px] font-medium text-white/58 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
+      className="group flex min-h-8 w-fit items-center gap-2 text-start text-[10px] font-medium text-white/58 transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60"
     >
       <span className="h-px w-0 bg-white/60 transition-[width] duration-300 group-hover:w-3" />
       {children}
@@ -1614,7 +2108,7 @@ function LightUtilityLink({
       href={href}
       onClick={onClick}
       className={cx(
-        "flex min-h-10 items-center text-right text-[10px] font-medium transition-opacity hover:opacity-55",
+        "flex min-h-10 items-center text-start text-[10px] font-medium transition-opacity hover:opacity-55",
         themeClasses.textSecondary,
         themeClasses.focusRing,
       )}

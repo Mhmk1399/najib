@@ -8,7 +8,9 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  createContext,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useLayoutEffect,
@@ -39,11 +41,36 @@ import {
   type ShopProduct as FakeShopProduct,
   type ShopProductImage,
 } from "@/data/fake-shop-products";
+import type { ShopCopy } from "@/lib/i18n/shop-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 
 /* ────────────────────────────────────────────────────────────
    TYPES
    ──────────────────────────────────────────────────────────── */
+type ShopPageProps = {
+  locale: Locale;
+  copy: ShopCopy;
+};
 
+type ShopI18nValue = {
+  locale: Locale;
+  copy: ShopCopy;
+};
+
+const ShopI18nContext = createContext<ShopI18nValue | null>(null);
+
+function useShopI18n() {
+  const value = useContext(ShopI18nContext);
+  if (!value) {
+    throw new Error("Shop i18n context is unavailable.");
+  }
+  return value;
+}
 type SortOption = "new-arrivals" | "price-low" | "price-high" | "featured";
 type CollectionOption = "all" | "new-season";
 type ProductCategory = string;
@@ -175,60 +202,101 @@ type ProductPanelSide = "left" | "right";
    CONSTANTS
    ──────────────────────────────────────────────────────────── */
 
-const SHOP_BANNERS: ShopBanner[] = [
-  {
-    id: "banner-aw-collection",
-    title: "The Autumn/Winter\nCollection",
-    subtitle: "Now Available",
-    description:
-      "Meticulously crafted pieces that define the season. Explore tailored silhouettes in the finest fabrics.",
-    image: "/assets/images/banner.webp",
-    imagePosition: "center 30%",
-    ctaText: "Explore the Collection",
-    ctaHref: "/shop?collection=new-season",
-    theme: "dark",
-    badge: "New Season",
-  },
-];
-
-const ALL_CATEGORY_OPTION: CategoryOption = { value: "all", label: "همه" };
-
 const PRODUCTS_PER_BANNER = 6;
 
 const SHOP_HERO_IMAGE = "/assets/images/p2.webp";
-const SHOP_HERO_IMAGE_ALT = "Najibzadeh menswear collection";
 const SHOP_HERO_IMAGE_POSITION = "center 34%";
 
-const SORT_MENU_OPTIONS: {
+const SORT_VALUES: SortOption[] = [
+  "new-arrivals",
+  "featured",
+  "price-low",
+  "price-high",
+];
+
+function getSortMenuOptions(copy: ShopCopy): {
   value: SortOption;
   label: string;
   shortLabel: string;
-}[] = [
-  { value: "new-arrivals", label: "جدیدترین", shortLabel: "جدیدترین" },
-  { value: "featured", label: "ویژه", shortLabel: "ویژه" },
-  { value: "price-low", label: "قیمت: کم به زیاد", shortLabel: "ارزان‌تر" },
-  {
-    value: "price-high",
-    label: "قیمت: زیاد به کم",
-    shortLabel: "گران‌تر",
-  },
-];
+}[] {
+  return [
+    { value: "new-arrivals", ...copy.sort.options.newArrivals },
+    { value: "featured", ...copy.sort.options.featured },
+    { value: "price-low", ...copy.sort.options.priceLow },
+    { value: "price-high", ...copy.sort.options.priceHigh },
+  ];
+}
+
+function getShopBanners(copy: ShopCopy): ShopBanner[] {
+  return [
+    {
+      id: "banner-aw-collection",
+      title: copy.banner.title,
+      subtitle: copy.banner.subtitle,
+      description: copy.banner.description,
+      image: "/assets/images/banner.webp",
+      imagePosition: "center 30%",
+      ctaText: copy.banner.ctaText,
+      ctaHref: "/shop?collection=new-season",
+      theme: "dark",
+      badge: copy.banner.badge,
+    },
+  ];
+}
 
 /* ────────────────────────────────────────────────────────────
    HELPERS
    ──────────────────────────────────────────────────────────── */
 
-function money(value: number, currency = "USD") {
-  return new Intl.NumberFormat("fa-IR", {
+function money(value: number, currency: string | undefined, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale), {
     style: "currency",
-    currency,
+    currency: currency || "USD",
     maximumFractionDigits: 0,
   }).format(value);
 }
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return (
-    value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback
+function localizedText(
+  value: LocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  const current = value?.[locale]?.trim();
+  if (current) return current;
+
+  const fallbackOrder: Locale[] =
+    locale === "fa"
+      ? ["en", "ar"]
+      : locale === "en"
+        ? ["fa", "ar"]
+        : ["fa", "en"];
+
+  for (const fallbackLocale of fallbackOrder) {
+    const candidate = value?.[fallbackLocale]?.trim();
+    if (candidate) return candidate;
+  }
+
+  return fallback;
+}
+
+function formatNumber(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale)).format(value);
+}
+
+function formatIndex(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale), {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(value);
+}
+
+function formatTemplate(
+  template: string,
+  values: Record<string, string | number>,
+) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
   );
 }
 
@@ -254,7 +322,7 @@ function cleanList(values: string[]) {
 }
 
 function validSort(value: string | null): SortOption {
-  return SORT_MENU_OPTIONS.some((option) => option.value === value)
+  return SORT_VALUES.includes(value as SortOption)
     ? (value as SortOption)
     : "new-arrivals";
 }
@@ -263,7 +331,11 @@ function validCollection(value: string | null): CollectionOption {
   return value === "new-season" ? "new-season" : "all";
 }
 
-async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
+async function fetchJson<T>(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+  fallbackError = "Request failed.",
+) {
   const response = await fetch(input, {
     ...init,
     headers: {
@@ -276,7 +348,7 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
     const body = (await response.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw new Error(body?.error ?? "دریافت محصولات ناموفق بود.");
+    throw new Error(body?.error ?? fallbackError);
   }
 
   return (await response.json()) as T;
@@ -297,6 +369,7 @@ function makeSizeMap(sizes: CatalogSizeRecord[] = []) {
 function makeProductImages(
   product: StorefrontProductRecord,
   imageMap: Map<string, CatalogImageAsset>,
+  locale: Locale,
 ): ShopProductImage[] {
   const ids = cleanList([
     product.primaryImageId ?? "",
@@ -310,7 +383,11 @@ function makeProductImages(
     items.push({
       id: `${product._id}-${index + 1}`,
       src: image.url,
-      alt: fa(image.alt, fa(product.name, product.slug)),
+      alt: localizedText(
+        image.alt,
+        locale,
+        localizedText(product.name, locale, product.slug),
+      ),
       position:
         index === 0
           ? (product.primaryImageObjectPosition ?? image.objectPosition)
@@ -333,17 +410,25 @@ function mapStorefrontProduct({
   subcategoryMap,
   colorMap,
   sizeMap,
+  locale,
+  fallbackCategory,
 }: {
   product: StorefrontProductRecord;
   imageMap: Map<string, CatalogImageAsset>;
   subcategoryMap: Map<string, CatalogSubcategoryRecord>;
   colorMap: Map<string, CatalogColorRecord>;
   sizeMap: Map<string, CatalogSizeRecord>;
+  locale: Locale;
+  fallbackCategory: string;
 }): Product {
-  const title = fa(product.name, product.slug);
+  const title = localizedText(product.name, locale, product.slug);
   const subcategory = subcategoryMap.get(idOf(product.subcategoryId));
-  const subcategoryLabel = fa(subcategory?.name, subcategory?.slug ?? "محصول");
-  const images = makeProductImages(product, imageMap);
+  const subcategoryLabel = localizedText(
+    subcategory?.name,
+    locale,
+    subcategory?.slug ?? fallbackCategory,
+  );
+  const images = makeProductImages(product, imageMap, locale);
   const fallbackImage = images[0] ?? {
     id: `${product._id}-fallback`,
     src: "/assets/images/banner.webp",
@@ -351,8 +436,10 @@ function mapStorefrontProduct({
     position: "center",
   };
   const materials =
-    product.material?.fa?.map((item) => item.toLowerCase()) ?? [];
-  const activeVariants = (product.variants ?? []).filter((variant) => variant.isActive);
+    product.material?.[locale]?.map((item) => item.toLowerCase()) ?? [];
+  const activeVariants = (product.variants ?? []).filter(
+    (variant) => variant.isActive,
+  );
   const colorIds = cleanList(
     activeVariants.length
       ? activeVariants.map((variant) => idOf(variant.colorId))
@@ -367,7 +454,7 @@ function mapStorefrontProduct({
     const color = colorMap.get(colorId);
     return {
       id: colorId,
-      label: fa(color?.name, color?.slug ?? colorId),
+      label: localizedText(color?.name, locale, color?.slug ?? colorId),
       value: color?.hex || "#111111",
     };
   });
@@ -375,7 +462,7 @@ function mapStorefrontProduct({
     const size = sizeMap.get(sizeId);
     return {
       id: sizeId,
-      label: fa(size?.name, size?.code ?? sizeId),
+      label: localizedText(size?.name, locale, size?.code ?? sizeId),
     };
   });
 
@@ -385,7 +472,7 @@ function mapStorefrontProduct({
     sku: idOf(product._id).slice(-8).toUpperCase(),
     title,
     subtitle: subcategoryLabel,
-    description: fa(product.description, title),
+    description: localizedText(product.description, locale, title),
     price: Math.round(product.basePriceMinor / 100),
     currency: product.currency,
     href: `/shop/${product.slug}`,
@@ -400,7 +487,7 @@ function mapStorefrontProduct({
     sizes: sizeIds,
     sizeOptions,
     materials,
-    origin: firstLine(fa(product.description), 42),
+    origin: firstLine(localizedText(product.description, locale), 42),
     images: images.length ? images : [fallbackImage],
     variants: activeVariants,
   };
@@ -473,16 +560,19 @@ function startLenis() {
    SHOP PAGE
    ──────────────────────────────────────────────────────────── */
 
-export function ShopPage() {
+export function ShopPage({ locale, copy }: ShopPageProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const catalogQuery = useStorefrontCatalog();
+  const [hydrated, setHydrated] = useState(false);
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [desktopFilterOpen, setDesktopFilterOpen] = useState(false);
   const [desktopFilterPinned, setDesktopFilterPinned] = useState(false);
-
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
   const selectedSubcategorySlug = searchParams.get("subcategory") ?? "";
   const selectedCategorySlug = searchParams.get("category") ?? "";
   const searchQuery = (searchParams.get("search") ?? "")
@@ -506,17 +596,26 @@ export function ShopPage() {
   const collection = validCollection(searchParams.get("collection"));
 
   const catalogCategories = useMemo(
-    () => (catalogQuery.data?.categories ?? []) as CatalogCategoryRecord[],
-    [catalogQuery.data?.categories],
+    () =>
+      hydrated
+        ? ((catalogQuery.data?.categories ?? []) as CatalogCategoryRecord[])
+        : [],
+    [hydrated, catalogQuery.data?.categories],
   );
   const catalogSubcategories = useMemo(
     () =>
-      (catalogQuery.data?.subcategories ?? []) as CatalogSubcategoryRecord[],
-    [catalogQuery.data?.subcategories],
+      hydrated
+        ? ((catalogQuery.data?.subcategories ??
+            []) as CatalogSubcategoryRecord[])
+        : [],
+    [hydrated, catalogQuery.data?.subcategories],
   );
   const catalogImages = useMemo(
-    () => (catalogQuery.data?.images ?? []) as CatalogImageAsset[],
-    [catalogQuery.data?.images],
+    () =>
+      hydrated
+        ? ((catalogQuery.data?.images ?? []) as CatalogImageAsset[])
+        : [],
+    [hydrated, catalogQuery.data?.images],
   );
 
   const selectedCategoryRecord = useMemo(
@@ -536,13 +635,13 @@ export function ShopPage() {
 
   const categoryOptions = useMemo<CategoryOption[]>(
     () => [
-      ALL_CATEGORY_OPTION,
+      { value: "all", label: copy.filters.all },
       ...catalogSubcategories.map((item) => ({
         value: item.slug,
-        label: fa(item.name, item.slug),
+        label: localizedText(item.name, locale, item.slug),
       })),
     ],
-    [catalogSubcategories],
+    [catalogSubcategories, copy.filters.all, locale],
   );
 
   const updateUrlFilters = useCallback(
@@ -637,9 +736,13 @@ export function ShopPage() {
     (selectedCategorySlug && catalogQuery.isSuccess && !selectedCategoryRecord);
 
   const productsQuery = useQuery({
-    queryKey: ["storefront", "shop-products", productsQueryUrl],
+    queryKey: ["storefront", "shop-products", productsQueryUrl, locale],
     queryFn: ({ signal }) =>
-      fetchJson<StorefrontProductPayload>(productsQueryUrl, { signal }),
+      fetchJson<StorefrontProductPayload>(
+        productsQueryUrl,
+        { signal },
+        copy.fetchError,
+      ),
     enabled: catalogQuery.isSuccess && !invalidUrlTaxonomy,
     staleTime: Infinity,
     gcTime: Infinity,
@@ -680,7 +783,13 @@ export function ShopPage() {
   }, [mobileFiltersOpen]);
 
   const mappedProducts = useMemo(() => {
-    if (invalidUrlTaxonomy) return [];
+    if (!hydrated) {
+      return [];
+    }
+
+    if (invalidUrlTaxonomy) {
+      return [];
+    }
 
     const imageMap = makeImageMap(catalogImages);
     const colorMap = makeColorMap(productsQuery.data?.colors ?? []);
@@ -696,39 +805,58 @@ export function ShopPage() {
         subcategoryMap,
         colorMap,
         sizeMap,
+        locale,
+        fallbackCategory: copy.products.fallbackCategory,
       }),
     );
   }, [
+    hydrated,
     catalogImages,
     catalogSubcategories,
     invalidUrlTaxonomy,
     productsQuery.data?.colors,
     productsQuery.data?.items,
     productsQuery.data?.sizes,
+    locale,
+    copy.products.fallbackCategory,
   ]);
 
   const colorFilterOptions = useMemo<ShopColorOption[]>(() => {
+    if (!hydrated) {
+      return COLOR_OPTIONS;
+    }
+
     const dynamic =
       productsQuery.data?.colors?.map((color) => ({
         id: idOf(color._id),
-        label: fa(color.name, color.slug),
+        label: localizedText(color.name, locale, color.slug),
         value: color.hex || "#111111",
       })) ?? [];
 
     return dynamic.length ? dynamic : COLOR_OPTIONS;
-  }, [productsQuery.data?.colors]);
+  }, [hydrated, productsQuery.data?.colors, locale]);
 
   const sizeFilterOptions = useMemo<ShopSizeOption[]>(() => {
+    if (!hydrated) {
+      return SIZE_OPTIONS.map((size) => ({
+        id: size,
+        label: size,
+      }));
+    }
+
     const dynamic =
       productsQuery.data?.sizes?.map((size) => ({
         id: idOf(size._id),
-        label: fa(size.name, size.code),
+        label: localizedText(size.name, locale, size.code),
       })) ?? [];
 
     return dynamic.length
       ? dynamic
-      : SIZE_OPTIONS.map((size) => ({ id: size, label: size }));
-  }, [productsQuery.data?.sizes]);
+      : SIZE_OPTIONS.map((size) => ({
+          id: size,
+          label: size,
+        }));
+  }, [hydrated, productsQuery.data?.sizes, locale]);
 
   const defaultMaxPrice = useMemo(
     () =>
@@ -804,6 +932,7 @@ export function ShopPage() {
 
   const interleavedContent = useMemo(() => {
     const items: InterleavedItem[] = [];
+    const shopBanners = getShopBanners(copy);
 
     products.forEach((product, index) => {
       items.push({ type: "product", product, index });
@@ -812,8 +941,8 @@ export function ShopPage() {
       if (productNumber % PRODUCTS_PER_BANNER !== 0) return;
 
       const baseBanner =
-        SHOP_BANNERS[
-          (productNumber / PRODUCTS_PER_BANNER - 1) % SHOP_BANNERS.length
+        shopBanners[
+          (productNumber / PRODUCTS_PER_BANNER - 1) % shopBanners.length
         ];
 
       if (!baseBanner) return;
@@ -828,7 +957,7 @@ export function ShopPage() {
     });
 
     return items;
-  }, [products]);
+  }, [products, copy]);
 
   const resetFilters = useCallback(() => {
     updateUrlFilters({
@@ -854,290 +983,310 @@ export function ShopPage() {
   );
 
   const desktopFilterExpanded = desktopFilterOpen || desktopFilterPinned;
-  const isLoadingProducts = catalogQuery.isLoading || productsQuery.isLoading;
-  const hasProductsError = catalogQuery.isError || productsQuery.isError;
-
+  const isLoadingProducts =
+    !hydrated || catalogQuery.isLoading || productsQuery.isLoading;
+  const hasProductsError =
+    hydrated && (catalogQuery.isError || productsQuery.isError);
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
   return (
-    <main
-      style={themeVars}
-      dir="rtl"
-      className="min-h-screen bg-[var(--shop-bg)] text-[var(--shop-text)]"
-    >
-      <BrandSketchLoader
-        open={isLoadingProducts}
-        label="در حال دریافت محصولات"
-      />
+    <ShopI18nContext.Provider value={{ locale, copy }}>
+      <main
+        style={themeVars}
+        dir={direction}
+        lang={htmlLang}
+        className="min-h-screen bg-[var(--shop-bg)] text-[var(--shop-text)]"
+      >
+        <BrandSketchLoader
+          open={isLoadingProducts}
+          label={copy.products.loading}
+        />
 
-      {/* The shop hero starts at page top so the existing transparent navbar can sit over it. */}
-      <ShopHero
-        image={SHOP_HERO_IMAGE}
-        alt={SHOP_HERO_IMAGE_ALT}
-        position={SHOP_HERO_IMAGE_POSITION}
-      />
+        {/* The shop hero starts at page top so the existing transparent navbar can sit over it. */}
+        <ShopHero
+          image={SHOP_HERO_IMAGE}
+          alt={copy.hero.imageAlt}
+          position={SHOP_HERO_IMAGE_POSITION}
+        />
 
-      {/* Desktop */}
-      <section className="relative mx-auto hidden max-w-[1920px] lg:block">
-        <div className="w-full">
-          <div className="px-8 pb-16 pt-0 xl:px-10">
-            {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
-            <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-3 xl:-mx-10 xl:px-10">
-              <div className="relative flex min-h-[52px] items-center justify-between gap-3">
-                <div className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
-                  <DesktopFilterIsland
-                    expanded={desktopFilterExpanded}
-                    pinned={desktopFilterPinned}
-                    onHoverOpen={() => setDesktopFilterOpen(true)}
-                    onHoverClose={() => setDesktopFilterOpen(false)}
-                    onTogglePin={() => setDesktopFilterPinned((v) => !v)}
-                    category={category}
-                    setCategory={setCategory}
-                    categoryOptions={categoryOptions}
-                    selectedSizes={selectedSizes}
-                    setSelectedSizes={setSelectedSizes}
-                    sizeOptions={sizeFilterOptions}
-                    selectedColors={selectedColors}
-                    setSelectedColors={setSelectedColors}
-                    colorOptions={colorFilterOptions}
-                    selectedMaterials={selectedMaterials}
-                    setSelectedMaterials={setSelectedMaterials}
-                    maxPrice={maxPrice}
-                    setMaxPrice={setMaxPrice}
-                    defaultMaxPrice={defaultMaxPrice}
-                    filterCount={filterCount}
-                    resetFilters={resetFilters}
-                  />
+        {/* Desktop */}
+        <section className="relative mx-auto hidden max-w-[1920px] lg:block">
+          <div className="w-full">
+            <div className="px-8 pb-16 pt-0 xl:px-10">
+              {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
+              <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-3 xl:-mx-10 xl:px-10">
+                <div className="relative flex min-h-[52px] items-center justify-between gap-3">
+                  <div className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
+                    <DesktopFilterIsland
+                      expanded={desktopFilterExpanded}
+                      pinned={desktopFilterPinned}
+                      onHoverOpen={() => setDesktopFilterOpen(true)}
+                      onHoverClose={() => setDesktopFilterOpen(false)}
+                      onTogglePin={() => setDesktopFilterPinned((v) => !v)}
+                      category={category}
+                      setCategory={setCategory}
+                      categoryOptions={categoryOptions}
+                      selectedSizes={selectedSizes}
+                      setSelectedSizes={setSelectedSizes}
+                      sizeOptions={sizeFilterOptions}
+                      selectedColors={selectedColors}
+                      setSelectedColors={setSelectedColors}
+                      colorOptions={colorFilterOptions}
+                      selectedMaterials={selectedMaterials}
+                      setSelectedMaterials={setSelectedMaterials}
+                      maxPrice={maxPrice}
+                      setMaxPrice={setMaxPrice}
+                      defaultMaxPrice={defaultMaxPrice}
+                      filterCount={filterCount}
+                      resetFilters={resetFilters}
+                    />
 
-                  <DesktopToolbarPopover
-                    label="دسته‌بندی"
-                    active={category !== "all"}
-                    widthClass="w-[220px]"
-                  >
-                    <div className="p-1.5">
-                      {categoryOptions.map((item) => {
-                        const active = category === item.value;
-                        return (
-                          <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => setCategory(item.value)}
-                            className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                              active
-                                ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
-                                : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
-                            }`}
-                          >
-                            {item.label}
-                            {active ? <CheckIcon className="size-2.5" /> : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </DesktopToolbarPopover>
+                    <DesktopToolbarPopover
+                      label={copy.filters.category}
+                      active={category !== "all"}
+                      widthClass="w-[220px]"
+                    >
+                      <div className="p-1.5">
+                        {categoryOptions.map((item) => {
+                          const active = category === item.value;
+                          return (
+                            <button
+                              key={item.value}
+                              type="button"
+                              onClick={() => setCategory(item.value)}
+                              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                                active
+                                  ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
+                                  : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
+                              }`}
+                            >
+                              {item.label}
+                              {active ? (
+                                <CheckIcon className="size-2.5" />
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </DesktopToolbarPopover>
 
-                  <DesktopToolbarPopover
-                    label="سایز"
-                    active={selectedSizes.length > 0}
-                    widthClass="w-[250px]"
-                  >
-                    <div className="p-4">
-                      <SizeSelector
-                        options={sizeFilterOptions}
-                        values={selectedSizes}
-                        onChange={setSelectedSizes}
-                      />
-                    </div>
-                  </DesktopToolbarPopover>
+                    <DesktopToolbarPopover
+                      label={copy.filters.size}
+                      active={selectedSizes.length > 0}
+                      widthClass="w-[250px]"
+                    >
+                      <div className="p-4">
+                        <SizeSelector
+                          options={sizeFilterOptions}
+                          values={selectedSizes}
+                          onChange={setSelectedSizes}
+                        />
+                      </div>
+                    </DesktopToolbarPopover>
 
-                  <DesktopToolbarPopover
-                    label="رنگ"
-                    active={selectedColors.length > 0}
-                    widthClass="w-[290px]"
-                  >
-                    <div className="p-4">
-                      <ColorSelector
-                        options={colorFilterOptions}
-                        values={selectedColors}
-                        onChange={setSelectedColors}
-                      />
-                    </div>
-                  </DesktopToolbarPopover>
+                    <DesktopToolbarPopover
+                      label={copy.filters.color}
+                      active={selectedColors.length > 0}
+                      widthClass="w-[290px]"
+                    >
+                      <div className="p-4">
+                        <ColorSelector
+                          options={colorFilterOptions}
+                          values={selectedColors}
+                          onChange={setSelectedColors}
+                        />
+                      </div>
+                    </DesktopToolbarPopover>
 
-                  <DesktopToolbarPopover
-                    label="قیمت"
-                    active={maxPrice < defaultMaxPrice}
-                    widthClass="w-[270px]"
-                  >
-                    <div className="p-4">
-                      <PriceSelector
-                        value={maxPrice}
-                        max={defaultMaxPrice}
-                        onChange={setMaxPrice}
-                      />
-                    </div>
-                  </DesktopToolbarPopover>
+                    <DesktopToolbarPopover
+                      label={copy.filters.price}
+                      active={maxPrice < defaultMaxPrice}
+                      widthClass="w-[270px]"
+                    >
+                      <div className="p-4">
+                        <PriceSelector
+                          value={maxPrice}
+                          max={defaultMaxPrice}
+                          onChange={setMaxPrice}
+                        />
+                      </div>
+                    </DesktopToolbarPopover>
 
-                  <DesktopToolbarPopover
-                    label="جنس"
-                    active={selectedMaterials.length > 0}
-                    widthClass="w-[230px]"
-                  >
-                    <div className="p-4">
-                      <MaterialSelector
-                        values={selectedMaterials}
-                        onChange={setSelectedMaterials}
-                      />
-                    </div>
-                  </DesktopToolbarPopover>
+                    <DesktopToolbarPopover
+                      label={copy.filters.material}
+                      active={selectedMaterials.length > 0}
+                      widthClass="w-[230px]"
+                    >
+                      <div className="p-4">
+                        <MaterialSelector
+                          values={selectedMaterials}
+                          onChange={setSelectedMaterials}
+                        />
+                      </div>
+                    </DesktopToolbarPopover>
 
-                  <DesktopToolbarPopover
-                    label="کالکشن"
-                    active={collection !== "all"}
-                    widthClass="w-[210px]"
-                  >
-                    <div className="p-1.5">
-                      {[
-                        { value: "all" as const, label: "همه کالکشن‌ها" },
-                        { value: "new-season" as const, label: "فصل جدید" },
-                      ].map((item) => {
-                        const active = collection === item.value;
-                        return (
-                          <button
-                            key={item.value}
-                            type="button"
-                            onClick={() => setCollection(item.value)}
-                            className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
-                              active
-                                ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
-                                : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
-                            }`}
-                          >
-                            {item.label}
-                            {active ? <CheckIcon className="size-2.5" /> : null}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </DesktopToolbarPopover>
-                </div>
+                    <DesktopToolbarPopover
+                      label={copy.filters.collection}
+                      active={collection !== "all"}
+                      widthClass="w-[210px]"
+                    >
+                      <div className="p-1.5">
+                        {[
+                          {
+                            value: "all" as const,
+                            label: copy.filters.collections.all,
+                          },
+                          {
+                            value: "new-season" as const,
+                            label: copy.filters.collections.newSeason,
+                          },
+                        ].map((item) => {
+                          const active = collection === item.value;
+                          return (
+                            <button
+                              key={item.value}
+                              type="button"
+                              onClick={() => setCollection(item.value)}
+                              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                                active
+                                  ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
+                                  : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
+                              }`}
+                            >
+                              {item.label}
+                              {active ? (
+                                <CheckIcon className="size-2.5" />
+                              ) : null}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </DesktopToolbarPopover>
+                  </div>
 
-                <div className="relative z-10 flex shrink-0 items-center gap-2">
-                  <span className="hidden text-[5.5px] font-semibold uppercase tracking-[0.12em] text-black/38 xl:block">
-                    مرتب‌سازی
-                  </span>
-                  <DesktopSortControl value={sort} onChange={setSort} />
+                  <div className="relative z-10 flex shrink-0 items-center gap-2">
+                    <span className="hidden text-[5.5px] font-semibold uppercase tracking-[0.12em] text-black/38 xl:block">
+                      {copy.sort.label}
+                    </span>
+                    <DesktopSortControl value={sort} onChange={setSort} />
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex min-h-[54px] items-center justify-between border-b border-[var(--shop-border)] px-1">
-              <span className="text-[6.5px] font-semibold uppercase tracking-[0.18em] text-black/62">
-                {new Intl.NumberFormat("fa-IR").format(products.length)} محصول
-              </span>
-              <div className="flex items-center gap-4">
-                <span className="text-[5.5px] font-semibold uppercase tracking-[0.2em] text-black/28">
-                  انتخاب‌های دقیق نجیب‌زاده
+              <div className="flex min-h-[54px] items-center justify-between border-b border-[var(--shop-border)] px-1">
+                <span className="text-[6.5px] font-semibold uppercase tracking-[0.18em] text-black/62">
+                  {formatTemplate(copy.products.productCountTemplate, {
+                    count: formatNumber(products.length, locale),
+                  })}
                 </span>
-                <span className="h-px w-16 bg-black/14" />
+                <div className="flex items-center gap-4">
+                  <span className="text-[5.5px] font-semibold uppercase tracking-[0.2em] text-black/28">
+                    {copy.products.desktopSelectionLabel}
+                  </span>
+                  <span className="h-px w-16 bg-black/14" />
+                </div>
               </div>
-            </div>
 
-            <div className="pt-4">
-              {isLoadingProducts ? (
-                <ShopProductsState title="در حال دریافت محصولات" />
-              ) : hasProductsError ? (
-                <ShopProductsState
-                  title="دریافت محصولات ناموفق بود"
-                  description="اتصال دیتابیس یا سرویس فروشگاه را بررسی کنید."
-                />
-              ) : products.length ? (
-                <DesktopInterleavedGrid content={interleavedContent} />
-              ) : (
-                <EmptyProducts resetFilters={resetFilters} />
-              )}
+              <div className="pt-4">
+                {isLoadingProducts ? (
+                  <ShopProductsState title={copy.products.loading} />
+                ) : hasProductsError ? (
+                  <ShopProductsState
+                    title={copy.products.errorTitle}
+                    description={copy.products.errorDescription}
+                  />
+                ) : products.length ? (
+                  <DesktopInterleavedGrid content={interleavedContent} />
+                ) : (
+                  <EmptyProducts resetFilters={resetFilters} />
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Mobile sticky toolbar */}
-      <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2 lg:hidden">
-        <div className="relative z-10 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setMobileFiltersOpen(true)}
-            className="group/mobile-filter relative flex h-11 min-w-0 items-center justify-center gap-2 overflow-hidden border border-white/70 bg-white/32 px-3 text-black shadow-[0_8px_22px_-16px_rgba(11,11,11,0.32),inset_0_1px_0_rgba(255,255,255,0.80)] ring-1 ring-inset ring-black/[0.025] backdrop-blur-[18px] transition-[background-color,border-color,transform,box-shadow] duration-200 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
-          >
-            <span className="grid size-6 shrink-0 place-items-center bg-black/[0.055] text-black/70">
-              <FilterIcon />
-            </span>
-            <span className="text-[7px] font-semibold uppercase tracking-[0.14em]">
-              فیلترها
-            </span>
-            {filterCount > 0 && (
-              <span className="grid size-[18px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[7px] font-bold tabular-nums text-white">
-                {new Intl.NumberFormat("fa-IR").format(filterCount)}
+        {/* Mobile sticky toolbar */}
+        <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2 lg:hidden">
+          <div className="relative z-10 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileFiltersOpen(true)}
+              className="group/mobile-filter relative flex h-11 min-w-0 items-center justify-center gap-2 overflow-hidden border border-white/70 bg-white/32 px-3 text-black shadow-[0_8px_22px_-16px_rgba(11,11,11,0.32),inset_0_1px_0_rgba(255,255,255,0.80)] ring-1 ring-inset ring-black/[0.025] backdrop-blur-[18px] transition-[background-color,border-color,transform,box-shadow] duration-200 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+            >
+              <span className="grid size-6 shrink-0 place-items-center bg-black/[0.055] text-black/70">
+                <FilterIcon />
               </span>
-            )}
-            <span className="absolute inset-x-3 bottom-0 h-px origin-left scale-x-0 bg-[var(--shop-copper)] transition-transform duration-300 group-active/mobile-filter:scale-x-100" />
-          </button>
-          <GlassSortControl
-            value={sort}
-            onChange={setSort}
-            compact
-            align="right"
-          />
+              <span className="text-[7px] font-semibold uppercase tracking-[0.14em]">
+                {copy.filters.filters}
+              </span>
+              {filterCount > 0 && (
+                <span className="grid size-[18px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[7px] font-bold tabular-nums text-white">
+                  {formatNumber(filterCount, locale)}
+                </span>
+              )}
+              <span className="absolute inset-x-3 bottom-0 h-px origin-left scale-x-0 bg-[var(--shop-copper)] transition-transform duration-300 group-active/mobile-filter:scale-x-100" />
+            </button>
+            <GlassSortControl
+              value={sort}
+              onChange={setSort}
+              compact
+              align="right"
+            />
+          </div>
         </div>
-      </div>
 
-      <div className="flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden">
-        <span className="text-[6px] font-semibold uppercase tracking-[0.18em] text-black/62">
-          {new Intl.NumberFormat("fa-IR").format(products.length)} محصول
-        </span>
-        <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-black/28">
-          انتخاب نجیب‌زاده
-        </span>
-      </div>
+        <div className="flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden">
+          <span className="text-[6px] font-semibold uppercase tracking-[0.18em] text-black/62">
+            {formatTemplate(copy.products.productCountTemplate, {
+              count: formatNumber(products.length, locale),
+            })}
+          </span>
+          <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-black/28">
+            {copy.products.mobileSelectionLabel}
+          </span>
+        </div>
 
-      {/* Mobile grid — ProductCard itself is intentionally untouched. */}
-      <div className="pb-6 lg:hidden">
-        {isLoadingProducts ? (
-          <ShopProductsState title="در حال دریافت محصولات" />
-        ) : hasProductsError ? (
-          <ShopProductsState
-            title="دریافت محصولات ناموفق بود"
-            description="اتصال دیتابیس یا سرویس فروشگاه را بررسی کنید."
-          />
-        ) : products.length ? (
-          <MobileInterleavedGrid content={interleavedContent} />
-        ) : (
-          <EmptyProducts resetFilters={resetFilters} />
-        )}
-      </div>
+        {/* Mobile grid — ProductCard itself is intentionally untouched. */}
+        <div className="pb-6 lg:hidden">
+          {isLoadingProducts ? (
+            <ShopProductsState title={copy.products.loading} />
+          ) : hasProductsError ? (
+            <ShopProductsState
+              title={copy.products.errorTitle}
+              description={copy.products.errorDescription}
+            />
+          ) : products.length ? (
+            <MobileInterleavedGrid content={interleavedContent} />
+          ) : (
+            <EmptyProducts resetFilters={resetFilters} />
+          )}
+        </div>
 
-      {/* Mobile filter drawer */}
-      <MobileFilters
-        open={mobileFiltersOpen}
-        onClose={() => setMobileFiltersOpen(false)}
-        category={category}
-        setCategory={setCategory}
-        categoryOptions={categoryOptions}
-        sort={sort}
-        setSort={setSort}
-        selectedSizes={selectedSizes}
-        setSelectedSizes={setSelectedSizes}
-        sizeOptions={sizeFilterOptions}
-        selectedColors={selectedColors}
-        setSelectedColors={setSelectedColors}
-        colorOptions={colorFilterOptions}
-        selectedMaterials={selectedMaterials}
-        setSelectedMaterials={setSelectedMaterials}
-        maxPrice={maxPrice}
-        setMaxPrice={setMaxPrice}
-        defaultMaxPrice={defaultMaxPrice}
-        resetFilters={resetFilters}
-        resultCount={products.length}
-      />
-    </main>
+        {/* Mobile filter drawer */}
+        <MobileFilters
+          open={mobileFiltersOpen}
+          onClose={() => setMobileFiltersOpen(false)}
+          category={category}
+          setCategory={setCategory}
+          categoryOptions={categoryOptions}
+          sort={sort}
+          setSort={setSort}
+          selectedSizes={selectedSizes}
+          setSelectedSizes={setSelectedSizes}
+          sizeOptions={sizeFilterOptions}
+          selectedColors={selectedColors}
+          setSelectedColors={setSelectedColors}
+          colorOptions={colorFilterOptions}
+          selectedMaterials={selectedMaterials}
+          setSelectedMaterials={setSelectedMaterials}
+          maxPrice={maxPrice}
+          setMaxPrice={setMaxPrice}
+          defaultMaxPrice={defaultMaxPrice}
+          resetFilters={resetFilters}
+          resultCount={products.length}
+        />
+      </main>
+    </ShopI18nContext.Provider>
   );
 }
 
@@ -1154,6 +1303,8 @@ function ShopHero({
   alt: string;
   position: string;
 }) {
+  const { copy } = useShopI18n();
+
   return (
     <section className="relative isolate h-[340px] w-full overflow-hidden bg-black text-white sm:h-[370px] lg:h-[410px]">
       <Image
@@ -1177,25 +1328,24 @@ function ShopHero({
       />
 
       <div className="mx-auto flex h-full max-w-[1920px] items-end justify-between px-5 pb-7 pt-[94px] sm:px-7 sm:pb-8 lg:px-10 lg:pb-10 lg:pt-[108px] xl:px-12">
-        <div className="text-right">
-          <h1 className="  text-[44px] font-normal leading-[0.9] tracking-[-0.045em] sm:text-[52px] lg:text-[62px]">
-             فروشگاه 
+        <div className="">
+          <h1 className="text-[44px] font-bold leading-[0.9] sm:text-[42px] lg:text-[52px]">
+            {copy.hero.title}
           </h1>
-          <p className="mt-2   text-[15px] italic leading-[1.2] text-white/80 sm:text-[17px] lg:text-[19px]">
-             پرفروش‌ترین محصولات برند نجیب‌زاده
+          <p className="mt-2 text-[15px] italic leading-[1.2] text-white/80 sm:text-[17px] lg:text-[19px]">
+            {copy.hero.description}
           </p>
         </div>
 
         <div className="mb-1 hidden border-r border-white/20 pr-5 text-right lg:block">
-          <span className="block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-             کیفیت
-          </span>
-          <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-            دست دوز
-          </span>
-          <span className="mt-1 block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46">
-            شخصیت
-          </span>
+          {copy.hero.highlights.map((item, index) => (
+            <span
+              key={`${item}-${index}`}
+              className={`${index ? "mt-1 " : ""}block text-[5px] font-semibold uppercase tracking-[0.24em] text-white/46`}
+            >
+              {item}
+            </span>
+          ))}
         </div>
       </div>
     </section>
@@ -1217,6 +1367,10 @@ function DesktopToolbarPopover({
   widthClass?: string;
   children: ReactNode;
 }) {
+  const { locale } = useShopI18n();
+
+  const isRtl = getLocaleDirection(locale) === "rtl";
+
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
@@ -1272,11 +1426,19 @@ function DesktopToolbarPopover({
       <div
         id={menuId}
         aria-hidden={!open}
-        className={`absolute right-0 top-[calc(100%_+_7px)] z-[130] ${widthClass} origin-top-right border border-[var(--shop-border)] bg-[var(--shop-surface)] text-right shadow-[0_18px_42px_-26px_rgba(35,31,32,0.30)] ${
+        className={`absolute top-[calc(100%_+_7px)] z-[130] ${widthClass} border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_18px_42px_-26px_rgba(35,31,32,0.30)] ${
+          isRtl
+            ? "right-0 origin-top-right text-right"
+            : "left-0 origin-top-left text-left"
+        } ${
           open ? "pointer-events-auto visible" : "pointer-events-none invisible"
         }`}
       >
-        <div className="border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 py-2.5 text-right">
+        <div
+          className={`border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 py-2.5 ${
+            isRtl ? "text-right" : "text-left"
+          }`}
+        >
           <p className="text-[5.5px] font-semibold uppercase tracking-[0.18em] text-[var(--shop-muted)]">
             {label}
           </p>
@@ -1336,11 +1498,12 @@ function DesktopFilterIsland({
   filterCount: number;
   resetFilters: () => void;
 }) {
+  const { copy, locale } = useShopI18n();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const hoverOpenTimer = useRef<number | null>(null);
   const hoverCloseTimer = useRef<number | null>(null);
   const popoverId = useId();
-
+  const isRtl = getLocaleDirection(locale) === "rtl";
   function clearOpen() {
     if (hoverOpenTimer.current !== null) {
       window.clearTimeout(hoverOpenTimer.current);
@@ -1433,7 +1596,9 @@ function DesktopFilterIsland({
         aria-controls={popoverId}
         onClick={togglePinned}
         onFocus={scheduleOpen}
-        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 text-right transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 ${
+          isRtl ? "text-right" : "text-left"
+        } transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           expanded
             ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_26px_-20px_rgba(35,31,32,0.32)]"
             : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:text-[var(--shop-text)]"
@@ -1447,7 +1612,7 @@ function DesktopFilterIsland({
           <FilterIcon />
         </span>
         <span className="text-[7px] font-semibold uppercase tracking-[0.08em]">
-          فیلترها
+          {copy.filters.filters}
         </span>
         {filterCount > 0 && (
           <span className="grid size-[16px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[6px] font-bold tabular-nums text-white">
@@ -1475,19 +1640,20 @@ function DesktopFilterIsland({
 
       <div
         aria-hidden="true"
-        className={`pointer-events-none absolute right-5 top-[calc(100%_+_6px)] z-[59] size-3 rotate-45 border-l border-t border-[var(--shop-border)] bg-[var(--shop-surface)] ${
-          expanded ? "visible" : "invisible"
-        }`}
+        className={`pointer-events-none absolute top-[calc(100%_+_6px)] z-[59] size-3 rotate-45 border-l border-t border-[var(--shop-border)] bg-[var(--shop-surface)] ${
+          isRtl ? "right-5" : "left-5"
+        } ${expanded ? "visible" : "invisible"}`}
       />
-
       <div
         id={popoverId}
         role="region"
-        aria-label="فیلترهای محصول"
+        aria-label={copy.filters.productFiltersAriaLabel}
         aria-hidden={!expanded}
-        className={`absolute right-0 top-[calc(100%_+_11px)] z-[60] w-[342px] max-w-[calc(100vw_-_5rem)] origin-top-right text-right ${
-          expanded ? "pointer-events-auto" : "pointer-events-none"
-        }`}
+        className={`absolute top-[calc(100%_+_11px)] z-[60] w-[342px] max-w-[calc(100vw_-_2rem)] ${
+          isRtl
+            ? "right-0 origin-top-right text-right"
+            : "left-0 origin-top-left text-left"
+        } ${expanded ? "pointer-events-auto" : "pointer-events-none"}`}
       >
         <div
           aria-hidden="true"
@@ -1506,12 +1672,14 @@ function DesktopFilterIsland({
               </span>
               <div>
                 <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[var(--shop-text)]">
-                  فیلترها
+                  {copy.filters.filters}
                 </p>
                 <p className="mt-1 text-[6.5px] font-medium uppercase tracking-[0.10em] text-[var(--shop-muted)]">
                   {filterCount > 0
-                    ? `${new Intl.NumberFormat("fa-IR").format(filterCount)} فیلتر فعال`
-                    : "انتخاب‌ها را دقیق‌تر کنید"}
+                    ? formatTemplate(copy.filters.activeFiltersTemplate, {
+                        count: formatNumber(filterCount, locale),
+                      })
+                    : copy.filters.refineSelection}
                 </p>
               </div>
             </div>
@@ -1522,11 +1690,11 @@ function DesktopFilterIsland({
                 disabled={filterCount === 0}
                 className="min-h-8 px-2 text-[7px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-copper)] transition-opacity hover:opacity-65 disabled:pointer-events-none disabled:opacity-25"
               >
-                پاک‌کردن
+                {copy.filters.clear}
               </button>
               <button
                 type="button"
-                aria-label="بستن فیلترها"
+                aria-label={copy.filters.closeAriaLabel}
                 onClick={closeFilter}
                 className="grid size-8 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
               >
@@ -1538,7 +1706,7 @@ function DesktopFilterIsland({
             data-lenis-prevent=""
             className="relative z-10 max-h-[min(640px,calc(100svh_-_190px))] overflow-y-auto overscroll-contain px-5 py-2 [scrollbar-color:rgb(11_11_11_/_0.18)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent"
           >
-            <IslandAccordion title="دسته‌بندی" defaultOpen>
+            <IslandAccordion title={copy.filters.category} defaultOpen>
               <div className="space-y-0.5">
                 {categoryOptions.map((item) => {
                   const active = category === item.value;
@@ -1571,27 +1739,27 @@ function DesktopFilterIsland({
                 })}
               </div>
             </IslandAccordion>
-            <IslandAccordion title="سایز">
+            <IslandAccordion title={copy.filters.size}>
               <SizeSelector
                 options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </IslandAccordion>
-            <IslandAccordion title="رنگ" defaultOpen>
+            <IslandAccordion title={copy.filters.color} defaultOpen>
               <ColorSelector
                 options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
             </IslandAccordion>
-            <IslandAccordion title="جنس">
+            <IslandAccordion title={copy.filters.material}>
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
             </IslandAccordion>
-            <IslandAccordion title="قیمت" defaultOpen>
+            <IslandAccordion title={copy.filters.price} defaultOpen>
               <PriceSelector
                 value={maxPrice}
                 max={defaultMaxPrice}
@@ -1607,11 +1775,11 @@ function DesktopFilterIsland({
                 }`}
               />
               <span className="text-[6.5px] font-semibold uppercase tracking-[0.11em] text-[var(--shop-muted)]">
-                {pinned ? "ثابت شده" : "پیش‌نمایش"}
+                {pinned ? copy.filters.pinned : copy.filters.preview}
               </span>
             </div>
             <span className="text-[6.5px] font-medium uppercase tracking-[0.1em] text-[var(--shop-soft)]">
-              کلیک برای {pinned ? "آزاد کردن" : "ثابت کردن"}
+              {pinned ? copy.filters.clickToUnpin : copy.filters.clickToPin}
             </span>
           </div>
         </div>
@@ -1637,11 +1805,13 @@ function GlassSortControl({
   dark?: boolean;
   align?: "left" | "right";
 }) {
+  const { copy } = useShopI18n();
+  const sortMenuOptions = getSortMenuOptions(copy);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
   const current =
-    SORT_MENU_OPTIONS.find((o) => o.value === value) ?? SORT_MENU_OPTIONS[0];
+    sortMenuOptions.find((o) => o.value === value) ?? sortMenuOptions[0];
 
   useEffect(() => {
     if (!open) return;
@@ -1699,7 +1869,7 @@ function GlassSortControl({
                 dark ? "text-white/42" : "text-[var(--shop-soft)]"
               }`}
             >
-              مرتب‌سازی
+              {copy.sort.label}
             </span>
           )}
           <span
@@ -1726,7 +1896,7 @@ function GlassSortControl({
       <div
         id={menuId}
         role="listbox"
-        aria-label="مرتب‌سازی محصولات"
+        aria-label={copy.sort.ariaLabel}
         aria-hidden={!open}
         className={`absolute top-[calc(100%_+_8px)] z-[120] w-[228px] ${
           align === "right"
@@ -1765,11 +1935,11 @@ function GlassSortControl({
                 dark ? "text-white/36" : "text-black/34"
               }`}
             >
-              Sort collection
+              {copy.sort.menuTitle}
             </p>
           </div>
           <div className="p-1.5">
-            {SORT_MENU_OPTIONS.map((opt) => {
+            {sortMenuOptions.map((opt) => {
               const sel = opt.value === value;
               return (
                 <button
@@ -1822,12 +1992,15 @@ function DesktopSortControl({
   value: SortOption;
   onChange: (v: SortOption) => void;
 }) {
+  const { copy, locale } = useShopI18n();
+  const isRtl = getLocaleDirection(locale) === "rtl";
+  const sortMenuOptions = getSortMenuOptions(copy);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
   const current =
-    SORT_MENU_OPTIONS.find((option) => option.value === value) ??
-    SORT_MENU_OPTIONS[0];
+    sortMenuOptions.find((option) => option.value === value) ??
+    sortMenuOptions[0];
 
   useEffect(() => {
     if (!open) return;
@@ -1854,7 +2027,9 @@ function DesktopSortControl({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((state) => !state)}
-        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 text-right transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 ${
+          isRtl ? "text-right" : "text-left"
+        } transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           open
             ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_24px_-20px_rgba(35,31,32,0.30)]"
             : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-text)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)]"
@@ -1871,13 +2046,17 @@ function DesktopSortControl({
       <div
         id={menuId}
         role="listbox"
-        aria-label="مرتب‌سازی محصولات"
+        aria-label={copy.sort.ariaLabel}
         aria-hidden={!open}
-        className={`absolute right-0 top-[calc(100%_+_7px)] z-[140] w-[210px] border border-[var(--shop-border)] bg-[var(--shop-surface)] p-1.5 text-right shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+        className={`absolute top-[calc(100%_+_7px)] z-[140] w-[210px] border border-[var(--shop-border)] bg-[var(--shop-surface)] p-1.5 shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+          isRtl
+            ? "left-0 origin-top-left text-right"
+            : "right-0 origin-top-right text-left"
+        } ${
           open ? "pointer-events-auto visible" : "pointer-events-none invisible"
         }`}
       >
-        {SORT_MENU_OPTIONS.map((option) => {
+        {sortMenuOptions.map((option) => {
           const active = option.value === value;
           return (
             <button
@@ -1889,7 +2068,9 @@ function DesktopSortControl({
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold tracking-[0.02em] transition-colors ${
+              className={`flex min-h-9 w-full items-center justify-between px-3 ${
+                isRtl ? "text-right" : "text-left"
+              } text-[7px] font-semibold tracking-[0.02em] transition-colors ${
                 active
                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -2038,6 +2219,7 @@ function ProductCard({
   compact?: boolean;
   panelSide?: ProductPanelSide;
 }) {
+  const { copy, locale } = useShopI18n();
   const toast = useToast();
   const queryClient = useQueryClient();
   const panelId = useId();
@@ -2383,15 +2565,15 @@ function ProductCard({
   function toggleFav() {
     const n = !favorite;
     setFavorite(n);
-    toast.info(n ? "به علاقه‌مندی‌ها اضافه شد" : "از علاقه‌مندی‌ها حذف شد", {
+    toast.info(n ? copy.wishlist.added : copy.wishlist.removed, {
       description: product.title,
     });
   }
   async function addToBag() {
     if (sizeOptions.length && !selSizeId) {
       setLockedOpen(true);
-      toast.info("سایز را انتخاب کنید", {
-        description: "قبل از افزودن محصول به سبد، یک سایز انتخاب کنید.",
+      toast.info(copy.cart.selectSizeTitle, {
+        description: copy.cart.selectSizeDescription,
       });
       return;
     }
@@ -2403,8 +2585,8 @@ function ProductCard({
     );
     if (!variant) {
       setLockedOpen(true);
-      toast.error("این انتخاب موجود نیست", {
-        description: "ترکیب دیگری از رنگ و سایز را انتخاب کنید.",
+      toast.error(copy.cart.unavailableTitle, {
+        description: copy.cart.unavailableDescription,
       });
       return;
     }
@@ -2417,15 +2599,16 @@ function ProductCard({
       await queryClient.invalidateQueries({ queryKey: cartQueryKey });
       await queryClient.invalidateQueries({ queryKey: ["account"] });
       setCartState("added");
-      toast.success("به سبد خرید اضافه شد", {
+      toast.success(copy.cart.addedTitle, {
         description: [
           product.title,
           selectedColor?.label,
           selSizeId
-            ? `سایز ${
-                sizeOptions.find((size) => size.id === selSizeId)?.label ??
-                selSizeId
-              }`
+            ? formatTemplate(copy.cart.sizeTemplate, {
+                size:
+                  sizeOptions.find((size) => size.id === selSizeId)?.label ??
+                  selSizeId,
+              })
             : undefined,
         ]
           .filter(Boolean)
@@ -2438,17 +2621,15 @@ function ProductCard({
     } catch (error) {
       setCartState("idle");
       if (error instanceof CommerceApiError && error.status === 401) {
-        toast.info("ابتدا وارد حساب شوید", {
-          description: "پس از ورود می‌توانید محصول را به سبد اضافه کنید.",
+        toast.info(copy.cart.loginTitle, {
+          description: copy.cart.loginDescription,
         });
         window.location.assign(loginHref(currentPath()));
         return;
       }
-      toast.error("افزودن محصول ناموفق بود", {
+      toast.error(copy.cart.errorTitle, {
         description:
-          error instanceof Error
-            ? error.message
-            : "دوباره برای افزودن محصول تلاش کنید.",
+          error instanceof Error ? error.message : copy.cart.errorFallback,
       });
     }
   }
@@ -2470,8 +2651,10 @@ function ProductCard({
     >
       {/* Main product image */}
       <Link
-        href={product.href}
-        aria-label={`مشاهده ${product.title}`}
+        href={localizedHref(product.href, locale)}
+        aria-label={formatTemplate(copy.products.viewAriaTemplate, {
+          product: product.title,
+        })}
         className="absolute inset-0 z-0 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-white"
       >
         <Image
@@ -2506,8 +2689,12 @@ function ProductCard({
         type="button"
         aria-label={
           favorite
-            ? `حذف ${product.title} از علاقه‌مندی‌ها`
-            : `افزودن ${product.title} به علاقه‌مندی‌ها`
+            ? formatTemplate(copy.wishlist.removeAriaTemplate, {
+                product: product.title,
+              })
+            : formatTemplate(copy.wishlist.addAriaTemplate, {
+                product: product.title,
+              })
         }
         aria-pressed={favorite}
         onClick={toggleFav}
@@ -2558,7 +2745,7 @@ function ProductCard({
               compact ? "text-[12px]" : "text-[10px] md:text-[11px]"
             }`}
           >
-            {money(product.price, product.currency)}
+            {money(product.price, product.currency, locale)}
           </span>
           <div
             className={`bg-[var(--shop-copper)] ${
@@ -2669,8 +2856,8 @@ function ProductCard({
             aria-controls={panelId}
             aria-label={
               open
-                ? "Close quick product options"
-                : "Open quick product options"
+                ? copy.products.closeQuickOptions
+                : copy.products.openQuickOptions
             }
             onPointerDown={onPDown}
             onPointerMove={onPMove}
@@ -2729,20 +2916,20 @@ function ProductCard({
           {compact && !open && (
             <button
               type="button"
-              aria-label="گزینه‌های سریع"
+              aria-label={copy.products.quickOptions}
               onClick={() => setLockedOpen(true)}
               className="relative z-10 flex min-h-0 flex-1 flex-col items-start justify-center gap-1 border-t border-white/8 px-3 text-left transition-colors active:bg-white/[0.04] focus-visible:outline-none focus-visible:bg-white/[0.04]"
             >
               <span className="text-[7px] font-semibold tabular-nums tracking-[0.12em] text-white/78">
-                {String(activeImgIdx + 1).padStart(2, "0")}
+                {formatIndex(activeImgIdx + 1, locale)}
                 <span className="mx-1 text-white/20">/</span>
-                {String(productImages.length).padStart(2, "0")}
+                {formatIndex(productImages.length, locale)}
               </span>
               <span className="max-w-full truncate text-[6.5px] font-semibold uppercase tracking-[0.14em] text-white/54">
                 {categoryLabel}
               </span>
               <span className="text-[5.5px] font-semibold uppercase tracking-[0.16em] text-white/30">
-                گزینه‌های سریع
+                {copy.products.quickOptions}
               </span>
             </button>
           )}
@@ -2752,9 +2939,9 @@ function ProductCard({
             <div className="relative z-10 flex flex-1 items-center justify-between gap-3 px-3">
               <div className="min-w-0">
                 <span className="block text-[6px] font-semibold tabular-nums tracking-[0.12em] text-white/68">
-                  {String(activeImgIdx + 1).padStart(2, "0")}
+                  {formatIndex(activeImgIdx + 1, locale)}
                   <span className="mx-1 text-white/22">/</span>
-                  {String(productImages.length).padStart(2, "0")}
+                  {formatIndex(productImages.length, locale)}
                 </span>
                 <span className="mt-1 block max-w-[94px] truncate text-[5.5px] font-semibold uppercase tracking-[0.12em] text-white/40">
                   {categoryLabel}
@@ -2762,7 +2949,7 @@ function ProductCard({
               </div>
               <div className="flex items-center">
                 <GlassIconButton
-                  label="Previous image"
+                  label={copy.products.previousImage}
                   disabled={!canCycle}
                   onClick={() => animateSlide(-1)}
                   compact={false}
@@ -2770,7 +2957,7 @@ function ProductCard({
                   <ArrowRightSmallIcon />
                 </GlassIconButton>
                 <GlassIconButton
-                  label="Next image"
+                  label={copy.products.nextImage}
                   disabled={!canCycle}
                   onClick={() => animateSlide(1)}
                   compact={false}
@@ -2781,7 +2968,7 @@ function ProductCard({
                   type="button"
                   aria-expanded={false}
                   aria-controls={panelId}
-                  aria-label="Open quick product options"
+                  aria-label={copy.products.openQuickOptions}
                   onClick={pinOrToggle}
                   className="grid size-7 place-items-center text-white/50 transition-[background-color,color] hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white"
                 >
@@ -2808,9 +2995,9 @@ function ProductCard({
               }`}
             >
               <span className="text-[6.5px] font-semibold tabular-nums tracking-[0.12em] text-white/58">
-                {String(activeImgIdx + 1).padStart(2, "0")}
+                {formatIndex(activeImgIdx + 1, locale)}
                 <span className="mx-1 text-white/22">/</span>
-                {String(productImages.length).padStart(2, "0")}
+                {formatIndex(productImages.length, locale)}
               </span>
               <div className="relative h-[1.5px] flex-1 bg-white/12">
                 <div
@@ -2820,7 +3007,7 @@ function ProductCard({
               </div>
               <div className="flex items-center">
                 <GlassIconButton
-                  label="Previous image"
+                  label={copy.products.previousImage}
                   disabled={!canCycle}
                   onClick={() => animateSlide(-1)}
                   compact={compact}
@@ -2828,7 +3015,7 @@ function ProductCard({
                   <ArrowRightSmallIcon />
                 </GlassIconButton>
                 <GlassIconButton
-                  label="Next image"
+                  label={copy.products.nextImage}
                   disabled={!canCycle}
                   onClick={() => animateSlide(1)}
                   compact={compact}
@@ -2839,7 +3026,7 @@ function ProductCard({
                   type="button"
                   aria-expanded={open}
                   aria-controls={panelId}
-                  aria-label="Close quick product options"
+                  aria-label={copy.products.closeQuickOptions}
                   onClick={pinOrToggle}
                   className={`grid place-items-center text-white/50 transition-[background-color,color] hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white ${
                     compact ? "size-[44px]" : "size-7"
@@ -2858,7 +3045,7 @@ function ProductCard({
             >
               {colors.length > 0 && (
                 <GlassOptionRail
-                  label="رنگ"
+                  label={copy.filters.color}
                   compact={compact}
                   selectedLabel={selectedColor?.label}
                 >
@@ -2869,7 +3056,10 @@ function ProductCard({
                         key={color.id}
                         type="button"
                         tabIndex={hiddenTab}
-                        aria-label={`انتخاب رنگ ${color.label}`}
+                        aria-label={formatTemplate(
+                          copy.products.selectColorTemplate,
+                          { color: color.label },
+                        )}
                         aria-pressed={active}
                         onClick={(e) => {
                           selectColor(color.id, ci);
@@ -2899,7 +3089,7 @@ function ProductCard({
               )}
               {sizeOptions.length > 0 && (
                 <GlassOptionRail
-                  label="سایز"
+                  label={copy.filters.size}
                   compact={compact}
                   selectedLabel={
                     sizeOptions.find((size) => size.id === selSizeId)?.label
@@ -2917,7 +3107,10 @@ function ProductCard({
                         key={size.id}
                         type="button"
                         tabIndex={hiddenTab}
-                        aria-label={`انتخاب سایز ${size.label}`}
+                        aria-label={formatTemplate(
+                          copy.products.selectSizeTemplate,
+                          { size: size.label },
+                        )}
                         aria-pressed={active}
                         disabled={!available}
                         onClick={(e) => {
@@ -2960,15 +3153,19 @@ function ProductCard({
                 disabled={cartState !== "idle"}
                 onClick={addToBag}
                 align="center"
-                aria-label="add to cart"
+                aria-label={copy.products.addToCartAria}
               >
                 {cartState === "added" ? (
                   <span className="inline-flex items-center gap-2">
                     <AddedCheckIcon />
-                    اضافه شد
+                    {copy.products.added}
                   </span>
                 ) : (
-                  <span>{money(product.price, product.currency)} خرید</span>
+                  <span>
+                    {formatTemplate(copy.products.buyTemplate, {
+                      price: money(product.price, product.currency, locale),
+                    })}
+                  </span>
                 )}
               </Button>
 
@@ -3028,6 +3225,7 @@ function GlassOptionRail({
   children: ReactNode;
   selectedLabel?: string;
 }) {
+  const { copy } = useShopI18n();
   const railRef = useRef<HTMLDivElement | null>(null);
   const [canPrev, setCanPrev] = useState(false);
   const [canNext, setCanNext] = useState(false);
@@ -3101,7 +3299,9 @@ function GlassOptionRail({
       <div className="flex min-w-0 items-center gap-1.5">
         {hasOverflow && (
           <RailArrowButton
-            label={`Previous ${label.toLowerCase()} options`}
+            label={formatTemplate(copy.products.previousOptionsTemplate, {
+              label,
+            })}
             onClick={() => scroll(-1)}
             compact={compact}
             disabled={!canPrev}
@@ -3133,7 +3333,7 @@ function GlassOptionRail({
         </div>
         {hasOverflow && (
           <RailArrowButton
-            label={`Next ${label.toLowerCase()} options`}
+            label={formatTemplate(copy.products.nextOptionsTemplate, { label })}
             onClick={() => scroll(1)}
             compact={compact}
             disabled={!canNext}
@@ -3221,6 +3421,7 @@ function MobileFilters({
   resetFilters: () => void;
   resultCount: number;
 }) {
+  const { copy, locale } = useShopI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -3265,7 +3466,7 @@ function MobileFilters({
           <div className="relative z-10 flex h-16 flex-none items-center justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 text-right">
             <button
               type="button"
-              aria-label="بستن فیلترها"
+              aria-label={copy.filters.closeAriaLabel}
               onClick={onClose}
               className="grid size-10 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
             >
@@ -3273,10 +3474,12 @@ function MobileFilters({
             </button>
             <div className="text-right">
               <span className="block text-[9px] font-semibold uppercase tracking-[0.21em]">
-                فیلترها
+                {copy.filters.filters}
               </span>
               <span className="mt-1 block text-[5.5px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-muted)]">
-                {new Intl.NumberFormat("fa-IR").format(resultCount)} نتیجه
+                {formatTemplate(copy.filters.resultTemplate, {
+                  count: formatNumber(resultCount, locale),
+                })}
               </span>
             </div>
             <button
@@ -3284,7 +3487,7 @@ function MobileFilters({
               onClick={resetFilters}
               className="min-h-10 px-2 text-[7px] font-semibold uppercase tracking-[0.14em] text-[var(--shop-copper)] transition-opacity active:opacity-60"
             >
-              پاک
+              {copy.filters.clearShort}
             </button>
           </div>
           <div
@@ -3293,7 +3496,7 @@ function MobileFilters({
             className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 [scrollbar-color:rgb(193_84_39_/_0.42)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[var(--shop-copper)] [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <MobileFilterBlock title="دسته‌بندی" defaultOpen>
+            <MobileFilterBlock title={copy.filters.category} defaultOpen>
               <div className="grid grid-cols-2 gap-2 pt-3">
                 {categoryOptions.map((item) => {
                   const active = category === item.value;
@@ -3317,27 +3520,27 @@ function MobileFilters({
                 })}
               </div>
             </MobileFilterBlock>
-            <MobileFilterBlock title="سایز">
+            <MobileFilterBlock title={copy.filters.size}>
               <SizeSelector
                 options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="رنگ" defaultOpen>
+            <MobileFilterBlock title={copy.filters.color} defaultOpen>
               <ColorSelector
                 options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="جنس">
+            <MobileFilterBlock title={copy.filters.material}>
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title="قیمت" defaultOpen>
+            <MobileFilterBlock title={copy.filters.price} defaultOpen>
               <PriceSelector
                 value={maxPrice}
                 max={defaultMaxPrice}
@@ -3347,10 +3550,10 @@ function MobileFilters({
             <div className="flex min-h-[82px] items-center justify-between gap-3 border-b border-[var(--shop-border)] py-3 text-right">
               <div>
                 <span className="block text-[8px] font-semibold uppercase tracking-[0.15em] text-[var(--shop-text)]">
-                  مرتب‌سازی
+                  {copy.sort.label}
                 </span>
                 <span className="mt-1 block text-[5.5px] font-medium uppercase tracking-[0.1em] text-[var(--shop-muted)]">
-                  ترتیب نمایش محصولات
+                  {copy.sort.mobileDescription}
                 </span>
               </div>
               <div className="w-[168px] max-w-[58vw]">
@@ -3371,7 +3574,9 @@ function MobileFilters({
               fullWidth
               onClick={onClose}
             >
-              مشاهده {new Intl.NumberFormat("fa-IR").format(resultCount)} محصول
+              {formatTemplate(copy.filters.viewResultsTemplate, {
+                count: formatNumber(resultCount, locale),
+              })}
             </Button>
           </div>
         </div>
@@ -3615,6 +3820,7 @@ function PriceSelector({
   onChange: (v: number) => void;
   dark?: boolean;
 }) {
+  const { copy, locale } = useShopI18n();
   const min = 0;
   const safeMax = Math.max(max, 100);
   const pct = (Math.min(value, safeMax) / safeMax) * 100;
@@ -3622,10 +3828,10 @@ function PriceSelector({
     <div>
       <div className="flex justify-between text-[7px] font-semibold uppercase tracking-[0.08em]">
         <span className={dark ? "text-white/34" : "text-black/34"}>
-          {money(min)}
+          {money(min, "USD", locale)}
         </span>
         <span className={dark ? "text-white/78" : "text-black/78"}>
-          {money(value)}
+          {money(value, "USD", locale)}
         </span>
       </div>
       <div className="relative mt-4 h-6">
@@ -3644,7 +3850,7 @@ function PriceSelector({
           max={safeMax}
           step={100}
           value={value}
-          aria-label="حداکثر قیمت"
+          aria-label={copy.price.maxAriaLabel}
           onChange={(e) => onChange(Number(e.target.value))}
           className="absolute inset-0 w-full cursor-pointer opacity-0"
         />
@@ -3664,11 +3870,14 @@ function PriceSelector({
 
 function ShopProductsState({
   title,
-  description = "چند لحظه صبر کنید.",
+  description,
 }: {
   title: string;
   description?: string;
 }) {
+  const { copy } = useShopI18n();
+  const resolvedDescription = description ?? copy.products.waitDescription;
+
   return (
     <div className="flex min-h-[500px] flex-col items-center justify-center px-6 text-center">
       <div className="mb-5 grid size-14 place-items-center border border-black/8">
@@ -3678,23 +3887,25 @@ function ShopProductsState({
         {title}
       </p>
       <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
-        {description}
+        {resolvedDescription}
       </p>
     </div>
   );
 }
 
 function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
+  const { copy } = useShopI18n();
+
   return (
     <div className="flex min-h-[500px] flex-col items-center justify-center px-6 text-center">
       <div className="mb-5 grid size-14 place-items-center border border-black/8">
         <SearchIcon className="size-5 text-black/28" />
       </div>
       <p className="  text-[34px] tracking-[-0.03em] text-black sm:text-[40px]">
-        محصولی پیدا نشد
+        {copy.empty.title}
       </p>
       <p className="mt-3 max-w-[320px] text-[10px] leading-[1.7] text-black/44">
-        فیلترها را تغییر دهید تا محصولات بیشتری از فروشگاه نمایش داده شود.
+        {copy.empty.description}
       </p>
       <div className="mt-7">
         <Button
@@ -3703,7 +3914,7 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
           size="md"
           onClick={resetFilters}
         >
-          پاک‌کردن فیلترها
+          {copy.empty.clearFilters}
         </Button>
       </div>
     </div>
@@ -3715,6 +3926,8 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
    ═══════════════════════════════════════════════════════════ */
 
 function InterstitialBanner({ banner }: { banner: ShopBanner }) {
+  const { locale } = useShopI18n();
+  const isRtl = locale !== "en";
   const isDark = banner.theme === "dark";
   return (
     <section className="group relative col-span-full overflow-hidden">
@@ -3770,7 +3983,11 @@ function InterstitialBanner({ banner }: { banner: ShopBanner }) {
               {banner.description}
             </p>
             <div className="mt-7">
-              <Button href={banner.ctaHref} variant="cream" size="md">
+              <Button
+                href={localizedHref(banner.ctaHref, locale)}
+                variant="cream"
+                size="md"
+              >
                 {banner.ctaText}
               </Button>
             </div>
@@ -3782,6 +3999,7 @@ function InterstitialBanner({ banner }: { banner: ShopBanner }) {
 }
 
 function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
+  const { locale } = useShopI18n();
   const isDark = banner.theme === "dark";
   return (
     <section className="relative col-span-full overflow-hidden">
@@ -3837,7 +4055,11 @@ function InterstitialBannerMobile({ banner }: { banner: ShopBanner }) {
               {banner.description}
             </p>
             <div className="mt-5">
-              <Button href={banner.ctaHref} variant="cream" size="md">
+              <Button
+                href={localizedHref(banner.ctaHref, locale)}
+                variant="cream"
+                size="md"
+              >
                 {banner.ctaText}
               </Button>
             </div>

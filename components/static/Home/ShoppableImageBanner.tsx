@@ -4,8 +4,24 @@ import Link from "next/link";
 import { type CSSProperties } from "react";
 
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
+import { localizedHref } from "@/lib/i18n/routes";
+
 import { getStorefrontImageStories } from "@/services/catalog/storefront";
+
 import { brandColors } from "@/theme/theme-colors";
+
+/* ==========================================================================
+   TYPES
+============================================================================ */
 
 type LocalizedText = {
   fa?: string;
@@ -45,6 +61,15 @@ type ImageStoriesPayload = {
   stories?: ImageStory[];
 };
 
+type ShoppableImageBannerProps = {
+  copy: HomeCopy["shoppableImage"];
+  locale: Locale;
+};
+
+/* ==========================================================================
+   CONSTANTS
+============================================================================ */
+
 const preferredKinds = new Set([
   "lookbook",
   "editorial",
@@ -53,24 +78,65 @@ const preferredKinds = new Set([
   "subcategory_banner",
 ]);
 
-const numberFormatter = new Intl.NumberFormat("fa-IR");
+/* ==========================================================================
+   HELPERS
+============================================================================ */
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+function localizedText(
+  value: LocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  const localizedValue = value?.[locale]?.trim();
+
+  if (localizedValue) {
+    return localizedValue;
+  }
+
+  const fallbackOrder: Locale[] =
+    locale === "fa"
+      ? ["en", "ar"]
+      : locale === "en"
+        ? ["fa", "ar"]
+        : ["fa", "en"];
+
+  for (const fallbackLocale of fallbackOrder) {
+    const fallbackValue = value?.[fallbackLocale]?.trim();
+
+    if (fallbackValue) {
+      return fallbackValue;
+    }
+  }
+
+  return fallback;
 }
 
-function formatMoney(minor: number | undefined, currency: string | undefined) {
+function formatMoney(
+  minor: number | undefined,
+  currency: string | undefined,
+  locale: Locale,
+) {
   if (typeof minor !== "number") return "";
 
+  const intlLocale = getHtmlLang(locale);
+
   try {
-    return new Intl.NumberFormat("fa-IR", {
+    return new Intl.NumberFormat(intlLocale, {
       style: "currency",
       currency: currency || "IRR",
       maximumFractionDigits: 0,
     }).format(minor / 100);
   } catch {
-    return `${numberFormatter.format(minor / 100)} ${currency ?? ""}`.trim();
+    const formattedNumber = new Intl.NumberFormat(intlLocale).format(
+      minor / 100,
+    );
+
+    return `${formattedNumber} ${currency ?? ""}`.trim();
   }
+}
+
+function formatNumber(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale)).format(value);
 }
 
 function imageFit(value: string | undefined): CSSProperties["objectFit"] {
@@ -96,15 +162,29 @@ function pickHomeStory(stories: ImageStory[]) {
   );
 }
 
-export async function ShoppableImageBanner() {
-  const payload =
-    (await getStorefrontImageStories().catch(() => null)) as ImageStoriesPayload | null;
+/* ==========================================================================
+   COMPONENT
+============================================================================ */
+
+export async function ShoppableImageBanner({
+  copy,
+  locale,
+}: ShoppableImageBannerProps) {
+  const payload = (await getStorefrontImageStories().catch(
+    () => null,
+  )) as ImageStoriesPayload | null;
+
   const story = pickHomeStory(payload?.stories ?? []);
 
   if (!story) return null;
 
   const products = story.linkedProducts.slice(0, 3);
-  const title = fa(story.image.alt, "انتخاب‌های خریدپذیر نجیب‌زاده");
+
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+
+  const title = localizedText(story.image.alt, locale, copy.fallbackTitle);
+
   const themeVars = {
     "--shoppable-black": brandColors.black.hex,
     "--shoppable-black-rgb": brandColors.black.rgb,
@@ -114,8 +194,8 @@ export async function ShoppableImageBanner() {
 
   return (
     <section
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       data-image-story-id={story.id}
       data-image-story-url={story.image.url}
       style={themeVars}
@@ -123,10 +203,14 @@ export async function ShoppableImageBanner() {
       className="relative isolate w-full overflow-hidden bg-[var(--shoppable-black)] text-[var(--shoppable-white)]"
     >
       <div className="mx-auto grid min-h-[720px] w-full max-w-[1760px] grid-cols-1 lg:grid-cols-[minmax(0,1.1fr)_minmax(430px,0.9fr)]">
+        {/* ================================================================
+            STORY IMAGE
+        ================================================================= */}
+
         <div className="relative min-h-[520px] overflow-hidden lg:min-h-[720px]">
           <Image
             src={story.image.url}
-            alt={fa(story.image.alt, title)}
+            alt={localizedText(story.image.alt, locale, title)}
             fill
             sizes="(max-width: 1023px) 100vw, 58vw"
             className="object-cover"
@@ -142,30 +226,54 @@ export async function ShoppableImageBanner() {
             className="absolute inset-0 bg-[linear-gradient(180deg,rgb(var(--shoppable-black-rgb)/0.08)_0%,rgb(var(--shoppable-black-rgb)/0.18)_46%,rgb(var(--shoppable-black-rgb)/0.62)_100%)]"
           />
 
-          {products.map((product, index) =>
-            typeof product.hotspotX === "number" &&
-            typeof product.hotspotY === "number" ? (
+          {/* ==============================================================
+              PRODUCT HOTSPOTS
+          =============================================================== */}
+
+          {products.map((product, index) => {
+            if (
+              typeof product.hotspotX !== "number" ||
+              typeof product.hotspotY !== "number"
+            ) {
+              return null;
+            }
+
+            const productName = localizedText(
+              product.name,
+              locale,
+              product.slug,
+            );
+
+            return (
               <Link
                 key={`${product.id}-hotspot`}
-                href={product.href}
-                aria-label={`مشاهده ${fa(product.name, product.slug)}`}
+                href={localizedHref(product.href, locale)}
+                aria-label={`${copy.productAriaPrefix} ${productName}`}
                 className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center border border-white/70 bg-black/55 text-[11px] font-semibold text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)] backdrop-blur-md transition-[background-color,border-color,transform] duration-500 hover:scale-105 hover:border-[var(--shoppable-copper)] hover:bg-[var(--shoppable-copper)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 style={{
                   left: `${product.hotspotX}%`,
                   top: `${product.hotspotY}%`,
                 }}
               >
-                {numberFormatter.format(index + 1)}
+                {formatNumber(index + 1, locale)}
               </Link>
-            ) : null,
-          )}
+            );
+          })}
         </div>
+
+        {/* ================================================================
+            CONTENT
+        ================================================================= */}
 
         <div className="flex min-h-[520px] flex-col justify-center px-5 py-14 sm:px-8 lg:min-h-[720px] lg:px-10 xl:px-14">
           <div className="max-w-[620px]">
             <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--shoppable-copper)] sm:text-[11px]">
-              <span className="h-px w-8 bg-[var(--shoppable-copper)]" aria-hidden="true" />
-              <span>تصویر خریدپذیر</span>
+              <span
+                className="h-px w-8 bg-[var(--shoppable-copper)]"
+                aria-hidden="true"
+              />
+
+              <span>{copy.eyebrow}</span>
             </div>
 
             <h2
@@ -176,19 +284,31 @@ export async function ShoppableImageBanner() {
             </h2>
 
             <p className="mt-5 max-w-[500px] text-pretty text-[12px] leading-7 text-white/62 sm:text-[13px] lg:text-[14px] lg:leading-8">
-              این تصویر به سه محصول منتخب وصل شده است؛ هر محصول را مستقیم ببینید
-              یا جزیره پایین صفحه را برای پیشنهادهای کامل‌تر باز کنید.
+              {copy.description}
             </p>
+
+            {/* ============================================================
+                PRODUCTS
+            ============================================================= */}
 
             <div className="mt-8 grid gap-2.5 sm:mt-10">
               {products.map((product, index) => {
-                const name = fa(product.label, fa(product.name, product.slug));
-                const price = formatMoney(product.priceMinor, product.currency);
+                const name = localizedText(
+                  product.label,
+                  locale,
+                  localizedText(product.name, locale, product.slug),
+                );
+
+                const price = formatMoney(
+                  product.priceMinor,
+                  product.currency,
+                  locale,
+                );
 
                 return (
                   <Link
                     key={product.id}
-                    href={product.href}
+                    href={localizedHref(product.href, locale)}
                     className="group grid grid-cols-[74px_1fr_auto] items-center gap-3 border border-white/10 bg-white/[0.045] p-2.5 transition-[border-color,background-color] duration-500 hover:border-white/22 hover:bg-white/[0.075] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                   >
                     <span className="relative aspect-[4/5] overflow-hidden bg-white/[0.07]">
@@ -200,7 +320,8 @@ export async function ShoppableImageBanner() {
                           sizes="74px"
                           className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                           style={{
-                            objectPosition: product.image.objectPosition ?? "center",
+                            objectPosition:
+                              product.image.objectPosition ?? "center",
                           }}
                         />
                       ) : null}
@@ -208,11 +329,13 @@ export async function ShoppableImageBanner() {
 
                     <span className="min-w-0">
                       <span className="text-[9px] text-[var(--shoppable-copper)]">
-                        محصول {numberFormatter.format(index + 1)}
+                        {copy.productLabel} {formatNumber(index + 1, locale)}
                       </span>
+
                       <strong className="mt-1 block truncate text-[14px] font-semibold leading-6 text-white">
                         {name}
                       </strong>
+
                       {price ? (
                         <span className="mt-1 block text-[10px] text-white/55">
                           {price}
@@ -228,9 +351,13 @@ export async function ShoppableImageBanner() {
               })}
             </div>
 
+            {/* ============================================================
+                CTA
+            ============================================================= */}
+
             <div className="mt-8 max-w-[230px]">
               <Button
-                href="/shop"
+                href={localizedHref(copy.action.href, locale)}
                 variant="cream"
                 size="lg"
                 fullWidth
@@ -238,7 +365,7 @@ export async function ShoppableImageBanner() {
                 iconPosition="right"
                 className="!tracking-normal"
               >
-                ورود به فروشگاه
+                {copy.action.label}
               </Button>
             </div>
           </div>

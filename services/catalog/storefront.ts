@@ -9,6 +9,7 @@ import { Product } from "@/models/catalog/product";
 import { ProductVariant } from "@/models/catalog/product-variant";
 import { Size } from "@/models/catalog/size";
 import { Subcategory } from "@/models/catalog/subcategory";
+import type { Locale } from "@/lib/i18n/config";
 
 type ProductListInput = {
   categoryId?: string;
@@ -26,6 +27,30 @@ type LocalizedRecord = {
 
 function toPlainJson<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function localizedField(
+  value: unknown,
+  locale: Locale | undefined,
+  fallback = "",
+) {
+  if (!locale) return value;
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return fallback;
+
+  const localized = value as LocalizedRecord;
+  const priorities: Record<Locale, Array<keyof LocalizedRecord>> = {
+    fa: ["fa", "en", "ar"],
+    en: ["en", "fa", "ar"],
+    ar: ["ar", "fa", "en"],
+  };
+
+  for (const key of priorities[locale]) {
+    const candidate = localized[key]?.trim();
+    if (candidate) return candidate;
+  }
+
+  return fallback;
 }
 
 function uniqueIds(values: unknown[]) {
@@ -72,7 +97,7 @@ function storyImagePayload(image: PlainCatalogRecord | null | undefined) {
   };
 }
 
-export async function getStorefrontCatalog() {
+export async function getStorefrontCatalog(locale?: Locale) {
   await connectToDatabase();
 
   const [categories, subcategories, images] = await Promise.all([
@@ -87,11 +112,33 @@ export async function getStorefrontCatalog() {
       .lean(),
   ]);
 
-  return toPlainJson({
+  const payload = toPlainJson({
     categories,
     subcategories,
     images,
   });
+
+  if (!locale) return payload;
+
+  return {
+    ...payload,
+    categories: payload.categories.map((category) => ({
+      ...category,
+      name: localizedField(category.name, locale, String(category.slug ?? "")),
+    })),
+    subcategories: payload.subcategories.map((subcategory) => ({
+      ...subcategory,
+      name: localizedField(
+        subcategory.name,
+        locale,
+        String(subcategory.slug ?? ""),
+      ),
+    })),
+    images: payload.images.map((image) => ({
+      ...image,
+      alt: localizedField(image.alt, locale),
+    })),
+  };
 }
 
 export async function getStorefrontCategoryRoute(slug: string) {

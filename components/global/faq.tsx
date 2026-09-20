@@ -8,7 +8,17 @@ import {
   useState,
 } from "react";
 
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
 import { brandColors, lightTokens } from "@/theme/theme-colors";
+
+/* ==========================================================================
+   TYPES
+============================================================================ */
 
 export type FAQItem = {
   id: string;
@@ -17,20 +27,39 @@ export type FAQItem = {
   answerLabel?: string;
 };
 
+type FAQEmptyState = {
+  title: ReactNode;
+  description: ReactNode;
+};
+
 export type FAQProps = {
   id?: string;
-  eyebrow?: string;
+
+  locale: Locale;
+
+  eyebrow?: ReactNode;
   title: ReactNode;
   description?: ReactNode;
+
   items: FAQItem[];
+
+  emptyState?: FAQEmptyState;
+
   defaultOpenIds?: string[];
   openIds?: string[];
+
   onOpenChange?: (openIds: string[]) => void;
+
   allowMultiple?: boolean;
   showIndex?: boolean;
+
   className?: string;
   footer?: ReactNode;
 };
+
+/* ==========================================================================
+   HELPERS
+============================================================================ */
 
 function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
@@ -43,16 +72,25 @@ function safeDomId(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function toPersianDigits(value: number | string) {
-  return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
+function formatIndex(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale), {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(value);
 }
+
+/* ==========================================================================
+   COMPONENT
+============================================================================ */
 
 export default function FAQ({
   id,
-  eyebrow = "پرسش‌های متداول",
+  locale,
+  eyebrow,
   title,
   description,
   items,
+  emptyState,
   defaultOpenIds = [],
   openIds,
   onOpenChange,
@@ -62,25 +100,39 @@ export default function FAQ({
   footer,
 }: FAQProps) {
   const reactId = useId();
+
   const headingId = `${safeDomId(reactId)}-faq-title`;
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
 
   const [internalOpenIds, setInternalOpenIds] =
     useState<string[]>(defaultOpenIds);
 
   const resolvedOpenIds = openIds ?? internalOpenIds;
+
   const openSet = useMemo(() => new Set(resolvedOpenIds), [resolvedOpenIds]);
 
   const themeVars = {
     "--faq-black": brandColors.black.hex,
+
     "--faq-cream": brandColors.cream.hex,
+
     "--faq-copper": brandColors.copper.hex,
+
     "--faq-muted": lightTokens.textMuted,
+
     "--faq-soft": lightTokens.textSoft,
+
     "--faq-border": lightTokens.border,
   } as CSSProperties;
 
   function commitOpenIds(next: string[]) {
-    if (openIds === undefined) setInternalOpenIds(next);
+    if (openIds === undefined) {
+      setInternalOpenIds(next);
+    }
+
     onOpenChange?.(next);
   }
 
@@ -93,6 +145,7 @@ export default function FAQ({
           ? resolvedOpenIds.filter((openId) => openId !== id)
           : [...resolvedOpenIds, id],
       );
+
       return;
     }
 
@@ -102,8 +155,8 @@ export default function FAQ({
   return (
     <section
       id={id}
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       aria-labelledby={headingId}
       style={themeVars}
       className={cx(
@@ -118,7 +171,10 @@ export default function FAQ({
       />
 
       <div className="mx-auto w-full max-w-[1920px] px-5 py-20 sm:px-7 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
-        {/* HEADER */}
+        {/* ================================================================
+            HEADER
+        ================================================================= */}
+
         <header className="mx-auto flex max-w-[900px] flex-col items-center text-center">
           {eyebrow ? (
             <div className="flex items-center justify-center gap-3">
@@ -126,6 +182,7 @@ export default function FAQ({
                 aria-hidden="true"
                 className="h-px w-8 bg-[var(--faq-copper)]"
               />
+
               <p className="text-[10px] font-medium leading-none text-[var(--faq-copper)] sm:text-[11px]">
                 {eyebrow}
               </p>
@@ -134,7 +191,7 @@ export default function FAQ({
 
           <h2
             id={headingId}
-            className="mt-6 max-w-[880px] text-balance text-xl md:text-5xl font-semibold leading-[1.12] tracking-[-0.045em] sm:mt-7  "
+            className="mt-6 max-w-[880px] text-balance text-xl font-semibold leading-[1.12] tracking-[-0.045em] sm:mt-7 md:text-5xl"
           >
             {title}
           </h2>
@@ -146,14 +203,20 @@ export default function FAQ({
           ) : null}
         </header>
 
-        {/* ACCORDION */}
-        <div className="mt-14 w-full max-w-[1120px] mx-auto sm:mt-16 lg:mt-20">
+        {/* ================================================================
+            ACCORDION
+        ================================================================= */}
+
+        <div className="mx-auto mt-14 w-full max-w-[1120px] sm:mt-16 lg:mt-20">
           {items.length > 0 ? (
             <div className="border-t border-black/[0.14]">
               {items.map((item, index) => {
                 const isOpen = openSet.has(item.id);
+
                 const itemDomId = safeDomId(`${reactId}-${item.id}`);
+
                 const triggerId = `${itemDomId}-trigger`;
+
                 const panelId = `${itemDomId}-panel`;
 
                 return (
@@ -167,7 +230,7 @@ export default function FAQ({
                     <span
                       aria-hidden="true"
                       className={cx(
-                        "absolute inset-y-0 right-0 w-[2px] origin-center bg-[var(--faq-copper)] transition-transform duration-500 ease-out motion-reduce:transition-none",
+                        "absolute inset-y-0 start-0 w-[2px] origin-center bg-[var(--faq-copper)] transition-transform duration-500 ease-out motion-reduce:transition-none",
                         isOpen ? "scale-y-100" : "scale-y-0",
                       )}
                     />
@@ -178,7 +241,7 @@ export default function FAQ({
                       aria-expanded={isOpen}
                       aria-controls={panelId}
                       onClick={() => toggleItem(item.id)}
-                      className="grid w-full cursor-pointer grid-cols-[44px_minmax(0,1fr)_40px] items-center gap-3 px-1 py-6 text-center outline-none sm:grid-cols-[56px_minmax(0,1fr)_48px] sm:gap-5 sm:px-2 sm:py-7 lg:grid-cols-[64px_minmax(0,1fr)_56px] lg:py-8 focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/70"
+                      className="grid w-full cursor-pointer grid-cols-[44px_minmax(0,1fr)_40px] items-center gap-3 px-1 py-6 text-center outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/70 sm:grid-cols-[56px_minmax(0,1fr)_48px] sm:gap-5 sm:px-2 sm:py-7 lg:grid-cols-[64px_minmax(0,1fr)_56px] lg:py-8"
                     >
                       {showIndex ? (
                         <span
@@ -189,7 +252,7 @@ export default function FAQ({
                               : "text-black/[0.28] group-hover/item:text-black/[0.50]",
                           )}
                         >
-                          {toPersianDigits(String(index + 1).padStart(2, "0"))}
+                          {formatIndex(index + 1, locale)}
                         </span>
                       ) : (
                         <span aria-hidden="true" />
@@ -216,6 +279,7 @@ export default function FAQ({
                         )}
                       >
                         <span className="absolute left-1/2 top-1/2 h-px w-3.5 -translate-x-1/2 -translate-y-1/2 bg-current" />
+
                         <span
                           className={cx(
                             "absolute left-1/2 top-1/2 h-3.5 w-px -translate-x-1/2 -translate-y-1/2 bg-current transition-transform duration-300 ease-out motion-reduce:transition-none",
@@ -241,7 +305,11 @@ export default function FAQ({
                         <div className="mx-auto max-w-[820px] px-6 pb-8 text-center sm:px-10 sm:pb-10 lg:px-14 lg:pb-11">
                           {item.answerLabel ? (
                             <div className="mb-4 flex items-center justify-center gap-3">
-                              <span className="h-px w-7 bg-[var(--faq-copper)]/70" />
+                              <span
+                                aria-hidden="true"
+                                className="h-px w-7 bg-[var(--faq-copper)]/70"
+                              />
+
                               <p className="text-[9px] font-medium text-[var(--faq-copper)]">
                                 {item.answerLabel}
                               </p>
@@ -258,21 +326,24 @@ export default function FAQ({
                 );
               })}
             </div>
-          ) : (
+          ) : emptyState ? (
             <div className="border-y border-black/[0.14] py-14 text-center sm:py-16">
               <div className="flex items-center justify-center gap-3">
-                <span className="h-px w-8 bg-[var(--faq-copper)]" />
+                <span
+                  aria-hidden="true"
+                  className="h-px w-8 bg-[var(--faq-copper)]"
+                />
+
                 <p className="text-[10px] font-medium text-[var(--faq-copper)]">
-                  هنوز پرسشی ثبت نشده است
+                  {emptyState.title}
                 </p>
               </div>
 
               <p className="mx-auto mt-4 max-w-[520px] text-[12px] leading-7 text-black/[0.50] sm:text-[13px]">
-                پرسش‌ها را به داده‌های FAQ اضافه کنید؛ موارد جدید به‌صورت خودکار
-                در این بخش نمایش داده می‌شوند.
+                {emptyState.description}
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
         {footer ? (

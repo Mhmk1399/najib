@@ -1,27 +1,40 @@
 import { type CSSProperties } from "react";
 
-import { brandColors } from "@/theme/theme-colors";
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
+import { brandColors } from "@/theme/theme-colors";
 
 const HERO_VIDEO = "/assets/video/hero-video.mp4";
 
-export function HeroSection() {
+type HeroSectionProps = {
+  copy: HomeCopy["hero"];
+  locale: Locale;
+};
+
+export function HeroSection({ copy, locale }: HeroSectionProps) {
   const colors = {
     "--hero-black": brandColors.black.hex,
     "--hero-black-rgb": brandColors.black.rgb,
     "--hero-white": brandColors.white.hex,
     "--hero-copper": brandColors.copper.hex,
   } as CSSProperties;
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
 
   return (
     <section
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       aria-labelledby="home-hero-title"
       style={colors}
       className="relative isolate flex min-h-[100svh] w-full overflow-hidden bg-[var(--hero-black)] text-[var(--hero-white)] md:min-h-[720px] lg:min-h-[760px] xl:min-h-[820px]"
     >
-      {/* Background video stays decorative so the main copy is immediately semantic. */}
       <video
         autoPlay
         muted
@@ -35,13 +48,11 @@ export function HeroSection() {
         <source src={HERO_VIDEO} type="video/mp4" />
       </video>
 
-      {/* Mobile readability: content sits lower, so the contrast comes from the bottom. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--hero-black-rgb)/0.18)_0%,rgb(var(--hero-black-rgb)/0.08)_28%,rgb(var(--hero-black-rgb)/0.26)_58%,rgb(var(--hero-black-rgb)/0.86)_100%)] md:hidden"
       />
 
-      {/* Desktop readability stays symmetrical because the composition is centered. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-20 hidden bg-[linear-gradient(180deg,rgb(var(--hero-black-rgb)/0.28)_0%,rgb(var(--hero-black-rgb)/0.08)_32%,rgb(var(--hero-black-rgb)/0.16)_60%,rgb(var(--hero-black-rgb)/0.72)_100%)] md:block"
@@ -52,7 +63,6 @@ export function HeroSection() {
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_22%,rgb(var(--hero-black-rgb)/0.12)_66%,rgb(var(--hero-black-rgb)/0.38)_125%)]"
       />
 
-      {/* Subtle frame keeps the hero feeling like a composed campaign image. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-5 bottom-5 top-[90px] border border-white/[0.08] sm:inset-x-7 sm:bottom-7 md:inset-x-10 md:bottom-9 md:top-[104px] lg:inset-x-12 xl:inset-x-14"
@@ -66,7 +76,7 @@ export function HeroSection() {
               aria-hidden="true"
             />
             <p className="text-[9px] font-medium tracking-[0.12em] text-white/56 sm:text-[10px]">
-              نجیب‌زاده / پوشاک مردانه
+              {copy.eyebrow}
             </p>
             <span
               className="h-px w-8 bg-[var(--hero-copper)]/90"
@@ -78,20 +88,19 @@ export function HeroSection() {
             <div className="min-w-0 text-center">
               <h1
                 id="home-hero-title"
-                className="mx-auto max-w-[760px] text-xl md:text-5xl font-semibold leading-[1.02] tracking-[-0.055em] text-[var(--hero-white)]  "
+                className="mx-auto max-w-[760px] text-xl font-semibold leading-[1.02] tracking-[-0.055em] text-[var(--hero-white)] md:text-5xl"
               >
-                حضور، با دقت دوخته شده
+                {copy.title}
               </h1>
 
               <p className="mx-auto mt-6 max-w-[560px] text-[12px] font-normal leading-7 text-white/66 sm:text-[13px] md:mt-7 md:text-[14px] md:leading-8">
-                خیاطی مدرن، عطرهای امضادار و جزئیاتی سنجیده؛ برای مردی که حضورش
-                را با انتخاب‌های دقیق تعریف می‌کند.
+                {copy.description}
               </p>
 
               <div className="mx-auto mt-8 flex w-full max-w-[500px] flex-col gap-2.5 sm:mt-9 sm:flex-row sm:gap-3 md:mt-10">
                 <div className="w-full sm:w-[230px]">
                   <Button
-                    href="/clothing"
+                    href={localizedHref(copy.primaryAction.href, locale)}
                     variant="cream"
                     size="lg"
                     fullWidth
@@ -99,13 +108,13 @@ export function HeroSection() {
                     iconPosition="right"
                     className="!tracking-normal"
                   >
-                    مشاهده پوشاک
+                    {copy.primaryAction.label}
                   </Button>
                 </div>
 
                 <div className="w-full sm:w-[230px]">
                   <Button
-                    href="/shop"
+                    href={localizedHref(copy.secondaryAction.href, locale)}
                     variant="outline"
                     size="lg"
                     fullWidth
@@ -113,13 +122,13 @@ export function HeroSection() {
                     iconPosition="right"
                     className="min-w-0 !border-white/40 !bg-black/15 !text-white !tracking-normal backdrop-blur-[4px] hover:!border-white hover:!bg-white hover:!text-black"
                   >
-                    ورود به فروشگاه
+                    {copy.secondaryAction.label}
                   </Button>
                 </div>
               </div>
 
               <div className="mt-8 flex items-center justify-center gap-3 text-[8px] font-medium tracking-[0.1em] text-white/36 sm:mt-10">
-                <span>برای استانداردی بالاتر بپوشید</span>
+                <span>{copy.footnote}</span>
                 <span className="h-px w-12 bg-white/18" aria-hidden="true" />
               </div>
             </div>

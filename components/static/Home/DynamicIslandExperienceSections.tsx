@@ -5,8 +5,24 @@ import { type CSSProperties } from "react";
 import { Layers, Search, Sparkles } from "lucide-react";
 
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
+import { localizedHref } from "@/lib/i18n/routes";
+
 import { getStorefrontImageStories } from "@/services/catalog/storefront";
+
 import { brandColors, lightTokens } from "@/theme/theme-colors";
+
+/* ==========================================================================
+   TYPES
+============================================================================ */
 
 type LocalizedText = {
   fa?: string;
@@ -31,8 +47,16 @@ type StoryProduct = {
   currency?: string;
   label?: LocalizedText;
   image?: StoryImage | null;
-  colors?: Array<{ _id?: string; name?: LocalizedText; hex?: string }>;
-  sizes?: Array<{ _id?: string; name?: LocalizedText; code?: string }>;
+  colors?: Array<{
+    _id?: string;
+    name?: LocalizedText;
+    hex?: string;
+  }>;
+  sizes?: Array<{
+    _id?: string;
+    name?: LocalizedText;
+    code?: string;
+  }>;
   tags?: string[];
 };
 
@@ -47,11 +71,21 @@ type ImageStoriesPayload = {
   stories?: ImageStory[];
 };
 
+type DynamicIslandExperienceSectionsProps = {
+  copy: HomeCopy["dynamicIsland"];
+  locale: Locale;
+};
+
+/* ==========================================================================
+   CONSTANTS
+============================================================================ */
+
 const preferredHeroKinds = new Set([
   "lookbook",
   "editorial",
   "collection_banner",
 ]);
+
 const visualStoryKinds = new Set([
   "lookbook",
   "editorial",
@@ -59,10 +93,74 @@ const visualStoryKinds = new Set([
   "category_banner",
   "subcategory_banner",
 ]);
-const numberFormatter = new Intl.NumberFormat("fa-IR");
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+/* ==========================================================================
+   HELPERS
+============================================================================ */
+
+function localizedText(
+  value: LocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  const currentValue = value?.[locale]?.trim();
+
+  if (currentValue) {
+    return currentValue;
+  }
+
+  const fallbackOrder: Locale[] =
+    locale === "fa"
+      ? ["en", "ar"]
+      : locale === "en"
+        ? ["fa", "ar"]
+        : ["fa", "en"];
+
+  for (const fallbackLocale of fallbackOrder) {
+    const fallbackValue = value?.[fallbackLocale]?.trim();
+
+    if (fallbackValue) {
+      return fallbackValue;
+    }
+  }
+
+  return fallback;
+}
+
+function formatNumber(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale)).format(value);
+}
+
+function formatMoney(
+  minor: number | undefined,
+  currency: string | undefined,
+  locale: Locale,
+) {
+  if (typeof minor !== "number") {
+    return "";
+  }
+
+  const intlLocale = getHtmlLang(locale);
+
+  try {
+    return new Intl.NumberFormat(intlLocale, {
+      style: "currency",
+      currency: currency || "IRR",
+      maximumFractionDigits: 0,
+    }).format(minor / 100);
+  } catch {
+    return `${formatNumber(minor / 100, locale)} ${currency ?? ""}`.trim();
+  }
+}
+
+function formatTemplate(
+  template: string,
+  values: Record<string, string | number>,
+) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
 }
 
 function imageFit(value: string | undefined): CSSProperties["objectFit"] {
@@ -77,20 +175,6 @@ function imageFit(value: string | undefined): CSSProperties["objectFit"] {
   }
 
   return "cover";
-}
-
-function formatMoney(minor: number | undefined, currency: string | undefined) {
-  if (typeof minor !== "number") return "";
-
-  try {
-    return new Intl.NumberFormat("fa-IR", {
-      style: "currency",
-      currency: currency || "IRR",
-      maximumFractionDigits: 0,
-    }).format(minor / 100);
-  } catch {
-    return `${numberFormatter.format(minor / 100)} ${currency ?? ""}`.trim();
-  }
 }
 
 function compactStories(stories: ImageStory[]) {
@@ -114,27 +198,49 @@ function chooseDistinctStories(
   limit: number,
 ) {
   const used = new Set(usedStoryIds);
+
   return stories
     .filter((story) => !used.has(story.id) && visualStoryKinds.has(story.kind))
     .slice(0, limit);
 }
 
-function productName(product: StoryProduct) {
-  return fa(product.label, fa(product.name, product.slug));
+function productName(product: StoryProduct, locale: Locale) {
+  return localizedText(
+    product.label,
+    locale,
+    localizedText(product.name, locale, product.slug),
+  );
 }
 
-export async function DynamicIslandExperienceSections() {
-  const payload =
-    (await getStorefrontImageStories().catch(() => null)) as ImageStoriesPayload | null;
+/* ==========================================================================
+   MAIN COMPONENT
+============================================================================ */
+
+export async function DynamicIslandExperienceSections({
+  copy,
+  locale,
+}: DynamicIslandExperienceSectionsProps) {
+  const payload = (await getStorefrontImageStories().catch(
+    () => null,
+  )) as ImageStoriesPayload | null;
+
   const stories = compactStories(payload?.stories ?? []);
+
   const completeLookStory = chooseCompleteLook(stories);
+
   const occasionStories = chooseDistinctStories(
     stories,
     completeLookStory ? [completeLookStory.id] : [],
     3,
   );
 
-  if (!completeLookStory && !occasionStories.length) return null;
+  if (!completeLookStory && !occasionStories.length) {
+    return null;
+  }
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
 
   const themeVars = {
     "--island-sections-black": brandColors.black.hex,
@@ -147,26 +253,56 @@ export async function DynamicIslandExperienceSections() {
 
   return (
     <div
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       style={themeVars}
       className="isolate bg-[var(--island-sections-black)] text-[var(--island-sections-white)]"
     >
       {completeLookStory ? (
-        <CompleteTheLookSection story={completeLookStory} />
+        <CompleteTheLookSection
+          story={completeLookStory}
+          copy={copy}
+          locale={locale}
+        />
       ) : null}
 
       {occasionStories.length ? (
-        <OccasionIntentSection stories={occasionStories} />
+        <OccasionIntentSection
+          stories={occasionStories}
+          copy={copy}
+          locale={locale}
+        />
       ) : null}
     </div>
   );
 }
 
-function CompleteTheLookSection({ story }: { story: ImageStory }) {
+/* ==========================================================================
+   COMPLETE THE LOOK
+============================================================================ */
+
+function CompleteTheLookSection({
+  story,
+  copy,
+  locale,
+}: {
+  story: ImageStory;
+  copy: HomeCopy["dynamicIsland"];
+  locale: Locale;
+}) {
   const products = story.linkedProducts.slice(0, 4);
-  const title = fa(story.image.alt, "استایل کامل نجیب زاده");
+
+  const title = localizedText(
+    story.image.alt,
+    locale,
+    copy.completeLook.fallbackTitle,
+  );
+
   const featuredProduct = products[0];
+
+  const imageNote = formatTemplate(copy.completeLook.imageNote, {
+    count: formatNumber(products.length, locale),
+  });
 
   return (
     <section
@@ -175,10 +311,14 @@ function CompleteTheLookSection({ story }: { story: ImageStory }) {
       aria-labelledby="complete-look-title"
       className="relative grid min-h-[760px] overflow-hidden border-t border-white/[0.08] lg:grid-cols-[minmax(0,0.92fr)_minmax(520px,1.08fr)]"
     >
+      {/* ================================================================
+          IMAGE
+      ================================================================= */}
+
       <div className="relative order-1 min-h-[460px] overflow-hidden lg:order-2 lg:min-h-[760px]">
         <Image
           src={story.image.url}
-          alt={fa(story.image.alt, title)}
+          alt={localizedText(story.image.alt, locale, title)}
           fill
           sizes="(max-width: 1023px) 100vw, 58vw"
           className="object-cover"
@@ -196,10 +336,7 @@ function CompleteTheLookSection({ story }: { story: ImageStory }) {
 
         <div className="absolute inset-x-5 bottom-5 flex items-end justify-between gap-4 sm:inset-x-8 sm:bottom-8">
           <div className="max-w-[310px] border border-white/12 bg-black/35 px-4 py-3 backdrop-blur-xl">
-            <p className="text-[10px] leading-5 text-white/62">
-              این تصویر به {numberFormatter.format(products.length)} محصول وصل
-              است و داینامیک ایلند انتخاب‌های مرتبط را زنده نمایش می‌دهد.
-            </p>
+            <p className="text-[10px] leading-5 text-white/62">{imageNote}</p>
           </div>
 
           <span className="grid size-11 shrink-0 place-items-center border border-white/16 bg-white/[0.08] text-white backdrop-blur-xl">
@@ -208,11 +345,19 @@ function CompleteTheLookSection({ story }: { story: ImageStory }) {
         </div>
       </div>
 
+      {/* ================================================================
+          CONTENT
+      ================================================================= */}
+
       <div className="order-2 flex min-h-[560px] flex-col justify-center px-5 py-16 sm:px-8 lg:order-1 lg:min-h-[760px] lg:px-12 xl:px-16">
         <div className="max-w-[620px]">
           <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--island-sections-copper)] sm:text-[11px]">
-            <span className="h-px w-8 bg-[var(--island-sections-copper)]" />
-            <span>ست پیشنهادی</span>
+            <span
+              aria-hidden="true"
+              className="h-px w-8 bg-[var(--island-sections-copper)]"
+            />
+
+            <span>{copy.completeLook.eyebrow}</span>
           </div>
 
           <h2
@@ -223,40 +368,44 @@ function CompleteTheLookSection({ story }: { story: ImageStory }) {
           </h2>
 
           <p className="mt-5 max-w-[510px] text-pretty text-[12px] leading-7 text-white/62 sm:text-[13px] lg:text-[14px] lg:leading-8">
-            هر محصول این تصویر به همان تجربه پایین صفحه وصل است؛ کاربر می‌تواند
-            محصول را انتخاب کند، جزئیاتش را زیر همین سکشن ببیند و بعد وارد
-            صفحه محصول شود.
+            {copy.completeLook.description}
           </p>
 
           <div className="mt-8 grid gap-2.5 sm:mt-10">
             {products.map((product, index) => (
-              <ProductRow key={product.id} product={product} index={index} />
+              <ProductRow
+                key={product.id}
+                product={product}
+                index={index}
+                copy={copy}
+                locale={locale}
+              />
             ))}
           </div>
 
           <div className="mt-8 flex flex-col gap-2.5 sm:flex-row">
             {featuredProduct ? (
               <Button
-                href={featuredProduct.href}
+                href={localizedHref(featuredProduct.href, locale)}
                 variant="cream"
                 size="lg"
                 icon={<ArrowLeftIcon />}
                 iconPosition="right"
                 className="!tracking-normal"
               >
-                دیدن محصول شاخص
+                {copy.completeLook.featuredActionLabel}
               </Button>
             ) : null}
 
             <Button
-              href="/shop"
+              href={localizedHref(copy.completeLook.shopAction.href, locale)}
               variant="outline"
               size="lg"
               icon={<Search className="size-4" aria-hidden="true" />}
               iconPosition="right"
               className="border-white/28 bg-white/[0.03] !tracking-normal text-white backdrop-blur-md hover:border-white hover:bg-white hover:text-black"
             >
-              جستجو در فروشگاه
+              {copy.completeLook.shopAction.label}
             </Button>
           </div>
         </div>
@@ -265,21 +414,34 @@ function CompleteTheLookSection({ story }: { story: ImageStory }) {
   );
 }
 
+/* ==========================================================================
+   PRODUCT ROW
+============================================================================ */
+
 function ProductRow({
   product,
   index,
+  copy,
+  locale,
 }: {
   product: StoryProduct;
   index: number;
+  copy: HomeCopy["dynamicIsland"];
+  locale: Locale;
 }) {
-  const name = productName(product);
-  const price = formatMoney(product.priceMinor, product.currency);
+  const name = productName(product, locale);
+
+  const price = formatMoney(product.priceMinor, product.currency, locale);
+
+  const itemLabel = formatTemplate(copy.completeLook.productItemLabel, {
+    number: formatNumber(index + 1, locale),
+  });
 
   return (
     <Link
-      href={product.href}
+      href={localizedHref(product.href, locale)}
       data-image-story-url={product.image?.url}
-      aria-label={`مشاهده ${name}`}
+      aria-label={`${copy.completeLook.productAriaPrefix} ${name}`}
       className="group grid min-h-[86px] grid-cols-[64px_1fr_auto] items-center gap-3 border border-white/10 bg-white/[0.045] p-2.5 transition-[border-color,background-color] duration-500 hover:border-white/24 hover:bg-white/[0.075] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
     >
       <span className="relative aspect-[4/5] overflow-hidden bg-white/[0.07]">
@@ -300,11 +462,13 @@ function ProductRow({
 
       <span className="min-w-0">
         <span className="text-[9px] text-[var(--island-sections-copper)]">
-          انتخاب {numberFormatter.format(index + 1)}
+          {itemLabel}
         </span>
+
         <strong className="mt-1 block truncate text-[14px] font-semibold leading-6 text-white">
           {name}
         </strong>
+
         {price ? (
           <span className="mt-1 block text-[10px] text-white/55">{price}</span>
         ) : null}
@@ -317,7 +481,19 @@ function ProductRow({
   );
 }
 
-function OccasionIntentSection({ stories }: { stories: ImageStory[] }) {
+/* ==========================================================================
+   OCCASION INTENT
+============================================================================ */
+
+function OccasionIntentSection({
+  stories,
+  copy,
+  locale,
+}: {
+  stories: ImageStory[];
+  copy: HomeCopy["dynamicIsland"];
+  locale: Locale;
+}) {
   return (
     <section
       aria-labelledby="occasion-intent-title"
@@ -325,42 +501,75 @@ function OccasionIntentSection({ stories }: { stories: ImageStory[] }) {
     >
       <header className="mx-auto flex max-w-[860px] flex-col items-center text-center">
         <div className="flex items-center gap-3 text-[10px] font-semibold text-[var(--island-sections-copper)]">
-          <span className="h-px w-7 bg-[var(--island-sections-copper)]" />
-          <span>راهنمای انتخاب</span>
-          <span className="h-px w-7 bg-[var(--island-sections-copper)]" />
+          <span
+            aria-hidden="true"
+            className="h-px w-7 bg-[var(--island-sections-copper)]"
+          />
+
+          <span>{copy.occasion.eyebrow}</span>
+
+          <span
+            aria-hidden="true"
+            className="h-px w-7 bg-[var(--island-sections-copper)]"
+          />
         </div>
 
         <h2
           id="occasion-intent-title"
           className="mt-4 max-w-[760px] text-balance text-[clamp(2.6rem,10vw,4.4rem)] font-semibold leading-[1.02] tracking-[-0.045em]"
         >
-          چند نقطه هوشمند برای داینامیک ایلند
+          {copy.occasion.title}
         </h2>
 
         <p className="mt-5 max-w-[560px] text-[12px] leading-7 text-[var(--island-sections-muted)] sm:text-[13px]">
-          هر تصویر این بخش یک context جدا دارد؛ با رسیدن کاربر به هر تصویر،
-          ایلند محصولات و پیشنهادهای همان فضا را نمایش می‌دهد.
+          {copy.occasion.description}
         </p>
       </header>
 
       <div className="mx-auto mt-10 grid w-full max-w-[1480px] grid-cols-1 gap-3 md:grid-cols-3 lg:mt-12">
         {stories.map((story, index) => (
-          <IntentStoryTile key={story.id} story={story} index={index} />
+          <IntentStoryTile
+            key={story.id}
+            story={story}
+            index={index}
+            copy={copy}
+            locale={locale}
+          />
         ))}
       </div>
     </section>
   );
 }
 
+/* ==========================================================================
+   INTENT STORY TILE
+============================================================================ */
+
 function IntentStoryTile({
   story,
   index,
+  copy,
+  locale,
 }: {
   story: ImageStory;
   index: number;
+  copy: HomeCopy["dynamicIsland"];
+  locale: Locale;
 }) {
-  const title = fa(story.image.alt, `انتخاب ${numberFormatter.format(index + 1)}`);
+  const fallbackTitle = formatTemplate(copy.occasion.storyFallbackTitle, {
+    number: formatNumber(index + 1, locale),
+  });
+
+  const title = localizedText(story.image.alt, locale, fallbackTitle);
+
   const products = story.linkedProducts.slice(0, 3);
+
+  const relatedProductsLabel = formatTemplate(
+    copy.occasion.relatedProductsLabel,
+    {
+      count: formatNumber(story.linkedProducts.length, locale),
+    },
+  );
 
   return (
     <article
@@ -388,8 +597,12 @@ function IntentStoryTile({
 
       <div className="absolute inset-x-5 bottom-5 z-10 sm:inset-x-6 sm:bottom-6">
         <div className="mb-4 inline-flex items-center gap-2 border border-white/14 bg-white/[0.08] px-3 py-2 text-[10px] text-white/68 backdrop-blur-xl">
-          <Layers className="size-3.5 text-[var(--island-sections-copper)]" />
-          {numberFormatter.format(story.linkedProducts.length)} محصول مرتبط
+          <Layers
+            className="size-3.5 text-[var(--island-sections-copper)]"
+            aria-hidden="true"
+          />
+
+          {relatedProductsLabel}
         </div>
 
         <h3 className="max-w-[360px] text-balance text-[clamp(2.2rem,8vw,3.8rem)] font-semibold leading-[0.98] tracking-[-0.045em]">
@@ -401,10 +614,10 @@ function IntentStoryTile({
             {products.map((product) => (
               <Link
                 key={product.id}
-                href={product.href}
+                href={localizedHref(product.href, locale)}
                 className="border border-white/14 bg-black/30 px-3 py-2 text-[10px] text-white/78 backdrop-blur-xl transition-[border-color,background-color,color] duration-300 hover:border-white/38 hover:bg-white hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
-                {productName(product)}
+                {productName(product, locale)}
               </Link>
             ))}
           </div>

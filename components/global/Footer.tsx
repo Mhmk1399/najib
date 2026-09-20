@@ -13,6 +13,22 @@ import {
 
 import { Button } from "@/components/ui/Button";
 import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  localeLabels,
+  type Locale,
+} from "@/lib/i18n/config";
+import {
+  getLocaleFromPathname,
+  localizedHref,
+  localizedPath,
+  splitLocalePathname,
+} from "@/lib/i18n/routes";
+import {
+  formatShellNumber,
+  shellCopy,
+} from "@/lib/i18n/shell-copy";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 /* =============================================================================
@@ -43,38 +59,6 @@ type SocialLink = {
    STATIC DATA
 ============================================================================= */
 
-const STATIC_FOOTER_GROUPS: FooterGroup[] = [
-  {
-    id: "services",
-    title: "خدمات مشتریان",
-    links: [
-      { label: "مشاوره اختصاصی", href: "/contact-us#appointment" },
-      { label: "یافتن فروشگاه", href: "/contact-us#location" },
-      { label: "ارسال و مرجوعی", href: "/terms-conditions#shipping-delivery" },
-      { label: "پشتیبانی مشتریان", href: "/contact-us#services" },
-    ],
-  },
-  {
-    id: "house",
-    title: "خانه نجیب‌زاده",
-    links: [
-      { label: "داستان ما", href: "/about-us" },
-      { label: "مجله", href: "/blog" },
-      { label: "کمپین‌ها", href: "/shop?collection=new-season" },
-    ],
-  },
-  {
-    id: "information",
-    title: "اطلاعات",
-    links: [
-      { label: "تماس با ما", href: "/contact-us" },
-      { label: "حریم خصوصی", href: "/privacy" },
-      { label: "قوانین و مقررات", href: "/terms-conditions" },
-      { label: "سیاست کوکی‌ها", href: "/cookies" },
-    ],
-  },
-];
-
 const SOCIAL_LINKS: SocialLink[] = [
   {
     id: "instagram",
@@ -96,6 +80,24 @@ const SOCIAL_LINKS: SocialLink[] = [
   },
 ];
 
+const SOCIAL_LABELS: Record<Locale, Record<string, string>> = {
+  fa: {
+    instagram: "اینستاگرام",
+    linkedin: "لینکدین",
+    pinterest: "پینترست",
+  },
+  en: {
+    instagram: "Instagram",
+    linkedin: "LinkedIn",
+    pinterest: "Pinterest",
+  },
+  ar: {
+    instagram: "إنستغرام",
+    linkedin: "لينكدإن",
+    pinterest: "بنترست",
+  },
+};
+
 const FOOTER_THEME_VARS = {
   "--footer-black": brandColors.black.hex,
   "--footer-cream": brandColors.cream.hex,
@@ -114,12 +116,8 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
-function toPersianDigits(value: string | number) {
-  return String(value).replace(/\d/g, (digit) => "۰۱۲۳۴۵۶۷۸۹"[Number(digit)]);
-}
-
-function formatIndex(index: number) {
-  return toPersianDigits(String(index).padStart(2, "0"));
+function formatIndex(index: number, locale: Locale) {
+  return formatShellNumber(index, locale, 2);
 }
 
 function footerLinkKey(groupId: string, link: FooterLink, index: number) {
@@ -128,11 +126,12 @@ function footerLinkKey(groupId: string, link: FooterLink, index: number) {
 
 function shouldHideFooter(pathname: string | null) {
   if (!pathname) return false;
+  const { pathnameWithoutLocale } = splitLocalePathname(pathname);
 
   return (
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname.startsWith("/admin")
+    pathnameWithoutLocale === "/login" ||
+    pathnameWithoutLocale === "/signup" ||
+    pathnameWithoutLocale.startsWith("/admin")
   );
 }
 
@@ -146,19 +145,29 @@ export default function Footer() {
 
   if (shouldHideFooter(pathname)) return null;
 
-  return <StorefrontFooter />;
+  return <StorefrontFooter pathname={pathname} />;
 }
 
 /* =============================================================================
    STOREFRONT FOOTER
 ============================================================================= */
 
-function StorefrontFooter() {
+function StorefrontFooter({ pathname }: { pathname: string | null }) {
   const year = new Date().getFullYear();
-  const menuSections = useStorefrontMenuSections();
+  const locale = getLocaleFromPathname(pathname);
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+  const copy = shellCopy[locale];
+  const homeHref = localizedPath("/", locale);
+  const supportHref = localizedHref("/contact-us#services", locale);
+  const privacyHref = localizedHref("/privacy", locale);
+  const termsHref = localizedHref("/terms-conditions", locale);
+  const cookiesHref = localizedHref("/cookies", locale);
+  const menuSections = useStorefrontMenuSections(locale);
 
   const footerGroups = useMemo<FooterGroup[]>(() => {
     const seen = new Set<string>();
+    const toLocalizedHref = (href: string) => localizedHref(href, locale);
 
     const categoryLinks = menuSections
       .filter((section) => {
@@ -183,10 +192,10 @@ function StorefrontFooter() {
 
         return {
           label: section.title,
-          href: section.href,
+          href: toLocalizedHref(section.href),
           description:
             childLabels.length > 0
-              ? childLabels.join("، ")
+              ? childLabels.join(locale === "en" ? ", " : "، ")
               : section.subtitle || undefined,
         } satisfies FooterLink;
       });
@@ -196,29 +205,35 @@ function StorefrontFooter() {
         ? [
             ...categoryLinks,
             {
-              label: "مشاهده همه محصولات",
-              href: "/shop",
-              description: "ورود به فروشگاه نجیب‌زاده",
+              label: copy.footer.viewAllProducts,
+              href: toLocalizedHref("/shop"),
+              description: copy.footer.viewAllProductsDescription,
             },
           ]
         : [
             {
-              label: "همه محصولات",
-              href: "/shop",
-              description: "مجموعه‌های فعال فروشگاه اینجا نمایش داده می‌شوند.",
+              label: copy.footer.allProducts,
+              href: toLocalizedHref("/shop"),
+              description: copy.footer.allProductsDescription,
             },
           ];
 
     return [
       {
         id: "catalog",
-        title: "دسته‌بندی‌ها",
+        title: copy.footer.catalogTitle,
         links: catalogLinks,
         featured: true,
       },
-      ...STATIC_FOOTER_GROUPS,
+      ...copy.footer.staticGroups.map((group) => ({
+        ...group,
+        links: group.links.map((link) => ({
+          ...link,
+          href: toLocalizedHref(link.href),
+        })),
+      })),
     ];
-  }, [menuSections]);
+  }, [copy, locale, menuSections]);
 
   function scrollToTop() {
     const reducedMotion = window.matchMedia(
@@ -233,8 +248,8 @@ function StorefrontFooter() {
 
   return (
     <footer
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       style={FOOTER_THEME_VARS}
       className="relative w-full overflow-visible bg-[var(--footer-cream)] text-[var(--footer-black)]"
     >
@@ -243,7 +258,7 @@ function StorefrontFooter() {
       ===================================================================== */}
 
       <section
-        aria-label="راهنمای دسته‌بندی‌ها و پیوندهای سایت"
+        aria-label={copy.footer.categoryGuideAria}
         className="border-t border-black/[0.10]"
       >
         <div className="mx-auto hidden w-full max-w-[1920px] md:grid md:grid-cols-[1.45fr_repeat(3,minmax(0,1fr))]">
@@ -251,7 +266,7 @@ function StorefrontFooter() {
             <DesktopFooterGroup
               key={group.id}
               group={group}
-              index={formatIndex(index + 1)}
+              index={formatIndex(index + 1, locale)}
               isLast={index === footerGroups.length - 1}
             />
           ))}
@@ -262,7 +277,7 @@ function StorefrontFooter() {
             <MobileFooterGroup
               key={group.id}
               group={group}
-              index={formatIndex(index + 1)}
+              index={formatIndex(index + 1, locale)}
               defaultOpen={group.featured}
             />
           ))}
@@ -278,36 +293,43 @@ function StorefrontFooter() {
           <div className="grid border-b border-white/10 py-7 md:grid-cols-[1fr_auto] md:items-center md:gap-10 lg:py-8">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
               <p className="shrink-0 text-[8px] font-semibold tracking-[0.08em] text-white/[0.42]">
-                همراه ما باشید
+                {copy.footer.followUs}
               </p>
 
               <nav
-                aria-label="شبکه‌های اجتماعی نجیب‌زاده"
+                aria-label={copy.footer.socialAria}
                 className="flex flex-wrap gap-x-1 gap-y-2"
               >
                 {SOCIAL_LINKS.map((social) => (
-                  <SocialTextLink key={social.id} social={social} />
+                  <SocialTextLink
+                    key={social.id}
+                    social={social}
+                    label={SOCIAL_LABELS[locale][social.id] ?? social.label}
+                    ariaLabel={copy.footer.socialPageAria(
+                      SOCIAL_LABELS[locale][social.id] ?? social.label,
+                    )}
+                  />
                 ))}
               </nav>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-5 md:mt-0 md:justify-end">
               <Button
-                href="/contact-us#services"
+                href={supportHref}
                 variant="outline"
                 size="sm"
                 icon={<ArrowLeftIcon />}
                 iconPosition="left"
                 className="!border-white/[0.18] !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
               >
-                خدمات مشتریان
+                {copy.footer.support}
               </Button>
 
               <span
-                aria-label="زبان فعلی: فارسی"
+                aria-label={copy.footer.currentLanguage(localeLabels[locale])}
                 className="text-[8px] font-medium text-white/[0.48]"
               >
-                فارسی
+                {localeLabels[locale]}
               </span>
             </div>
           </div>
@@ -318,7 +340,7 @@ function StorefrontFooter() {
           IMMERSIVE BRAND WORDMARK
       ===================================================================== */}
 
-      <WordmarkStage />
+      <WordmarkStage href={homeHref} ariaLabel={copy.footer.homeAria} />
 
       {/* =====================================================================
           LEGAL END CAP
@@ -328,18 +350,18 @@ function StorefrontFooter() {
         <div className="mx-auto w-full max-w-[1920px] px-5 sm:px-7 lg:px-10 xl:px-14">
           <div className="flex flex-col gap-5 border-t border-white/10 py-6 sm:flex-row sm:items-center sm:justify-between lg:py-7">
             <p className="text-[8px] font-medium text-white/[0.38]">
-              © {toPersianDigits(year)} نجیب‌زاده. همه حقوق محفوظ است.
+              {copy.footer.copyright(formatShellNumber(year, locale))}
             </p>
 
             <nav
-              aria-label="پیوندهای حقوقی"
+              aria-label={copy.footer.legalAria}
               className="flex flex-wrap items-center gap-x-4 gap-y-3"
             >
-              <LegalLink href="/privacy">حریم خصوصی</LegalLink>
+              <LegalLink href={privacyHref}>{copy.footer.privacy}</LegalLink>
               <Separator />
-              <LegalLink href="/terms-conditions">قوانین و مقررات</LegalLink>
+              <LegalLink href={termsHref}>{copy.footer.terms}</LegalLink>
               <Separator />
-              <LegalLink href="/cookies">سیاست کوکی‌ها</LegalLink>
+              <LegalLink href={cookiesHref}>{copy.footer.cookies}</LegalLink>
             </nav>
 
             <Button
@@ -349,10 +371,10 @@ function StorefrontFooter() {
               icon={<ArrowUpIcon />}
               iconPosition="left"
               onClick={scrollToTop}
-              aria-label="بازگشت به ابتدای صفحه"
+              aria-label={copy.footer.backToTopAria}
               className="!border-white/[0.18] !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
             >
-              بازگشت به بالا
+              {copy.footer.backToTop}
             </Button>
           </div>
         </div>
@@ -365,7 +387,13 @@ function StorefrontFooter() {
    WORDMARK STAGE
 ============================================================================= */
 
-function WordmarkStage() {
+function WordmarkStage({
+  href,
+  ariaLabel,
+}: {
+  href: string;
+  ariaLabel: string;
+}) {
   const stageRef = useRef<HTMLElement>(null);
   const surfaceRef = useRef<HTMLDivElement>(null);
 
@@ -464,12 +492,12 @@ function WordmarkStage() {
         />
 
         <Link
-          href="/"
-          aria-label="صفحه اصلی نجیب‌زاده"
+          href={href}
+          aria-label={ariaLabel}
           className="relative z-10 block w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/70"
         >
           <span
-            dir="ltr"
+            
             className="block whitespace-nowrap text-center text-[clamp(34px,9.6vw,205px)] font-medium uppercase leading-[0.78] tracking-[-0.07em] motion-reduce:transform-none"
             style={{
               transform: "scale(var(--wordmark-scale))",
@@ -511,8 +539,8 @@ function DesktopFooterGroup({
     <section
       aria-labelledby={`footer-desktop-${group.id}`}
       className={cx(
-        "min-h-[340px] px-7 py-10 text-right lg:min-h-[370px] lg:px-9 lg:py-12 xl:px-12 xl:py-14",
-        !isLast && "border-l border-black/[0.10]",
+        "min-h-[340px] px-7 py-10 text-start lg:min-h-[370px] lg:px-9 lg:py-12 xl:px-12 xl:py-14",
+        !isLast && "border-e border-black/[0.10]",
       )}
     >
       <div className="mb-8 flex items-center justify-between gap-5">
@@ -562,7 +590,7 @@ function CategoryFooterLink({ link }: { link: FooterLink }) {
         <span className="truncate text-[12px] font-semibold text-black/[0.72] transition-colors duration-200 group-hover/category:text-black">
           {link.label}
         </span>
-        <span className="shrink-0 text-black/[0.28] transition-[color,transform] duration-200 group-hover/category:-translate-x-0.5 group-hover/category:text-[var(--footer-copper)] motion-reduce:transform-none">
+        <span className="shrink-0 text-black/[0.28] transition-[color,transform] duration-200 group-hover/category:-translate-x-0.5 group-hover/category:text-[var(--footer-copper)] motion-reduce:transform-none ltr:group-hover/category:translate-x-0.5">
           <ArrowLeftIcon />
         </span>
       </span>
@@ -591,7 +619,7 @@ function MobileFooterGroup({
 }) {
   return (
     <details open={defaultOpen} className="group border-b border-black/[0.10]">
-      <summary className="flex min-h-[68px] cursor-pointer list-none items-center gap-4 px-5 text-right focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/[0.60] sm:px-7 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-[68px] cursor-pointer list-none items-center gap-4 px-5 text-start focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-black/[0.60] sm:px-7 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1 text-[15px] font-bold tracking-[-0.015em]">
           {group.title}
         </span>
@@ -601,7 +629,7 @@ function MobileFooterGroup({
         </span>
 
         <span className="relative size-4 shrink-0 text-black/[0.55]">
-          <span className="absolute left-0 top-1/2 h-px w-4 -translate-y-1/2 bg-current" />
+          <span className="absolute start-0 top-1/2 h-px w-4 -translate-y-1/2 bg-current" />
           <span className="absolute left-1/2 top-0 h-4 w-px -translate-x-1/2 bg-current transition-opacity duration-200 group-open:opacity-0" />
         </span>
       </summary>
@@ -643,28 +671,36 @@ function FooterNavLink({
   return (
     <Link
       href={href}
-      className="group/link flex min-h-9 w-fit items-center text-[12px] font-medium text-black/[0.54] transition-[color,transform] duration-[250ms] hover:-translate-x-1 hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black/[0.60] motion-reduce:transform-none"
+      className="group/link flex min-h-9 w-fit items-center text-[12px] font-medium text-black/[0.54] transition-[color,transform] duration-[250ms] hover:-translate-x-1 hover:text-black focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-black/[0.60] motion-reduce:transform-none ltr:hover:translate-x-1"
     >
       <span>{children}</span>
-      <span className="mr-0 h-px w-0 bg-black/[0.72] transition-[width,margin] duration-[250ms] group-hover/link:mr-2 group-hover/link:w-4" />
+      <span className="ms-0 h-px w-0 bg-black/[0.72] transition-[width,margin] duration-[250ms] group-hover/link:ms-2 group-hover/link:w-4" />
     </Link>
   );
 }
 
-function SocialTextLink({ social }: { social: SocialLink }) {
+function SocialTextLink({
+  social,
+  label,
+  ariaLabel,
+}: {
+  social: SocialLink;
+  label: string;
+  ariaLabel: string;
+}) {
   return (
     <Button
       href={social.href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={`صفحه ${social.label} نجیب‌زاده`}
+      aria-label={ariaLabel}
       variant="outline"
       size="sm"
       uppercase={false}
       className="!min-h-9 !border-0 !bg-transparent !px-2.5 !text-white/[0.58] !tracking-normal hover:!border-0 hover:!bg-white/[0.06] hover:!text-white"
     >
       <span className="flex items-center gap-2.5">
-        <span className="text-[10px] font-medium">{social.label}</span>
+        <span className="text-[10px] font-medium">{label}</span>
         <span
           dir="ltr"
           className="text-[7px] font-semibold uppercase tracking-[0.16em] text-white/[0.32]"
