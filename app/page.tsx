@@ -118,6 +118,7 @@ export default async function Page() {
       <DynamicIslandExperienceSections />
       <ProductEditorialGrid />
       <FAQ
+        id="faq"
         eyebrow={FAQ_DEMO_CONTENT.eyebrow}
         title={FAQ_DEMO_CONTENT.title}
         description={FAQ_DEMO_CONTENT.description}

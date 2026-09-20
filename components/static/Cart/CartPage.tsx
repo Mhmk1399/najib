@@ -75,7 +75,7 @@ const INITIAL_CART: CartItemData[] = [
 
     title: "Tuscan Wool Blazer",
 
-    href: "/products/tuscan-wool-blazer",
+    href: "/shop/tuscan-wool-blazer",
 
     image: "/assets/images/banner.webp",
 
@@ -101,7 +101,7 @@ const INITIAL_CART: CartItemData[] = [
 
     title: "Oxford 02 — Calf Leather",
 
-    href: "/products/oxford-calf-leather",
+    href: "/shop/oxford-calf-leather",
 
     image: "/assets/images/banner.webp",
 
@@ -127,7 +127,7 @@ const INITIAL_CART: CartItemData[] = [
 
     title: "Noir Absolu",
 
-    href: "/products/noir-absolu",
+    href: "/shop/noir-absolu",
 
     image: "/assets/images/banner.webp",
 
@@ -153,7 +153,7 @@ const RECOMMENDATIONS: Recommendation[] = [
 
     subtitle: "Cream",
 
-    href: "/products/cashmere-crewneck",
+    href: "/shop/cashmere-crewneck",
 
     image: "/assets/images/banner.webp",
 
@@ -167,7 +167,7 @@ const RECOMMENDATIONS: Recommendation[] = [
 
     subtitle: "Black",
 
-    href: "/products/leather-weekender",
+    href: "/shop/leather-weekender",
 
     image: "/assets/images/banner.webp",
 
@@ -181,7 +181,7 @@ const RECOMMENDATIONS: Recommendation[] = [
 
     subtitle: "Steel / Black",
 
-    href: "/products/classic-watch",
+    href: "/shop/classic-watch",
 
     image: "/assets/images/banner.webp",
 

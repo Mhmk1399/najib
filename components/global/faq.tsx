@@ -18,6 +18,7 @@ export type FAQItem = {
 };
 
 export type FAQProps = {
+  id?: string;
   eyebrow?: string;
   title: ReactNode;
   description?: ReactNode;
@@ -47,6 +48,7 @@ function toPersianDigits(value: number | string) {
 }
 
 export default function FAQ({
+  id,
   eyebrow = "پرسش‌های متداول",
   title,
   description,
@@ -99,6 +101,7 @@ export default function FAQ({
 
   return (
     <section
+      id={id}
       dir="rtl"
       lang="fa"
       aria-labelledby={headingId}

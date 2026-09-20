@@ -60,7 +60,7 @@ const DEFAULT_METHODS: ContactMethod[] = [
 
     action: {
       label: "رزرو قرار ملاقات",
-      href: "/appointments",
+      href: "/contact-us#appointment",
     },
 
     icon: "appointment",
@@ -80,7 +80,7 @@ const DEFAULT_METHODS: ContactMethod[] = [
 
     action: {
       label: "خدمات مشتریان",
-      href: "/customer-care",
+      href: "/contact-us#services",
     },
 
     icon: "service",
@@ -105,7 +105,7 @@ const DEFAULT_METHODS: ContactMethod[] = [
 
     action: {
       label: "مشاهده مسیر",
-      href: "/stores",
+      href: "/contact-us#location",
     },
 
     icon: "location",
@@ -421,6 +421,7 @@ export function ContactServicesSection({
 function ContactMethodCard({ method }: { method: ContactMethod }) {
   return (
     <article
+      id={method.id}
     className="
   flex
   min-h-[280px]

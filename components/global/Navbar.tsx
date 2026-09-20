@@ -966,13 +966,13 @@ export default function Navbar({
                     خدمات مشتریان
                   </p>
                   <div className="space-y-1">
-                    <DarkUtilityLink href="/appointments" onClick={hideMenu}>
+                    <DarkUtilityLink href="/contact-us#appointment" onClick={hideMenu}>
                       رزرو وقت اختصاصی
                     </DarkUtilityLink>
-                    <DarkUtilityLink href="/stores" onClick={hideMenu}>
+                    <DarkUtilityLink href="/contact-us#location" onClick={hideMenu}>
                       یافتن فروشگاه
                     </DarkUtilityLink>
-                    <DarkUtilityLink href="/customer-care" onClick={hideMenu}>
+                    <DarkUtilityLink href="/contact-us#services" onClick={hideMenu}>
                       پشتیبانی مشتریان
                     </DarkUtilityLink>
                   </div>
@@ -1264,13 +1264,13 @@ export default function Navbar({
                   خدمات مشتریان
                 </p>
                 <div className="grid gap-1 sm:grid-cols-3">
-                  <LightUtilityLink href="/appointments" onClick={hideMenu}>
+                  <LightUtilityLink href="/contact-us#appointment" onClick={hideMenu}>
                     رزرو وقت اختصاصی
                   </LightUtilityLink>
-                  <LightUtilityLink href="/stores" onClick={hideMenu}>
+                  <LightUtilityLink href="/contact-us#location" onClick={hideMenu}>
                     یافتن فروشگاه
                   </LightUtilityLink>
-                  <LightUtilityLink href="/customer-care" onClick={hideMenu}>
+                  <LightUtilityLink href="/contact-us#services" onClick={hideMenu}>
                     پشتیبانی مشتریان
                   </LightUtilityLink>
                 </div>

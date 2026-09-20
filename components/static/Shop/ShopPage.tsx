@@ -167,7 +167,7 @@ const SHOP_BANNERS: ShopBanner[] = [
     image: "/assets/images/banner.webp",
     imagePosition: "center 30%",
     ctaText: "Explore the Collection",
-    ctaHref: "/collections/autumn-winter",
+    ctaHref: "/shop?collection=new-season",
     theme: "dark",
     badge: "New Season",
   },

@@ -1139,7 +1139,7 @@ function ProductPurchasePanel({
         "
       >
         <Link
-          href="/stores"
+          href="/contact-us#location"
           className="
             group/service
 
@@ -1171,7 +1171,7 @@ function ProductPurchasePanel({
         </Link>
 
         <Link
-          href="/contact"
+          href="/contact-us"
           className="
             group/service
 
@@ -1750,7 +1750,7 @@ function MobileProductSheet({
                 "
             >
               <Link
-                href="/stores"
+                href="/contact-us#location"
                 className="
                     border-l
                     border-[var(--product-border)]
@@ -1770,7 +1770,7 @@ function MobileProductSheet({
               </Link>
 
               <Link
-                href="/contact"
+                href="/contact-us"
                 className="
                     pr-4
 

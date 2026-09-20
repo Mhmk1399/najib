@@ -48,10 +48,10 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
     id: "services",
     title: "خدمات مشتریان",
     links: [
-      { label: "مشاوره اختصاصی", href: "/appointments" },
-      { label: "یافتن فروشگاه", href: "/stores" },
-      { label: "ارسال و مرجوعی", href: "/shipping-returns" },
-      { label: "پشتیبانی مشتریان", href: "/customer-care" },
+      { label: "مشاوره اختصاصی", href: "/contact-us#appointment" },
+      { label: "یافتن فروشگاه", href: "/contact-us#location" },
+      { label: "ارسال و مرجوعی", href: "/terms-conditions#shipping-delivery" },
+      { label: "پشتیبانی مشتریان", href: "/contact-us#services" },
     ],
   },
   {
@@ -62,7 +62,7 @@ const STATIC_FOOTER_GROUPS: FooterGroup[] = [
       { label: "هنر خیاطی", href: "/craftsmanship" },
       { label: "میراث نجیب‌زاده", href: "/heritage" },
       { label: "مجله", href: "/blog" },
-      { label: "کمپین‌ها", href: "/campaigns" },
+      { label: "کمپین‌ها", href: "/shop?collection=new-season" },
     ],
   },
   {
@@ -296,7 +296,7 @@ function StorefrontFooter() {
 
             <div className="mt-6 flex flex-wrap items-center gap-5 md:mt-0 md:justify-end">
               <Button
-                href="/customer-care"
+                href="/contact-us#services"
                 variant="outline"
                 size="sm"
                 icon={<ArrowLeftIcon />}
@@ -340,7 +340,7 @@ function StorefrontFooter() {
             >
               <LegalLink href="/privacy">حریم خصوصی</LegalLink>
               <Separator />
-              <LegalLink href="/terms">قوانین و مقررات</LegalLink>
+              <LegalLink href="/terms-conditions">قوانین و مقررات</LegalLink>
               <Separator />
               <LegalLink href="/cookies">سیاست کوکی‌ها</LegalLink>
             </nav>

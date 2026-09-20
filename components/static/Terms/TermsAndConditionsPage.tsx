@@ -1035,7 +1035,7 @@ export function TermsAndConditionsPage({
                   "
                 >
                   <Button
-                    href="/contact"
+                    href="/contact-us"
                     variant="black"
                     size="lg"
                     icon={<ArrowRightIcon />}

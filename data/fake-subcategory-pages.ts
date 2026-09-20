@@ -60,7 +60,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Burgundy cashmere blend",
 
-                href: "/products/signature-cashmere-jacket",
+                href: "/shop/signature-cashmere-jacket",
 
                 image: "/assets/images/banner.webp",
 
@@ -82,7 +82,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Charcoal wool",
 
-                href: "/products/soft-shoulder-blazer",
+                href: "/shop/soft-shoulder-blazer",
 
                 image: "/assets/images/banner.webp",
 
@@ -102,7 +102,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Black barathea",
 
-                href: "/products/evening-dinner-jacket",
+                href: "/shop/evening-dinner-jacket",
 
                 image: "/assets/images/banner.webp",
 
@@ -124,7 +124,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Warm ivory",
 
-                href: "/products/linen-summer-jacket",
+                href: "/shop/linen-summer-jacket",
 
                 image: "/assets/images/banner.webp",
 
@@ -232,7 +232,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Charcoal",
 
-                href: "/products/cashmere-textured-crewneck",
+                href: "/shop/cashmere-textured-crewneck",
 
                 image: "/assets/images/banner.webp",
 
@@ -252,7 +252,7 @@ export const fakeSubcategoryPages: Record<string, SubcategoryPageData> = {
 
                 subtitle: "Deep navy",
 
-                href: "/products/ribbed-merino-polo",
+                href: "/shop/ribbed-merino-polo",
 
                 image: "/assets/images/banner.webp",
 
@@ -465,7 +465,7 @@ function buildFallbackProducts(
 
             subtitle: "Najibzadeh edit",
 
-            href: `/products/${subcategory.id}-signature-piece`,
+            href: `/shop/${subcategory.id}-signature-piece`,
 
             image: subcategory.image,
 
@@ -487,7 +487,7 @@ function buildFallbackProducts(
 
             subtitle: "Limited selection",
 
-            href: `/products/${subcategory.id}-seasonal-piece`,
+            href: `/shop/${subcategory.id}-seasonal-piece`,
 
             image: subcategory.image,
 
