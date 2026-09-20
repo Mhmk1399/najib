@@ -40,6 +40,20 @@ const checks = [
     validate: (body) => typeof body.error === "string",
   },
   {
+    name: "checkout destinations expose safe active options",
+    path: "/api/storefront/checkout-destinations",
+    status: 200,
+    validate: (body, response) =>
+      Array.isArray(body.cities) &&
+      Array.isArray(body.stores) &&
+      body.stores.every((store) =>
+        ["id", "code", "cityId", "name"].every((key) => key in store) &&
+        !("locationId" in store) &&
+        !("onHand" in store),
+      ) &&
+      response.headers.get("cache-control") === "no-store",
+  },
+  {
     name: "admin catalog is protected",
     path: "/api/catalog/products",
     status: 401,

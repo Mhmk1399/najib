@@ -42,6 +42,15 @@ The customer workspace at `/customer-dashboard` uses these protected endpoints:
 - `POST /api/account/payments/:id/confirm`
 - `GET|PATCH /api/account/profile`
 
+The customer-safe destination selector is public so the Checkout UI can prepare
+its city/store choices without exposing operational inventory data:
+
+- `GET /api/storefront/checkout-destinations`
+
+It returns localized active cities and stores only when an active inventory
+location backs the store. It never returns location IDs, balances, reserved
+quantities, warehouse names, or safety stock.
+
 These routes accept only an active, database-backed customer session and always
 return `Cache-Control: no-store`. Anonymous callers receive `401`, while staff
 accounts receive `403` and use the Admin APIs instead. Order detail ownership is
@@ -59,6 +68,9 @@ submit or override prices. Adding the same variant increases its quantity up to
 99, quantity changes refresh the server price, and only the active cart owned by
 the authenticated customer can be changed. Adding to a cart does not reserve
 stock; exact stock is reserved by the checkout orchestration step.
+Cart reads include the product's active primary image metadata and, while a cart
+is in `checkout_started`, safe resumable Checkout metadata (`id`, status, expiry,
+and payment ID). Checkout reads expose their payment ID for the same resume flow.
 
 `POST /api/account/checkouts` accepts an idempotency key plus an active `storeId`
 and matching `cityId`. In one MongoDB transaction it reprices every cart item,

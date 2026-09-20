@@ -7,7 +7,9 @@ import { connectToDatabase } from "@/lib/server/db";
 import { conflict, notFound } from "@/lib/server/errors";
 import { User } from "@/models/auth/user";
 import { Cart } from "@/models/catalog/cart";
+import { CheckoutSession } from "@/models/catalog/checkout";
 import { Color } from "@/models/catalog/color";
+import { ImageAsset } from "@/models/catalog/image-asset";
 import { Order, ORDER_STATUSES } from "@/models/catalog/order";
 import { ProductVariant } from "@/models/catalog/product-variant";
 import { Product } from "@/models/catalog/product";
@@ -126,6 +128,21 @@ type SellableVariantRecord = {
 type SellableProductRecord = {
   basePriceMinor: number;
   currency: string;
+};
+
+type CartProductRecord = {
+  _id: unknown;
+  name?: LocalizedText;
+  slug?: string;
+  primaryImageId?: unknown;
+  primaryImageObjectPosition?: string;
+};
+
+type CartCheckoutRecord = {
+  _id: unknown;
+  status: string;
+  expiresAt: Date;
+  paymentId?: unknown;
 };
 
 function localized(value: LocalizedText, fallback: string) {
@@ -333,20 +350,35 @@ export const accountService = {
     const variantIds = activeCart.items.map((item) => item.variantId);
     const variants = await ProductVariant.find({ _id: { $in: variantIds } }).lean();
     const variantMap = new Map(variants.map((variant) => [String(variant._id), variant]));
-    const [products, colors, sizes] = await Promise.all([
+    const [products, colors, sizes, checkout] = await Promise.all([
       Product.find({ _id: { $in: variants.map((variant) => variant.productId) } })
-        .select("name slug")
-        .lean(),
+        .select("name slug primaryImageId primaryImageObjectPosition")
+        .lean() as unknown as Promise<CartProductRecord[]>,
       Color.find({ _id: { $in: variants.map((variant) => variant.colorId) } })
         .select("name hex")
         .lean(),
       Size.find({ _id: { $in: variants.map((variant) => variant.sizeId) } })
         .select("name code")
         .lean(),
+      CheckoutSession.findOne({
+        cartId: String(activeCart._id),
+        userId: accountId,
+        status: { $in: ["reserved", "payment_pending"] },
+      })
+        .sort({ createdAt: -1 })
+        .select("status expiresAt paymentId")
+        .lean() as unknown as Promise<CartCheckoutRecord | null>,
     ]);
+    const imageIds = products.map((product) => product.primaryImageId).filter(Boolean);
+    const images = imageIds.length
+      ? await ImageAsset.find({ _id: { $in: imageIds }, isActive: true })
+          .select("url alt objectPosition")
+          .lean()
+      : [];
     const productMap = new Map(products.map((item) => [String(item._id), item]));
     const colorMap = new Map(colors.map((item) => [String(item._id), item]));
     const sizeMap = new Map(sizes.map((item) => [String(item._id), item]));
+    const imageMap = new Map(images.map((item) => [String(item._id), item]));
 
     return {
       id: String(activeCart._id),
@@ -358,11 +390,22 @@ export const accountService = {
         (sum, item) => sum + item.quantity * item.unitPriceMinor,
         0,
       ),
+      checkout: checkout
+        ? {
+            id: String(checkout._id),
+            status: checkout.status,
+            expiresAt: checkout.expiresAt,
+            paymentId: checkout.paymentId ? String(checkout.paymentId) : null,
+          }
+        : null,
       items: activeCart.items.map((item) => {
         const variant = variantMap.get(String(item.variantId));
         const product = variant ? productMap.get(String(variant.productId)) : undefined;
         const color = variant ? colorMap.get(String(variant.colorId)) : undefined;
         const size = variant ? sizeMap.get(String(variant.sizeId)) : undefined;
+        const image = product?.primaryImageId
+          ? imageMap.get(String(product.primaryImageId))
+          : undefined;
         return {
           id: String(item._id),
           variantId: String(item.variantId),
@@ -375,6 +418,10 @@ export const accountService = {
           colorName: localized(color?.name as LocalizedText, "—"),
           colorHex: color?.hex ?? null,
           sizeName: localized(size?.name as LocalizedText, size?.code ?? "—"),
+          imageUrl: image?.url ?? null,
+          imageAlt: localized(image?.alt as LocalizedText, localized(product?.name, "محصول")),
+          imagePosition:
+            product?.primaryImageObjectPosition ?? image?.objectPosition ?? "center",
         };
       }),
     };

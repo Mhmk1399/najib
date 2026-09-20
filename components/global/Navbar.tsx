@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   type ReactNode,
@@ -17,6 +18,7 @@ import {
 import { Button } from "@/components/ui/Button";
 import { useStorefrontMenuSections } from "@/lib/catalog/storefront-client";
 import { themeClasses } from "@/theme/theme-colors";
+import { cartQueryKey, fetchAccountCart } from "@/lib/commerce/client";
 
 /* ==========================================================================
    TYPES
@@ -461,6 +463,11 @@ export default function Navbar({
 }) {
   const pathname = usePathname();
   const menuSections = useStorefrontMenuSections();
+  const cartQuery = useQuery({
+    queryKey: cartQueryKey,
+    queryFn: ({ signal }) => fetchAccountCart(signal),
+    retry: false,
+  });
 
   const [open, setOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
@@ -778,7 +785,7 @@ export default function Navbar({
             <NavAction
               href="/cart"
               label="سبد خرید"
-              badge={2}
+              badge={cartQuery.data?.itemCount || undefined}
               onReadableSurface={readableNavbar}
             >
               <BagIcon />

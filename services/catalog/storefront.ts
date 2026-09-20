@@ -156,7 +156,7 @@ export async function getStorefrontProducts(input: ProductListInput = {}) {
   const productIds = products.map((product) => String(product._id));
   const variants = productIds.length
     ? await ProductVariant.find({ productId: { $in: productIds }, isActive: true })
-        .select({ productId: 1, colorId: 1, sizeId: 1 })
+        .select({ productId: 1, colorId: 1, sizeId: 1, sku: 1, isActive: 1 })
         .lean() as PlainCatalogRecord[]
     : [];
 
@@ -183,6 +183,7 @@ export async function getStorefrontProducts(input: ProductListInput = {}) {
       ...product,
       colorIds,
       sizeIds,
+      variants: productVariants,
     };
   });
 

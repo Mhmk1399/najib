@@ -201,7 +201,15 @@ function buildColors(
     ];
   }
 
-  return payload.colors.map((color, index) => ({
+  const activeColorIds = new Set(
+    payload.variants
+      .filter((variant) => variant.isActive)
+      .map((variant) => idOf(variant.colorId)),
+  );
+
+  return payload.colors
+    .filter((color) => activeColorIds.size === 0 || activeColorIds.has(idOf(color._id)))
+    .map((color, index) => ({
     id: idOf(color._id),
     name: fa(color.name, color.slug),
     code: payload.variants.find(
@@ -209,7 +217,7 @@ function buildColors(
     )?.sku,
     swatch: color.hex || "#111111",
     images: rotateImages(images, index),
-  }));
+    }));
 }
 
 function buildSizes(payload: ProductDetailPayload): ProductSizeOption[] {
@@ -318,6 +326,14 @@ function mapProduct(payload: ProductDetailPayload): ProductDetailData {
     currency: payload.product.currency,
     colors: buildColors(payload, images),
     sizes: buildSizes(payload),
+    variants: payload.variants
+      .filter((variant) => variant.isActive)
+      .map((variant) => ({
+        id: idOf(variant._id),
+        colorId: idOf(variant.colorId),
+        sizeId: idOf(variant.sizeId),
+        sku: variant.sku,
+      })),
     sections: buildSections(payload.product),
     shippingNote: "ارسال و پشتیبانی خرید طبق شرایط فروشگاه نجیب‌زاده انجام می‌شود.",
     relatedProducts: relatedProducts(payload, imageMap),
