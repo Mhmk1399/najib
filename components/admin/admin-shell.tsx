@@ -14,15 +14,27 @@ import {
   Menu,
   Moon,
   Package,
-  Warehouse,
+  PanelRightClose,
+  PanelRightOpen,
+  Search,
   ShieldCheck,
   SlidersHorizontal,
   Sun,
   Users,
+  Warehouse,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+
 import {
   AdminAuthProvider,
   type AdminStaffProfile,
@@ -67,6 +79,44 @@ const USERS_NAV: NavItem = {
   icon: Users,
 };
 
+const DARK_THEME_VARS = {
+  "--admin-shell-canvas": "#090806",
+  "--admin-shell-panel": "#100E0C",
+  "--admin-shell-raised": "#17130F",
+  "--admin-shell-control": "#15120F",
+  "--admin-shell-control-hover": "#1D1813",
+  "--admin-shell-text": "#F4EEE7",
+  "--admin-shell-muted": "#A69B91",
+  "--admin-shell-subtle": "#756B62",
+  "--admin-shell-accent": "#C58C5B",
+  "--admin-shell-accent-soft": "#E2B687",
+  "--admin-shell-border": "rgba(255,255,255,0.075)",
+  "--admin-shell-border-strong": "rgba(255,255,255,0.14)",
+  "--admin-shell-active-border": "rgba(197,140,91,0.46)",
+  "--admin-shell-active": "rgba(197,140,91,0.12)",
+  "--admin-shell-brand-wash":
+    "linear-gradient(180deg, rgba(9,8,6,0.34), rgba(9,8,6,0.92))",
+} as CSSProperties;
+
+const LIGHT_THEME_VARS = {
+  "--admin-shell-canvas": "#ECE6DC",
+  "--admin-shell-panel": "#F7F2EA",
+  "--admin-shell-raised": "#FFFBF5",
+  "--admin-shell-control": "#F1EAE0",
+  "--admin-shell-control-hover": "#E9DFD2",
+  "--admin-shell-text": "#211B16",
+  "--admin-shell-muted": "#675D54",
+  "--admin-shell-subtle": "#8C8177",
+  "--admin-shell-accent": "#9D673E",
+  "--admin-shell-accent-soft": "#7E4E2E",
+  "--admin-shell-border": "rgba(42,30,20,0.10)",
+  "--admin-shell-border-strong": "rgba(42,30,20,0.17)",
+  "--admin-shell-active-border": "rgba(157,103,62,0.40)",
+  "--admin-shell-active": "rgba(157,103,62,0.10)",
+  "--admin-shell-brand-wash":
+    "linear-gradient(180deg, rgba(247,242,234,0.44), rgba(247,242,234,0.96))",
+} as CSSProperties;
+
 function useTehranClock() {
   const [now, setNow] = useState<Date | null>(null);
 
@@ -105,18 +155,32 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const pathname = usePathname();
   const clock = useTehranClock();
   const staffProfile = staff ?? FALLBACK_STAFF;
+
   const [theme, setTheme] = useState<ThemeMode>("dark");
   const [themePreferenceReady, setThemePreferenceReady] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [desktopSidebarHovered, setDesktopSidebarHovered] = useState(false);
+  const [desktopSidebarFocused, setDesktopSidebarFocused] = useState(false);
+
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
   const logoutOpenerRef = useRef<HTMLElement | null>(null);
+
+  const availableNavItems = useMemo(() => {
+    const primary = PRIMARY_NAV.filter(
+      (item) =>
+        !item.permission || staffProfile.permissions?.includes(item.permission),
+    );
+    return staffProfile.permissions?.includes("staff.manage")
+      ? [...primary, USERS_NAV]
+      : primary;
+  }, [staffProfile.permissions]);
+
   const currentSection = useMemo(
     () =>
-      [...PRIMARY_NAV, USERS_NAV].find((item) =>
-        isNavActive(pathname, item.href),
-      )?.label ?? "پنل مدیریت",
-    [pathname],
+      availableNavItems.find((item) => isNavActive(pathname, item.href))
+        ?.label ?? "پنل مدیریت",
+    [availableNavItems, pathname],
   );
 
   useEffect(() => {
@@ -173,33 +237,72 @@ export function AdminShell({ children, staff }: AdminShellProps) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [logoutOpen, mobileOpen]);
 
+  const themeVars = theme === "dark" ? DARK_THEME_VARS : LIGHT_THEME_VARS;
+  const desktopSidebarOpen = desktopSidebarHovered || desktopSidebarFocused;
+
   return (
     <AdminAuthProvider staff={staffProfile}>
       <div
         dir="rtl"
+        lang="fa"
         data-theme={theme}
-        className="admin-workspace-shell group/admin h-dvh overflow-hidden bg-[var(--admin-shell-canvas)] text-[var(--admin-shell-text)] antialiased selection:bg-[var(--admin-shell-accent)]/35"
+        style={themeVars}
+        className="admin-workspace-shell group/admin h-dvh overflow-hidden bg-[var(--admin-shell-canvas)] text-[var(--admin-shell-text)] antialiased selection:bg-[var(--admin-shell-accent)]/30"
       >
         <div className="flex h-full min-w-0 flex-row">
-          <aside className="admin-desktop-rail group/sidebar relative z-[60] order-1 hidden h-dvh w-[76px] shrink-0 xl:block">
-            <div className="admin-desktop-rail__panel absolute inset-y-0 right-0 w-[76px] overflow-hidden border-l border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]">
+          <aside
+            id="admin-desktop-sidebar"
+            aria-label="نوار کناری مدیریت"
+            className="relative z-[60] hidden h-dvh w-[78px] shrink-0 overflow-visible xl:block"
+          >
+            <div
+              data-sidebar-state={desktopSidebarOpen ? "open" : "closed"}
+              onPointerEnter={(event) => {
+                if (event.pointerType === "mouse") {
+                  setDesktopSidebarHovered(true);
+                }
+              }}
+              onPointerLeave={(event) => {
+                if (event.pointerType === "mouse") {
+                  setDesktopSidebarHovered(false);
+                }
+              }}
+              onFocusCapture={() => setDesktopSidebarFocused(true)}
+              onBlurCapture={(event) => {
+                const nextTarget = event.relatedTarget;
+                if (
+                  nextTarget instanceof Node &&
+                  event.currentTarget.contains(nextTarget)
+                ) {
+                  return;
+                }
+
+                setDesktopSidebarFocused(false);
+              }}
+              className={`absolute inset-y-0 right-0 overflow-hidden border-l border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] transition-[width,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                desktopSidebarOpen
+                  ? "w-[252px] border-[var(--admin-shell-border-strong)] shadow-[-26px_0_80px_-42px_rgba(0,0,0,0.82)]"
+                  : "w-[78px]"
+              }`}
+            >
               <Sidebar
                 pathname={pathname}
                 staff={staffProfile}
                 imagePriority
-                rail
+                collapsed={!desktopSidebarOpen}
                 onLogout={requestLogout}
                 onNavigate={() => undefined}
               />
             </div>
           </aside>
 
-          <div className="order-2 flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 flex-1 flex-col">
             <Topbar
               clock={clock}
               currentSection={currentSection}
               staff={staffProfile}
               theme={theme}
+              navItems={availableNavItems}
               menuButtonRef={menuButtonRef}
               onOpenMenu={() => setMobileOpen(true)}
               onToggleTheme={() =>
@@ -245,6 +348,7 @@ function Topbar({
   currentSection,
   staff,
   theme,
+  navItems,
   menuButtonRef,
   onOpenMenu,
   onToggleTheme,
@@ -254,25 +358,47 @@ function Topbar({
   currentSection: string;
   staff: AdminStaffProfile;
   theme: ThemeMode;
-  menuButtonRef: React.RefObject<HTMLButtonElement | null>;
+  navItems: NavItem[];
+  menuButtonRef: RefObject<HTMLButtonElement | null>;
   onOpenMenu: () => void;
   onToggleTheme: () => void;
   onRequestLogout: () => void;
 }) {
+  const router = useRouter();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const searchRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const normalizedQuery = normalizePersianSearch(searchQuery);
+  const searchResults = useMemo(() => {
+    if (!normalizedQuery) return navItems;
+    return navItems.filter((item) =>
+      normalizePersianSearch(item.label).includes(normalizedQuery),
+    );
+  }, [navItems, normalizedQuery]);
 
   useEffect(() => {
-    if (!profileOpen) return;
+    if (!profileOpen && !searchOpen) return;
 
     const onPointerDown = (event: PointerEvent) => {
-      const node = profileMenuRef.current;
-      if (!node || node.contains(event.target as Node)) return;
-      setProfileOpen(false);
+      const target = event.target as Node;
+      if (profileOpen && !profileMenuRef.current?.contains(target)) {
+        setProfileOpen(false);
+      }
+      if (searchOpen && !searchRef.current?.contains(target)) {
+        setSearchOpen(false);
+      }
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setProfileOpen(false);
+      if (event.key !== "Escape") return;
+      setProfileOpen(false);
+      setSearchOpen(false);
     };
 
     document.addEventListener("pointerdown", onPointerDown);
@@ -282,44 +408,200 @@ function Topbar({
       document.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [profileOpen]);
+  }, [profileOpen, searchOpen]);
+
+  const navigateToResult = (item: NavItem) => {
+    router.push(item.href);
+    setSearchOpen(false);
+    setSearchQuery("");
+    setActiveSearchIndex(0);
+  };
 
   return (
-    <header className="relative z-40 h-[68px] shrink-0 border-b border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]/95 backdrop-blur-xl">
-      <div className="flex h-full min-w-0 items-center gap-2.5 px-3 sm:px-4 lg:px-5">
+    <header className="relative z-[70] h-[72px] shrink-0 border-b border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]/96 shadow-[0_14px_44px_-34px_rgba(0,0,0,0.88)] backdrop-blur-2xl">
+      <div className="mx-auto flex h-full min-w-0 items-center gap-2.5 px-3 sm:px-4 lg:px-5 xl:px-6">
         <button
           ref={menuButtonRef}
           type="button"
           onClick={onOpenMenu}
           aria-label="باز کردن منوی مدیریت"
-          className="grid size-10 shrink-0 cursor-pointer place-items-center border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-colors hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 xl:hidden"
+          className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-[border-color,background-color,color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 xl:hidden"
         >
-          <Menu size={18} strokeWidth={1.55} />
+          <Menu size={18} strokeWidth={1.55} aria-hidden="true" />
         </button>
 
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="hidden min-w-[150px] items-center gap-3 sm:flex">
           <span
             aria-hidden="true"
-            className="h-7 w-0.5 shrink-0 bg-[var(--admin-shell-accent)]"
+            className="h-8 w-0.5 shrink-0 rounded-full bg-[var(--admin-shell-accent)]"
           />
           <div className="min-w-0 text-right">
             <span className="block text-[7px] font-semibold text-[var(--admin-shell-accent-soft)]">
               فضای مدیریت
             </span>
-            <strong className="mt-1 block max-w-[180px] truncate text-[11px] font-bold text-[var(--admin-shell-text)] sm:max-w-[260px]">
+            <strong className="mt-1 block max-w-[190px] truncate text-[11px] font-bold text-[var(--admin-shell-text)]">
               {currentSection}
             </strong>
           </div>
         </div>
 
-        <div className="min-w-0 flex-1" />
+        <div
+          ref={searchRef}
+          className="relative mx-auto min-w-0 flex-1 sm:max-w-[560px]"
+        >
+          <label htmlFor="admin-sidebar-search" className="sr-only">
+            جستجو در منوی مدیریت
+          </label>
+          <div
+            className={`flex h-11 items-center gap-2.5 rounded-[13px] border bg-[var(--admin-shell-control)] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,background-color,box-shadow] ${
+              searchOpen
+                ? "border-[var(--admin-shell-accent)]/55 bg-[var(--admin-shell-raised)] shadow-[0_0_0_3px_rgba(197,140,91,0.08)]"
+                : "border-[var(--admin-shell-border-strong)] hover:border-[var(--admin-shell-accent)]/28"
+            }`}
+          >
+            <Search
+              size={16}
+              strokeWidth={1.6}
+              className="shrink-0 text-[var(--admin-shell-subtle)]"
+              aria-hidden="true"
+            />
+            <input
+              ref={searchInputRef}
+              id="admin-sidebar-search"
+              type="search"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-controls="admin-sidebar-search-results"
+              aria-expanded={searchOpen}
+              aria-activedescendant={
+                searchOpen && searchResults[activeSearchIndex]
+                  ? `admin-sidebar-result-${activeSearchIndex}`
+                  : undefined
+              }
+              autoComplete="off"
+              value={searchQuery}
+              onFocus={() => setSearchOpen(true)}
+              onChange={(event) => {
+                setSearchQuery(event.target.value);
+                setSearchOpen(true);
+                setActiveSearchIndex(0);
+              }}
+              onKeyDown={(event) => {
+                if (event.nativeEvent.isComposing) return;
+
+                if (event.key === "ArrowDown") {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex((current) =>
+                    searchResults.length
+                      ? (current + 1) % searchResults.length
+                      : 0,
+                  );
+                  return;
+                }
+
+                if (event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setSearchOpen(true);
+                  setActiveSearchIndex((current) =>
+                    searchResults.length
+                      ? (current - 1 + searchResults.length) %
+                        searchResults.length
+                      : 0,
+                  );
+                  return;
+                }
+
+                if (event.key === "Enter" && searchResults[activeSearchIndex]) {
+                  event.preventDefault();
+                  navigateToResult(searchResults[activeSearchIndex]);
+                  return;
+                }
+
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  setSearchOpen(false);
+                }
+              }}
+              placeholder="جستجو در منوی مدیریت…"
+              className="min-w-0 flex-1 bg-transparent text-right text-[10px] font-medium text-[var(--admin-shell-text)] outline-none placeholder:text-[var(--admin-shell-subtle)] sm:text-[10.5px]"
+            />
+            {searchQuery ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveSearchIndex(0);
+                  searchInputRef.current?.focus();
+                }}
+                aria-label="پاک کردن جستجو"
+                className="grid size-7 shrink-0 cursor-pointer place-items-center rounded-full text-[var(--admin-shell-subtle)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+              >
+                <X size={13} aria-hidden="true" />
+              </button>
+            ) : (
+              <kbd className="hidden rounded-[6px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] px-1.5 py-1 text-[7px] font-medium text-[var(--admin-shell-subtle)] lg:inline-flex">
+                منو
+              </kbd>
+            )}
+          </div>
+
+          {searchOpen ? (
+            <div
+              id="admin-sidebar-search-results"
+              role="listbox"
+              aria-label="نتایج جستجوی منوی مدیریت"
+              className="absolute inset-x-0 top-[calc(100%+8px)] z-[100] overflow-hidden rounded-[15px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-1.5 shadow-[0_26px_80px_-28px_rgba(0,0,0,0.84)] backdrop-blur-2xl"
+            >
+              {searchResults.length ? (
+                searchResults.map((item, index) => {
+                  const Icon = item.icon;
+                  const active = index === activeSearchIndex;
+                  return (
+                    <button
+                      id={`admin-sidebar-result-${index}`}
+                      key={item.href}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      onPointerEnter={() => setActiveSearchIndex(index)}
+                      onClick={() => navigateToResult(item)}
+                      className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 text-right text-[10px] outline-none transition-[background-color,color] ${
+                        active
+                          ? "bg-[var(--admin-shell-active)] text-[var(--admin-shell-text)]"
+                          : "text-[var(--admin-shell-muted)] hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)]"
+                      }`}
+                    >
+                      <span className="grid size-8 shrink-0 place-items-center rounded-[9px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-accent-soft)]">
+                        <Icon size={15} strokeWidth={1.5} aria-hidden="true" />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.label}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <p className="px-4 py-5 text-center text-[10px] leading-6 text-[var(--admin-shell-muted)]">
+                  موردی در منوی مدیریت پیدا نشد.
+                </p>
+              )}
+              <p className="sr-only" aria-live="polite">
+                {searchResults.length
+                  ? `${searchResults.length} نتیجه پیدا شد`
+                  : "نتیجه‌ای پیدا نشد"}
+              </p>
+            </div>
+          ) : null}
+        </div>
 
         <div className="flex shrink-0 items-center gap-2">
-          <div className="hidden h-10 items-center gap-3 border-l border-[var(--admin-shell-border)] px-3 md:flex">
+          <div className="hidden h-10 items-center gap-3 border-l border-[var(--admin-shell-border)] px-3 2xl:flex">
             <CalendarDays
               size={15}
               className="text-[var(--admin-shell-accent-soft)]"
               strokeWidth={1.45}
+              aria-hidden="true"
             />
             <div className="text-right">
               <p className="text-[9px] font-medium text-[var(--admin-shell-text)]">
@@ -341,7 +623,7 @@ function Topbar({
               theme === "dark" ? "فعال کردن تم روشن" : "فعال کردن تم تیره"
             }
             onClick={onToggleTheme}
-            className="!size-10 !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!border-[var(--admin-shell-accent)]/45 hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
+            className="!size-10 !rounded-[11px] !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!border-[var(--admin-shell-accent)]/45 hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
           />
 
           <ProfileDropdown
@@ -367,7 +649,7 @@ function ProfileDropdown({
   onToggle,
   onLogout,
 }: {
-  refContainer: React.RefObject<HTMLDivElement | null>;
+  refContainer: RefObject<HTMLDivElement | null>;
   staff: AdminStaffProfile;
   open: boolean;
   onToggle: () => void;
@@ -377,7 +659,7 @@ function ProfileDropdown({
     `${staff.firstName ?? ""} ${staff.lastName ?? ""}`.trim() || "کاربر مدیریت";
   const initials =
     `${staff.firstName?.charAt(0) ?? ""}${staff.lastName?.charAt(0) ?? ""}`.trim() ||
-    "N";
+    "ن";
 
   return (
     <div ref={refContainer} className="relative">
@@ -388,17 +670,17 @@ function ProfileDropdown({
         aria-controls="admin-profile-menu"
         aria-label={open ? "بستن منوی کاربر" : "باز کردن منوی کاربر"}
         onClick={onToggle}
-        className="group/profile flex h-11 cursor-pointer items-center gap-2 border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] p-1 pl-1.5 pr-1 text-[var(--admin-shell-text)] outline-none transition-[background-color,border-color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35"
+        className="group/profile flex h-11 cursor-pointer items-center gap-2 rounded-[12px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] p-1 text-[var(--admin-shell-text)] outline-none transition-[background-color,border-color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
       >
-        <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[10px] font-extrabold text-[var(--admin-shell-panel)]">
+        <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[9px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[10px] font-extrabold text-[var(--admin-shell-panel)]">
           {initials}
           <span
             aria-hidden="true"
-            className="absolute bottom-0.5 right-0.5 size-1.5 rounded-full bg-[#58a67b] ring-2 ring-[var(--admin-shell-panel)]"
+            className="absolute bottom-0.5 right-0.5 size-1.5 rounded-full bg-[#58A67B] ring-2 ring-[var(--admin-shell-panel)]"
           />
         </span>
 
-        <span className="hidden min-w-0 px-1 text-right md:block">
+        <span className="hidden min-w-0 px-1 text-right xl:block 2xl:hidden min-[1560px]:block">
           <strong className="block max-w-[118px] truncate text-[9px] font-bold">
             {fullName}
           </strong>
@@ -407,8 +689,8 @@ function ProfileDropdown({
           </small>
         </span>
 
-        <span className="grid size-7 shrink-0 place-items-center border-r border-[var(--admin-shell-border)] text-[var(--admin-shell-subtle)] transition-colors group-hover/profile:text-[var(--admin-shell-accent-soft)]">
-          <ChevronsUpDown size={13} strokeWidth={1.6} />
+        <span className="hidden size-7 shrink-0 place-items-center border-r border-[var(--admin-shell-border)] text-[var(--admin-shell-subtle)] transition-colors group-hover/profile:text-[var(--admin-shell-accent-soft)] md:grid">
+          <ChevronsUpDown size={13} strokeWidth={1.6} aria-hidden="true" />
         </span>
       </button>
 
@@ -416,15 +698,15 @@ function ProfileDropdown({
         <div
           id="admin-profile-menu"
           role="menu"
-          className="admin-profile-menu absolute left-0 top-[calc(100%+9px)] z-[80] w-[292px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-2.5 shadow-[0_26px_70px_-28px_rgba(0,0,0,0.72)]"
+          className="absolute left-0 top-[calc(100%+9px)] z-[110] w-[286px] overflow-hidden rounded-[16px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-2.5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.84)]"
         >
           <div className="flex items-center gap-3 border-b border-[var(--admin-shell-border)] p-2 pb-3">
-            <span className="grid size-11 shrink-0 place-items-center border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[12px] font-extrabold text-[var(--admin-shell-panel)]">
+            <span className="grid size-11 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[12px] font-extrabold text-[var(--admin-shell-panel)]">
               {initials}
             </span>
 
             <div className="min-w-0 flex-1 text-right">
-              <span className="mb-1 block text-[6px] font-semibold text-[var(--admin-shell-accent-soft)]">
+              <span className="mb-1 block text-[7px] font-semibold text-[var(--admin-shell-accent-soft)]">
                 حساب مدیریت
               </span>
               <strong className="block truncate text-[11px] font-bold text-[var(--admin-shell-text)]">
@@ -440,7 +722,8 @@ function ProfileDropdown({
             <ShieldCheck
               size={15}
               strokeWidth={1.5}
-              className="text-[#58a67b]"
+              className="text-[#58A67B]"
+              aria-hidden="true"
             />
             <span>نشست امن و فعال</span>
           </div>
@@ -449,10 +732,10 @@ function ProfileDropdown({
             type="button"
             role="menuitem"
             onClick={onLogout}
-            className="mt-2 flex h-10 w-full cursor-pointer items-center justify-between border border-transparent px-3 text-[9px] font-semibold text-[#d8766d] outline-none transition-colors hover:border-[#a7554c]/35 hover:bg-[#a7554c]/10 hover:text-[#efa39b] focus-visible:ring-2 focus-visible:ring-[#a7554c]/35"
+            className="mt-2 flex h-10 w-full cursor-pointer items-center justify-between rounded-[10px] border border-transparent px-3 text-[9px] font-semibold text-[#D8766D] outline-none transition-colors hover:border-[#A7554C]/35 hover:bg-[#A7554C]/10 hover:text-[#EFA39B] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35"
           >
             <span>خروج از حساب</span>
-            <LogOut size={15} strokeWidth={1.5} />
+            <LogOut size={15} strokeWidth={1.5} aria-hidden="true" />
           </button>
         </div>
       ) : null}
@@ -464,26 +747,24 @@ function Sidebar({
   pathname,
   staff,
   imagePriority = false,
-  rail = false,
+  collapsed = false,
+  onToggleCollapse,
   onLogout,
   onNavigate,
 }: {
   pathname: string;
   staff: AdminStaffProfile;
   imagePriority?: boolean;
-  rail?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
   onLogout: () => void;
   onNavigate: () => void;
 }) {
   return (
-    <div
-      className={`admin-sidebar relative flex h-full min-h-0 w-full flex-col overflow-hidden ${
-        rail ? "admin-sidebar--rail" : ""
-      }`}
-    >
+    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[220px] overflow-hidden opacity-[0.12]"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[235px] overflow-hidden opacity-[0.17]"
       >
         <Image
           src="/assets/images/suit.webp"
@@ -496,24 +777,60 @@ function Sidebar({
         <div className="absolute inset-0 bg-[var(--admin-shell-brand-wash)]" />
       </div>
 
-      <div className="relative z-10 flex h-[68px] shrink-0 items-center border-b border-[var(--admin-shell-border)] px-[17px]">
+      <div
+        className={`relative z-10 flex h-[72px] shrink-0 items-center border-b border-[var(--admin-shell-border)] ${
+          collapsed ? "justify-center px-2" : "justify-between gap-2 px-3"
+        }`}
+      >
         <Link
           href="/admin"
           aria-label="پنل مدیریت نجیب‌زاده"
-          className="admin-sidebar-brand flex min-w-0 items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+          className={`flex min-w-0 items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
+            collapsed ? "justify-center" : "gap-3"
+          }`}
         >
-          <span className="admin-sidebar-brand__mark grid size-10 shrink-0 place-items-center rounded-[3px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[17px] font-extrabold text-[var(--admin-shell-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+          <span className="grid size-10 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-control)] text-[18px] font-medium text-[var(--admin-shell-accent-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
             N
           </span>
-          <span className="admin-sidebar-brand__copy min-w-0 text-right">
-            <strong className="block whitespace-nowrap text-[13px] font-semibold tracking-[0.2em] text-[var(--admin-shell-text)]">
-              NAJIBZADEH
-            </strong>
-            <small className="mt-1 block whitespace-nowrap text-[5px] font-semibold tracking-[0.3em] text-[var(--admin-shell-accent-soft)]">
-              Atelier Operations
-            </small>
-          </span>
+          {!collapsed ? (
+            <span className="min-w-0 text-right">
+              <strong className="block whitespace-nowrap text-[12px] font-semibold tracking-[0.16em] text-[var(--admin-shell-text)]">
+                NAJIBZADEH
+              </strong>
+              <small className="mt-1 block whitespace-nowrap text-[6px] font-medium text-[var(--admin-shell-accent-soft)]">
+                پنل مدیریت
+              </small>
+            </span>
+          ) : null}
         </Link>
+
+        {!collapsed && onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-controls="admin-desktop-sidebar"
+            aria-expanded="true"
+            aria-label="جمع کردن نوار کناری"
+            title="جمع کردن نوار کناری"
+            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-[9px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-subtle)] transition-colors hover:border-[var(--admin-shell-accent)]/42 hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+          >
+            <PanelRightClose size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        ) : null}
+
+        {collapsed && onToggleCollapse ? (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            aria-controls="admin-desktop-sidebar"
+            aria-expanded="false"
+            aria-label="باز کردن نوار کناری"
+            title="باز کردن نوار کناری"
+            className="absolute -left-px top-[82px] z-30 grid size-8 translate-x-1/2 cursor-pointer place-items-center rounded-full border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] text-[var(--admin-shell-accent-soft)] shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-colors hover:border-[var(--admin-shell-accent)]/60 hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+          >
+            <PanelRightOpen size={14} strokeWidth={1.6} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       <nav
@@ -521,30 +838,44 @@ function Sidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className="relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4"
+        className={`relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 ${
+          collapsed ? "px-2" : "px-3"
+        }`}
       >
-        <p className="admin-sidebar-section-label mb-2 px-2 text-[6px] font-semibold text-[var(--admin-shell-subtle)]">
+        <p
+          className={
+            collapsed
+              ? "sr-only"
+              : "mb-2 px-2 text-[7px] font-semibold text-[var(--admin-shell-subtle)]"
+          }
+        >
           ناوبری اصلی
         </p>
+
         <div className="space-y-1">
           {PRIMARY_NAV.filter(
-            (item) => !item.permission || staff.permissions?.includes(item.permission),
+            (item) =>
+              !item.permission || staff.permissions?.includes(item.permission),
           ).map((item) => (
             <SidebarLink
               key={item.href}
               item={item}
               active={isNavActive(pathname, item.href)}
+              collapsed={collapsed}
               onNavigate={onNavigate}
             />
           ))}
         </div>
 
-        <div className="my-4 h-px bg-[var(--admin-shell-border)]" />
+        <div
+          className={`my-4 h-px bg-[var(--admin-shell-border)] ${collapsed ? "mx-2" : ""}`}
+        />
 
         {staff.permissions?.includes("staff.manage") ? (
           <SidebarLink
             item={USERS_NAV}
             active={isNavActive(pathname, "/admin/users")}
+            collapsed={collapsed}
             onNavigate={onNavigate}
           />
         ) : null}
@@ -552,27 +883,41 @@ function Sidebar({
         <button
           type="button"
           onClick={onLogout}
-          className="admin-sidebar-link admin-sidebar-logout mt-1 flex h-11 w-full cursor-pointer items-center gap-3 border border-transparent px-3 text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-colors hover:border-[#a7554c]/30 hover:bg-[#a7554c]/10 hover:text-[#df8178] focus-visible:ring-2 focus-visible:ring-[#a7554c]/35"
+          title={collapsed ? "خروج از حساب" : undefined}
+          className={`mt-1 flex h-11 w-full cursor-pointer items-center rounded-[10px] border border-transparent text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-colors hover:border-[#A7554C]/30 hover:bg-[#A7554C]/10 hover:text-[#DF8178] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35 ${
+            collapsed ? "justify-center px-0" : "gap-3 px-3"
+          }`}
         >
-          <span className="admin-sidebar-link__icon grid size-6 shrink-0 place-items-center">
-            <LogOut size={16} strokeWidth={1.5} />
+          <span className="grid size-7 shrink-0 place-items-center">
+            <LogOut size={16} strokeWidth={1.5} aria-hidden="true" />
           </span>
-          <span className="admin-sidebar-link__label whitespace-nowrap">
-            خروج از حساب
-          </span>
+          {!collapsed ? (
+            <span className="whitespace-nowrap">خروج از حساب</span>
+          ) : null}
         </button>
       </nav>
 
-      <div className="admin-sidebar-footer relative z-10 flex h-[68px] shrink-0 items-center gap-3 border-t border-[var(--admin-shell-border)] px-[22px]">
-        <Crown size={15} strokeWidth={1.4} className="shrink-0 text-[var(--admin-shell-accent-soft)]" />
-        <span className="admin-sidebar-footer__copy min-w-0 text-right">
-          <strong className="block whitespace-nowrap text-[7px] font-semibold text-[var(--admin-shell-muted)]">
-            مدیریت نجیب‌زاده
-          </strong>
-          <small className="mt-1 block whitespace-nowrap text-[5px] text-[var(--admin-shell-accent-soft)]">
-            فضای امن کارکنان
-          </small>
-        </span>
+      <div
+        className={`relative z-10 flex h-[72px] shrink-0 items-center border-t border-[var(--admin-shell-border)] ${
+          collapsed ? "justify-center px-2" : "gap-3 px-5"
+        }`}
+      >
+        <Crown
+          size={16}
+          strokeWidth={1.4}
+          className="shrink-0 text-[var(--admin-shell-accent-soft)]"
+          aria-hidden="true"
+        />
+        {!collapsed ? (
+          <span className="min-w-0 text-right">
+            <strong className="block whitespace-nowrap text-[8px] font-semibold text-[var(--admin-shell-muted)]">
+              مدیریت نجیب‌زاده
+            </strong>
+            <small className="mt-1 block whitespace-nowrap text-[6px] text-[var(--admin-shell-accent-soft)]">
+              فضای امن کارکنان
+            </small>
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -581,10 +926,12 @@ function Sidebar({
 function SidebarLink({
   item,
   active,
+  collapsed,
   onNavigate,
 }: {
   item: NavItem;
   active: boolean;
+  collapsed: boolean;
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
@@ -594,7 +941,10 @@ function SidebarLink({
       href={item.href}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
-      className={`admin-sidebar-link group/nav relative flex h-11 items-center gap-3 rounded-[3px] border px-3 text-[9px] font-semibold outline-none transition-[background-color,border-color,color] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
+      title={collapsed ? item.label : undefined}
+      className={`group/nav relative flex h-11 items-center rounded-[10px] border text-[9px] font-semibold outline-none transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
+        collapsed ? "justify-center px-0" : "gap-3 px-3"
+      } ${
         active
           ? "border-[var(--admin-shell-active-border)] bg-[var(--admin-shell-active)] text-[var(--admin-shell-text)]"
           : "border-transparent text-[var(--admin-shell-muted)] hover:border-[var(--admin-shell-border)] hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)]"
@@ -603,21 +953,28 @@ function SidebarLink({
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute inset-y-2 right-0 w-0.5 bg-[var(--admin-shell-accent)]"
+          className={`absolute bg-[var(--admin-shell-accent)] ${
+            collapsed
+              ? "bottom-1.5 right-1/2 h-0.5 w-4 translate-x-1/2 rounded-full"
+              : "inset-y-2 right-0 w-0.5 rounded-full"
+          }`}
         />
       ) : null}
-      <span className="admin-sidebar-link__icon grid size-6 shrink-0 place-items-center">
+
+      <span className="grid size-7 shrink-0 place-items-center">
         <Icon
           size={16}
           strokeWidth={1.5}
           className={
             active ? "text-[var(--admin-shell-accent-soft)]" : "text-current"
           }
+          aria-hidden="true"
         />
       </span>
-      <span className="admin-sidebar-link__label whitespace-nowrap">
-        {item.label}
-      </span>
+
+      {!collapsed ? (
+        <span className="whitespace-nowrap">{item.label}</span>
+      ) : null}
     </Link>
   );
 }
@@ -635,6 +992,15 @@ function isNavActive(pathname: string, href: string) {
   return pathname.startsWith(href);
 }
 
+function normalizePersianSearch(value: string) {
+  return value
+    .trim()
+    .toLocaleLowerCase("fa")
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/\s+/g, " ");
+}
+
 function MobileSidebar({
   open,
   pathname,
@@ -648,6 +1014,14 @@ function MobileSidebar({
   onClose: () => void;
   onLogout: () => void;
 }) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
   return (
     <div
       aria-hidden={!open}
@@ -660,7 +1034,7 @@ function MobileSidebar({
         tabIndex={open ? 0 : -1}
         aria-label="بستن منو"
         onClick={onClose}
-        className={`absolute inset-0 bg-black/64 backdrop-blur-[3px] transition-opacity duration-300 ${
+        className={`absolute inset-0 cursor-pointer bg-black/68 backdrop-blur-[5px] transition-opacity duration-300 motion-reduce:transition-none ${
           open ? "opacity-100" : "opacity-0"
         }`}
       />
@@ -672,25 +1046,26 @@ function MobileSidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className={`absolute inset-y-0 right-0 flex w-[min(88vw,330px)] flex-col overflow-hidden border-l border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-panel)] shadow-[-28px_0_90px_-36px_rgba(0,0,0,0.72)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`absolute inset-y-0 right-0 flex w-[min(88vw,330px)] flex-col overflow-hidden border-l border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-panel)] shadow-[-28px_0_90px_-36px_rgba(0,0,0,0.78)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="absolute left-3 top-3 z-20">
-          <Button
+        <div className="absolute left-3 top-4 z-30">
+          <button
+            ref={closeButtonRef}
             type="button"
-            variant="outline"
-            size="sm"
-            iconOnly
-            icon={<X size={17} />}
             onClick={onClose}
             aria-label="بستن منو"
-            className="!size-9 !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
-          />
+            className="grid size-9 cursor-pointer place-items-center rounded-[10px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </div>
+
         <Sidebar
           staff={staff}
           pathname={pathname}
+          collapsed={false}
           onLogout={onLogout}
           onNavigate={onClose}
         />
@@ -741,54 +1116,60 @@ function LogoutModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="admin-logout-title"
+      aria-describedby="admin-logout-description"
       data-lenis-prevent
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
-      className="fixed inset-0 z-[2000] grid place-items-center bg-black/68 px-4 backdrop-blur-[4px]"
+      className="fixed inset-0 z-[2000] grid place-items-center bg-black/72 px-4 backdrop-blur-[7px]"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
     >
-      <section className="w-full max-w-[420px] overflow-hidden rounded-[4px] border border-white/[0.11] bg-[#10151b] shadow-[0_38px_100px_-28px_rgba(0,0,0,0.95)] group-data-[theme=light]/admin:border-black/[0.10] group-data-[theme=light]/admin:bg-[#f0ede7]">
-        <header className="flex items-start justify-between gap-5 border-b border-white/[0.075] px-6 py-5 group-data-[theme=light]/admin:border-black/[0.08]">
+      <section className="w-full max-w-[420px] overflow-hidden rounded-[18px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] shadow-[0_38px_100px_-28px_rgba(0,0,0,0.95)]">
+        <header className="flex items-start justify-between gap-5 border-b border-[var(--admin-shell-border)] px-6 py-5">
           <div className="text-right">
-            <p className="text-[7px] font-semibold uppercase tracking-[0.19em] text-[#9d7357]">
+            <p className="text-[8px] font-semibold text-[var(--admin-shell-accent-soft)]">
               نشست کاربری
             </p>
             <h2
               id="admin-logout-title"
-              className="mt-2 text-[20px] font-bold text-white group-data-[theme=light]/admin:text-[#24211e]"
+              className="mt-2 text-[20px] font-bold text-[var(--admin-shell-text)]"
             >
               خروج از حساب؟
             </h2>
           </div>
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            iconOnly
-            icon={<X size={16} />}
             onClick={onClose}
             aria-label="بستن"
-            className="!size-9 !border-white/[0.09] !bg-transparent !text-white/44 hover:!bg-white/[0.04] hover:!text-white group-data-[theme=light]/admin:!border-black/[0.09] group-data-[theme=light]/admin:!text-black/48"
-          />
+            className="grid size-9 cursor-pointer place-items-center rounded-[10px] border border-[var(--admin-shell-border)] text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+          >
+            <X size={16} aria-hidden="true" />
+          </button>
         </header>
 
         <div className="px-6 py-5 text-right">
-          <p className="text-[11px] leading-7 text-white/52 group-data-[theme=light]/admin:text-black/58">
+          <p
+            id="admin-logout-description"
+            className="text-[11px] leading-7 text-[var(--admin-shell-muted)]"
+          >
             آیا مطمئن هستید که می‌خواهید از پنل مدیریت خارج شوید؟ نشست امن شما
             پایان می‌یابد و برای ورود دوباره باید رمز عبور را وارد کنید.
           </p>
-          {error ? <p role="alert" className="mt-3 text-[11px] text-[#df8178]">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="mt-3 text-[11px] text-[#DF8178]">
+              {error}
+            </p>
+          ) : null}
         </div>
 
-        <footer className="grid grid-cols-2 gap-2 border-t border-white/[0.075] p-4 group-data-[theme=light]/admin:border-black/[0.08]">
+        <footer className="grid grid-cols-2 gap-2 border-t border-[var(--admin-shell-border)] p-4">
           <button
             ref={cancelRef}
             type="button"
             onClick={onClose}
             disabled={pending}
-            className="h-11 rounded-[3px] border border-white/[0.09] bg-white/[0.02] text-[10px] font-semibold text-white/64 transition-colors hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/18 group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-black/[0.02] group-data-[theme=light]/admin:text-black/62"
+            className="h-11 cursor-pointer rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[10px] font-semibold text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 disabled:cursor-not-allowed disabled:opacity-50"
           >
             انصراف
           </button>
@@ -801,7 +1182,7 @@ function LogoutModal({
             onClick={() => void logout()}
             loading={pending}
             disabled={pending}
-            className="!h-11 !justify-center !border-[#a5574f]/35 !bg-[#a5574f]/12 !tracking-normal !text-[#df8178] hover:!border-[#a5574f]/50 hover:!bg-[#a5574f]/18 hover:!text-[#ef9b93]"
+            className="!h-11 !justify-center !rounded-[11px] !border-[#A5574F]/35 !bg-[#A5574F]/12 !tracking-normal !text-[#DF8178] hover:!border-[#A5574F]/50 hover:!bg-[#A5574F]/18 hover:!text-[#EF9B93]"
           >
             {pending ? "در حال خروج…" : "خروج از حساب"}
           </Button>

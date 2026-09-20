@@ -1,9 +1,11 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import Image from "next/image";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowLeft,
   Boxes,
   ImageIcon,
   Layers3,
@@ -12,6 +14,7 @@ import {
   SlidersHorizontal,
   Users,
 } from "lucide-react";
+
 import { Button } from "@/components/ui/Button";
 import { fa, type LocalizedText } from "@/lib/admin/localization";
 
@@ -57,12 +60,14 @@ async function fetchSummary(): Promise<Summary> {
     credentials: "same-origin",
     cache: "no-store",
   });
+
   if (!response.ok) {
     const body = (await response.json().catch(() => ({}))) as {
       error?: string;
     };
     throw new Error(body.error || "دریافت خلاصه کاتالوگ انجام نشد.");
   }
+
   return response.json() as Promise<Summary>;
 }
 
@@ -72,20 +77,27 @@ export function Dashboard() {
     queryFn: fetchSummary,
     staleTime: 30_000,
   });
+
   if (query.isPending) return <DashboardLoading />;
+
   if (query.isError) {
     return (
-      <main className="mx-auto w-full max-w-[1700px] p-4 sm:p-6">
-        <section className="border border-[#a7554c]/35 bg-[#a7554c]/[0.06] p-6 text-right text-white group-data-[theme=light]/admin:text-[#24211e]">
-          <AlertTriangle className="text-[#df8178]" size={24} />
+      <main className="mx-auto w-full max-w-[1660px] p-3 sm:p-5 xl:p-6">
+        <section
+          role="alert"
+          className="rounded-[18px] border border-[#A7554C]/35 bg-[#A7554C]/[0.07] p-6 text-right text-[var(--admin-shell-text)] shadow-[0_22px_70px_-45px_rgba(0,0,0,0.78)]"
+        >
+          <span className="grid size-11 place-items-center rounded-[12px] border border-[#A7554C]/35 bg-[#A7554C]/10 text-[#DF8178]">
+            <AlertTriangle size={20} strokeWidth={1.6} aria-hidden="true" />
+          </span>
           <h1 className="mt-4 text-[18px] font-bold">
             خلاصه کاتالوگ در دسترس نیست
           </h1>
-          <p className="mt-2 text-[12px] leading-7 text-white/55 group-data-[theme=light]/admin:text-black/70">
+          <p className="mt-2 max-w-[620px] text-[12px] leading-7 text-[var(--admin-shell-muted)]">
             {query.error.message}
           </p>
           <Button
-            className="mt-5"
+            className="mt-5 !tracking-normal"
             type="button"
             variant="outline"
             onClick={() => void query.refetch()}
@@ -99,6 +111,7 @@ export function Dashboard() {
   }
 
   const data = query.data;
+
   const summaryCards = [
     {
       label: "محصولات",
@@ -143,6 +156,7 @@ export function Dashboard() {
       icon: Users,
     },
   ];
+
   const attention = [
     {
       label: "محصول پیش‌نویس",
@@ -167,75 +181,145 @@ export function Dashboard() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-[1700px] p-3 sm:p-5 lg:p-6">
-      <header className="border border-white/[0.08] bg-[#0d1319] px-5 py-7 text-right text-white shadow-[0_24px_80px_-54px_rgba(0,0,0,0.95)] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e] sm:px-7">
-        <p className="text-[11px] font-semibold text-[#b58a6c] group-data-[theme=light]/admin:text-[#80543a]">
-          مرکز کنترل کاتالوگ
-        </p>
-        <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <h1 className="text-[clamp(1.6rem,4vw,2.6rem)] font-bold leading-[1.5]">
-              وضعیت واقعی فروشگاه، در یک نگاه
+    <main className="mx-auto w-full max-w-[1660px] p-3 sm:p-5 xl:p-6">
+      <section
+        aria-labelledby="dashboard-title"
+        className="relative isolate min-h-[210px] overflow-hidden rounded-[20px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] shadow-[0_28px_90px_-58px_rgba(0,0,0,0.95)] sm:min-h-[238px]"
+      >
+        <Image
+          src="/assets/images/suit.webp"
+          alt=""
+          fill
+          priority
+          sizes="(max-width: 1279px) 100vw, 1200px"
+          className="-z-30 object-cover object-[44%_28%] grayscale-[0.1]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-20 bg-[linear-gradient(90deg,rgba(10,8,6,0.98)_0%,rgba(10,8,6,0.88)_35%,rgba(10,8,6,0.48)_62%,rgba(10,8,6,0.86)_100%)]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_72%_22%,rgba(194,137,88,0.13),transparent_26%),linear-gradient(180deg,rgba(255,255,255,0.03),transparent_40%)]"
+        />
+
+        <div className="relative flex min-h-[210px] flex-col justify-between gap-8 p-5 sm:min-h-[238px] sm:p-7 lg:flex-row lg:items-end lg:p-8">
+          <div className="max-w-[700px] text-right">
+            <div className="flex items-center gap-3 text-[var(--admin-shell-accent-soft)]">
+              <span className="h-px w-8 bg-current/80" aria-hidden="true" />
+              <p className="text-[9px] font-semibold">پنل مدیریت نجیب‌زاده</p>
+            </div>
+            <h1
+              id="dashboard-title"
+              className="mt-4 text-balance text-[clamp(1.75rem,5vw,3.2rem)] font-bold leading-[1.25] tracking-[-0.035em] text-white"
+            >
+              کنترل کامل، تصمیم‌گیری سریع‌تر
             </h1>
-            <p className="mt-2 text-[12px] leading-7 text-white/52 group-data-[theme=light]/admin:text-black/68">
-              اعداد این صفحه مستقیماً از کاتالوگ و حساب‌های ثبت‌شده خوانده
-              می‌شوند.
+            <p className="mt-3 max-w-[620px] text-[11px] leading-7 text-white/62 sm:text-[12px]">
+              وضعیت کاتالوگ، محتوای فروشگاه و موارد نیازمند پیگیری را در یک نمای
+              متمرکز ببینید.
             </p>
+
+            <div className="mt-5 flex flex-wrap gap-2.5">
+              <Link
+                href="/admin/catalog/products"
+                className="inline-flex min-h-11 items-center gap-2 rounded-[12px] border border-[var(--admin-shell-accent)]/65 bg-[var(--admin-shell-accent)] px-4 text-[10px] font-bold text-[#15100C] shadow-[0_12px_34px_-18px_rgba(194,137,88,0.82)] outline-none transition-[transform,filter,box-shadow] hover:-translate-y-0.5 hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent-soft)]/75 active:translate-y-0"
+              >
+                مدیریت محصولات
+                <ArrowLeft size={14} aria-hidden="true" />
+              </Link>
+              <Link
+                href="/shop"
+                className="inline-flex min-h-11 items-center gap-2 rounded-[12px] border border-white/14 bg-black/22 px-4 text-[10px] font-semibold text-white/82 backdrop-blur-xl outline-none transition-[border-color,background-color,color] hover:border-white/30 hover:bg-white/8 hover:text-white focus-visible:ring-2 focus-visible:ring-white/50"
+              >
+                مشاهده فروشگاه
+                <ArrowLeft size={14} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-          <p className="text-[11px] text-white/38 group-data-[theme=light]/admin:text-black/60">
-            بروزرسانی: {date.format(new Date(data.generatedAt))}
-          </p>
+
+          <div className="flex shrink-0 flex-col items-start gap-1 text-right lg:items-end">
+            <span className="text-[8px] text-white/40">آخرین بروزرسانی</span>
+            <strong className="text-[10px] font-semibold text-white/74">
+              {date.format(new Date(data.generatedAt))}
+            </strong>
+          </div>
         </div>
-      </header>
+      </section>
 
       <section
         aria-label="آمار کاتالوگ"
-        className="mt-3 grid grid-cols-1 border-r border-t border-white/[0.08] group-data-[theme=light]/admin:border-black/[0.09] sm:grid-cols-2 xl:grid-cols-3"
+        className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 2xl:grid-cols-6"
       >
         {summaryCards.map(({ label, value, detail, href, icon: Icon }) => (
           <Link
             key={label}
             href={href}
-            className="group flex min-h-28 items-center gap-4 border-b border-l border-white/[0.08] bg-[#0d1319] p-5 text-right text-white outline-none transition-colors hover:bg-[#121a22] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#b08061] group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e] group-data-[theme=light]/admin:hover:bg-[#f5f1ea]"
+            className="group relative min-h-[126px] overflow-hidden rounded-[16px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] p-4 text-right text-[var(--admin-shell-text)] shadow-[0_20px_54px_-46px_rgba(0,0,0,0.92)] outline-none transition-[border-color,background-color,transform,box-shadow] hover:-translate-y-0.5 hover:border-[var(--admin-shell-accent)]/34 hover:bg-[var(--admin-shell-raised)] hover:shadow-[0_24px_60px_-42px_rgba(0,0,0,0.94)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/45 active:translate-y-0"
           >
-            <span className="grid size-11 shrink-0 place-items-center border border-[#a87959]/25 bg-[#a87959]/10 text-[#c59676] group-data-[theme=light]/admin:text-[#80543a]">
-              <Icon size={19} />
-            </span>
-            <span className="min-w-0">
-              <span className="block text-[12px] text-white/55 group-data-[theme=light]/admin:text-black/65">
-                {label}
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-4 top-0 h-px bg-[linear-gradient(90deg,transparent,var(--admin-shell-accent),transparent)] opacity-0 transition-opacity group-hover:opacity-60"
+            />
+            <div className="flex items-start justify-between gap-3">
+              <span className="grid size-9 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-accent)]/22 bg-[var(--admin-shell-accent)]/10 text-[var(--admin-shell-accent-soft)]">
+                <Icon size={17} strokeWidth={1.6} aria-hidden="true" />
               </span>
-              <strong className="mt-1 block text-[28px] leading-none">
+              <ArrowLeft
+                size={14}
+                aria-hidden="true"
+                className="mt-1 text-[var(--admin-shell-subtle)] transition-transform group-hover:-translate-x-1 group-hover:text-[var(--admin-shell-accent-soft)]"
+              />
+            </div>
+            <span className="mt-4 block text-[10px] text-[var(--admin-shell-muted)]">
+              {label}
+            </span>
+            <div className="mt-1 flex items-end justify-between gap-2">
+              <strong className="text-[26px] font-bold leading-none tabular-nums">
                 {number.format(value)}
               </strong>
-              <span className="mt-2 block text-[11px] text-[#b58a6c] group-data-[theme=light]/admin:text-[#80543a]">
+              <span className="text-[8.5px] font-medium text-[var(--admin-shell-accent-soft)]">
                 {detail}
               </span>
-            </span>
+            </div>
           </Link>
         ))}
       </section>
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[0.8fr_1.2fr]">
-        <section className="border border-white/[0.08] bg-[#0d1319] p-5 text-white group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e]">
-          <h2 className="text-[15px] font-bold">نیازمند توجه</h2>
-          <p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/62">
-            موارد قابل پیگیری در داده‌های فعلی کاتالوگ
-          </p>
-          <div className="mt-4 divide-y divide-white/[0.07] group-data-[theme=light]/admin:divide-black/[0.08]">
-            {attention.map((item) => (
+      <div className="mt-3 grid gap-3 xl:grid-cols-[0.9fr_1.1fr]">
+        <section className="overflow-hidden rounded-[18px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] text-[var(--admin-shell-text)] shadow-[0_22px_70px_-52px_rgba(0,0,0,0.9)]">
+          <header className="flex items-start justify-between gap-4 border-b border-[var(--admin-shell-border)] px-5 py-4 sm:px-6">
+            <div className="text-right">
+              <p className="text-[8px] font-semibold text-[var(--admin-shell-accent-soft)]">
+                پایش کاتالوگ
+              </p>
+              <h2 className="mt-1 text-[14px] font-bold">نیازمند توجه</h2>
+            </div>
+            <AlertTriangle
+              size={17}
+              className="text-[#DDA15F]"
+              aria-hidden="true"
+            />
+          </header>
+
+          <div className="divide-y divide-[var(--admin-shell-border)] px-5 sm:px-6">
+            {attention.map((item, index) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="flex min-h-12 items-center justify-between gap-4 py-3 text-[12px] outline-none hover:text-[#c59676] focus-visible:ring-2 focus-visible:ring-[#b08061]"
+                className="group flex min-h-[62px] items-center justify-between gap-4 py-3 text-[11px] outline-none transition-colors hover:text-[var(--admin-shell-accent-soft)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-shell-accent)]/42"
               >
-                <span>{item.label}</span>
+                <span className="flex min-w-0 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="grid size-7 shrink-0 place-items-center rounded-full border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[9px] text-[var(--admin-shell-subtle)]"
+                  >
+                    {number.format(index + 1)}
+                  </span>
+                  <span className="truncate">{item.label}</span>
+                </span>
                 <strong
-                  className={
-                    item.value
-                      ? "text-[#dda15f] group-data-[theme=light]/admin:text-[#8a4f18]"
-                      : "text-[#70b48d] group-data-[theme=light]/admin:text-[#2f6f4f]"
-                  }
+                  className={item.value ? "text-[#DDA15F]" : "text-[#70B48D]"}
                 >
                   {number.format(item.value)}
                 </strong>
@@ -243,31 +327,46 @@ export function Dashboard() {
             ))}
           </div>
         </section>
-        <section className="border border-white/[0.08] bg-[#0d1319] p-5 text-white group-data-[theme=light]/admin:border-black/[0.09] group-data-[theme=light]/admin:bg-[#eeeae3] group-data-[theme=light]/admin:text-[#24211e]">
-          <h2 className="text-[15px] font-bold">آخرین محصولات ویرایش‌شده</h2>
-          <p className="mt-1 text-[11px] leading-6 text-white/42 group-data-[theme=light]/admin:text-black/62">
-            آخرین تغییرات ثبت‌شده در محصول‌ها
-          </p>
+
+        <section className="overflow-hidden rounded-[18px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] text-[var(--admin-shell-text)] shadow-[0_22px_70px_-52px_rgba(0,0,0,0.9)]">
+          <header className="flex items-center justify-between gap-4 border-b border-[var(--admin-shell-border)] px-5 py-4 sm:px-6">
+            <div className="text-right">
+              <p className="text-[8px] font-semibold text-[var(--admin-shell-accent-soft)]">
+                فعالیت اخیر
+              </p>
+              <h2 className="mt-1 text-[14px] font-bold">
+                آخرین محصولات ویرایش‌شده
+              </h2>
+            </div>
+            <Link
+              href="/admin/catalog/products"
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-[10px] px-2 text-[9px] font-semibold text-[var(--admin-shell-accent-soft)] outline-none transition-colors hover:text-[var(--admin-shell-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+            >
+              همه محصولات
+              <ArrowLeft size={13} aria-hidden="true" />
+            </Link>
+          </header>
+
           {data.recentlyEditedProducts.length ? (
-            <div className="mt-4 divide-y divide-white/[0.07] group-data-[theme=light]/admin:divide-black/[0.08]">
+            <div className="divide-y divide-[var(--admin-shell-border)] px-5 sm:px-6">
               {data.recentlyEditedProducts.map((product) => (
                 <Link
                   key={product._id}
                   href="/admin/catalog/products"
-                  className="grid min-h-14 grid-cols-[1fr_auto] items-center gap-4 py-3 outline-none hover:text-[#c59676] focus-visible:ring-2 focus-visible:ring-[#b08061]"
+                  className="group grid min-h-[62px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-3 outline-none transition-colors hover:text-[var(--admin-shell-accent-soft)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--admin-shell-accent)]/42"
                 >
-                  <span className="min-w-0">
-                    <strong className="block truncate text-[12px]">
+                  <span className="min-w-0 text-right">
+                    <strong className="block truncate text-[11px]">
                       {fa(product.name)}
                     </strong>
                     <span
                       dir="ltr"
-                      className="mt-1 block truncate text-left text-[10px] text-white/35 group-data-[theme=light]/admin:text-black/45"
+                      className="mt-1 block truncate text-left text-[8.5px] text-[var(--admin-shell-subtle)]"
                     >
                       {product.slug}
                     </span>
                   </span>
-                  <span className="text-left text-[10px] text-white/42 group-data-[theme=light]/admin:text-black/50">
+                  <span className="text-left text-[8.5px] text-[var(--admin-shell-muted)]">
                     {product.updatedAt
                       ? date.format(new Date(product.updatedAt))
                       : "—"}
@@ -276,7 +375,7 @@ export function Dashboard() {
               ))}
             </div>
           ) : (
-            <div className="mt-5 border border-dashed border-white/[0.12] px-4 py-8 text-center text-[12px] text-white/44 group-data-[theme=light]/admin:border-black/[0.14] group-data-[theme=light]/admin:text-black/52">
+            <div className="m-5 rounded-[14px] border border-dashed border-[var(--admin-shell-border-strong)] px-4 py-8 text-center text-[11px] text-[var(--admin-shell-muted)]">
               هنوز محصولی ثبت نشده است.
             </div>
           )}
@@ -291,16 +390,20 @@ function DashboardLoading() {
     <main
       aria-busy="true"
       aria-label="در حال دریافت خلاصه کاتالوگ"
-      className="mx-auto w-full max-w-[1700px] p-4 sm:p-6"
+      className="mx-auto w-full max-w-[1660px] p-3 sm:p-5 xl:p-6"
     >
-      <div className="h-36 animate-pulse bg-white/[0.04] motion-reduce:animate-none group-data-[theme=light]/admin:bg-black/[0.05]" />
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="h-[238px] animate-pulse rounded-[20px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] motion-reduce:animate-none" />
+      <div className="mt-3 grid grid-cols-2 gap-2.5 md:grid-cols-3 2xl:grid-cols-6">
         {Array.from({ length: 6 }, (_, index) => (
           <div
             key={index}
-            className="h-28 animate-pulse bg-white/[0.04] motion-reduce:animate-none group-data-[theme=light]/admin:bg-black/[0.05]"
+            className="h-[126px] animate-pulse rounded-[16px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] motion-reduce:animate-none"
           />
         ))}
+      </div>
+      <div className="mt-3 grid gap-3 xl:grid-cols-2">
+        <div className="h-[300px] animate-pulse rounded-[18px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] motion-reduce:animate-none" />
+        <div className="h-[300px] animate-pulse rounded-[18px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] motion-reduce:animate-none" />
       </div>
     </main>
   );
