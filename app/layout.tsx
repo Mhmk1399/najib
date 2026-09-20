@@ -19,6 +19,7 @@
  */
 
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import "./admin/admin.css";
 import { LenisProvider } from "@/components/providers/lenis-provider";
@@ -29,15 +30,27 @@ import { SiteShell } from "@/components/global/site-shell";
 import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 import { DynamicImageIsland } from "@/components/storefront/dynamic-image-island";
 import { ContextualProductReveal } from "@/components/storefront/contextual-product-reveal";
+import {
+  defaultLocale,
+  getHtmlLang,
+  getLocaleDirection,
+  isLocale,
+} from "@/lib/i18n/config";
+import {
+  localeAlternates,
+  localizedOpenGraph,
+  siteUrl,
+} from "@/lib/i18n/metadata";
 import { estedad } from "@/next-persian-fonts/estedad";
  
 export const metadata: Metadata = {
   title: "Najibzadeh | Luxury Menswear & Tailoring",
   description:
     "Dignity in silence. Najibzadeh is a luxury menswear and tailoring house.",
-  metadataBase: new URL("https://najibzadeh.com"),
+  metadataBase: siteUrl,
   applicationName: "Najibzadeh",
   manifest: "/manifest.webmanifest",
+  alternates: localeAlternates("/", defaultLocale),
   formatDetection: {
     telephone: false,
   },
@@ -56,10 +69,7 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    alternateLocale: "fa_IR",
-    siteName: "Najibzadeh",
+    ...localizedOpenGraph(defaultLocale),
   },
   robots: {
     index: true,
@@ -82,9 +92,14 @@ interface RootLayoutProps {
   children: React.ReactNode;
 }
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
-}: RootLayoutProps): React.JSX.Element {
+}: RootLayoutProps): Promise<React.JSX.Element> {
+  const requestHeaders = await headers();
+  const candidateLocale = requestHeaders.get("x-najib-locale") ?? undefined;
+  const locale = isLocale(candidateLocale) ? candidateLocale : defaultLocale;
+  const direction = getLocaleDirection(locale);
+
   return (
     /*
      * suppressHydrationWarning is required on <html> because ThemeScript
@@ -94,13 +109,16 @@ export default function RootLayout({
      */
     <html
       className="scroll-smooth"
-      lang="en"
-      dir="ltr"
+      lang={getHtmlLang(locale)}
+      dir={direction}
       suppressHydrationWarning
     >
       <head></head>
 
-      <body dir="ltr" className={`antialiased  ${estedad.className} min-h-dvh`}>
+      <body
+        dir={direction}
+        className={`antialiased  ${estedad.className} min-h-dvh`}
+      >
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>
             <QueryProvider>

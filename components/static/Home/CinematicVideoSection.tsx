@@ -1,41 +1,41 @@
 "use client";
 
 import Image from "next/image";
-
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 
-import { brandColors } from "@/theme/theme-colors";
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
 
-type VideoAction = {
-  label: string;
-  href: string;
-};
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
+import { localizedHref } from "@/lib/i18n/routes";
+
+import { brandColors } from "@/theme/theme-colors";
 
 type CinematicVideoSectionProps = {
+  copy: HomeCopy["cinematic"];
+  locale: Locale;
+
   videoSrc: string;
   posterSrc: string;
-  posterAlt?: string;
-  eyebrow?: string;
-  title: string;
-  description?: string;
-  primaryAction?: VideoAction;
-  secondaryAction?: VideoAction;
+
   mobileVideoPosition?: string;
   desktopVideoPosition?: string;
+
   posterStoryId?: string;
   className?: string;
 };
 
 export function CinematicVideoSection({
+  copy,
+  locale,
   videoSrc,
   posterSrc,
-  posterAlt = "",
-  eyebrow = "خانه نجیب‌زاده",
-  title,
-  description,
-  primaryAction,
-  secondaryAction,
   mobileVideoPosition = "center top",
   desktopVideoPosition = "center",
   posterStoryId,
@@ -50,6 +50,9 @@ export function CinematicVideoSection({
 
   const titleId = useId();
 
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+
   const themeVars = {
     "--video-black": brandColors.black.hex,
     "--video-black-rgb": brandColors.black.rgb,
@@ -59,7 +62,7 @@ export function CinematicVideoSection({
     "--video-desktop-position": desktopVideoPosition,
   } as CSSProperties;
 
-  const hasBothActions = Boolean(primaryAction && secondaryAction);
+  const hasBothActions = Boolean(copy.primaryAction && copy.secondaryAction);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -69,6 +72,7 @@ export function CinematicVideoSection({
     };
 
     updatePreference();
+
     media.addEventListener("change", updatePreference);
 
     return () => {
@@ -85,6 +89,7 @@ export function CinematicVideoSection({
 
     if (!("IntersectionObserver" in window)) {
       const timer = globalThis.setTimeout(() => setShouldMountVideo(true), 0);
+
       return () => globalThis.clearTimeout(timer);
     }
 
@@ -129,7 +134,9 @@ export function CinematicVideoSection({
           video.pause();
         }
       },
-      { threshold: 0.18 },
+      {
+        threshold: 0.18,
+      },
     );
 
     observer.observe(section);
@@ -143,18 +150,17 @@ export function CinematicVideoSection({
   return (
     <section
       ref={sectionRef}
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       aria-labelledby={titleId}
       data-image-story-id={posterStoryId}
       data-image-story-url={posterSrc}
       style={themeVars}
       className={`relative isolate flex h-[86svh] min-h-[640px] max-h-[920px] w-full items-center justify-center overflow-hidden bg-[var(--video-black)] text-[var(--video-white)] sm:min-h-[680px] lg:h-[88svh] ${className}`}
     >
-      {/* Poster remains the visual fallback for reduced-motion users and while video initializes. */}
       <Image
         src={posterSrc}
-        alt={posterAlt}
+        alt={copy.posterAlt}
         fill
         loading="lazy"
         fetchPriority="low"
@@ -190,7 +196,6 @@ export function CinematicVideoSection({
         </video>
       )}
 
-      {/* Symmetrical cinematic fade for a centered composition. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--video-black-rgb)/0.20)_0%,rgb(var(--video-black-rgb)/0.06)_30%,rgb(var(--video-black-rgb)/0.15)_58%,rgb(var(--video-black-rgb)/0.78)_100%)]"
@@ -201,7 +206,6 @@ export function CinematicVideoSection({
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_12%,rgb(var(--video-black-rgb)/0.08)_48%,rgb(var(--video-black-rgb)/0.36)_120%)]"
       />
 
-      {/* Subtle editorial frame. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-4 z-0 border border-white/[0.08] sm:inset-6 lg:inset-8"
@@ -209,7 +213,7 @@ export function CinematicVideoSection({
 
       <div className="relative z-10 mx-auto flex w-full max-w-[1600px] items-center justify-center px-5 py-12 sm:px-8 sm:py-16 lg:px-12 xl:px-16">
         <div className="mx-auto flex w-full max-w-[760px] flex-col items-center text-center">
-          {eyebrow && (
+          {copy.eyebrow && (
             <div className="mb-5 flex items-center justify-center gap-3 sm:mb-6">
               <span
                 aria-hidden="true"
@@ -217,7 +221,7 @@ export function CinematicVideoSection({
               />
 
               <p className="text-[10px] font-medium leading-none text-white/58 sm:text-[11px]">
-                {eyebrow}
+                {copy.eyebrow}
               </p>
 
               <span
@@ -229,18 +233,18 @@ export function CinematicVideoSection({
 
           <h2
             id={titleId}
-            className="mx-auto max-w-[720px] text-balance text-xl md:text-5xl font-semibold leading-[1.1] tracking-[-0.045em] text-white [text-shadow:0_5px_32px_rgb(var(--video-black-rgb)/0.38)]  "
+            className="mx-auto max-w-[720px] text-balance text-xl font-semibold leading-[1.1] tracking-[-0.045em] text-white [text-shadow:0_5px_32px_rgb(var(--video-black-rgb)/0.38)] md:text-5xl"
           >
-            {title}
+            {copy.title}
           </h2>
 
-          {description && (
+          {copy.description && (
             <p className="mx-auto mt-5 max-w-[540px] text-pretty text-[12px] leading-7 text-white/68 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
-              {description}
+              {copy.description}
             </p>
           )}
 
-          {(primaryAction || secondaryAction) && (
+          {(copy.primaryAction || copy.secondaryAction) && (
             <div
               className={`mx-auto mt-7 grid w-full gap-2.5 sm:mt-8 sm:gap-3 ${
                 hasBothActions
@@ -248,9 +252,9 @@ export function CinematicVideoSection({
                   : "max-w-[230px] grid-cols-1"
               }`}
             >
-              {primaryAction && (
+              {copy.primaryAction && (
                 <Button
-                  href={primaryAction.href}
+                  href={localizedHref(copy.primaryAction.href, locale)}
                   variant="cream"
                   size="lg"
                   icon={<ArrowLeftIcon />}
@@ -258,13 +262,13 @@ export function CinematicVideoSection({
                   fullWidth
                   className="!tracking-normal"
                 >
-                  {primaryAction.label}
+                  {copy.primaryAction.label}
                 </Button>
               )}
 
-              {secondaryAction && (
+              {copy.secondaryAction && (
                 <Button
-                  href={secondaryAction.href}
+                  href={localizedHref(copy.secondaryAction.href, locale)}
                   variant="outline"
                   size="lg"
                   icon={<ArrowLeftIcon />}
@@ -272,7 +276,7 @@ export function CinematicVideoSection({
                   fullWidth
                   className="border-white/40 bg-black/15 !tracking-normal text-white backdrop-blur-sm hover:border-white hover:bg-white hover:text-black"
                 >
-                  {secondaryAction.label}
+                  {copy.secondaryAction.label}
                 </Button>
               )}
             </div>
@@ -283,6 +287,7 @@ export function CinematicVideoSection({
             className="mt-8 flex items-center justify-center gap-3 text-white/28 sm:mt-10"
           >
             <span className="h-px w-10 bg-current" />
+
             <span className="text-[7px] font-medium tracking-[0.22em]">
               NAJIBZADEH
             </span>

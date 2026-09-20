@@ -9,6 +9,8 @@ import type {
   CategorySubcategory,
   SubcategoryPageData,
 } from "@/types/category-page";
+import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import { shellCopy } from "@/lib/i18n/shell-copy";
 
 type LocalizedText = {
   fa?: string;
@@ -141,6 +143,20 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
 
 function fa(value: LocalizedText | null | undefined, fallback = "") {
   return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+}
+
+function localized(
+  value: LocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  return (
+    value?.[locale]?.trim() ||
+    value?.fa?.trim() ||
+    value?.en?.trim() ||
+    value?.ar?.trim() ||
+    fallback
+  );
 }
 
 function idOf(value: unknown) {
@@ -578,25 +594,36 @@ export function useSubcategoryPageData(
   };
 }
 
-export function useStorefrontMenuSections() {
+export function useStorefrontMenuSections(locale: Locale = defaultLocale) {
   const catalogQuery = useStorefrontCatalog();
+  const copy = shellCopy[locale];
 
   return useMemo<StorefrontMenuSection[]>(() => {
     if (!catalogQuery.data) {
       return [
         {
           id: "catalog-loading",
-          title: "دسته‌بندی‌ها",
-          subtitle: "در حال دریافت دسته‌بندی‌های فروشگاه.",
+          title: copy.footer.catalogTitle,
+          subtitle:
+            locale === "fa"
+              ? "در حال دریافت دسته‌بندی‌های فروشگاه."
+              : locale === "ar"
+                ? "جار تحميل تصنيفات المتجر."
+                : "Loading store categories.",
           href: "/shop",
           groups: [
             {
-              title: "فروشگاه",
-              items: [{ label: "همه محصولات", href: "/shop" }],
+              title: copy.navbar.quickLinks[4]?.label ?? copy.footer.allProducts,
+              items: [{ label: copy.footer.allProducts, href: "/shop" }],
             },
           ],
           image: FALLBACK_IMAGE,
-          imageLabel: "کاتالوگ نجیب‌زاده",
+          imageLabel:
+            locale === "fa"
+              ? "کاتالوگ نجیب‌زاده"
+              : locale === "ar"
+                ? "كتالوج نجيب زاده"
+                : "Najibzadeh catalog",
         },
       ];
     }
@@ -607,40 +634,69 @@ export function useStorefrontMenuSections() {
       return [
         {
           id: "catalog-empty",
-          title: "دسته‌بندی‌ها",
-          subtitle: "هنوز دسته‌بندی فعالی برای نمایش عمومی ثبت نشده است.",
+          title: copy.footer.catalogTitle,
+          subtitle:
+            locale === "fa"
+              ? "هنوز دسته‌بندی فعالی برای نمایش عمومی ثبت نشده است."
+              : locale === "ar"
+                ? "لم يتم نشر أي تصنيف نشط بعد."
+                : "No active categories are published yet.",
           href: "/shop",
           groups: [
             {
-              title: "فروشگاه",
-              items: [{ label: "همه محصولات", href: "/shop" }],
+              title: copy.navbar.quickLinks[4]?.label ?? copy.footer.allProducts,
+              items: [{ label: copy.footer.allProducts, href: "/shop" }],
             },
           ],
           image: FALLBACK_IMAGE,
-          imageLabel: "کاتالوگ نجیب‌زاده",
+          imageLabel:
+            locale === "fa"
+              ? "کاتالوگ نجیب‌زاده"
+              : locale === "ar"
+                ? "كتالوج نجيب زاده"
+                : "Najibzadeh catalog",
         },
       ];
     }
 
     return catalogQuery.data.categories.map((category) => {
-      const name = fa(category.name, category.slug);
+      const name = localized(category.name, locale, category.slug);
       const subs = catalogQuery.data.subcategories.filter(
         (subcategory) => idOf(subcategory.categoryId) === idOf(category._id),
       );
       const subcategoryItems = subs.map((subcategory) => ({
-        label: fa(subcategory.name, subcategory.slug),
+        label: localized(subcategory.name, locale, subcategory.slug),
         href: `/${category.slug}/${subcategory.slug}`,
       }));
       const groups = [
         {
-          title: "دسترسی سریع",
+          title: copy.navbar.quickAccess,
           items: [
-            { label: `صفحه ${name}`, href: `/${category.slug}` },
-            { label: "همه محصولات", href: `/shop?category=${category.slug}` },
+            {
+              label:
+                locale === "fa"
+                  ? `صفحه ${name}`
+                  : locale === "ar"
+                    ? `صفحة ${name}`
+                    : `${name} page`,
+              href: `/${category.slug}`,
+            },
+            { label: copy.footer.allProducts, href: `/shop?category=${category.slug}` },
           ],
         },
         ...chunk(subcategoryItems, 6).map((items, index) => ({
-          title: index === 0 ? "زیردسته‌ها" : "زیردسته‌های بیشتر",
+          title:
+            index === 0
+              ? locale === "fa"
+                ? "زیردسته‌ها"
+                : locale === "ar"
+                  ? "التصنيفات الفرعية"
+                  : "Subcategories"
+              : locale === "fa"
+                ? "زیردسته‌های بیشتر"
+                : locale === "ar"
+                  ? "تصنيفات فرعية أخرى"
+                  : "More subcategories",
           items,
         })),
       ];
@@ -651,11 +707,17 @@ export function useStorefrontMenuSections() {
         id: category.slug,
         title: name,
         subtitle: firstSentence(
-          fa(
+          localized(
             category.description,
-            fa(
+            locale,
+            localized(
               category.pageContent?.primaryDescription?.body,
-              "کالکشن‌های فعال این دسته را مرور کنید.",
+              locale,
+              locale === "fa"
+                ? "کالکشن‌های فعال این دسته را مرور کنید."
+                : locale === "ar"
+                  ? "تصفح المجموعات النشطة في هذا التصنيف."
+                  : "Explore active collections in this category.",
             ),
           ),
         ),
@@ -665,5 +727,5 @@ export function useStorefrontMenuSections() {
         imageLabel: name,
       };
     });
-  }, [catalogQuery.data]);
+  }, [catalogQuery.data, copy, locale]);
 }

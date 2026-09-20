@@ -1,111 +1,58 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { type CSSProperties } from "react";
+import { type CSSProperties, useId } from "react";
+
+import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
+import { localizedHref } from "@/lib/i18n/routes";
 
 import { brandColors, themeClasses } from "@/theme/theme-colors";
-import { ArrowLeftIcon, Button } from "@/components/ui/Button";
 
 /* ==========================================================================
    TYPES
 ============================================================================ */
 
-type HouseAction = {
-  label: string;
-  href: string;
-};
-
-type HouseFeature = {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-  icon: "tailoring" | "fragrance" | "story";
-};
-
 type HouseEditorialSectionProps = {
+  copy: HomeCopy["houseEditorial"];
+  locale: Locale;
+
   imageSrc: string;
-  imageAlt?: string;
-  eyebrow?: string;
-  title?: string;
-  description?: string;
-  primaryAction?: HouseAction;
-  secondaryAction?: HouseAction;
-  features?: HouseFeature[];
+
   mobileImagePosition?: string;
   desktopImagePosition?: string;
+
   imageStoryId?: string;
   className?: string;
 };
-
-/* ==========================================================================
-   DATA
-============================================================================ */
-
-const defaultFeatures: HouseFeature[] = [
-  {
-    id: "tailoring",
-    title: "خیاطی نجیب‌زاده",
-    description: "کت‌وشلوار، بافت و پوشاکی که با دقت شکل گرفته‌اند.",
-    href: "/tailoring",
-    icon: "tailoring",
-  },
-  {
-    id: "fragrance",
-    title: "عطرهای امضادار",
-    description: "رایحه‌هایی متمایز برای حضوری که در خاطر می‌ماند.",
-    href: "/fragrance",
-    icon: "fragrance",
-  },
-  {
-    id: "story",
-    title: "داستان ما",
-    description: "نگاهی به ارزش‌ها، نگاه و جهان پشت خانه نجیب‌زاده.",
-    href: "/about-us",
-    icon: "story",
-  },
-];
-
-/* ==========================================================================
-   HELPERS
-============================================================================ */
-
-function headingIdFromTitle(title: string) {
-  const normalized = title
-    .trim()
-    .toLocaleLowerCase("fa")
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "");
-
-  return `house-editorial-${normalized || "section"}`;
-}
 
 /* ==========================================================================
    COMPONENT
 ============================================================================ */
 
 export function HouseEditorialSection({
+  copy,
+  locale,
   imageSrc,
-  imageAlt = "",
-  eyebrow = "فصل تازه",
-  title = "برای لحظه‌هایی که در خاطر می‌مانند.",
-  description = "خیاطی ماندگار، رایحه‌های متمایز و انتخاب‌هایی سنجیده؛ برای سبک زندگی‌ای که کیفیت را در جزئیات تعریف می‌کند.",
-  primaryAction = {
-    label: "مشاهده مجموعه",
-    href: "/shop",
-  },
-  secondaryAction = {
-    label: "کشف خانه نجیب‌زاده",
-    href: "/about-us",
-  },
-  features = defaultFeatures,
   mobileImagePosition = "60% center",
   desktopImagePosition = "center",
   imageStoryId,
   className = "",
 }: HouseEditorialSectionProps) {
-  const visibleFeatures = features.slice(0, 3);
-  const headingId = headingIdFromTitle(title);
+  const visibleFeatures = copy.features.slice(0, 3);
+
+  const headingId = useId();
+
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
 
   const themeVars = {
     "--house-black": brandColors.black.hex,
@@ -116,20 +63,21 @@ export function HouseEditorialSection({
     "--house-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
+  const hasBothActions = Boolean(copy.primaryAction && copy.secondaryAction);
+
   return (
     <section
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       aria-labelledby={headingId}
       data-image-story-id={imageStoryId}
       data-image-story-url={imageSrc}
       style={themeVars}
       className={`relative isolate w-full overflow-hidden bg-[var(--house-black)] text-[var(--house-white)] ${className}`}
     >
-      {/* Background media */}
       <Image
         src={imageSrc}
-        alt={imageAlt}
+        alt={copy.imageAlt}
         fill
         sizes="100vw"
         loading="lazy"
@@ -137,7 +85,6 @@ export function HouseEditorialSection({
         className="-z-30 object-cover object-[var(--house-mobile-position)] md:object-[var(--house-desktop-position)]"
       />
 
-      {/* Balanced tonal field for the centered composition. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--house-black-rgb)/0.26)_0%,rgb(var(--house-black-rgb)/0.12)_34%,rgb(var(--house-black-rgb)/0.26)_68%,rgb(var(--house-black-rgb)/0.78)_100%)]"
@@ -153,16 +100,14 @@ export function HouseEditorialSection({
         className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgb(var(--house-black-rgb)/0.10)_44%,rgb(var(--house-black-rgb)/0.38)_120%)]"
       />
 
-      {/* Very quiet frame to give the campaign image a refined editorial edge. */}
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-4 z-0 border border-white/[0.07] sm:inset-6 lg:inset-8"
       />
 
       <div className="relative z-10 mx-auto flex min-h-[720px] w-full max-w-[1540px] flex-col items-center justify-center px-5 py-16 sm:min-h-[760px] sm:px-8 sm:py-20 lg:min-h-[min(900px,100svh)] lg:px-12 lg:py-24 xl:px-14">
-        {/* Main editorial statement */}
         <header className="mx-auto flex w-full max-w-[820px] flex-col items-center text-center">
-          {eyebrow ? (
+          {copy.eyebrow ? (
             <div className="flex items-center justify-center gap-3">
               <span
                 aria-hidden="true"
@@ -170,8 +115,9 @@ export function HouseEditorialSection({
               />
 
               <p className="text-[10px] font-medium leading-none text-white/64 sm:text-[11px]">
-                {eyebrow}
+                {copy.eyebrow}
               </p>
+
               <span
                 aria-hidden="true"
                 className="h-px w-8 bg-[var(--house-copper)]"
@@ -183,67 +129,66 @@ export function HouseEditorialSection({
             id={headingId}
             className="mx-auto mt-5 max-w-[760px] text-balance text-[clamp(2.75rem,11vw,4.7rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-white [text-shadow:0_5px_30px_rgb(var(--house-black-rgb)/0.36)] sm:text-[clamp(3.5rem,8vw,5.4rem)] md:text-[clamp(4rem,6vw,6.25rem)] lg:text-[clamp(4.35rem,5vw,6.45rem)]"
           >
-            {title}
+            {copy.title}
           </h2>
 
-          {description ? (
+          {copy.description ? (
             <p className="mx-auto mt-5 max-w-[590px] text-pretty text-[12px] leading-7 text-white/68 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
-              {description}
+              {copy.description}
             </p>
           ) : null}
 
-          {(primaryAction || secondaryAction) && (
+          {(copy.primaryAction || copy.secondaryAction) && (
             <div
               className={`mx-auto mt-7 grid w-full gap-2.5 sm:mt-8 sm:gap-3 ${
-                primaryAction && secondaryAction
+                hasBothActions
                   ? "max-w-[480px] grid-cols-1 min-[430px]:grid-cols-2"
                   : "max-w-[230px] grid-cols-1"
               }`}
             >
-              {primaryAction ? (
+              {copy.primaryAction ? (
                 <Button
-                  href={primaryAction.href}
+                  href={localizedHref(copy.primaryAction.href, locale)}
                   variant="cream"
                   size="lg"
-                   icon={
-                         <ArrowLeftIcon />
-                     }
-                    iconPosition="right"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
                   fullWidth
                   className="!tracking-normal"
                 >
-                  {primaryAction.label}
+                  {copy.primaryAction.label}
                 </Button>
               ) : null}
 
-              {secondaryAction ? (
+              {copy.secondaryAction ? (
                 <Button
-                  href={secondaryAction.href}
+                  href={localizedHref(copy.secondaryAction.href, locale)}
                   variant="outline"
                   size="lg"
-                     icon={
-                         <ArrowLeftIcon />
-                     }
-                    iconPosition="right"
+                  icon={<ArrowLeftIcon />}
+                  iconPosition="right"
                   fullWidth
                   className="border-white/40 bg-black/15 !tracking-normal text-white backdrop-blur-[5px] hover:border-white hover:bg-white hover:text-black"
                 >
-                  {secondaryAction.label}
+                  {copy.secondaryAction.label}
                 </Button>
               ) : null}
             </div>
           )}
         </header>
 
-        {/* Discovery rail */}
         {visibleFeatures.length ? (
           <nav
-            aria-label="بخش‌های خانه نجیب‌زاده"
+            aria-label={copy.navAriaLabel}
             className="mx-auto mt-10 w-full max-w-[1020px] border-y border-white/[0.12] bg-black/[0.18] backdrop-blur-[8px] sm:mt-12 lg:mt-14"
           >
             <div className="grid grid-cols-1 md:grid-cols-3">
               {visibleFeatures.map((feature) => (
-                <FeatureItem key={feature.id} feature={feature} />
+                <FeatureItem
+                  key={feature.id}
+                  feature={feature}
+                  locale={locale}
+                />
               ))}
             </div>
           </nav>
@@ -257,10 +202,19 @@ export function HouseEditorialSection({
    FEATURE ITEM
 ============================================================================ */
 
-function FeatureItem({ feature }: { feature: HouseFeature }) {
+function FeatureItem({
+  feature,
+  locale,
+}: {
+  feature: HomeCopy["houseEditorial"]["features"][number];
+  locale: Locale;
+}) {
+  const direction = getLocaleDirection(locale);
+  const isRtl = direction === "rtl";
+
   return (
     <Link
-      href={feature.href}
+      href={localizedHref(feature.href, locale)}
       className={`group relative flex min-h-[128px] flex-col items-center justify-center gap-3 border-b border-white/10 px-5 py-6 text-center transition-[background-color,border-color] duration-300 last:border-b-0 hover:border-white/[0.16] hover:bg-white/[0.045] md:min-h-[156px] md:border-b-0 md:border-l md:px-6 md:py-6 md:last:border-l-0 ${themeClasses.focusRing}`}
     >
       <span className="grid size-10 shrink-0 place-items-center border border-white/20 text-white/70 transition-[border-color,background-color,color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--house-copper)]/65 group-hover:bg-[var(--house-copper)]/[0.07] group-hover:text-[var(--house-copper)] md:size-11">
@@ -279,7 +233,11 @@ function FeatureItem({ feature }: { feature: HouseFeature }) {
 
       <span
         aria-hidden="true"
-        className="inline-flex rotate-180 text-white/38 transition-[color,transform] duration-300 group-hover:-translate-x-1 group-hover:text-white"
+        className={`inline-flex text-white/38 transition-[color,transform] duration-300 group-hover:text-white ${
+          isRtl
+            ? "rotate-180 group-hover:-translate-x-1"
+            : "group-hover:translate-x-1"
+        }`}
       >
         <ArrowIcon />
       </span>
@@ -296,12 +254,16 @@ function FeatureItem({ feature }: { feature: HouseFeature }) {
    FEATURE ICON
 ============================================================================ */
 
-function FeatureIcon({ type }: { type: HouseFeature["icon"] }) {
+function FeatureIcon({
+  type,
+}: {
+  type: HomeCopy["houseEditorial"]["features"][number]["icon"];
+}) {
   if (type === "tailoring") return <TailoringIcon />;
   if (type === "fragrance") return <FragranceIcon />;
+
   return <StoryIcon />;
 }
-
 /* ==========================================================================
    ICONS
 ============================================================================ */

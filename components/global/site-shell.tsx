@@ -4,11 +4,15 @@ import { usePathname } from "next/navigation";
 import Navbar from "@/components/global/Navbar";
 import Footer from "@/components/global/Footer";
 import FloatingContactDock from "@/components/global/floating";
+import { splitLocalePathname } from "@/lib/i18n/routes";
 
 export function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdminRoute = pathname.startsWith("/admin");
-  const isAccountWorkspace = pathname === "/auth" || pathname.startsWith("/customer-dashboard");
+  const { pathnameWithoutLocale } = splitLocalePathname(pathname);
+  const isAdminRoute = pathnameWithoutLocale.startsWith("/admin");
+  const isAccountWorkspace =
+    pathnameWithoutLocale === "/auth" ||
+    pathnameWithoutLocale.startsWith("/customer-dashboard");
 
   if (isAdminRoute || isAccountWorkspace) return <>{children}</>;
 

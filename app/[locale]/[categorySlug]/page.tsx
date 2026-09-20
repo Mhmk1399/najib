@@ -6,6 +6,7 @@ import { getStorefrontCategoryRoute } from "@/services/catalog/storefront";
 
 type CategoryPageProps = {
   params: Promise<{
+    locale: string;
     categorySlug: string;
   }>;
 };

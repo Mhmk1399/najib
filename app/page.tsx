@@ -11,6 +11,8 @@ import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSe
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
 import { ShoppableImageBanner } from "@/components/static/Home/ShoppableImageBanner";
 import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
+import { homeCopy } from "@/lib/i18n/home-copy";
+import { getRequestLocale } from "@/lib/i18n/server";
 
 export const dynamic = "force-dynamic";
 
@@ -74,43 +76,33 @@ export const FAQ_DEMO_ITEMS: FAQItem[] = [
 ];
 
 export default async function Page() {
-  const categoryShowcaseItems = await getHomeCategoryShowcaseItems();
+  const locale = await getRequestLocale();
+  const copy = homeCopy[locale];
+  const categoryShowcaseItems = await getHomeCategoryShowcaseItems(locale);
 
   return (
     <main>
-      <HeroSection />
-      <CategoryShowcase categories={categoryShowcaseItems} />
+      <HeroSection copy={copy.hero} locale={locale} />
+      <CategoryShowcase
+        categories={categoryShowcaseItems}
+        copy={copy.categories}
+        locale={locale}
+      />
       <CinematicVideoSection
+        copy={copy.cinematic}
+        locale={locale}
         videoSrc="/assets/video/videoCinema.mp4"
         posterSrc="/assets/images/p1.webp"
-        posterAlt="خیاط در حال آماده‌سازی کت نجیب‌زاده"
-        eyebrow="هنر خیاطی"
-        title="جزئیات، تفاوت را می‌سازند."
-        description="هر قطعه با دقت، تجربه و توجه به تناسب ساخته می‌شود؛ از انتخاب پارچه تا آخرین دوخت."
-        primaryAction={{
-          label: "کشف داستان ما",
-          href: "/about-us",
-        }}
-        secondaryAction={{
-          label: "مشاهده مجموعه",
-          href: "/shop",
-        }}
       />
-      <WhyChooseUsSection backgroundImage="/assets/images/whyus.webp" />
+      <WhyChooseUsSection
+        copy={copy.whyChooseUs}
+        locale={locale}
+        backgroundImage="/assets/images/whyus.webp"
+      />
       <HouseEditorialSection
+        copy={copy.houseEditorial}
+        locale={locale}
         imageSrc="/assets/images/p2.webp"
-        imageAlt="Najibzadeh tailoring"
-        eyebrow="فصل تازه"
-        title="برای لحظه‌هایی که در خاطر می‌مانند."
-        description="خیاطی ماندگار، رایحه‌های متمایز و انتخاب‌هایی سنجیده؛ برای سبک زندگی‌ای که کیفیت را در جزئیات تعریف می‌کند"
-        primaryAction={{
-          label: "مشاهده مجموعه",
-          href: "/shop",
-        }}
-        secondaryAction={{
-          label: "کشف خانه نجیب‌زاده",
-          href: "/about-us",
-        }}
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />

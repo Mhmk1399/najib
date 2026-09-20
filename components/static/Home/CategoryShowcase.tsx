@@ -1,8 +1,14 @@
 import Image from "next/image";
 import Link from "next/link";
-
 import { type CSSProperties } from "react";
 
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import type { HomeCopy } from "@/lib/i18n/home-copy";
+import { localizedHref } from "@/lib/i18n/routes";
 import { getStorefrontCatalog } from "@/services/catalog/storefront";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
@@ -23,9 +29,8 @@ export type CategoryItem = {
 
 type CategoryShowcaseProps = {
   categories?: CategoryItem[];
-  eyebrow?: string;
-  title?: string;
-  description?: string;
+  copy: HomeCopy["categories"];
+  locale: Locale;
   className?: string;
 };
 
@@ -38,14 +43,14 @@ type LocalizedText = {
 type CatalogImageAsset = {
   _id: unknown;
   url?: string;
-  alt?: LocalizedText;
+  alt?: LocalizedText | string;
   objectFit?: string;
   objectPosition?: string;
 };
 
 type CatalogCategoryRecord = {
   _id: unknown;
-  name?: LocalizedText;
+  name?: LocalizedText | string;
   slug: string;
   thumbnailImageId?: unknown;
   thumbnailObjectFit?: string;
@@ -71,10 +76,25 @@ function idOf(value: unknown) {
   return "";
 }
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return (
-    value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback
-  );
+function localizedText(
+  value: LocalizedText | string | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  if (typeof value === "string") return value.trim() || fallback;
+
+  const priorities: Record<Locale, Array<keyof LocalizedText>> = {
+    fa: ["fa", "en", "ar"],
+    en: ["en", "fa", "ar"],
+    ar: ["ar", "fa", "en"],
+  };
+
+  for (const key of priorities[locale]) {
+    const candidate = value?.[key]?.trim();
+    if (candidate) return candidate;
+  }
+
+  return fallback;
 }
 
 function imageFitOf(value: string | undefined): CSSProperties["objectFit"] {
@@ -91,8 +111,10 @@ function imageFitOf(value: string | undefined): CSSProperties["objectFit"] {
   return "cover";
 }
 
-export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
-  const catalog = (await getStorefrontCatalog()) as unknown as {
+export async function getHomeCategoryShowcaseItems(
+  locale: Locale,
+): Promise<CategoryItem[]> {
+  const catalog = (await getStorefrontCatalog(locale)) as unknown as {
     categories?: CatalogCategoryRecord[];
     images?: CatalogImageAsset[];
   };
@@ -102,7 +124,7 @@ export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
   );
 
   return (catalog.categories ?? []).map((category) => {
-    const name = fa(category.name, category.slug);
+    const name = localizedText(category.name, locale, category.slug);
     const banner = category.pageContent?.primaryBanner;
     const imageId = category.thumbnailImageId ?? banner?.imageId;
     const image = imageMap.get(idOf(imageId));
@@ -113,7 +135,7 @@ export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
       href: `/${category.slug}`,
       image: image?.url || FALLBACK_IMAGE,
       imageAssetId: image ? idOf(image._id) : undefined,
-      imageAlt: fa(image?.alt, name),
+      imageAlt: localizedText(image?.alt, locale, name),
       imageFit: imageFitOf(
         category.thumbnailObjectFit ?? banner?.objectFit ?? image?.objectFit,
       ),
@@ -132,12 +154,13 @@ export async function getHomeCategoryShowcaseItems(): Promise<CategoryItem[]> {
 
 export function CategoryShowcase({
   categories = [],
-  eyebrow = "دسته‌بندی‌ها",
-  title = "دسته‌بندی‌های نجیب‌زاده",
-  description = "مجموعه‌های اصلی نجیب‌زاده را ببینید و بر اساس سلیقه، نیاز و موقعیت خود انتخاب کنید.",
+  copy,
+  locale,
   className = "",
 }: CategoryShowcaseProps) {
   const visibleCategories = categories;
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
 
   const themeVars = {
     "--cat-bg": lightTokens.surfaceBrand,
@@ -155,19 +178,19 @@ export function CategoryShowcase({
     <section
       aria-labelledby="category-showcase-title"
       style={themeVars}
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       className={`relative w-full overflow-hidden bg-[var(--cat-bg)] text-[var(--cat-text)] ${className}`}
     >
       <div className="mx-auto w-full max-w-[1760px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10 xl:py-28">
         <header className="mx-auto flex max-w-[820px] flex-col items-center text-center">
-          {eyebrow ? (
+          {copy.eyebrow ? (
             <div className="flex items-center justify-center gap-3 text-[10px] font-medium text-[var(--cat-accent)] sm:text-[11px]">
               <span
                 aria-hidden="true"
                 className="h-px w-7 bg-[var(--cat-accent)]/70"
               />
-              <span>{eyebrow}</span>
+              <span>{copy.eyebrow}</span>
               <span
                 aria-hidden="true"
                 className="h-px w-7 bg-[var(--cat-accent)]/70"
@@ -179,12 +202,12 @@ export function CategoryShowcase({
             id="category-showcase-title"
             className="mt-5 max-w-[760px] text-balance text-[clamp(2.45rem,8vw,4.9rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--cat-text)] sm:mt-6 lg:text-[clamp(3.7rem,4.8vw,5.3rem)]"
           >
-            {title}
+            {copy.title}
           </h2>
 
-          {description ? (
+          {copy.description ? (
             <p className="mt-5 max-w-[590px] text-pretty text-[12px] leading-7 text-[var(--cat-muted)] sm:text-[13px] lg:mt-6 lg:text-[14px] lg:leading-8">
-              {description}
+              {copy.description}
             </p>
           ) : null}
 
@@ -198,7 +221,13 @@ export function CategoryShowcase({
           className={`mx-auto mt-10 grid w-full gap-2.5 sm:mt-12 sm:gap-3 lg:mt-14 lg:gap-4 ${gridLayout}`}
         >
           {visibleCategories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
+            <CategoryCard
+              key={category.id}
+              category={category}
+              copy={copy}
+              locale={locale}
+              direction={direction}
+            />
           ))}
         </div>
       </div>
@@ -208,7 +237,9 @@ export function CategoryShowcase({
 
 function getGridLayout(count: number) {
   if (count === 1) return "max-w-[620px] grid-cols-1";
+
   if (count === 2) return "max-w-[1120px] grid-cols-1 sm:grid-cols-2";
+
   if (count === 4) {
     return "max-w-[1560px] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4";
   }
@@ -220,11 +251,21 @@ function getGridLayout(count: number) {
    CATEGORY CARD
 ============================================================================ */
 
-function CategoryCard({ category }: { category: CategoryItem }) {
+function CategoryCard({
+  category,
+  copy,
+  locale,
+  direction,
+}: {
+  category: CategoryItem;
+  copy: HomeCopy["categories"];
+  locale: Locale;
+  direction: "rtl" | "ltr";
+}) {
   return (
     <Link
-      href={category.href}
-      aria-label={`مشاهده دسته ${category.name}`}
+      href={localizedHref(category.href, locale)}
+      aria-label={`${copy.categoryAriaPrefix} ${category.name}`}
       data-image-story-id={category.imageAssetId}
       data-image-story-url={category.image}
       className="group relative isolate mx-auto block aspect-[4/5] w-full max-w-[620px] overflow-hidden bg-[#0B0B0B] text-white outline-none focus-visible:ring-2 focus-visible:ring-black/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cat-bg)] sm:aspect-[3/4] lg:max-w-none"
@@ -258,8 +299,6 @@ function CategoryCard({ category }: { category: CategoryItem }) {
       />
 
       <div className="absolute inset-x-5 bottom-6 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:bottom-8">
-        
-
         <h3 className="mt-2 text-balance text-[clamp(2.15rem,10vw,3.9rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-[clamp(2.3rem,6vw,4rem)] md:text-[clamp(2.3rem,3.5vw,4rem)]">
           {category.name}
         </h3>
@@ -270,8 +309,8 @@ function CategoryCard({ category }: { category: CategoryItem }) {
         />
 
         <span className="mt-4 inline-flex items-center gap-2 text-[10px] font-medium text-white/68 transition-colors duration-300 group-hover:text-white sm:text-[11px]">
-          مشاهده دسته
-          <ArrowLeftIcon />
+          {copy.categoryActionLabel}
+          <DirectionalArrow direction={direction} />
         </span>
       </div>
     </Link>
@@ -282,13 +321,18 @@ function CategoryCard({ category }: { category: CategoryItem }) {
    ICON
 ============================================================================ */
 
-function ArrowLeftIcon() {
+function DirectionalArrow({ direction }: { direction: "rtl" | "ltr" }) {
+  const motionClass =
+    direction === "rtl"
+      ? "group-hover:-translate-x-1"
+      : "rotate-180 group-hover:translate-x-1";
+
   return (
     <svg
       viewBox="0 0 16 16"
       fill="none"
       aria-hidden="true"
-      className="size-3.5 transition-transform duration-300 group-hover:-translate-x-1 motion-reduce:transition-none"
+      className={`size-3.5 transition-transform duration-300 motion-reduce:transition-none ${motionClass}`}
     >
       <path
         d="M13.5 8H3M6.5 4.5L3 8L6.5 11.5"
