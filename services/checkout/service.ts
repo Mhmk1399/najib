@@ -83,6 +83,7 @@ type CheckoutRecord = {
   expiresAt: Date;
   correlationId: string;
   inventoryReservationId?: string;
+  paymentId?: unknown;
   createdAt?: Date;
   updatedAt?: Date;
 };
@@ -102,6 +103,7 @@ function serializeCheckout(value: CheckoutRecord, idempotent = false) {
     expiresAt: value.expiresAt,
     correlationId: value.correlationId,
     inventoryReservationId: value.inventoryReservationId ?? null,
+    paymentId: value.paymentId ? String(value.paymentId) : null,
     itemCount: value.items.reduce((sum, item) => sum + item.quantity, 0),
     subtotalMinor: value.items.reduce(
       (sum, item) => sum + item.quantity * item.unitPriceMinor,
@@ -231,6 +233,42 @@ async function allocateInventory(
 }
 
 export const checkoutService = {
+  async destinations() {
+    await connectToDatabase();
+    const activeLocations = await InventoryLocation.find({ isActive: true, storeId: { $ne: null } })
+      .select("cityId storeId")
+      .lean();
+    const cityIds = [...new Set(activeLocations.map((item) => String(item.cityId)))];
+    const storeIds = [...new Set(activeLocations.map((item) => String(item.storeId)))];
+    const [cities, stores] = await Promise.all([
+      City.find({ _id: { $in: cityIds }, isActive: true })
+        .select("code name")
+        .sort({ code: 1 })
+        .lean(),
+      Store.find({ _id: { $in: storeIds }, cityId: { $in: cityIds }, isActive: true })
+        .select("code name cityId address")
+        .sort({ code: 1 })
+        .lean(),
+    ]);
+    const activeCityIds = new Set(cities.map((city) => String(city._id)));
+    return {
+      cities: cities.map((city) => ({
+        id: String(city._id),
+        code: city.code,
+        name: city.name,
+      })),
+      stores: stores
+        .filter((store) => activeCityIds.has(String(store.cityId)))
+        .map((store) => ({
+          id: String(store._id),
+          code: store.code,
+          cityId: String(store.cityId),
+          name: store.name,
+          address: store.address ?? null,
+        })),
+    };
+  },
+
   async start(accountId: string, value: unknown) {
     const input = startCheckoutSchema.parse(value);
     await connectToDatabase();

@@ -16,13 +16,20 @@ import {
   useRef,
   useState,
 } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
 import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
+import {
+  cartQueryKey,
+  CommerceApiError,
+  commerceFetch,
+  currentPath,
+  loginHref,
+} from "@/lib/commerce/client";
 
 import {
   COLOR_OPTIONS,
@@ -48,6 +55,7 @@ type Product = Omit<FakeShopProduct, "category" | "images"> & {
   images: ShopProductImage[];
   colorSwatches?: ShopColorOption[];
   sizeOptions?: ShopSizeOption[];
+  variants: StorefrontVariantRecord[];
 };
 
 type CategoryOption = {
@@ -89,6 +97,16 @@ type StorefrontProductRecord = {
   colorIds?: string[];
   sizeIds?: string[];
   createdAt?: string;
+  variants?: StorefrontVariantRecord[];
+};
+
+type StorefrontVariantRecord = {
+  _id: string;
+  productId: string;
+  colorId: string;
+  sizeId: string;
+  sku: string;
+  isActive: boolean;
 };
 
 type StorefrontProductPayload = {
@@ -334,8 +352,17 @@ function mapStorefrontProduct({
   };
   const materials =
     product.material?.fa?.map((item) => item.toLowerCase()) ?? [];
-  const colorIds = cleanList(product.colorIds ?? []);
-  const sizeIds = cleanList(product.sizeIds ?? []);
+  const activeVariants = (product.variants ?? []).filter((variant) => variant.isActive);
+  const colorIds = cleanList(
+    activeVariants.length
+      ? activeVariants.map((variant) => idOf(variant.colorId))
+      : (product.colorIds ?? []),
+  );
+  const sizeIds = cleanList(
+    activeVariants.length
+      ? activeVariants.map((variant) => idOf(variant.sizeId))
+      : (product.sizeIds ?? []),
+  );
   const colorSwatches = colorIds.map((colorId) => {
     const color = colorMap.get(colorId);
     return {
@@ -375,6 +402,7 @@ function mapStorefrontProduct({
     materials,
     origin: firstLine(fa(product.description), 42),
     images: images.length ? images : [fallbackImage],
+    variants: activeVariants,
   };
 }
 
@@ -2011,6 +2039,7 @@ function ProductCard({
   panelSide?: ProductPanelSide;
 }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const panelId = useId();
   const panelRef = useRef<HTMLDivElement | null>(null);
   const previewTrackRef = useRef<HTMLDivElement | null>(null);
@@ -2340,6 +2369,15 @@ function ProductCard({
   }
   function selectColor(cid: string, ci: number) {
     setSelColorId(cid);
+    if (
+      selSizeId &&
+      !product.variants.some(
+        (variant) =>
+          idOf(variant.colorId) === cid && idOf(variant.sizeId) === selSizeId,
+      )
+    ) {
+      setSelSizeId("");
+    }
     if (productImages[ci]) setActiveImgIdx(ci);
   }
   function toggleFav() {
@@ -2358,9 +2396,26 @@ function ProductCard({
       return;
     }
     if (cartState !== "idle") return;
+    const variant = product.variants.find(
+      (candidate) =>
+        idOf(candidate.colorId) === selColorId &&
+        idOf(candidate.sizeId) === selSizeId,
+    );
+    if (!variant) {
+      setLockedOpen(true);
+      toast.error("این انتخاب موجود نیست", {
+        description: "ترکیب دیگری از رنگ و سایز را انتخاب کنید.",
+      });
+      return;
+    }
     setCartState("adding");
     try {
-      await new Promise((r) => window.setTimeout(r, 520));
+      await commerceFetch("/api/account/cart/items", {
+        method: "POST",
+        body: JSON.stringify({ variantId: idOf(variant._id), quantity: 1 }),
+      });
+      await queryClient.invalidateQueries({ queryKey: cartQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["account"] });
       setCartState("added");
       toast.success("به سبد خرید اضافه شد", {
         description: [
@@ -2376,14 +2431,24 @@ function ProductCard({
           .filter(Boolean)
           .join(" — "),
       });
-      await new Promise((r) => window.setTimeout(r, 760));
+      await new Promise((resolve) => window.setTimeout(resolve, 760));
       setCartState("idle");
       setLockedOpen(false);
       if (compact) setHoverOpen(false);
-    } catch {
+    } catch (error) {
       setCartState("idle");
+      if (error instanceof CommerceApiError && error.status === 401) {
+        toast.info("ابتدا وارد حساب شوید", {
+          description: "پس از ورود می‌توانید محصول را به سبد اضافه کنید.",
+        });
+        window.location.assign(loginHref(currentPath()));
+        return;
+      }
       toast.error("افزودن محصول ناموفق بود", {
-        description: "دوباره برای افزودن محصول تلاش کنید.",
+        description:
+          error instanceof Error
+            ? error.message
+            : "دوباره برای افزودن محصول تلاش کنید.",
       });
     }
   }
@@ -2842,6 +2907,11 @@ function ProductCard({
                 >
                   {sizeOptions.map((size) => {
                     const active = selSizeId === size.id;
+                    const available = product.variants.some(
+                      (variant) =>
+                        idOf(variant.colorId) === selColorId &&
+                        idOf(variant.sizeId) === size.id,
+                    );
                     return (
                       <button
                         key={size.id}
@@ -2849,6 +2919,7 @@ function ProductCard({
                         tabIndex={hiddenTab}
                         aria-label={`انتخاب سایز ${size.label}`}
                         aria-pressed={active}
+                        disabled={!available}
                         onClick={(e) => {
                           setSelSizeId(size.id);
                           centerOption(e.currentTarget);
@@ -2860,7 +2931,9 @@ function ProductCard({
                         } ${
                           active
                             ? "border-[var(--shop-copper)] bg-white/[0.08] text-white"
-                            : "border-white/14 text-white/50 hover:border-white/42 hover:text-white"
+                            : available
+                              ? "border-white/14 text-white/50 hover:border-white/42 hover:text-white"
+                              : "cursor-not-allowed border-white/8 text-white/20 line-through"
                         }`}
                       >
                         {size.label}

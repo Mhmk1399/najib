@@ -22,6 +22,14 @@ import { useToast } from "@/components/ui/CustomToast";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { ShoppingBag } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  cartQueryKey,
+  CommerceApiError,
+  commerceFetch,
+  currentPath,
+  loginHref,
+} from "@/lib/commerce/client";
 
 /* ==========================================================================
    TYPES
@@ -104,6 +112,13 @@ export type ProductDetailData = {
 
   sizes?: ProductSizeOption[];
 
+  variants?: Array<{
+    id: string;
+    colorId: string;
+    sizeId: string;
+    sku: string;
+  }>;
+
   sections: ProductDetailSection[];
 
   shippingNote?: string;
@@ -121,6 +136,7 @@ type ProductDetailPageProps = {
 
 export function ProductDetailPage({ product }: ProductDetailPageProps) {
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   const stageRef = useRef<HTMLElement | null>(null);
 
@@ -188,10 +204,16 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
         label: size.label,
 
-        disabled: size.disabled,
+        disabled:
+          size.disabled ||
+          !(product.variants ?? []).some(
+            (variant) =>
+              variant.colorId === selectedColorId &&
+              variant.sizeId === size.value,
+          ),
       })) ?? []
     );
-  }, [product.sizes]);
+  }, [product.sizes, product.variants, selectedColorId]);
 
   /* ------------------------------------------------------------------------
      MOBILE SHEET VISIBILITY
@@ -247,6 +269,16 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
   function selectColor(colorId: string) {
     setSelectedColorId(colorId);
 
+    if (
+      selectedSize &&
+      !(product.variants ?? []).some(
+        (variant) =>
+          variant.colorId === colorId && variant.sizeId === selectedSize,
+      )
+    ) {
+      setSelectedSize(null);
+    }
+
     setZoomIndex(null);
   }
 
@@ -269,28 +301,49 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
     setSizeError(undefined);
 
+    const variant = (product.variants ?? []).find(
+      (candidate) =>
+        candidate.colorId === selectedColorId &&
+        candidate.sizeId === selectedSize,
+    );
+
+    if (!variant) {
+      setSizeError("این ترکیب رنگ و سایز قابل فروش نیست.");
+      toast.error("این انتخاب موجود نیست", {
+        description: "ترکیب دیگری از رنگ و سایز را انتخاب کنید.",
+      });
+      return;
+    }
+
     setAddingToBag(true);
-
-    /*
-     * FAKE REQUEST
-     *
-     * بعداً:
-     *
-     * await addProductToCart({
-     *   productId: product.id,
-     *   colorId: selectedColorId,
-     *   size: selectedSize,
-     *   quantity: 1,
-     * });
-     */
-
-    await new Promise((resolve) => window.setTimeout(resolve, 650));
-
-    setAddingToBag(false);
-
-    toast.success("به سبد خرید اضافه شد", {
-      description: `${product.name}${selectedSize ? ` - ${selectedSize}` : ""}`,
-    });
+    try {
+      await commerceFetch("/api/account/cart/items", {
+        method: "POST",
+        body: JSON.stringify({ variantId: variant.id, quantity: 1 }),
+      });
+      await queryClient.invalidateQueries({ queryKey: cartQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["account"] });
+      const sizeLabel = product.sizes?.find(
+        (size) => size.value === selectedSize,
+      )?.label;
+      toast.success("به سبد خرید اضافه شد", {
+        description: `${product.name}${sizeLabel ? ` — سایز ${sizeLabel}` : ""}`,
+      });
+    } catch (error) {
+      if (error instanceof CommerceApiError && error.status === 401) {
+        toast.info("ابتدا وارد حساب شوید", {
+          description: "پس از ورود می‌توانید این انتخاب را به سبد اضافه کنید.",
+        });
+        window.location.assign(loginHref(currentPath()));
+        return;
+      }
+      toast.error("افزودن محصول ناموفق بود", {
+        description:
+          error instanceof Error ? error.message : "دوباره تلاش کنید.",
+      });
+    } finally {
+      setAddingToBag(false);
+    }
   }
 
   /* ------------------------------------------------------------------------

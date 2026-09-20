@@ -440,7 +440,7 @@ export const paymentService = {
           correlationId: currentCheckout.correlationId,
           destination: "events",
           payload: { orderId: order.id, userId: accountId, phone: user.phone ?? null },
-        }], { session }),
+        }], { session, ordered: true }),
       ]);
       return { payment: currentPayment, order, user, idempotent: false };
     });

@@ -58,6 +58,7 @@ added to the Admin navigation and interface.
 | Account summary | `GET /api/account/summary` | Complete; safe profile, real order totals, spending, active cart, address count, and recent orders |
 | Customer orders | `GET /api/account/orders`, `GET /api/account/orders/:id` | Complete; validated filters/pagination and ownership enforced in database queries |
 | Current cart | `GET/DELETE /api/account/cart`, `POST /api/account/cart/items`, `PATCH/DELETE /api/account/cart/items/:id` | Complete for customer-owned read, add, quantity update, item removal, and clear operations; sellability and server-side prices are revalidated on every write |
+| Checkout destinations | `GET /api/storefront/checkout-destinations` | Complete; returns only active localized cities and stores backed by active inventory locations, without warehouse or stock details |
 | Checkout reservation | `POST /api/account/checkouts`, `GET/PATCH /api/account/checkouts/:id` | Complete for customer-owned start/read/cancel: reprices the cart, validates destination, reserves exact variants transactionally for 15 minutes, prevents duplicate reservation with an idempotency key, and releases stock on cancel |
 | Temporary payment | `POST /api/account/checkouts/:id/payment-intents`, `GET /api/account/payments/:id`, `POST /api/account/payments/:id/confirm` | Complete with development-only mock providers: failed attempts remain retryable; verified success atomically commits inventory, creates the order, completes checkout, converts the cart, and requests confirmation SMS |
 | Customer profile | `GET/PATCH /api/account/profile` | Complete; full saved-address read and strict whitelist for editable profile fields |
@@ -103,8 +104,12 @@ Before starting a new domain, keep `npm run typecheck`, `npm run lint`,
 `npm run build`, and `npm run test:api` green. Production also requires an
 explicit `AUTH_ACCESS_TOKEN_SECRET` of at least 32 bytes.
 
-The Inventory backend contract, customer cart/checkout flow, and temporary
-development Payment/SMS adapters are complete. The next batch is:
+The Inventory backend contract, customer cart/checkout flow, temporary
+development Payment/SMS adapters, and storefront Cart/Checkout interface are
+complete. Storefront products resolve an exact active color/size variant before
+calling the Cart API; the real Cart supports quantity/removal/clear actions and
+Checkout exposes destination selection, the 15-minute reservation countdown,
+cancel, mock payment outcomes, and order confirmation. The next batch is:
 
 1. Replace the temporary adapters when Payment and SMS provider credentials and
    callback contracts are available.

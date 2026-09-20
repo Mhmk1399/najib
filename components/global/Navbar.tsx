@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { usePathname } from "next/navigation";
 import { Languages } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   type ReactNode,
@@ -38,6 +39,7 @@ import {
   translateShellText,
 } from "@/lib/i18n/shell-copy";
 import { themeClasses } from "@/theme/theme-colors";
+import { cartQueryKey, fetchAccountCart } from "@/lib/commerce/client";
 
 /* ==========================================================================
    TYPES
@@ -644,6 +646,11 @@ export default function Navbar({
       })),
     [copy],
   );
+   const cartQuery = useQuery({
+    queryKey: cartQueryKey,
+    queryFn: ({ signal }) => fetchAccountCart(signal),
+    retry: false,
+  });
 
   const [open, setOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
@@ -1013,13 +1020,13 @@ export default function Navbar({
               href={toLocalizedHref("/cart")}
               label={copy.navbar.cart}
               badge={2}
+              href="/cart"
+              label="سبد خرید"
               onReadableSurface={readableNavbar}
-              locale={locale}
-            >
+              locale={locale}>
               <BagIcon />
             </NavAction>
           </div>
-        </div>
       </header>
 
       {languageModalOpen && (
