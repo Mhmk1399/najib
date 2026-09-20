@@ -302,6 +302,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   profile: "حساب کاربری",
   wishlist: "علاقه‌مندی‌ها",
   cart: "سبد خرید",
+  checkout: "تکمیل خرید",
   about: "درباره ما",
   contact: "تماس با ما",
   campaigns: "کمپین‌ها",
@@ -686,7 +687,9 @@ export default function Navbar({
     };
   }, [hideMenu, menuMounted]);
 
-  const readableNavbar = menuMounted || scrolled;
+  const commerceSurface = pathname === "/cart" || pathname === "/checkout";
+  const commerceLightSurface = commerceSurface && !menuMounted;
+  const readableNavbar = menuMounted || scrolled || commerceSurface;
   const overlayBreadcrumbClass =
     overlayTone === "dark" ? "text-white" : "text-white";
   if (
@@ -710,6 +713,8 @@ export default function Navbar({
           "motion-reduce:transition-none",
           menuMounted
             ? cx(themeClasses.megaMenu, themeClasses.border)
+            : commerceLightSurface
+              ? "border-black/[0.08] bg-[#F7F5F0]/[0.96] text-[#231F20] shadow-[0_10px_40px_rgba(9,9,9,0.055)] backdrop-blur-2xl backdrop-saturate-150 dark:!border-black/[0.08] dark:!bg-[#F7F5F0]/[0.96] dark:!text-[#231F20]"
             : scrolled
               ? cx(
                   NAVBAR_GLASS_CLASSES,
@@ -736,7 +741,9 @@ export default function Navbar({
                 "h-11 !min-h-0 !border-0 !bg-transparent !px-0 !text-current",
                 "gap-3 !tracking-normal",
                 "transition-opacity duration-200 hover:!border-0 hover:!bg-transparent hover:opacity-60",
-                readableNavbar
+                commerceLightSurface
+                  ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
+                  : readableNavbar
                   ? NAVBAR_SURFACE_CHROME_CLASSES
                   : NAVBAR_OVERLAY_CHROME_CLASSES,
               )}
@@ -753,7 +760,9 @@ export default function Navbar({
               "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
               "transition-[opacity,transform,filter] duration-300",
               "hover:scale-[1.025] hover:opacity-80",
-              readableNavbar
+              commerceLightSurface
+                ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
+                : readableNavbar
                 ? NAVBAR_SURFACE_CHROME_CLASSES
                 : NAVBAR_OVERLAY_CHROME_CLASSES,
             )}
@@ -767,7 +776,12 @@ export default function Navbar({
               width={84}
               height={84}
               priority
-              className="h-auto w-[66px] sm:w-[72px] md:w-[78px]"
+              className={cx(
+                "h-auto w-[66px] sm:w-[72px] md:w-[78px]",
+                commerceLightSurface
+                  ? "brightness-0"
+                  : readableNavbar && "brightness-0 dark:invert",
+              )}
             />
           </Link>
 
@@ -777,6 +791,7 @@ export default function Navbar({
                 href="/profile"
                 label="حساب کاربری"
                 onReadableSurface={readableNavbar}
+                forceLightSurface={commerceLightSurface}
               >
                 <ProfileIcon />
               </NavAction>
@@ -787,6 +802,7 @@ export default function Navbar({
               label="سبد خرید"
               badge={cartQuery.data?.itemCount || undefined}
               onReadableSurface={readableNavbar}
+              forceLightSurface={commerceLightSurface}
             >
               <BagIcon />
             </NavAction>
@@ -801,11 +817,15 @@ export default function Navbar({
           aria-label="مسیر صفحه"
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
-            scrolled ? themeClasses.textAccent : overlayBreadcrumbClass,
+            commerceSurface
+              ? "text-[#231F20] dark:!text-[#231F20]"
+              : scrolled
+                ? themeClasses.textAccent
+                : overlayBreadcrumbClass,
           )}
         >
           <div className="mx-auto max-w-[1920px] overflow-x-auto px-4 py-3 text-right sm:px-6 lg:px-10">
-            <ol className="flex items-center gap-2 whitespace-nowrap text-[9px] font-medium tracking-normal">
+            <ol className="flex items-center gap-2 whitespace-nowrap text-[11px] font-medium tracking-normal">
               <li>
                 <Link
                   href="/"
@@ -1489,12 +1509,14 @@ function NavAction({
   label,
   badge,
   onReadableSurface,
+  forceLightSurface,
   children,
 }: {
   href: string;
   label: string;
   badge?: number;
   onReadableSurface: boolean;
+  forceLightSurface?: boolean;
   children: ReactNode;
 }) {
   return (
@@ -1509,7 +1531,9 @@ function NavAction({
         className={cx(
           "!h-11 !w-10 !min-h-0 !border-0 !bg-transparent !p-0 !text-current md:!w-11",
           "hover:!border-0 hover:!bg-transparent hover:opacity-60",
-          onReadableSurface
+          forceLightSurface
+            ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
+            : onReadableSurface
             ? NAVBAR_SURFACE_CHROME_CLASSES
             : NAVBAR_OVERLAY_CHROME_CLASSES,
         )}
@@ -1519,7 +1543,9 @@ function NavAction({
         <span
           className={cx(
             "pointer-events-none absolute left-0 top-0 flex min-h-[15px] min-w-[15px] items-center justify-center px-[3px] text-[7px] font-semibold leading-none",
-            onReadableSurface
+            forceLightSurface
+              ? "bg-[#0B0B0B] text-white"
+              : onReadableSurface
               ? "bg-[#0B0B0B] text-white dark:bg-white dark:text-[#0B0B0B]"
               : "bg-white text-black",
           )}

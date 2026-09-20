@@ -68,6 +68,8 @@ export function CheckoutPage() {
     queryFn: ({ signal }) =>
       commerceFetch<Checkout>(`/api/account/checkouts/${checkoutId}`, { signal }),
     enabled: Boolean(checkoutId),
+    retry: (count, error) =>
+      !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
   const checkout = checkoutQuery.data;
   const paymentId =
@@ -81,13 +83,15 @@ export function CheckoutPage() {
     queryFn: ({ signal }) =>
       commerceFetch<Payment>(`/api/account/payments/${paymentId}`, { signal }),
     enabled: Boolean(paymentId),
+    retry: (count, error) =>
+      !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
   const payment = paymentQuery.data;
 
   const reportMutationError = (title: string, error: unknown) => {
     if (error instanceof CommerceApiError && error.status === 401) {
       toast.info("نشست شما پایان یافته است", {
-        description: "برای ادامه Checkout دوباره وارد حساب شوید.",
+        description: "برای ادامه تکمیل خرید دوباره وارد حساب شوید.",
       });
       window.location.assign(loginHref("/checkout"));
       return;
@@ -126,7 +130,7 @@ export function CheckoutPage() {
 
   const paymentMutation = useMutation({
     mutationFn: async () => {
-      if (!checkoutId) throw new Error("Checkout هنوز ساخته نشده است.");
+      if (!checkoutId) throw new Error("رزرو خرید هنوز ساخته نشده است.");
       paymentKey.current ??= crypto.randomUUID();
       return commerceFetch<Payment>(`/api/account/checkouts/${checkoutId}/payment-intents`, {
         method: "POST",
@@ -168,7 +172,7 @@ export function CheckoutPage() {
 
   const cancelMutation = useMutation({
     mutationFn: () => {
-      if (!checkoutId) throw new Error("Checkout پیدا نشد.");
+      if (!checkoutId) throw new Error("رزرو خرید پیدا نشد.");
       return commerceFetch<Checkout>(`/api/account/checkouts/${checkoutId}`, {
         method: "PATCH",
         body: JSON.stringify({ action: "cancel" }),
@@ -186,7 +190,7 @@ export function CheckoutPage() {
       await queryClient.invalidateQueries({ queryKey: cartQueryKey });
       toast.info("رزرو لغو و موجودی آزاد شد");
     },
-    onError: (error) => reportMutationError("لغو Checkout انجام نشد", error),
+    onError: (error) => reportMutationError("لغو رزرو انجام نشد", error),
   });
 
   const stores = useMemo(
@@ -195,8 +199,22 @@ export function CheckoutPage() {
   );
   const expiresAt = checkout ? new Date(checkout.expiresAt).getTime() : 0;
   const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
-  const expired = Boolean(checkout && remaining === 0 && checkout.status !== "completed");
+  const expired = Boolean(
+    checkout &&
+      (checkout.status === "expired" ||
+        (remaining === 0 && ["reserved", "payment_pending"].includes(checkout.status))),
+  );
+  const terminalCheckout = Boolean(
+    checkout && (expired || ["cancelled", "failed", "expired"].includes(checkout.status)),
+  );
+  const activeCheckout = Boolean(
+    checkout && ["reserved", "payment_pending"].includes(checkout.status) && !expired,
+  );
   const signedOut = cartQuery.error instanceof CommerceApiError && cartQuery.error.status === 401;
+  const checkoutSignedOut =
+    checkoutQuery.error instanceof CommerceApiError && checkoutQuery.error.status === 401;
+  const paymentSignedOut =
+    paymentQuery.error instanceof CommerceApiError && paymentQuery.error.status === 401;
   const cart = cartQuery.data;
 
   if (completedOrder || payment?.status === "succeeded") {
@@ -207,10 +225,10 @@ export function CheckoutPage() {
     <main dir="rtl" lang="fa" className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
       <div className="mx-auto w-full max-w-[1450px] px-5 sm:px-8 lg:px-12">
         <header className="border-b border-black/15 pb-7">
-          <p className="text-[10px] font-semibold tracking-[0.12em] text-[#C15427]">تکمیل خرید</p>
+          <p className="text-xs font-semibold tracking-[0.08em] text-[#C15427]">مسیر سفارش</p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-5">
-            <h1 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">Checkout</h1>
-            <ol className="flex items-center gap-2 text-[10px] text-black/45" aria-label="مراحل خرید">
+            <h1 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">تکمیل خرید</h1>
+            <ol className="flex items-center gap-2 text-[11px] text-black/60" aria-label="مراحل خرید">
               <Step active={!checkout} done={Boolean(checkout)} number="۱" label="انتخاب تحویل" />
               <span className="h-px w-5 bg-black/20" />
               <Step active={Boolean(checkout && !paymentId)} done={Boolean(paymentId)} number="۲" label="رزرو" />
@@ -229,13 +247,13 @@ export function CheckoutPage() {
         ) : null}
 
         {(cartQuery.isError && !signedOut) || destinationsQuery.isError ? (
-          <CheckoutState title="اطلاعات Checkout دریافت نشد" description={messageFor(cartQuery.error || destinationsQuery.error)}>
+          <CheckoutState title="اطلاعات تکمیل خرید دریافت نشد" description={messageFor(cartQuery.error || destinationsQuery.error)}>
             <Button type="button" variant="outline" size="lg" onClick={() => { void cartQuery.refetch(); void destinationsQuery.refetch(); }}>تلاش دوباره</Button>
           </CheckoutState>
         ) : null}
 
         {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
-          <CheckoutState title="سبد خرید خالی است" description="برای شروع Checkout ابتدا محصولی را به سبد اضافه کنید.">
+          <CheckoutState title="سبد خرید خالی است" description="برای شروع تکمیل خرید ابتدا محصولی را به سبد اضافه کنید.">
             <Button href="/shop" variant="black" size="lg">بازگشت به فروشگاه</Button>
           </CheckoutState>
         ) : null}
@@ -244,7 +262,29 @@ export function CheckoutPage() {
           <div className="grid gap-10 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-16">
             <section className="space-y-8">
               {checkoutId && checkoutQuery.isPending ? (
-                <div className="h-48 animate-pulse bg-white" aria-label="در حال بازیابی Checkout" />
+                <FlowLoading label="در حال بازیابی رزرو خرید" />
+              ) : checkoutId && checkoutQuery.isError ? (
+                <FlowState
+                  title={checkoutSignedOut ? "برای ادامه دوباره وارد حساب شوید" : "وضعیت رزرو دریافت نشد"}
+                  description={
+                    checkoutSignedOut
+                      ? "شناسه رزرو شما حفظ شده است و پس از ورود می‌توانید ادامه دهید."
+                      : "رزرو قبلی حذف نشده است. ارتباط را دوباره بررسی می‌کنیم تا سفارش تکراری ساخته نشود."
+                  }
+                >
+                  {checkoutSignedOut ? (
+                    <Button href={loginHref("/checkout")} variant="black" size="lg">ورود به حساب</Button>
+                  ) : (
+                    <Button type="button" variant="outline" size="lg" onClick={() => void checkoutQuery.refetch()}>دریافت دوباره وضعیت رزرو</Button>
+                  )}
+                </FlowState>
+              ) : terminalCheckout && checkout ? (
+                <FlowState
+                  title={checkout.status === "cancelled" ? "رزرو لغو شده است" : expired ? "زمان رزرو پایان یافته است" : "رزرو قابل ادامه نیست"}
+                  description="برای بررسی دوباره کالاها و شروع یک رزرو تازه به سبد خرید برگردید."
+                >
+                  <Button href="/cart" variant="black" size="lg">بازگشت به سبد خرید</Button>
+                </FlowState>
               ) : checkout ? (
                 <ReservationRail remaining={remaining} expired={expired} />
               ) : (
@@ -253,7 +293,7 @@ export function CheckoutPage() {
                     <MapPin className="mt-1 size-5 text-[#C15427]" />
                     <div>
                       <h2 className="text-xl font-semibold">محل تحویل و رزرو</h2>
-                      <p className="mt-2 text-xs leading-6 text-black/50">شهر و فروشگاهی را انتخاب کنید که موجودی فعال آن برای سفارش بررسی شود.</p>
+                      <p className="mt-2 text-xs leading-6 text-black/65">شهر و فروشگاهی را انتخاب کنید که موجودی فعال آن برای سفارش بررسی شود.</p>
                     </div>
                   </div>
                   <div className="mt-8 grid gap-6 sm:grid-cols-2">
@@ -279,13 +319,13 @@ export function CheckoutPage() {
                 </section>
               )}
 
-              {checkout && !expired ? (
+              {activeCheckout ? (
                 <section className="border-t-2 border-black bg-white p-6 sm:p-8">
                   <div className="flex items-start gap-4">
                     <ShieldCheck className="mt-1 size-5 text-[#C15427]" />
                     <div>
                       <h2 className="text-xl font-semibold">پرداخت آزمایشی</h2>
-                      <p className="mt-2 text-xs leading-6 text-black/50">تا زمان اتصال درگاه واقعی، این کنترل‌ها فقط نتیجه Provider آزمایشی را شبیه‌سازی می‌کنند. هیچ اطلاعات بانکی وارد نکنید.</p>
+                      <p className="mt-2 text-xs leading-6 text-black/65">تا زمان اتصال درگاه واقعی، این بخش فقط نتیجه پرداخت را برای آزمایش فرایند سفارش شبیه‌سازی می‌کند. هیچ اطلاعات بانکی وارد نکنید.</p>
                     </div>
                   </div>
 
@@ -293,9 +333,23 @@ export function CheckoutPage() {
                     <div className="mt-8">
                       <Button type="button" variant="black" size="lg" loading={paymentMutation.isPending} onClick={() => paymentMutation.mutate()}>آماده‌سازی پرداخت</Button>
                     </div>
-                  ) : (
+                  ) : paymentQuery.isPending ? (
+                    <FlowLoading label="در حال دریافت وضعیت پرداخت" compact />
+                  ) : paymentQuery.isError ? (
+                    <FlowState
+                      title={paymentSignedOut ? "برای ادامه پرداخت وارد حساب شوید" : "وضعیت پرداخت دریافت نشد"}
+                      description="تا مشخص‌شدن وضعیت فعلی، امکان ارسال درخواست پرداخت تازه وجود ندارد."
+                      compact
+                    >
+                      {paymentSignedOut ? (
+                        <Button href={loginHref("/checkout")} variant="black" size="lg">ورود به حساب</Button>
+                      ) : (
+                        <Button type="button" variant="outline" size="lg" onClick={() => void paymentQuery.refetch()}>دریافت دوباره وضعیت پرداخت</Button>
+                      )}
+                    </FlowState>
+                  ) : paymentQuery.isSuccess ? (
                     <div className="mt-8 border border-dashed border-[#C15427]/55 bg-[#F6F2EB] p-5">
-                      <p className="text-[10px] font-semibold text-[#C15427]">محیط آزمایشی / MOCK</p>
+                      <p className="text-xs font-semibold text-[#C15427]">محیط پرداخت آزمایشی</p>
                       <p className="mt-2 text-sm">یکی از نتیجه‌های زیر را برای تست جریان سفارش انتخاب کنید.</p>
                       {payment?.status === "failed" ? <p className="mt-3 text-xs text-[#A33A32]">تلاش قبلی ناموفق بود؛ در صورت اعتبار رزرو می‌توانید دوباره امتحان کنید.</p> : null}
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -307,15 +361,15 @@ export function CheckoutPage() {
                         </Button>
                       </div>
                     </div>
-                  )}
+                  ) : null}
                 </section>
               ) : null}
 
-              {checkout ? (
+              {activeCheckout ? (
                 <div className="flex flex-wrap items-center justify-between gap-4 border-t border-black/15 pt-5">
-                  <p className="text-xs leading-6 text-black/50">لغو Checkout رزرو موجودی را فوراً آزاد می‌کند.</p>
+                  <p className="text-xs leading-6 text-black/65">لغو رزرو، موجودی نگه‌داشته‌شده را فوراً آزاد می‌کند.</p>
                   <button type="button" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate()} className="inline-flex min-h-11 items-center gap-2 text-xs text-[#A33A32] underline underline-offset-4 disabled:opacity-35">
-                    <X className="size-3.5" /> {cancelMutation.isPending ? "در حال لغو…" : "لغو Checkout"}
+                    <X className="size-3.5" /> {cancelMutation.isPending ? "در حال لغو…" : "لغو رزرو"}
                   </button>
                 </div>
               ) : null}
@@ -333,14 +387,16 @@ function ReservationRail({ remaining, expired }: { remaining: number; expired: b
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const progress = Math.max(0, Math.min(100, (remaining / (15 * 60)) * 100));
+  const timer = `${formatPersianInteger(minutes, 2)}:${formatPersianInteger(seconds, 2)}`;
+  const announcement = reservationAnnouncement(remaining, expired);
   return (
-    <section className="border-t-2 border-[#C15427] bg-[#111] p-6 text-white sm:p-8" aria-live="polite">
+    <section className="border-t-2 border-[#C15427] bg-[#111] p-6 text-white sm:p-8">
       <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-3"><Clock3 className="size-5 text-[#C15427]" /><div><p className="text-sm font-semibold">رزرو اختصاصی موجودی</p><p className="mt-1 text-[10px] text-white/55">رنگ و سایز انتخابی برای شما نگه داشته شده است.</p></div></div>
-        <strong className="text-2xl tabular-nums" dir="ltr">{expired ? "۰۰:۰۰" : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`}</strong>
+        <div className="flex items-center gap-3"><Clock3 className="size-5 text-[#C15427]" /><div><p className="text-sm font-semibold">رزرو اختصاصی موجودی</p><p className="mt-1 text-xs leading-5 text-white/75">رنگ و سایز انتخابی برای شما نگه داشته شده است.</p></div></div>
+        <strong className="text-2xl tabular-nums" dir="ltr" role="timer" aria-label={`${formatPersianInteger(minutes)} دقیقه و ${formatPersianInteger(seconds)} ثانیه باقی مانده`}>{expired ? "۰۰:۰۰" : timer}</strong>
       </div>
       <div className="mt-6 h-px bg-white/15"><div className="h-px bg-[#C15427] transition-[width] duration-1000" style={{ width: `${progress}%` }} /></div>
-      {expired ? <p className="mt-4 text-xs text-[#F0A483]">زمان رزرو تمام شده است. به سبد برگردید و Checkout را دوباره شروع کنید.</p> : null}
+      <span className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
     </section>
   );
 }
@@ -352,19 +408,19 @@ function OrderSummary({ cart }: { cart: NonNullable<Awaited<ReturnType<typeof fe
       <div className="mt-6 divide-y divide-black/10 border-y border-black/10">
         {cart.items.map((item) => (
           <div key={item.id} className="flex justify-between gap-5 py-4 text-xs leading-6">
-            <div><p className="font-semibold">{item.productName}</p><p className="text-black/45">{item.colorName} · {item.sizeName} · تعداد {new Intl.NumberFormat("fa-IR").format(item.quantity)}</p></div>
+            <div><p className="font-semibold">{item.productName}</p><p className="text-black/65">{item.colorName} · {item.sizeName} · تعداد {new Intl.NumberFormat("fa-IR").format(item.quantity)}</p></div>
             <span className="shrink-0 tabular-nums">{formatMinor(item.lineTotalMinor, cart.currency)}</span>
           </div>
         ))}
       </div>
       <div className="flex items-center justify-between pt-6"><span className="font-semibold">مبلغ کالاها</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong></div>
-      <p className="mt-4 text-[10px] leading-5 text-black/45">هزینه ارسال در این نسخه محاسبه نمی‌شود و تخفیف یا مالیات ساختگی اعمال نشده است.</p>
+      <p className="mt-4 text-xs leading-6 text-black/65">هزینه ارسال در این نسخه محاسبه نمی‌شود و تخفیف یا مالیات ساختگی اعمال نشده است.</p>
     </aside>
   );
 }
 
 function Step({ active, done, number, label }: { active: boolean; done: boolean; number: string; label: string }) {
-  return <li className={`flex items-center gap-2 ${active || done ? "text-black" : ""}`}><span className={`grid size-6 place-items-center border ${active || done ? "border-[#C15427]" : "border-black/20"}`}>{done ? <Check className="size-3 text-[#C15427]" /> : number}</span><span className="hidden sm:inline">{label}</span></li>;
+  return <li aria-current={active ? "step" : undefined} className={`flex items-center gap-1.5 ${active || done ? "text-black" : ""}`}><span className={`grid size-6 shrink-0 place-items-center border ${active || done ? "border-[#C15427]" : "border-black/20"}`}>{done ? <Check className="size-3 text-[#C15427]" aria-hidden /> : number}</span><span className="text-[10px] sm:text-[11px]">{label}</span></li>;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -372,11 +428,19 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function CheckoutLoading() {
-  return <div className="grid gap-10 pt-10 lg:grid-cols-[minmax(0,1fr)_390px]"><div className="h-80 animate-pulse bg-white" /><div className="h-72 animate-pulse bg-white" /></div>;
+  return <div className="grid gap-10 pt-10 lg:grid-cols-[minmax(0,1fr)_390px]" role="status" aria-label="در حال دریافت اطلاعات تکمیل خرید"><div className="h-80 animate-pulse bg-white" /><div className="h-72 animate-pulse bg-white" /></div>;
+}
+
+function FlowLoading({ label, compact = false }: { label: string; compact?: boolean }) {
+  return <div className={`${compact ? "mt-8 h-24" : "h-48"} animate-pulse bg-white`} role="status" aria-label={label}><span className="sr-only">{label}</span></div>;
+}
+
+function FlowState({ title, description, children, compact = false }: { title: string; description: string; children: React.ReactNode; compact?: boolean }) {
+  return <section className={`${compact ? "mt-8" : ""} border-r-2 border-[#C15427] bg-white p-6 sm:p-8`} role="status"><h2 className="text-xl font-semibold">{title}</h2><p className="mt-3 text-sm leading-7 text-black/65">{description}</p><div className="mt-6">{children}</div></section>;
 }
 
 function CheckoutState({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <section className="mx-auto max-w-xl py-24 text-center"><h2 className="text-2xl font-semibold">{title}</h2><p className="mt-4 text-sm leading-7 text-black/55">{description}</p><div className="mt-8">{children}</div></section>;
+  return <section className="mx-auto max-w-xl py-24 text-center"><h2 className="text-2xl font-semibold">{title}</h2><p className="mt-4 text-sm leading-7 text-black/65">{description}</p><div className="mt-8">{children}</div></section>;
 }
 
 function Success({ order }: { order: ConfirmResult["order"] }) {
@@ -384,9 +448,9 @@ function Success({ order }: { order: ConfirmResult["order"] }) {
     <main dir="rtl" lang="fa" className="grid min-h-dvh place-items-center bg-[#F6F2EB] px-5 py-28 text-[#0B0B0B]">
       <section className="w-full max-w-2xl border-t-2 border-[#C15427] bg-white p-8 text-center sm:p-14">
         <div className="mx-auto grid size-14 place-items-center border border-[#C15427] text-[#C15427]"><Check className="size-6" /></div>
-        <p className="mt-7 text-[10px] font-semibold tracking-[0.12em] text-[#C15427]">سفارش ثبت شد</p>
+        <p className="mt-7 text-xs font-semibold tracking-[0.08em] text-[#C15427]">سفارش ثبت شد</p>
         <h1 className="mt-3 text-3xl font-semibold">از انتخاب شما سپاسگزاریم</h1>
-        <p className="mt-5 text-sm leading-7 text-black/55">پرداخت آزمایشی موفق بود و موجودی سفارش قطعی شد.</p>
+        <p className="mt-5 text-sm leading-7 text-black/65">پرداخت آزمایشی موفق بود و موجودی سفارش قطعی شد.</p>
         {order?.orderNumber ? <p className="mt-5 border-y border-black/10 py-4 text-sm">شماره سفارش: <strong dir="ltr">{order.orderNumber}</strong></p> : null}
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button href="/customer-dashboard" variant="black" size="lg">مشاهده سفارش‌ها</Button><Button href="/shop" variant="outline" size="lg">ادامه خرید</Button></div>
       </section>
@@ -396,4 +460,19 @@ function Success({ order }: { order: ConfirmResult["order"] }) {
 
 function messageFor(error: unknown) {
   return error instanceof Error ? error.message : "لطفاً دوباره تلاش کنید.";
+}
+
+function formatPersianInteger(value: number, minimumIntegerDigits = 1) {
+  return new Intl.NumberFormat("fa-IR", {
+    minimumIntegerDigits,
+    useGrouping: false,
+  }).format(value);
+}
+
+function reservationAnnouncement(remaining: number, expired: boolean) {
+  if (expired) return "زمان رزرو موجودی پایان یافته است.";
+  if (remaining === 600) return "ده دقیقه از زمان رزرو باقی مانده است.";
+  if (remaining === 300) return "پنج دقیقه از زمان رزرو باقی مانده است.";
+  if (remaining === 60) return "یک دقیقه از زمان رزرو باقی مانده است.";
+  return "";
 }

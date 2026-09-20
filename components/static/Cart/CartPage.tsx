@@ -93,7 +93,7 @@ export function CartPage() {
             <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">سبد خرید</h1>
           </div>
           {cart?.itemCount ? (
-            <p className="mt-4 text-sm text-black/55 md:mt-0">
+            <p className="mt-4 text-sm text-black/65 md:mt-0">
               {new Intl.NumberFormat("fa-IR").format(cart.itemCount)} کالا
             </p>
           ) : null}
@@ -134,7 +134,7 @@ export function CartPage() {
             <section aria-label="کالاهای سبد خرید">
               {locked ? (
                 <div className="mb-7 border-r-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7">
-                  موجودی این انتخاب‌ها در مرحله پرداخت رزرو شده است. برای تغییر سبد، ابتدا Checkout را لغو کنید.
+                  موجودی این انتخاب‌ها در مرحله پرداخت رزرو شده است. برای تغییر سبد، ابتدا رزرو خرید را لغو کنید.
                 </div>
               ) : null}
 
@@ -157,11 +157,11 @@ export function CartPage() {
                       </Link>
 
                       <div className="min-w-0 py-1">
-                        <p className="text-[9px] tracking-[0.1em] text-black/45">{item.sku}</p>
+                        <p className="text-[11px] tracking-[0.08em] text-black/60">{item.sku}</p>
                         <Link href={item.productSlug ? `/shop/${item.productSlug}` : "/shop"} className="mt-2 block text-lg font-semibold leading-8 transition-colors hover:text-[#C15427]">
                           {item.productName}
                         </Link>
-                        <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-black/55">
+                        <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-black/65">
                           <div className="flex items-center gap-2">
                             <dt>رنگ</dt>
                             <dd className="flex items-center gap-1.5 text-black/80">
@@ -182,7 +182,7 @@ export function CartPage() {
                               <Plus className="size-3.5" />
                             </button>
                           </div>
-                          <button type="button" disabled={locked || changing} onClick={() => removeMutation.mutate(item.id)} className="inline-flex min-h-11 items-center gap-2 text-xs text-black/50 underline-offset-4 transition-colors hover:text-[#A33A32] hover:underline disabled:opacity-30">
+                          <button type="button" disabled={locked || changing} onClick={() => removeMutation.mutate(item.id)} className="inline-flex min-h-11 items-center gap-2 text-xs text-black/65 underline-offset-4 transition-colors hover:text-[#A33A32] hover:underline disabled:opacity-30">
                             <Trash2 className="size-3.5" /> حذف
                           </button>
                         </div>
@@ -197,7 +197,7 @@ export function CartPage() {
               </div>
 
               {!locked ? (
-                <button type="button" disabled={clearMutation.isPending} onClick={() => clearMutation.mutate()} className="mt-5 min-h-11 text-xs text-black/50 underline underline-offset-4 transition-colors hover:text-[#A33A32] disabled:opacity-40">
+                <button type="button" disabled={clearMutation.isPending} onClick={() => clearMutation.mutate()} className="mt-5 min-h-11 text-xs text-black/65 underline underline-offset-4 transition-colors hover:text-[#A33A32] disabled:opacity-40">
                   {clearMutation.isPending ? "در حال خالی‌کردن…" : "خالی‌کردن سبد"}
                 </button>
               ) : null}
@@ -208,7 +208,7 @@ export function CartPage() {
               <div className="mt-7 flex items-center justify-between border-b border-black/15 pb-5 text-sm">
                 <span>جمع کالاها</span><strong className="tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong>
               </div>
-              <div className="space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/55">
+              <div className="space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/65">
                 <p className="flex justify-between gap-4"><span>هزینه ارسال</span><span>در مرحله تحویل مشخص می‌شود</span></p>
                 <p className="flex justify-between gap-4"><span>تخفیف و مالیات</span><span>فعلاً اعمال نمی‌شود</span></p>
               </div>
@@ -218,7 +218,7 @@ export function CartPage() {
               <Button type="button" variant="black" size="xl" fullWidth onClick={() => router.push("/checkout")}>
                 {locked ? "ادامه پرداخت" : "ادامه فرایند خرید"}
               </Button>
-              <p className="mt-4 text-center text-[10px] leading-5 text-black/45">موجودی تنها پس از ورود به Checkout برای ۱۵ دقیقه رزرو می‌شود.</p>
+              <p className="mt-4 text-center text-xs leading-6 text-black/65">موجودی تنها پس از ورود به مرحله تکمیل خرید برای ۱۵ دقیقه رزرو می‌شود.</p>
             </aside>
           </div>
         ) : null}
@@ -248,7 +248,7 @@ function StatePanel({ icon, title, description, children }: { icon?: React.React
     <section className="mx-auto flex max-w-xl flex-col items-center py-24 text-center">
       {icon ? <div className="mb-6 grid size-14 place-items-center border border-black/15">{icon}</div> : null}
       <h2 className="text-2xl font-semibold">{title}</h2>
-      <p className="mt-4 max-w-md text-sm leading-7 text-black/55">{description}</p>
+      <p className="mt-4 max-w-md text-sm leading-7 text-black/65">{description}</p>
       <div className="mt-8">{children}</div>
     </section>
   );

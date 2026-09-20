@@ -83,7 +83,6 @@ const nextConfig: NextConfig = {
       { source: "/fragrance", destination: "/shop", permanent: false },
       { source: "/clothing", destination: "/shop", permanent: false },
       { source: "/wishlist", destination: "/profile", permanent: false },
-      { source: "/checkout", destination: "/cart", permanent: false },
       { source: "/catalog/images", destination: "/admin/catalog/images", permanent: true },
     ];
   },
