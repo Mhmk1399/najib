@@ -35,6 +35,11 @@ The customer workspace at `/customer-dashboard` uses these protected endpoints:
 - `GET|DELETE /api/account/cart`
 - `POST /api/account/cart/items`
 - `PATCH|DELETE /api/account/cart/items/:id`
+- `POST /api/account/checkouts`
+- `GET|PATCH /api/account/checkouts/:id`
+- `POST /api/account/checkouts/:id/payment-intents`
+- `GET /api/account/payments/:id`
+- `POST /api/account/payments/:id/confirm`
 - `GET|PATCH /api/account/profile`
 
 These routes accept only an active, database-backed customer session and always
@@ -54,6 +59,26 @@ submit or override prices. Adding the same variant increases its quantity up to
 99, quantity changes refresh the server price, and only the active cart owned by
 the authenticated customer can be changed. Adding to a cart does not reserve
 stock; exact stock is reserved by the checkout orchestration step.
+
+`POST /api/account/checkouts` accepts an idempotency key plus an active `storeId`
+and matching `cityId`. In one MongoDB transaction it reprices every cart item,
+validates product/color/size sellability, allocates the exact variants across
+active store locations, creates a 15-minute inventory reservation, marks the cart
+as `checkout_started`, and writes an outbox event. Repeating the same request key
+returns the original checkout without reserving stock twice. `PATCH` currently
+accepts `{ "action": "cancel" }`; it releases the reservation and reopens the cart.
+The temporary Payment provider supports successful and failed attempts without
+allowing client-supplied amounts. A successful confirmation commits the inventory
+reservation, creates an immutable order snapshot, completes Checkout, converts the
+cart, and requests an order-confirmation SMS in the same domain flow. Failed
+attempts remain retryable while the reservation is active.
+
+Development uses deterministic `mock` Payment and SMS adapters when no provider is
+configured. They do not make external calls and are idempotent by request key. For
+explicit local configuration use `PAYMENT_PROVIDER=mock` and `SMS_PROVIDER=mock`.
+Production never falls back to these adapters: until real providers are configured,
+the corresponding operation returns `503` instead of reporting a fake payment or
+message as successful.
 
 `PATCH /api/account/profile` accepts only `firstName`, `lastName`, `phone`, and
 `preferredLocale`. Email, roles, permissions, account status, credentials, and

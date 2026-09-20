@@ -184,6 +184,125 @@ async function createMovement(
   );
 }
 
+type ReservationInput = z.infer<typeof createInventoryReservationSchema>;
+type ReservationAction = z.infer<typeof inventoryReservationActionSchema>;
+
+export async function reserveInventoryInSession(
+  input: ReservationInput,
+  session: ClientSession,
+  actorId?: string,
+  writeStaffAudit = false,
+) {
+  const reservationId = new mongoose.Types.ObjectId();
+  for (const [index, item] of input.items.entries()) {
+    await Promise.all([
+      activeVariant(item.variantId, session),
+      activeLocation(item.locationId, session),
+    ]);
+    const balance = await InventoryBalance.findOneAndUpdate(
+      {
+        variantId: item.variantId,
+        locationId: item.locationId,
+        $expr: {
+          $gte: [
+            { $subtract: [{ $subtract: ["$onHand", "$reserved"] }, "$safetyStock"] },
+            item.quantity,
+          ],
+        },
+      },
+      { $inc: { reserved: item.quantity, version: 1 } },
+      { new: true, session, runValidators: true },
+    );
+    if (!balance) conflict("موجودی قابل فروش برای رزرو کافی نیست.");
+    await createMovement({
+      idempotencyKey: `${input.idempotencyKey}:reserve:${index}`,
+      type: "reservation",
+      variantId: item.variantId,
+      locationId: item.locationId,
+      onHandDelta: 0,
+      reservedDelta: item.quantity,
+      balance,
+      referenceType: "reservation",
+      referenceId: reservationId.toString(),
+      actorId,
+    }, session);
+  }
+  const [reservation] = await InventoryReservation.create(
+    [{ _id: reservationId, ...input }],
+    { session },
+  );
+  if (writeStaffAudit && actorId) {
+    await audit(actorId, "inventory.reservation.create", reservation.id, "رزرو موجودی", session);
+  }
+  return reservation;
+}
+
+export async function transitionInventoryReservationInSession(
+  id: string,
+  input: ReservationAction,
+  session: ClientSession,
+  actorId?: string,
+  writeStaffAudit = false,
+) {
+  const reservation = await InventoryReservation.findById(parseId(id)).session(session);
+  if (!reservation) notFound("رزرو موجودی پیدا نشد.");
+  const finalStatus = input.action === "commit"
+    ? "committed"
+    : input.action === "expire"
+      ? "expired"
+      : "released";
+  if (reservation.status === finalStatus) {
+    return { idempotent: true, reservation };
+  }
+  if (reservation.status !== "active") {
+    conflict(`رزرو با وضعیت ${reservation.status} قابل تغییر نیست.`);
+  }
+
+  for (const [index, item] of reservation.items.entries()) {
+    const increments = input.action === "commit"
+      ? { onHand: -item.quantity, reserved: -item.quantity, version: 1 }
+      : { reserved: -item.quantity, version: 1 };
+    const balance = await InventoryBalance.findOneAndUpdate(
+      {
+        variantId: item.variantId,
+        locationId: item.locationId,
+        reserved: { $gte: item.quantity },
+        ...(input.action === "commit" ? { onHand: { $gte: item.quantity } } : {}),
+      },
+      { $inc: increments },
+      { new: true, session, runValidators: true },
+    );
+    if (!balance) conflict("مانده‌ی موجودی با رزرو هماهنگ نیست.");
+    await createMovement({
+      idempotencyKey: `${reservation.id}:${input.action}:${index}`,
+      type: input.action === "commit" ? "commit" : "release",
+      variantId: item.variantId.toString(),
+      locationId: item.locationId.toString(),
+      onHandDelta: input.action === "commit" ? -item.quantity : 0,
+      reservedDelta: -item.quantity,
+      balance,
+      referenceType: "reservation",
+      referenceId: reservation.id,
+      reason: input.reason,
+      actorId,
+    }, session);
+  }
+  reservation.status = finalStatus;
+  if (input.action === "commit") reservation.committedAt = new Date();
+  else reservation.releasedAt = new Date();
+  await reservation.save({ session });
+  if (writeStaffAudit && actorId) {
+    await audit(
+      actorId,
+      `inventory.reservation.${input.action}`,
+      reservation.id,
+      input.reason ?? input.action,
+      session,
+    );
+  }
+  return { idempotent: false, reservation };
+}
+
 export const inventoryService = {
   parseId,
 
@@ -339,79 +458,26 @@ export const inventoryService = {
       return { idempotent: true, reservation: previous };
     }
 
-    return mongoose.connection.transaction(async (session) => {
-      const reservationId = new mongoose.Types.ObjectId();
-      for (const [index, item] of input.items.entries()) {
-        await Promise.all([activeVariant(item.variantId, session), activeLocation(item.locationId, session)]);
-        const balance = await InventoryBalance.findOneAndUpdate(
-          {
-            variantId: item.variantId,
-            locationId: item.locationId,
-            $expr: { $gte: [{ $subtract: [{ $subtract: ["$onHand", "$reserved"] }, "$safetyStock"] }, item.quantity] },
-          },
-          { $inc: { reserved: item.quantity, version: 1 } },
-          { new: true, session, runValidators: true },
-        );
-        if (!balance) conflict("موجودی قابل فروش برای رزرو کافی نیست.");
-        await createMovement({
-          idempotencyKey: `${input.idempotencyKey}:reserve:${index}`,
-          type: "reservation",
-          variantId: item.variantId,
-          locationId: item.locationId,
-          onHandDelta: 0,
-          reservedDelta: item.quantity,
-          balance,
-          referenceType: "reservation",
-          referenceId: reservationId.toString(),
-          actorId,
-        }, session);
-      }
-      const [reservation] = await InventoryReservation.create([{ _id: reservationId, ...input }], { session });
-      await audit(actorId, "inventory.reservation.create", reservation.id, "رزرو موجودی", session);
-      return { idempotent: false, reservation: reservation.toObject() };
-    });
+    return mongoose.connection.transaction(async (session) => ({
+      idempotent: false,
+      reservation: (
+        await reserveInventoryInSession(input, session, actorId, true)
+      ).toObject(),
+    }));
   },
 
   async actOnReservation(id: string, value: unknown, actorId: string) {
     const input = inventoryReservationActionSchema.parse(value);
     await connectToDatabase();
     return mongoose.connection.transaction(async (session) => {
-      const reservation = await InventoryReservation.findById(parseId(id)).session(session);
-      if (!reservation) notFound("رزرو موجودی پیدا نشد.");
-      const finalStatus = input.action === "commit" ? "committed" : input.action === "expire" ? "expired" : "released";
-      if (reservation.status === finalStatus) return { idempotent: true, reservation: reservation.toObject() };
-      if (reservation.status !== "active") conflict(`رزرو با وضعیت ${reservation.status} قابل تغییر نیست.`);
-
-      for (const [index, item] of reservation.items.entries()) {
-        const increments = input.action === "commit"
-          ? { onHand: -item.quantity, reserved: -item.quantity, version: 1 }
-          : { reserved: -item.quantity, version: 1 };
-        const balance = await InventoryBalance.findOneAndUpdate(
-          { variantId: item.variantId, locationId: item.locationId, reserved: { $gte: item.quantity }, ...(input.action === "commit" ? { onHand: { $gte: item.quantity } } : {}) },
-          { $inc: increments },
-          { new: true, session, runValidators: true },
-        );
-        if (!balance) conflict("مانده‌ی موجودی با رزرو هماهنگ نیست.");
-        await createMovement({
-          idempotencyKey: `${reservation.id}:${input.action}:${index}`,
-          type: input.action === "commit" ? "commit" : "release",
-          variantId: item.variantId.toString(),
-          locationId: item.locationId.toString(),
-          onHandDelta: input.action === "commit" ? -item.quantity : 0,
-          reservedDelta: -item.quantity,
-          balance,
-          referenceType: "reservation",
-          referenceId: reservation.id,
-          reason: input.reason,
-          actorId,
-        }, session);
-      }
-      reservation.status = finalStatus;
-      if (input.action === "commit") reservation.committedAt = new Date();
-      else reservation.releasedAt = new Date();
-      await reservation.save({ session });
-      await audit(actorId, `inventory.reservation.${input.action}`, reservation.id, input.reason ?? input.action, session);
-      return { idempotent: false, reservation: reservation.toObject() };
+      const result = await transitionInventoryReservationInSession(
+        id,
+        input,
+        session,
+        actorId,
+        true,
+      );
+      return { ...result, reservation: result.reservation.toObject() };
     });
   },
 

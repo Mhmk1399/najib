@@ -150,6 +150,10 @@ async function runAuthFlow() {
   let cartSizeGroupId;
   let cartSizeId;
   let cartVariantId;
+  let checkoutCityId;
+  let checkoutPoolId;
+  let checkoutStoreId;
+  let checkoutLocationId;
   let inventoryVariantId;
   const inventoryIds = [];
   const inventoryKeyPrefix = `inventory-test-${suffix}`;
@@ -204,6 +208,10 @@ async function runAuthFlow() {
     cartSizeGroupId = new mongoose.Types.ObjectId();
     cartSizeId = new mongoose.Types.ObjectId();
     cartVariantId = new mongoose.Types.ObjectId();
+    checkoutCityId = new mongoose.Types.ObjectId();
+    checkoutPoolId = new mongoose.Types.ObjectId();
+    checkoutStoreId = new mongoose.Types.ObjectId();
+    checkoutLocationId = new mongoose.Types.ObjectId();
     const orderBase = {
       orderNumber: `TEST-${suffix}`.toUpperCase(),
       idempotencyKey: `test-${suffix}`,
@@ -253,7 +261,7 @@ async function runAuthFlow() {
         _id: cartId,
         userId: String(userId),
         currency: "IRR",
-        items: [{ _id: new mongoose.Types.ObjectId(), variantId: new mongoose.Types.ObjectId(), quantity: 2, unitPriceMinor: 400_000, addedAt: now }],
+        items: [{ _id: new mongoose.Types.ObjectId(), variantId: cartVariantId, quantity: 2, unitPriceMinor: 400_000, addedAt: now }],
         status: "active",
         expiresAt: new Date(now.getTime() + 86_400_000),
         createdAt: now,
@@ -312,7 +320,57 @@ async function runAuthFlow() {
         createdAt: now,
         updatedAt: now,
       }),
-      db.collection("users").updateOne({ _id: userId }, { $set: { addresses: [{ _id: new mongoose.Types.ObjectId(), label: "خانه", firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567", line1: "نشانی آزمایشی", city: "تهران", postalCode: "1234567890", countryCode: "IR", isDefault: true }] } }),
+      db.collection("cities").insertOne({
+        _id: checkoutCityId,
+        code: `CHECKOUT-CITY-${suffix}`.toUpperCase(),
+        name: { fa: "شهر Checkout", en: "Checkout city", ar: "مدينة الدفع" },
+        countryCode: "IR",
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("inventorypools").insertOne({
+        _id: checkoutPoolId,
+        code: `CHECKOUT-POOL-${suffix}`.toUpperCase(),
+        name: { fa: "استخر Checkout", en: "Checkout pool", ar: "مجموعة الدفع" },
+        cityId: checkoutCityId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("stores").insertOne({
+        _id: checkoutStoreId,
+        code: `CHECKOUT-STORE-${suffix}`.toUpperCase(),
+        name: { fa: "فروشگاه Checkout", en: "Checkout store", ar: "متجر الدفع" },
+        cityId: checkoutCityId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("inventorylocations").insertOne({
+        _id: checkoutLocationId,
+        code: `CHECKOUT-LOCATION-${suffix}`.toUpperCase(),
+        name: { fa: "موجودی Checkout", en: "Checkout stock", ar: "مخزون الدفع" },
+        type: "store",
+        cityId: checkoutCityId,
+        poolId: checkoutPoolId,
+        storeId: checkoutStoreId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("inventorybalances").insertOne({
+        _id: new mongoose.Types.ObjectId(),
+        variantId: cartVariantId,
+        locationId: checkoutLocationId,
+        onHand: 10,
+        reserved: 0,
+        safetyStock: 0,
+        version: 0,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("users").updateOne({ _id: userId }, { $set: { phone: "+989121234567", addresses: [{ _id: new mongoose.Types.ObjectId(), label: "خانه", firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567", line1: "نشانی آزمایشی", city: "تهران", postalCode: "1234567890", countryCode: "IR", isDefault: true }] } }),
     ]);
 
     const customerMe = await apiRequest("/api/auth/me", { jar: customerCookies });
@@ -322,7 +380,7 @@ async function runAuthFlow() {
       String(customerMe.response.status),
     );
 
-    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile"]) {
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
       const anonymousAccount = await apiRequest(path);
       failed += result(`anonymous is blocked from ${path}`, anonymousAccount.response.status === 401, String(anonymousAccount.response.status));
     }
@@ -372,6 +430,71 @@ async function runAuthFlow() {
       jar: customerCookies,
       body: { variantId: String(cartVariantId), quantity: 1, unitPriceMinor: 1 },
     });
+    const checkoutKey = `checkout-test-${suffix}`;
+    const startCheckout = await apiRequest("/api/account/checkouts", {
+      method: "POST",
+      jar: customerCookies,
+      body: {
+        idempotencyKey: checkoutKey,
+        storeId: String(checkoutStoreId),
+        cityId: String(checkoutCityId),
+      },
+    });
+    const checkoutId = startCheckout.body?.id;
+    const repeatCheckout = await apiRequest("/api/account/checkouts", {
+      method: "POST",
+      jar: customerCookies,
+      body: {
+        idempotencyKey: checkoutKey,
+        storeId: String(checkoutStoreId),
+        cityId: String(checkoutCityId),
+      },
+    });
+    const checkoutDetail = await apiRequest(`/api/account/checkouts/${checkoutId}`, {
+      jar: customerCookies,
+    });
+    const [reservedBalance, checkoutCart] = await Promise.all([
+      db.collection("inventorybalances").findOne({
+        variantId: cartVariantId,
+        locationId: checkoutLocationId,
+      }),
+      db.collection("carts").findOne({ _id: cartId }),
+    ]);
+    failed += result(
+      "checkout reserves exact variant once and is idempotent",
+      startCheckout.response.status === 201 && startCheckout.body?.status === "reserved" &&
+        startCheckout.body?.itemCount === 3 && startCheckout.body?.subtotalMinor === 2_550_000 &&
+        repeatCheckout.response.status === 201 && repeatCheckout.body?.id === checkoutId &&
+        repeatCheckout.body?.idempotent === true && checkoutDetail.response.status === 200 &&
+        reservedBalance?.reserved === 3 && checkoutCart?.status === "checkout_started",
+      `${startCheckout.response.status}/${repeatCheckout.response.status}/${checkoutDetail.response.status}/${reservedBalance?.reserved}`,
+    );
+
+    const cancelCheckout = await apiRequest(`/api/account/checkouts/${checkoutId}`, {
+      method: "PATCH",
+      jar: customerCookies,
+      body: { action: "cancel" },
+    });
+    const cancelCheckoutAgain = await apiRequest(`/api/account/checkouts/${checkoutId}`, {
+      method: "PATCH",
+      jar: customerCookies,
+      body: { action: "cancel" },
+    });
+    const [releasedBalance, reopenedCart] = await Promise.all([
+      db.collection("inventorybalances").findOne({
+        variantId: cartVariantId,
+        locationId: checkoutLocationId,
+      }),
+      db.collection("carts").findOne({ _id: cartId }),
+    ]);
+    failed += result(
+      "checkout cancellation releases stock and reopens cart",
+      cancelCheckout.response.status === 200 && cancelCheckout.body?.status === "cancelled" &&
+        cancelCheckoutAgain.response.status === 200 && cancelCheckoutAgain.body?.idempotent === true &&
+        releasedBalance?.reserved === 0 && reopenedCart?.status === "active",
+      `${cancelCheckout.response.status}/${cancelCheckoutAgain.response.status}/${releasedBalance?.reserved}/${reopenedCart?.status}`,
+    );
+
     const removeCartItem = await apiRequest(`/api/account/cart/items/${addedItem?.id}`, {
       method: "DELETE",
       jar: customerCookies,
@@ -383,10 +506,82 @@ async function runAuthFlow() {
     failed += result(
       "customer cart mutations use server price and enforce ownership",
       addCartItem.response.status === 200 && addedItem?.unitPriceMinor === 850_000 &&
-        updateCartItem.response.status === 200 && updateCartItem.body?.itemCount === 5 &&
+        updateCartItem.response.status === 200 && updateCartItem.body?.itemCount === 3 &&
         rejectedClientPrice.response.status === 400 && removeCartItem.response.status === 200 &&
-        removeCartItem.body?.itemCount === 2 && clearCart.response.status === 200 && clearCart.body?.itemCount === 0,
+        removeCartItem.body?.itemCount === 0 && clearCart.response.status === 200 && clearCart.body?.itemCount === 0,
       `${addCartItem.response.status}/${updateCartItem.response.status}/${rejectedClientPrice.response.status}/${removeCartItem.response.status}/${clearCart.response.status}`,
+    );
+
+    const addPaymentItem = await apiRequest("/api/account/cart/items", {
+      method: "POST",
+      jar: customerCookies,
+      body: { variantId: String(cartVariantId), quantity: 2 },
+    });
+    const paymentCheckoutKey = `payment-checkout-${suffix}`;
+    const paymentCheckout = await apiRequest("/api/account/checkouts", {
+      method: "POST",
+      jar: customerCookies,
+      body: {
+        idempotencyKey: paymentCheckoutKey,
+        storeId: String(checkoutStoreId),
+        cityId: String(checkoutCityId),
+      },
+    });
+    const paymentCheckoutId = paymentCheckout.body?.id;
+    const paymentIntentKey = `payment-intent-${suffix}`;
+    const createPayment = await apiRequest(`/api/account/checkouts/${paymentCheckoutId}/payment-intents`, {
+      method: "POST",
+      jar: customerCookies,
+      body: { idempotencyKey: paymentIntentKey },
+    });
+    const paymentId = createPayment.body?.id;
+    const repeatPayment = await apiRequest(`/api/account/checkouts/${paymentCheckoutId}/payment-intents`, {
+      method: "POST",
+      jar: customerCookies,
+      body: { idempotencyKey: paymentIntentKey },
+    });
+    const failedPayment = await apiRequest(`/api/account/payments/${paymentId}/confirm`, {
+      method: "POST",
+      jar: customerCookies,
+      body: { idempotencyKey: `payment-test-fail-${suffix}`, outcome: "failed" },
+    });
+    const balanceAfterFailure = await db.collection("inventorybalances").findOne({
+      variantId: cartVariantId,
+      locationId: checkoutLocationId,
+    });
+    const successfulPayment = await apiRequest(`/api/account/payments/${paymentId}/confirm`, {
+      method: "POST",
+      jar: customerCookies,
+      body: { idempotencyKey: `payment-test-success-${suffix}`, outcome: "succeeded" },
+    });
+    const repeatedSuccess = await apiRequest(`/api/account/payments/${paymentId}/confirm`, {
+      method: "POST",
+      jar: customerCookies,
+      body: { idempotencyKey: `payment-test-success-${suffix}`, outcome: "succeeded" },
+    });
+    const paymentDetail = await apiRequest(`/api/account/payments/${paymentId}`, {
+      jar: customerCookies,
+    });
+    const [balanceAfterPayment, convertedCart, completedCheckout, storedPayment, createdOrder] = await Promise.all([
+      db.collection("inventorybalances").findOne({ variantId: cartVariantId, locationId: checkoutLocationId }),
+      db.collection("carts").findOne({ _id: cartId }),
+      db.collection("checkoutsessions").findOne({ _id: new mongoose.Types.ObjectId(paymentCheckoutId) }),
+      db.collection("paymentintents").findOne({ _id: new mongoose.Types.ObjectId(paymentId) }),
+      db.collection("orders").findOne({ checkoutSessionId: paymentCheckoutId }),
+    ]);
+    failed += result(
+      "temporary payment and SMS providers complete the order safely",
+      addPaymentItem.response.status === 200 && paymentCheckout.response.status === 201 &&
+        createPayment.response.status === 201 && createPayment.body?.status === "requires_action" &&
+        createPayment.body?.amountMinor === 1_700_000 && repeatPayment.body?.id === paymentId &&
+        repeatPayment.body?.idempotent === true && failedPayment.body?.payment?.status === "failed" &&
+        balanceAfterFailure?.reserved === 2 && successfulPayment.body?.payment?.status === "succeeded" &&
+        successfulPayment.body?.order?.status === "confirmed" && successfulPayment.body?.sms?.status === "accepted" &&
+        repeatedSuccess.body?.payment?.idempotent === true && paymentDetail.body?.status === "succeeded" &&
+        balanceAfterPayment?.onHand === 8 && balanceAfterPayment?.reserved === 0 &&
+        convertedCart?.status === "converted" && completedCheckout?.status === "completed" &&
+        storedPayment?.status === "succeeded" && createdOrder?.totalMinor === 1_700_000,
+      `${createPayment.response.status}/${failedPayment.body?.payment?.status}/${successfulPayment.body?.payment?.status}/${successfulPayment.body?.sms?.status}`,
     );
 
     const safeProfileUpdate = await apiRequest("/api/account/profile", {
@@ -633,7 +828,7 @@ async function runAuthFlow() {
       `${transfer.response.status}/${balances.body?.items?.length}/${movements.body?.pagination?.total}/${finalAvailability.body?.available}`,
     );
 
-    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile"]) {
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
       const staffAccount = await apiRequest(path, { jar: adminCookies });
       failed += result(`staff is isolated from ${path}`, staffAccount.response.status === 403, String(staffAccount.response.status));
     }
@@ -698,14 +893,28 @@ async function runAuthFlow() {
       await Promise.all([
         db.collection("staffsessions").deleteMany({ userId }),
         db.collection("staffaudits").deleteMany({ userId }),
-        db.collection("orders").deleteMany({ _id: { $in: [ownedOrderId, foreignOrderId].filter(Boolean) } }),
+        db.collection("orders").deleteMany({
+          $or: [{ userId: String(userId) }, { _id: foreignOrderId }],
+        }),
         db.collection("carts").deleteMany({ _id: { $in: [cartId].filter(Boolean) } }),
+        db.collection("checkoutsessions").deleteMany({ userId: String(userId) }),
+        db.collection("paymentintents").deleteMany({ userId }),
+        db.collection("paymentattempts").deleteMany({ idempotencyKey: { $regex: `^payment-test-` } }),
         db.collection("productvariants").deleteMany({ _id: cartVariantId }),
         db.collection("products").deleteMany({ _id: cartProductId }),
         db.collection("sizes").deleteMany({ _id: cartSizeId }),
         db.collection("sizegroups").deleteMany({ _id: cartSizeGroupId }),
         db.collection("colors").deleteMany({ _id: cartColorId }),
-        db.collection("outboxes").deleteMany({ correlationId: `test-${suffix}` }),
+        db.collection("outboxes").deleteMany({
+          $or: [{ correlationId: `test-${suffix}` }, { "payload.userId": String(userId) }],
+        }),
+        db.collection("inventorymovements").deleteMany({ actorId: userId }),
+        db.collection("inventoryreservations").deleteMany({ userId }),
+        db.collection("inventorybalances").deleteMany({ variantId: cartVariantId }),
+        db.collection("inventorylocations").deleteMany({ _id: checkoutLocationId }),
+        db.collection("inventorypools").deleteMany({ _id: checkoutPoolId }),
+        db.collection("stores").deleteMany({ _id: checkoutStoreId }),
+        db.collection("cities").deleteMany({ _id: checkoutCityId }),
         db.collection("inventorymovements").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
         db.collection("inventoryreservations").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
         db.collection("inventorytransfers").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
