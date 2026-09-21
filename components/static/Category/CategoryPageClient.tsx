@@ -7,29 +7,42 @@ import {
   useCategoryPageData,
   useSubcategoryPageData,
 } from "@/lib/catalog/storefront-client";
+import { catalogPageCopy } from "@/lib/i18n/catalog-page-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 import { SubcategoryLandingPage } from "./SubcategoryLandingPage";
 
 type CategoryPageClientProps = {
   categorySlug: string;
+  locale: Locale;
 };
 
 type SubcategoryPageClientProps = CategoryPageClientProps & {
   subcategorySlug: string;
 };
 
-export function CategoryPageClient({ categorySlug }: CategoryPageClientProps) {
-  const query = useCategoryPageData(categorySlug);
+export function CategoryPageClient({
+  categorySlug,
+  locale,
+}: CategoryPageClientProps) {
+  const copy = catalogPageCopy[locale];
+  const query = useCategoryPageData(categorySlug, locale);
 
   if (query.isLoading) {
-    return <BrandSketchLoader open label="در حال دریافت دسته‌بندی" />;
+    return <BrandSketchLoader open label={copy.loadingCategory} />;
   }
 
   if (query.isError) {
     return (
       <CatalogState
-        title="دریافت دسته‌بندی ناموفق بود"
-        description="اتصال به دیتابیس یا سرویس کاتالوگ را بررسی کنید."
-        actionLabel="تلاش دوباره"
+        title={copy.categoryErrorTitle}
+        description={copy.errorDescription}
+        actionLabel={copy.retry}
+        locale={locale}
         onAction={() => void query.refetch()}
       />
     );
@@ -38,33 +51,37 @@ export function CategoryPageClient({ categorySlug }: CategoryPageClientProps) {
   if (query.isNotFound || !query.data) {
     return (
       <CatalogState
-        title="دسته‌بندی پیدا نشد"
-        description="این دسته‌بندی هنوز فعال نشده یا آدرس آن تغییر کرده است."
-        actionLabel="بازگشت به فروشگاه"
-        href="/shop"
+        title={copy.categoryNotFoundTitle}
+        description={copy.notFoundDescription}
+        actionLabel={copy.backToShop}
+        href={localizedHref("/shop", locale)}
+        locale={locale}
       />
     );
   }
 
-  return <CategoryLandingPage data={query.data} />;
+  return <CategoryLandingPage data={query.data} locale={locale} />;
 }
 
 export function SubcategoryPageClient({
   categorySlug,
+  locale,
   subcategorySlug,
 }: SubcategoryPageClientProps) {
-  const query = useSubcategoryPageData(categorySlug, subcategorySlug);
+  const copy = catalogPageCopy[locale];
+  const query = useSubcategoryPageData(categorySlug, subcategorySlug, locale);
 
   if (query.isLoading) {
-    return <BrandSketchLoader open label="در حال دریافت زیردسته" />;
+    return <BrandSketchLoader open label={copy.loadingSubcategory} />;
   }
 
   if (query.isError) {
     return (
       <CatalogState
-        title="دریافت زیردسته ناموفق بود"
-        description="اتصال به دیتابیس یا سرویس کاتالوگ را بررسی کنید."
-        actionLabel="تلاش دوباره"
+        title={copy.subcategoryErrorTitle}
+        description={copy.errorDescription}
+        actionLabel={copy.retry}
+        locale={locale}
         onAction={query.refetch}
       />
     );
@@ -73,41 +90,52 @@ export function SubcategoryPageClient({
   if (query.isNotFound || !query.data) {
     return (
       <CatalogState
-        title="زیردسته پیدا نشد"
-        description="این زیردسته هنوز فعال نشده یا آدرس آن تغییر کرده است."
-        actionLabel="بازگشت به فروشگاه"
-        href="/shop"
+        title={copy.subcategoryNotFoundTitle}
+        description={copy.notFoundDescription}
+        actionLabel={copy.backToShop}
+        href={localizedHref("/shop", locale)}
+        locale={locale}
       />
     );
   }
 
-  return <SubcategoryLandingPage data={query.data} />;
+  return <SubcategoryLandingPage data={query.data} locale={locale} />;
 }
 
 function CatalogState({
   title,
-  description = "چند لحظه صبر کنید.",
+  description,
   actionLabel,
   href,
   onAction,
+  locale,
 }: {
   title: string;
   description?: string;
   actionLabel?: string;
   href?: string;
   onAction?: () => void;
+  locale: Locale;
 }) {
+  const copy = catalogPageCopy[locale];
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+
   return (
-    <main className="grid min-h-screen place-items-center bg-white px-6 text-center text-black">
+    <main
+      dir={direction}
+      lang={htmlLang}
+      className="grid min-h-screen place-items-center bg-white px-6 text-center text-black"
+    >
       <div className="max-w-[460px]">
         <p className="text-[8px] font-semibold uppercase tracking-[0.22em] text-black/40">
-          Najibzadeh Catalog
+          {copy.catalogStateEyebrow}
         </p>
         <h1 className="mt-4   text-[clamp(2.8rem,12vw,4.8rem)] leading-[0.92] tracking-[-0.05em]">
           {title}
         </h1>
         <p className="mx-auto mt-5 max-w-[360px] text-[11px] leading-7 text-black/50">
-          {description}
+          {description ?? copy.notFoundDescription}
         </p>
         {actionLabel && (
           <div className="mx-auto mt-8 max-w-[220px]">

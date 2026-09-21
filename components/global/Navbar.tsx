@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { usePathname } from "next/navigation";
-import { Languages } from "lucide-react";
+import { ChevronDown, Globe2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -264,7 +264,7 @@ const QUICK_LINKS: QuickLink[] = [
 
   {
     label: "پروفایل",
-    href: "/profile",
+    href: "/customer-dashboard",
     icon: <ProfileIcon />,
   },
 ];
@@ -780,6 +780,21 @@ export default function Navbar({
     setLanguageModalOpen(true);
   }, [hideMenu, open]);
 
+  const selectLanguage = useCallback(
+    (href: string, selected: boolean) => {
+      if (selected) {
+        closeLanguageModal();
+        return;
+      }
+
+      closeLanguageModal(false);
+
+      const suffix = `${window.location.search}${window.location.hash}`;
+      window.location.assign(`${href}${suffix}`);
+    },
+    [closeLanguageModal],
+  );
+
   useEffect(() => {
     return () => {
       if (closeTimerRef.current) {
@@ -810,7 +825,11 @@ export default function Navbar({
     };
   }, [closeLanguageModal, languageModalOpen]);
   useEffect(() => {
-    setNavbarVisible(true);
+    const frame = requestAnimationFrame(() => {
+      setNavbarVisible(true);
+    });
+
+    return () => cancelAnimationFrame(frame);
   }, [pathname]);
 
   useEffect(() => {
@@ -1238,11 +1257,12 @@ export default function Navbar({
                 label={languageCopy.openButton}
                 onClick={openLanguageModal}
                 onReadableSurface={readableNavbar}
+                open={languageModalOpen}
               />
 
               <div className="hidden sm:block">
                 <NavAction
-                  href={toLocalizedHref("/profile")}
+                  href={toLocalizedHref("/customer-dashboard")}
                   label={copy.navbar.profile}
                   onReadableSurface={readableNavbar}
                   forceLightSurface={commerceLightSurface}
@@ -1275,7 +1295,7 @@ export default function Navbar({
           direction={direction}
           htmlLang={htmlLang}
           onClose={() => closeLanguageModal()}
-          onSelect={() => closeLanguageModal(false)}
+          onSelect={selectLanguage}
           options={languageOptions}
         />
       )}
@@ -2046,12 +2066,14 @@ function LanguageToggle({
   onReadableSurface,
   label,
   onClick,
+  open,
 }: {
   buttonRef: RefObject<HTMLButtonElement | null>;
   currentLocale: Locale;
   onReadableSurface: boolean;
   label: string;
   onClick: () => void;
+  open: boolean;
 }) {
   return (
     <button
@@ -2059,22 +2081,28 @@ function LanguageToggle({
       type="button"
       aria-label={label}
       title={label}
+      aria-expanded={open}
+      aria-haspopup="dialog"
       onClick={onClick}
       className={cx(
         "cursor-pointer",
-        "inline-flex h-11 min-w-10 items-center justify-center gap-1.5 rounded-full px-2.5 text-current transition-[opacity,background-color] duration-200 hover:opacity-70 focus-visible:outline-none focus-visible:ring-1 md:min-w-11",
-        onReadableSurface
-          ? NAVBAR_SURFACE_CHROME_CLASSES
-          : NAVBAR_OVERLAY_CHROME_CLASSES,
+        "inline-flex h-10 min-w-10 items-center justify-center gap-1.5 rounded-full   px-2.5 text-current transition-[border-color,background-color,opacity] duration-200 hover:opacity-80 focus-visible:outline-none focus-visible:ring-1 md:h-11 md:min-w-11",
       )}
     >
-      <Languages className="size-4" aria-hidden="true" />
+      <Globe2 className="size-3.5" aria-hidden="true" />
       <span
         dir="ltr"
-        className="text-[9px] font-semibold uppercase leading-none tracking-normal"
+        className="text-[9px] font-semibold uppercase leading-none tracking-[0.04em]"
       >
         {currentLocale}
       </span>
+      <ChevronDown
+        className={cx(
+          "size-3 transition-transform duration-200",
+          open && "rotate-180",
+        )}
+        aria-hidden="true"
+      />
     </button>
   );
 }
@@ -2095,7 +2123,7 @@ function LanguageSelectorModal({
   direction: "rtl" | "ltr";
   htmlLang: string;
   onClose: () => void;
-  onSelect: () => void;
+  onSelect: (href: string, selected: boolean) => void;
   options: LanguageOption[];
 }) {
   return (
@@ -2172,7 +2200,10 @@ function LanguageSelectorModal({
                 lang={option.htmlLang}
                 dir={option.direction}
                 aria-current={selected ? "true" : undefined}
-                onClick={onSelect}
+                onClick={(event) => {
+                  event.preventDefault();
+                  onSelect(option.href, selected);
+                }}
                 className={cx(
                   "group relative flex min-h-[52px] items-center gap-2.5 overflow-hidden rounded-[16px] border px-3 text-start transition-[border-color,background-color,transform,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D8AE86]/80",
                   selected

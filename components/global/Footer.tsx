@@ -251,7 +251,7 @@ function StorefrontFooter({ pathname }: { pathname: string | null }) {
       dir={direction}
       lang={htmlLang}
       style={FOOTER_THEME_VARS}
-      className="relative w-full overflow-visible bg-[var(--footer-cream)] text-[var(--footer-black)]"
+      className="relative w-full overflow-visible  bg-[var(--footer-cream)] text-[var(--footer-black)]"
     >
       {/* =====================================================================
           DYNAMIC CATEGORY DIRECTORY + STATIC NAVIGATION
@@ -346,10 +346,10 @@ function StorefrontFooter({ pathname }: { pathname: string | null }) {
           LEGAL END CAP
       ===================================================================== */}
 
-      <section className="relative bg-[#0C0C0C] text-[#F7F5F0]">
+      <section className="relative bg-[#0C0C0C] text-[#F7F5F0] pb-20">
         <div className="mx-auto w-full max-w-[1920px] px-5 sm:px-7 lg:px-10 xl:px-14">
           <div className="flex flex-col gap-5 border-t border-white/10 py-6 sm:flex-row sm:items-center sm:justify-between lg:py-7">
-            <p className="text-[8px] font-medium text-white/[0.38]">
+            <p className="text-[11px] font-medium text-white/[0.38]">
               {copy.footer.copyright(formatShellNumber(year, locale))}
             </p>
 
@@ -372,7 +372,7 @@ function StorefrontFooter({ pathname }: { pathname: string | null }) {
               iconPosition="left"
               onClick={scrollToTop}
               aria-label={copy.footer.backToTopAria}
-              className="!border-white/[0.18] !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
+              className="!border-white/[0.18] text-xs! !bg-transparent !text-white hover:!border-white hover:!bg-white hover:!text-black"
             >
               {copy.footer.backToTop}
             </Button>
@@ -716,7 +716,7 @@ function LegalLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <Link
       href={href}
-      className="text-[8px] font-semibold text-white/[0.42] transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.65]"
+      className="text-[11px] font-semibold text-white/[0.42] transition-colors duration-200 hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/[0.65]"
     >
       {children}
     </Link>

@@ -10,6 +10,16 @@ import type {
   CategorySubcategory,
 } from "@/types/category-page";
 
+import {
+  catalogPageCopy,
+  type CatalogPageCopy,
+} from "@/lib/i18n/catalog-page-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
@@ -20,6 +30,7 @@ import { ArrowRightIcon, Button } from "@/components/ui/Button";
 
 type CategoryLandingPageProps = {
   data: CategoryPageData;
+  locale: Locale;
 };
 
 const CATEGORY_THEME_VARS = {
@@ -32,11 +43,15 @@ const CATEGORY_THEME_VARS = {
   "--category-copper": brandColors.copper.hex,
 } as CSSProperties;
 
-function RtlArrowIcon() {
+function DirectionalArrowIcon({ locale }: { locale: Locale }) {
+  const direction = getLocaleDirection(locale);
+
   return (
     <span
       aria-hidden="true"
-      className="inline-grid size-4 shrink-0 place-items-center [&>svg]:rotate-180"
+      className={`inline-grid size-4 shrink-0 place-items-center ${
+        direction === "rtl" ? "[&>svg]:rotate-180" : ""
+      }`}
     >
       <ArrowRightIcon />
     </span>
@@ -47,18 +62,24 @@ function RtlArrowIcon() {
    PAGE
 ============================================================================ */
 
-export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
+export function CategoryLandingPage({
+  data,
+  locale,
+}: CategoryLandingPageProps) {
+  const direction = getLocaleDirection(locale);
+  const copy = catalogPageCopy[locale];
+
   return (
     <main
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={getHtmlLang(locale)}
       style={CATEGORY_THEME_VARS}
       className="
         w-full
         overflow-hidden
 
         bg-white
-        text-right
+        text-start
         text-[var(--category-black)]
       "
     >
@@ -66,7 +87,7 @@ export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
           HERO
       ================================================================ */}
 
-      <CategoryHero data={data} />
+      <CategoryHero data={data} locale={locale} />
 
       {/* ===============================================================
           INTRO
@@ -78,7 +99,7 @@ export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
           SUBCATEGORIES
       ================================================================ */}
 
-      <CategoryCollections data={data} />
+      <CategoryCollections data={data} locale={locale} copy={copy} />
 
       {/* ===============================================================
           FEATURE
@@ -90,7 +111,7 @@ export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
           FINAL CTA
       ================================================================ */}
 
-      <CategoryFinalCTA data={data} />
+      <CategoryFinalCTA data={data} locale={locale} />
     </main>
   );
 }
@@ -99,7 +120,13 @@ export function CategoryLandingPage({ data }: CategoryLandingPageProps) {
    HERO
 ============================================================================ */
 
-function CategoryHero({ data }: { data: CategoryPageData }) {
+function CategoryHero({
+  data,
+  locale,
+}: {
+  data: CategoryPageData;
+  locale: Locale;
+}) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
   const hero = data.hero;
@@ -214,16 +241,17 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
           md:px-[7vw]
           md:pb-0
 
-          text-right
+          text-start
         "
       >
         <div
           className={`
-            ml-auto
+            rtl:ml-auto
+            ltr:mr-auto
             w-full
             max-w-[680px]
 
-            text-right
+            text-start
 
             transition-[opacity,transform]
             duration-[900ms]
@@ -347,10 +375,10 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
             "
           >
             <Button
-              href={hero.action.href}
+              href={localizedHref(hero.action.href, locale)}
               variant="black"
               size="lg"
-              icon={<RtlArrowIcon />}
+              icon={<DirectionalArrowIcon locale={locale} />}
               fullWidth
             >
               {hero.action.label}
@@ -377,10 +405,10 @@ function CategoryHero({ data }: { data: CategoryPageData }) {
         "
       >
         <Button
-          href={hero.action.href}
+          href={localizedHref(hero.action.href, locale)}
           variant="black"
           size="lg"
-          icon={<RtlArrowIcon />}
+          icon={<DirectionalArrowIcon locale={locale} />}
           fullWidth
         >
           {hero.action.label}
@@ -422,7 +450,7 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
 
           py-16
 
-          text-right
+          text-start
 
           sm:px-8
           sm:py-20
@@ -515,7 +543,17 @@ function CategoryIntro({ data }: { data: CategoryPageData }) {
    COLLECTIONS
 ============================================================================ */
 
-function CategoryCollections({ data }: { data: CategoryPageData }) {
+function CategoryCollections({
+  data,
+  locale,
+  copy,
+}: {
+  data: CategoryPageData;
+  locale: Locale;
+  copy: CatalogPageCopy;
+}) {
+  const direction = getLocaleDirection(locale);
+
   return (
     <section
       aria-labelledby="category-subcategories-heading"
@@ -567,11 +605,11 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
             text-black
           "
         >
-          زیردسته‌ها
+          {copy.subcategoriesHeading}
         </h2>
 
         <Link
-          href={`/shop?category=${data.slug}`}
+          href={localizedHref(`/shop?category=${data.slug}`, locale)}
           className="
             group
 
@@ -600,14 +638,15 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
             sm:flex
           "
         >
-          مشاهده همه
+          {copy.viewAll}
           <span
             className="
               transition-transform
-              group-hover:-translate-x-1
+              rtl:group-hover:-translate-x-1
+              ltr:group-hover:translate-x-1
             "
           >
-            <span aria-hidden="true">&larr;</span>
+            <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
           </span>
         </Link>
       </div>
@@ -641,7 +680,12 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
       >
         {data.subcategories.map((category, index) => (
           <li key={category.id} className="min-w-0">
-            <CategoryCard category={category} index={index} />
+            <CategoryCard
+              category={category}
+              copy={copy}
+              index={index}
+              locale={locale}
+            />
           </li>
         ))}
       </ul>
@@ -659,13 +703,13 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
         "
       >
         <Button
-          href={`/shop?category=${data.slug}`}
+          href={localizedHref(`/shop?category=${data.slug}`, locale)}
           variant="black"
           size="lg"
-          icon={<RtlArrowIcon />}
+          icon={<DirectionalArrowIcon locale={locale} />}
           fullWidth
         >
-          مشاهده همه {data.name}
+          {copy.viewAllNamed(data.name)}
         </Button>
       </div>
     </section>
@@ -678,15 +722,21 @@ function CategoryCollections({ data }: { data: CategoryPageData }) {
 
 function CategoryCard({
   category,
+  copy,
   index,
+  locale,
 }: {
   category: CategorySubcategory;
+  copy: CatalogPageCopy;
 
   index: number;
+  locale: Locale;
 }) {
+  const direction = getLocaleDirection(locale);
+
   return (
     <Link
-      href={category.href}
+      href={localizedHref(category.href, locale)}
       data-image-story-id={category.imageAssetId}
       data-image-story-url={category.image}
       className="
@@ -769,7 +819,7 @@ function CategoryCard({
         className="
           absolute
 
-          left-5
+          start-5
           top-5
 
           text-[6px]
@@ -839,8 +889,8 @@ function CategoryCard({
               text-white/55
             "
           >
-            مشاهده مجموعه
-            <span aria-hidden="true">&larr;</span>
+            {copy.viewCollection}
+            <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
           </span>
         </div>
 
@@ -859,14 +909,15 @@ function CategoryCard({
 
             transition-[background-color,color,border-color,transform]
 
-            group-hover:-translate-x-1
+            rtl:group-hover:-translate-x-1
+            ltr:group-hover:translate-x-1
 
             group-hover:border-white
             group-hover:bg-white
             group-hover:text-black
           "
         >
-          <span aria-hidden="true">&larr;</span>
+          <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
         </span>
       </div>
     </Link>
@@ -959,14 +1010,15 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
           md:items-center
           md:px-[7vw]
 
-          text-right
+          text-start
         "
       >
         <div
           className="
-            ml-auto
+            rtl:ml-auto
+            ltr:mr-auto
             max-w-[620px]
-            text-right
+            text-start
           "
         >
           {feature.eyebrow && (
@@ -1062,7 +1114,13 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
    FINAL CTA
 ============================================================================ */
 
-function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
+function CategoryFinalCTA({
+  data,
+  locale,
+}: {
+  data: CategoryPageData;
+  locale: Locale;
+}) {
   const cta = data.finalCTA;
 
   return (
@@ -1110,7 +1168,7 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
 
             justify-center
 
-            text-right
+            text-start
 
             px-7
             py-10
@@ -1197,10 +1255,10 @@ function CategoryFinalCTA({ data }: { data: CategoryPageData }) {
             "
           >
             <Button
-              href={cta.action.href}
+              href={localizedHref(cta.action.href, locale)}
               variant="black"
               size="lg"
-              icon={<RtlArrowIcon />}
+              icon={<DirectionalArrowIcon locale={locale} />}
               fullWidth
             >
               {cta.action.label}

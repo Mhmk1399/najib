@@ -144,11 +144,27 @@ export async function getStorefrontCatalog(locale?: Locale) {
 export async function getStorefrontCategoryRoute(slug: string) {
   await connectToDatabase();
 
-  const category = await Category.findOne({ slug, isActive: true })
-    .select({ name: 1, slug: 1 })
-    .lean();
+  const category = (await Category.findOne({ slug, isActive: true })
+    .select({
+      name: 1,
+      slug: 1,
+      description: 1,
+      thumbnailImageId: 1,
+      pageContent: 1,
+    })
+    .lean()) as PlainCatalogRecord | null;
 
-  return category ? toPlainJson(category as PlainCatalogRecord) : null;
+  if (!category) return null;
+
+  const imageId = category.thumbnailImageId ?? pageBannerImageId(category);
+  const metadataImage = imageId
+    ? await ImageAsset.findById(imageId).select({ url: 1, alt: 1 }).lean()
+    : null;
+
+  return toPlainJson({
+    ...(category as PlainCatalogRecord),
+    metadataImage,
+  });
 }
 
 export async function getStorefrontSubcategoryRoute(
@@ -161,7 +177,7 @@ export async function getStorefrontSubcategoryRoute(
     slug: categorySlug,
     isActive: true,
   })
-    .select({ name: 1, slug: 1 })
+    .select({ name: 1, slug: 1, description: 1 })
     .lean()) as PlainCatalogRecord | null;
 
   if (!category) return null;
@@ -171,12 +187,34 @@ export async function getStorefrontSubcategoryRoute(
     categoryId: category._id,
     isActive: true,
   })
-    .select({ name: 1, slug: 1, categoryId: 1 })
+    .select({
+      name: 1,
+      slug: 1,
+      categoryId: 1,
+      description: 1,
+      thumbnailImageId: 1,
+      pageContent: 1,
+    })
     .lean()) as PlainCatalogRecord | null;
 
   if (!subcategory) return null;
 
-  return toPlainJson({ category, subcategory });
+  const imageId = subcategory.thumbnailImageId ?? pageBannerImageId(subcategory);
+  const metadataImage = imageId
+    ? await ImageAsset.findById(imageId).select({ url: 1, alt: 1 }).lean()
+    : null;
+
+  return toPlainJson({ category, subcategory, metadataImage });
+}
+
+function pageBannerImageId(record: PlainCatalogRecord | null | undefined) {
+  const pageContent = record?.pageContent;
+  if (!pageContent || typeof pageContent !== "object") return undefined;
+
+  const primaryBanner = (pageContent as PlainCatalogRecord).primaryBanner;
+  if (!primaryBanner || typeof primaryBanner !== "object") return undefined;
+
+  return (primaryBanner as PlainCatalogRecord).imageId;
 }
 
 export async function getStorefrontProducts(input: ProductListInput = {}) {

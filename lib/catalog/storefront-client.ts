@@ -10,6 +10,8 @@ import type {
   SubcategoryPageData,
 } from "@/types/category-page";
 import { defaultLocale, type Locale } from "@/lib/i18n/config";
+import { catalogPageCopy } from "@/lib/i18n/catalog-page-copy";
+import { localizedHref } from "@/lib/i18n/routes";
 import { shellCopy } from "@/lib/i18n/shell-copy";
 
 type LocalizedText = {
@@ -141,10 +143,6 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   return (await response.json()) as T;
 }
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
-}
-
 function localized(
   value: LocalizedText | null | undefined,
   locale: Locale,
@@ -186,9 +184,10 @@ function imageUrl(
 function imageAlt(
   imageMap: Map<string, CatalogImageAsset>,
   imageId: string | null | undefined,
+  locale: Locale,
   fallback: string,
 ) {
-  return fa(imageMap.get(idOf(imageId))?.alt, fallback);
+  return localized(imageMap.get(idOf(imageId))?.alt, locale, fallback);
 }
 
 function imagePosition(
@@ -205,15 +204,17 @@ function firstSentence(value: string, maxLength = 210) {
   return `${compact.slice(0, maxLength).trim()}...`;
 }
 
-function formatMoney(minor: number, currency: string) {
+function formatMoney(minor: number, currency: string, locale: Locale) {
   try {
-    return new Intl.NumberFormat("fa-IR", {
+    return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : locale, {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
     }).format(minor / 100);
   } catch {
-    return new Intl.NumberFormat("fa-IR").format(minor / 100);
+    return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : locale).format(
+      minor / 100,
+    );
   }
 }
 
@@ -229,18 +230,24 @@ function toSubcategoryCard(
   subcategory: CatalogSubcategoryRecord,
   category: CatalogCategoryRecord,
   imageMap: Map<string, CatalogImageAsset>,
+  locale: Locale,
 ): CategorySubcategory {
-  const fallbackTitle = fa(subcategory.name, "زیردسته");
+  const copy = catalogPageCopy[locale];
+  const fallbackTitle = localized(
+    subcategory.name,
+    locale,
+    copy.subcategoryFallbackTitle,
+  );
   const imageId =
     subcategory.thumbnailImageId ?? subcategory.pageContent?.primaryBanner?.imageId;
 
   return {
     id: idOf(subcategory._id),
     title: fallbackTitle,
-    href: `/${category.slug}/${subcategory.slug}`,
+    href: localizedHref(`/${category.slug}/${subcategory.slug}`, locale),
     image: imageUrl(imageMap, imageId),
     imageAssetId: idOf(imageId),
-    imageAlt: imageAlt(imageMap, imageId, fallbackTitle),
+    imageAlt: imageAlt(imageMap, imageId, locale, fallbackTitle),
     imagePosition: imagePosition(
       imageMap,
       imageId,
@@ -253,12 +260,14 @@ function toSubcategoryCard(
 function buildCategoryPageData(
   catalog: StorefrontCatalogPayload,
   categorySlug: string,
+  locale: Locale,
 ): CategoryPageData | null {
   const category = catalog.categories.find((item) => item.slug === categorySlug);
   if (!category) return null;
 
+  const copy = catalogPageCopy[locale];
   const imageMap = imageMapFrom(catalog.images);
-  const name = fa(category.name, category.slug);
+  const name = localized(category.name, locale, category.slug);
   const content = category.pageContent ?? {};
   const primaryBanner = content.primaryBanner ?? {};
   const secondaryBanner = content.secondaryBanner ?? {};
@@ -269,7 +278,9 @@ function buildCategoryPageData(
 
   const subcategories = catalog.subcategories
     .filter((item) => idOf(item.categoryId) === idOf(category._id))
-    .map((subcategory) => toSubcategoryCard(subcategory, category, imageMap));
+    .map((subcategory) =>
+      toSubcategoryCard(subcategory, category, imageMap, locale),
+    );
 
   return {
     id: idOf(category._id),
@@ -277,15 +288,20 @@ function buildCategoryPageData(
     name,
     breadcrumbLabel: name,
     hero: {
-      eyebrow: fa(primaryBanner.eyebrow, "نجیب‌زاده"),
-      title: fa(primaryBanner.heading, name),
-      description: fa(
+      eyebrow: localized(primaryBanner.eyebrow, locale, copy.brandEyebrow),
+      title: localized(primaryBanner.heading, locale, name),
+      description: localized(
         primaryBanner.body,
-        fa(category.description, "کالکشن‌های منتخب نجیب‌زاده را مرور کنید."),
+        locale,
+        localized(
+          category.description,
+          locale,
+          copy.categoryFallbackDescription,
+        ),
       ),
       image: imageUrl(imageMap, primaryImageId),
       imageAssetId: idOf(primaryImageId),
-      imageAlt: imageAlt(imageMap, primaryImageId, name),
+      imageAlt: imageAlt(imageMap, primaryImageId, locale, name),
       mobileImagePosition: imagePosition(
         imageMap,
         primaryImageId,
@@ -297,29 +313,42 @@ function buildCategoryPageData(
         primaryBanner.objectPosition,
       ),
       action: {
-        label: fa(primaryBanner.ctaLabel, "مشاهده محصولات"),
-        href: primaryBanner.ctaHref || `/shop?category=${category.slug}`,
+        label: localized(primaryBanner.ctaLabel, locale, copy.viewProducts),
+        href: localizedHref(
+          primaryBanner.ctaHref || `/shop?category=${category.slug}`,
+          locale,
+        ),
       },
     },
     intro: {
-      eyebrow: "درباره دسته",
-      title: fa(primaryDescription.heading),
-      description: fa(
+      eyebrow: copy.categoryAboutEyebrow,
+      title: localized(primaryDescription.heading, locale),
+      description: localized(
         primaryDescription.body,
-        fa(category.description, "جزئیات این دسته به‌زودی تکمیل می‌شود."),
+        locale,
+        localized(
+          category.description,
+          locale,
+          copy.subcategoryIntroFallbackDescription,
+        ),
       ),
     },
     subcategories,
     feature: {
-      eyebrow: fa(secondaryBanner.eyebrow, "انتخاب ویژه"),
-      title: fa(secondaryBanner.heading, name),
-      description: fa(
+      eyebrow: localized(secondaryBanner.eyebrow, locale, copy.categoryFeatureEyebrow),
+      title: localized(secondaryBanner.heading, locale, name),
+      description: localized(
         secondaryBanner.body,
-        fa(secondaryDescription.body, "جزئیات انتخاب ویژه این دسته به‌زودی تکمیل می‌شود."),
+        locale,
+        localized(
+          secondaryDescription.body,
+          locale,
+          copy.categoryFeatureDescription,
+        ),
       ),
       image: imageUrl(imageMap, secondaryImageId),
       imageAssetId: idOf(secondaryImageId),
-      imageAlt: imageAlt(imageMap, secondaryImageId, name),
+      imageAlt: imageAlt(imageMap, secondaryImageId, locale, name),
       mobileImagePosition: imagePosition(
         imageMap,
         secondaryImageId,
@@ -332,23 +361,27 @@ function buildCategoryPageData(
       ),
     },
     finalCTA: {
-      eyebrow: fa(secondaryDescription.heading, "ادامه مسیر"),
-      title: fa(secondaryBanner.ctaLabel, `خرید ${name}`),
-      description: fa(
+      eyebrow: localized(secondaryDescription.heading, locale, copy.categoryFinalEyebrow),
+      title: localized(secondaryBanner.ctaLabel, locale, copy.categoryFinalTitle(name)),
+      description: localized(
         secondaryDescription.body,
-        fa(secondaryBanner.body, "برای دیدن محصولات این دسته وارد فروشگاه شوید."),
+        locale,
+        localized(secondaryBanner.body, locale, copy.categoryFinalDescription),
       ),
       image: imageUrl(imageMap, secondaryImageId),
       imageAssetId: idOf(secondaryImageId),
-      imageAlt: imageAlt(imageMap, secondaryImageId, name),
+      imageAlt: imageAlt(imageMap, secondaryImageId, locale, name),
       imagePosition: imagePosition(
         imageMap,
         secondaryImageId,
         secondaryBanner.objectPosition,
       ),
       action: {
-        label: fa(secondaryBanner.ctaLabel, "ورود به فروشگاه"),
-        href: secondaryBanner.ctaHref || `/shop?category=${category.slug}`,
+        label: localized(secondaryBanner.ctaLabel, locale, copy.enterShop),
+        href: localizedHref(
+          secondaryBanner.ctaHref || `/shop?category=${category.slug}`,
+          locale,
+        ),
       },
     },
   };
@@ -358,8 +391,9 @@ function productCard(
   product: CatalogProductRecord,
   imageMap: Map<string, CatalogImageAsset>,
   colorMap: Map<string, CatalogColorRecord>,
+  locale: Locale,
 ): CategoryProduct {
-  const title = fa(product.name, product.slug);
+  const title = localized(product.name, locale, product.slug);
   const imageId = product.primaryImageId;
   const colors = (product.colorIds ?? [])
     .map((colorId) => colorMap.get(idOf(colorId))?.hex)
@@ -368,17 +402,17 @@ function productCard(
   return {
     id: idOf(product._id),
     title,
-    subtitle: firstSentence(fa(product.description), 70),
-    href: `/shop/${product.slug}`,
+    subtitle: firstSentence(localized(product.description, locale), 70),
+    href: localizedHref(`/shop/${product.slug}`, locale),
     image: imageUrl(imageMap, imageId, FALLBACK_PRODUCT_IMAGE),
     imageAssetId: idOf(imageId),
-    imageAlt: imageAlt(imageMap, imageId, title),
+    imageAlt: imageAlt(imageMap, imageId, locale, title),
     imagePosition: imagePosition(
       imageMap,
       imageId,
       product.primaryImageObjectPosition,
     ),
-    priceLabel: formatMoney(product.basePriceMinor, product.currency),
+    priceLabel: formatMoney(product.basePriceMinor, product.currency, locale),
     colors,
   };
 }
@@ -389,6 +423,7 @@ function buildSubcategoryPageData(
   subcategorySlug: string,
   products: CatalogProductRecord[],
   colors: CatalogColorRecord[] = [],
+  locale: Locale,
 ): SubcategoryPageData | null {
   const category = catalog.categories.find((item) => item.slug === categorySlug);
   if (!category) return null;
@@ -401,8 +436,9 @@ function buildSubcategoryPageData(
 
   const imageMap = imageMapFrom(catalog.images);
   const colorMap = colorMapFrom(colors);
-  const name = fa(subcategory.name, subcategory.slug);
-  const categoryName = fa(category.name, category.slug);
+  const copy = catalogPageCopy[locale];
+  const name = localized(subcategory.name, locale, subcategory.slug);
+  const categoryName = localized(category.name, locale, category.slug);
   const content = subcategory.pageContent ?? {};
   const primaryBanner = content.primaryBanner ?? {};
   const secondaryBanner = content.secondaryBanner ?? {};
@@ -419,15 +455,20 @@ function buildSubcategoryPageData(
     name,
     breadcrumbLabel: name,
     hero: {
-      eyebrow: fa(primaryBanner.eyebrow, categoryName),
-      title: fa(primaryBanner.heading, name),
-      description: fa(
+      eyebrow: localized(primaryBanner.eyebrow, locale, categoryName),
+      title: localized(primaryBanner.heading, locale, name),
+      description: localized(
         primaryBanner.body,
-        fa(subcategory.description, "محصولات منتخب این زیردسته را مرور کنید."),
+        locale,
+        localized(
+          subcategory.description,
+          locale,
+          copy.subcategoryFallbackDescription,
+        ),
       ),
       image: imageUrl(imageMap, primaryImageId),
       imageAssetId: idOf(primaryImageId),
-      imageAlt: imageAlt(imageMap, primaryImageId, name),
+      imageAlt: imageAlt(imageMap, primaryImageId, locale, name),
       mobileImagePosition: imagePosition(
         imageMap,
         primaryImageId,
@@ -439,29 +480,48 @@ function buildSubcategoryPageData(
         primaryBanner.objectPosition,
       ),
       action: {
-        label: fa(primaryBanner.ctaLabel, "مشاهده محصولات"),
-        href: primaryBanner.ctaHref || `/shop?subcategory=${subcategory.slug}`,
+        label: localized(primaryBanner.ctaLabel, locale, copy.viewProducts),
+        href: localizedHref(
+          primaryBanner.ctaHref || `/shop?subcategory=${subcategory.slug}`,
+          locale,
+        ),
       },
     },
     intro: {
       eyebrow: categoryName,
-      title: fa(primaryDescription.heading),
-      description: fa(
+      title: localized(primaryDescription.heading, locale),
+      description: localized(
         primaryDescription.body,
-        fa(subcategory.description, "جزئیات این زیردسته به‌زودی تکمیل می‌شود."),
+        locale,
+        localized(
+          subcategory.description,
+          locale,
+          copy.subcategoryIntroFallbackDescription,
+        ),
       ),
     },
-    products: products.map((product) => productCard(product, imageMap, colorMap)),
+    products: products.map((product) =>
+      productCard(product, imageMap, colorMap, locale),
+    ),
     feature: {
-      eyebrow: fa(secondaryBanner.eyebrow, "جزئیات کالکشن"),
-      title: fa(secondaryBanner.heading, name),
-      description: fa(
+      eyebrow: localized(
+        secondaryBanner.eyebrow,
+        locale,
+        copy.subcategoryFeatureEyebrow,
+      ),
+      title: localized(secondaryBanner.heading, locale, name),
+      description: localized(
         secondaryBanner.body,
-        fa(secondaryDescription.body, "جزئیات انتخاب ویژه این زیردسته به‌زودی تکمیل می‌شود."),
+        locale,
+        localized(
+          secondaryDescription.body,
+          locale,
+          copy.subcategoryFeatureDescription,
+        ),
       ),
       image: imageUrl(imageMap, secondaryImageId),
       imageAssetId: idOf(secondaryImageId),
-      imageAlt: imageAlt(imageMap, secondaryImageId, name),
+      imageAlt: imageAlt(imageMap, secondaryImageId, locale, name),
       mobileImagePosition: imagePosition(
         imageMap,
         secondaryImageId,
@@ -474,23 +534,35 @@ function buildSubcategoryPageData(
       ),
     },
     finalCTA: {
-      eyebrow: fa(secondaryDescription.heading, "خرید انتخاب‌شده"),
-      title: fa(secondaryBanner.ctaLabel, `خرید ${name}`),
-      description: fa(
+      eyebrow: localized(
+        secondaryDescription.heading,
+        locale,
+        copy.subcategoryFinalEyebrow,
+      ),
+      title: localized(
+        secondaryBanner.ctaLabel,
+        locale,
+        copy.subcategoryFinalTitle(name),
+      ),
+      description: localized(
         secondaryDescription.body,
-        fa(secondaryBanner.body, "همه محصولات این زیردسته را در فروشگاه ببینید."),
+        locale,
+        localized(secondaryBanner.body, locale, copy.subcategoryFinalDescription),
       ),
       image: imageUrl(imageMap, secondaryImageId),
       imageAssetId: idOf(secondaryImageId),
-      imageAlt: imageAlt(imageMap, secondaryImageId, name),
+      imageAlt: imageAlt(imageMap, secondaryImageId, locale, name),
       imagePosition: imagePosition(
         imageMap,
         secondaryImageId,
         secondaryBanner.objectPosition,
       ),
       action: {
-        label: fa(secondaryBanner.ctaLabel, "مشاهده فروشگاه"),
-        href: secondaryBanner.ctaHref || `/shop?subcategory=${subcategory.slug}`,
+        label: localized(secondaryBanner.ctaLabel, locale, copy.viewShop),
+        href: localizedHref(
+          secondaryBanner.ctaHref || `/shop?subcategory=${subcategory.slug}`,
+          locale,
+        ),
       },
     },
   };
@@ -521,15 +593,18 @@ export function useStorefrontCatalog() {
   });
 }
 
-export function useCategoryPageData(categorySlug: string) {
+export function useCategoryPageData(
+  categorySlug: string,
+  locale: Locale = defaultLocale,
+) {
   const catalogQuery = useStorefrontCatalog();
 
   const data = useMemo(
     () =>
       catalogQuery.data
-        ? buildCategoryPageData(catalogQuery.data, categorySlug)
+        ? buildCategoryPageData(catalogQuery.data, categorySlug, locale)
         : null,
-    [catalogQuery.data, categorySlug],
+    [catalogQuery.data, categorySlug, locale],
   );
 
   return {
@@ -544,6 +619,7 @@ export function useCategoryPageData(categorySlug: string) {
 export function useSubcategoryPageData(
   categorySlug: string,
   subcategorySlug: string,
+  locale: Locale = defaultLocale,
 ) {
   const catalogQuery = useStorefrontCatalog();
 
@@ -553,7 +629,7 @@ export function useSubcategoryPageData(
   );
 
   const productsQuery = useQuery({
-    queryKey: ["storefront", "products", base?.subcategory._id ?? null],
+    queryKey: ["storefront", "products", locale, base?.subcategory._id ?? null],
     queryFn: ({ signal }) =>
       fetchJson<StorefrontProductPayload>(
         `/api/storefront/products?subcategoryId=${base?.subcategory._id}&limit=48`,
@@ -571,11 +647,13 @@ export function useSubcategoryPageData(
       subcategorySlug,
       productsQuery.data.items,
       productsQuery.data.colors,
+      locale,
     );
   }, [
     base,
     catalogQuery.data,
     categorySlug,
+    locale,
     productsQuery.data,
     subcategorySlug,
   ]);

@@ -10,12 +10,24 @@ import type {
   SubcategoryPageData,
 } from "@/types/category-page";
 
+import {
+  catalogNumber,
+  catalogPageCopy,
+  type CatalogPageCopy,
+} from "@/lib/i18n/catalog-page-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 import { ArrowRightIcon, Button } from "@/components/ui/Button";
 
 type SubcategoryLandingPageProps = {
   data: SubcategoryPageData;
+  locale: Locale;
 };
 
 const SUBCATEGORY_THEME_VARS = {
@@ -28,48 +40,62 @@ const SUBCATEGORY_THEME_VARS = {
   "--category-copper": brandColors.copper.hex,
 } as CSSProperties;
 
-const FA_NUMBER_FORMATTER = new Intl.NumberFormat("fa-IR");
+function DirectionalArrowIcon({ locale }: { locale: Locale }) {
+  const direction = getLocaleDirection(locale);
 
-function RtlArrowIcon() {
   return (
     <span
       aria-hidden="true"
-      className="inline-grid size-4 shrink-0 place-items-center [&>svg]:rotate-180"
+      className={`inline-grid size-4 shrink-0 place-items-center ${
+        direction === "rtl" ? "[&>svg]:rotate-180" : ""
+      }`}
     >
       <ArrowRightIcon />
     </span>
   );
 }
 
-export function SubcategoryLandingPage({ data }: SubcategoryLandingPageProps) {
+export function SubcategoryLandingPage({
+  data,
+  locale,
+}: SubcategoryLandingPageProps) {
+  const direction = getLocaleDirection(locale);
+  const copy = catalogPageCopy[locale];
+
   return (
     <main
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={getHtmlLang(locale)}
       style={SUBCATEGORY_THEME_VARS}
       className="
         w-full
         overflow-hidden
 
         bg-white
-        text-right
+        text-start
         text-[var(--category-black)]
       "
     >
-      <SubcategoryHero data={data} />
+      <SubcategoryHero data={data} locale={locale} />
 
       <SubcategoryIntro data={data} />
 
-      <SubcategoryProducts data={data} />
+      <SubcategoryProducts data={data} locale={locale} copy={copy} />
 
       <SubcategoryFeature data={data} />
 
-      <SubcategoryFinalCTA data={data} />
+      <SubcategoryFinalCTA data={data} locale={locale} />
     </main>
   );
 }
 
-function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
+function SubcategoryHero({
+  data,
+  locale,
+}: {
+  data: SubcategoryPageData;
+  locale: Locale;
+}) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
   const hero = data.hero;
@@ -168,16 +194,17 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
           md:px-[7vw]
           md:pb-0
 
-          text-right
+          text-start
         "
       >
         <div
           className={`
-            ml-auto
+            rtl:ml-auto
+            ltr:mr-auto
             w-full
             max-w-[680px]
 
-            text-right
+            text-start
 
             transition-[opacity,transform]
             duration-[900ms]
@@ -267,10 +294,10 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
 
           <div className="mt-8 hidden w-full max-w-[250px] md:block">
             <Button
-              href={hero.action.href}
+              href={localizedHref(hero.action.href, locale)}
               variant="black"
               size="lg"
-              icon={<RtlArrowIcon />}
+              icon={<DirectionalArrowIcon locale={locale} />}
               fullWidth
             >
               {hero.action.label}
@@ -293,10 +320,10 @@ function SubcategoryHero({ data }: { data: SubcategoryPageData }) {
         "
       >
         <Button
-          href={hero.action.href}
+          href={localizedHref(hero.action.href, locale)}
           variant="black"
           size="lg"
-          icon={<RtlArrowIcon />}
+          icon={<DirectionalArrowIcon locale={locale} />}
           fullWidth
         >
           {hero.action.label}
@@ -327,7 +354,7 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
 
           py-16
 
-          text-right
+          text-start
 
           sm:px-8
           sm:py-20
@@ -402,7 +429,17 @@ function SubcategoryIntro({ data }: { data: SubcategoryPageData }) {
   );
 }
 
-function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
+function SubcategoryProducts({
+  data,
+  locale,
+  copy,
+}: {
+  data: SubcategoryPageData;
+  locale: Locale;
+  copy: CatalogPageCopy;
+}) {
+  const direction = getLocaleDirection(locale);
+
   return (
     <section
       aria-labelledby="subcategory-products-heading"
@@ -451,16 +488,16 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
               text-black
             "
           >
-            محصولات
+            {copy.productsHeading}
           </h2>
 
           <p className="mt-2 text-[9px] text-black/40">
-            {FA_NUMBER_FORMATTER.format(data.products.length)} محصول
+            {copy.productCount(catalogNumber(data.products.length, locale))}
           </p>
         </div>
 
         <Link
-          href={`/shop?category=${data.slug}`}
+          href={localizedHref(`/shop?subcategory=${data.slug}`, locale)}
           className="
             group
 
@@ -489,9 +526,9 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
             sm:flex
           "
         >
-          مشاهده همه
-          <span className="transition-transform group-hover:-translate-x-1">
-            <span aria-hidden="true">&larr;</span>
+          {copy.viewAll}
+          <span className="transition-transform rtl:group-hover:-translate-x-1 ltr:group-hover:translate-x-1">
+            <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
           </span>
         </Link>
       </div>
@@ -524,7 +561,7 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
         >
           {data.products.map((product, index) => (
             <li key={product.id} className="min-w-0">
-              <ProductCard index={index} product={product} />
+              <ProductCard index={index} locale={locale} product={product} />
             </li>
           ))}
         </ul>
@@ -539,16 +576,15 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
               place-items-center
               bg-[var(--category-cream)]
               px-6
-              text-right
+              text-start
             "
           >
             <div>
               <p className="  text-[42px] tracking-[-0.05em]">
-                هنوز محصولی برای این زیردسته ثبت نشده است.
+                {copy.emptyProductsTitle}
               </p>
               <p className="mt-4 max-w-[420px] text-[10px] leading-[1.8] text-black/45">
-                محصول فعال بسازید و این زیردسته را انتخاب کنید تا همین‌جا نمایش
-                داده شود.
+                {copy.emptyProductsDescription}
               </p>
             </div>
           </div>
@@ -557,13 +593,13 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
 
       <div className="px-6 pt-6 sm:hidden">
         <Button
-          href={`/shop?category=${data.slug}`}
+          href={localizedHref(`/shop?subcategory=${data.slug}`, locale)}
           variant="black"
           size="lg"
-          icon={<RtlArrowIcon />}
+          icon={<DirectionalArrowIcon locale={locale} />}
           fullWidth
         >
-          مشاهده همه {data.name}
+          {copy.viewAllNamed(data.name)}
         </Button>
       </div>
     </section>
@@ -573,14 +609,18 @@ function SubcategoryProducts({ data }: { data: SubcategoryPageData }) {
 function ProductCard({
   product,
   index,
+  locale,
 }: {
   product: CategoryProduct;
 
   index: number;
+  locale: Locale;
 }) {
+  const direction = getLocaleDirection(locale);
+
   return (
     <Link
-      href={product.href}
+      href={localizedHref(product.href, locale)}
       data-image-story-id={product.imageAssetId}
       data-image-story-url={product.image}
       className="
@@ -601,7 +641,7 @@ function ProductCard({
 
         xl:min-h-[540px]
 
-        text-right
+        text-start
 
         focus-visible:outline-none
         focus-visible:ring-2
@@ -662,7 +702,7 @@ function ProductCard({
         className="
           absolute
 
-          left-5
+          start-5
           top-5
 
           text-[6px]
@@ -680,7 +720,7 @@ function ProductCard({
         <span
           className="
             absolute
-            right-5
+            end-5
             top-5
             bg-white
             px-3
@@ -710,7 +750,7 @@ function ProductCard({
           lg:p-8
         "
       >
-        <div className="flex items-end justify-between gap-5 text-right">
+        <div className="flex items-end justify-between gap-5 text-start">
           <div className="min-w-0">
             <h3
               className="
@@ -807,14 +847,15 @@ function ProductCard({
 
               transition-[background-color,color,border-color,transform]
 
-              group-hover:-translate-x-1
+              rtl:group-hover:-translate-x-1
+              ltr:group-hover:translate-x-1
 
               group-hover:border-white
               group-hover:bg-white
               group-hover:text-black
             "
           >
-            <span aria-hidden="true">&larr;</span>
+            <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
           </span>
         </div>
       </div>
@@ -904,10 +945,10 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
           md:items-center
           md:px-[7vw]
 
-          text-right
+          text-start
         "
       >
-        <div className="ml-auto max-w-[620px] text-right">
+        <div className="max-w-[620px] text-start rtl:ml-auto ltr:mr-auto">
           {feature.eyebrow && (
             <div
               className="
@@ -982,7 +1023,13 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
   );
 }
 
-function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
+function SubcategoryFinalCTA({
+  data,
+  locale,
+}: {
+  data: SubcategoryPageData;
+  locale: Locale;
+}) {
   const cta = data.finalCTA;
 
   return (
@@ -1026,7 +1073,7 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
 
             justify-center
 
-            text-right
+            text-start
 
             px-7
             py-10
@@ -1099,10 +1146,10 @@ function SubcategoryFinalCTA({ data }: { data: SubcategoryPageData }) {
 
           <div className="mt-8 w-full max-w-[250px]">
             <Button
-              href={cta.action.href}
+              href={localizedHref(cta.action.href, locale)}
               variant="black"
               size="lg"
-              icon={<RtlArrowIcon />}
+              icon={<DirectionalArrowIcon locale={locale} />}
               fullWidth
             >
               {cta.action.label}

@@ -9,6 +9,7 @@
  */
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import Lenis from "lenis";
 
 interface LenisProviderProps {
@@ -22,8 +23,45 @@ type LenisWindow = Window & {
 export function LenisProvider({
   children,
 }: LenisProviderProps): React.JSX.Element {
+  const pathname = usePathname();
   const lenisRef = useRef<Lenis | null>(null);
   const rafRef = useRef<number | null>(null);
+  const previousPathnameRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!("scrollRestoration" in window.history)) return;
+
+    const previous = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+
+    return () => {
+      window.history.scrollRestoration = previous;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pathname) return;
+
+    if (previousPathnameRef.current === null) {
+      previousPathnameRef.current = pathname;
+      return;
+    }
+
+    if (previousPathnameRef.current === pathname) return;
+    previousPathnameRef.current = pathname;
+
+    const frame = requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      lenisRef.current?.scrollTo(0, {
+        force: true,
+        immediate: true,
+        lock: false,
+      });
+      lenisRef.current?.resize();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [pathname]);
 
   useEffect(() => {
     // Reduced motion — native scrolling
