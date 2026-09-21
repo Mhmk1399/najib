@@ -33,6 +33,12 @@ import {
 
 import { localizedHref } from "@/lib/i18n/routes";
 
+import {
+  clearPendingCartItem,
+  commerceFetch,
+  readPendingCartItem,
+} from "@/lib/commerce/client";
+
 /* ==========================================================================
    TYPES
 ============================================================================ */
@@ -433,7 +439,26 @@ export function AuthForm({
       const result = (await response.json().catch(() => ({}))) as AuthResponse;
 
       if (response.ok && result.ok && result.destination) {
-        router.replace(result.destination);
+        const pendingCartItem = readPendingCartItem();
+        let destination = nextPath ?? result.destination;
+
+        if (pendingCartItem) {
+          try {
+            await commerceFetch("/api/account/cart/items", {
+              method: "POST",
+              body: JSON.stringify({
+                variantId: pendingCartItem.variantId,
+                quantity: pendingCartItem.quantity,
+              }),
+            });
+            clearPendingCartItem();
+            destination = localizedHref("/cart", locale);
+          } catch {
+            // Keep the pending selection for a later retry.
+          }
+        }
+
+        router.replace(destination);
 
         router.refresh();
 
@@ -1192,7 +1217,7 @@ export function AuthForm({
         </section>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         @keyframes auth-rise {
           from {
             opacity: 0;

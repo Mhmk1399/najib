@@ -29,8 +29,8 @@ import {
   cartQueryKey,
   CommerceApiError,
   commerceFetch,
-  currentPath,
   loginHref,
+  savePendingCartItem,
 } from "@/lib/commerce/client";
 
 import {
@@ -2621,10 +2621,11 @@ function ProductCard({
     } catch (error) {
       setCartState("idle");
       if (error instanceof CommerceApiError && error.status === 401) {
+        savePendingCartItem(idOf(variant._id), 1);
         toast.info(copy.cart.loginTitle, {
-          description: copy.cart.loginDescription,
+          description: "پس از ورود، محصول خودکار به سبد اضافه می‌شود.",
         });
-        window.location.assign(loginHref(currentPath()));
+        window.location.assign(loginHref("/cart"));
         return;
       }
       toast.error(copy.cart.errorTitle, {

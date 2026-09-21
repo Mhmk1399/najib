@@ -1,5 +1,14 @@
 export const cartQueryKey = ["account", "cart"] as const;
 
+const PENDING_CART_ITEM_KEY = "najib:pending-cart-item";
+const PENDING_CART_ITEM_TTL_MS = 30 * 60 * 1000;
+
+export type PendingCartItem = {
+  variantId: string;
+  quantity: number;
+  createdAt: number;
+};
+
 export type CartItem = {
   id: string;
   variantId: string;
@@ -104,6 +113,49 @@ export function fetchAccountCart(signal?: AbortSignal) {
 
 export function loginHref(next: string) {
   return `/auth?mode=login&next=${encodeURIComponent(next)}`;
+}
+
+export function savePendingCartItem(variantId: string, quantity = 1) {
+  if (typeof window === "undefined") return;
+
+  window.sessionStorage.setItem(
+    PENDING_CART_ITEM_KEY,
+    JSON.stringify({ variantId, quantity, createdAt: Date.now() }),
+  );
+}
+
+export function readPendingCartItem(): PendingCartItem | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const raw = window.sessionStorage.getItem(PENDING_CART_ITEM_KEY);
+    if (!raw) return null;
+
+    const item = JSON.parse(raw) as Partial<PendingCartItem>;
+    const valid =
+      typeof item.variantId === "string" &&
+      /^[a-f\d]{24}$/i.test(item.variantId) &&
+      Number.isInteger(item.quantity) &&
+      Number(item.quantity) > 0 &&
+      typeof item.createdAt === "number" &&
+      Date.now() - item.createdAt <= PENDING_CART_ITEM_TTL_MS;
+
+    if (!valid) {
+      clearPendingCartItem();
+      return null;
+    }
+
+    return item as PendingCartItem;
+  } catch {
+    clearPendingCartItem();
+    return null;
+  }
+}
+
+export function clearPendingCartItem() {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(PENDING_CART_ITEM_KEY);
+  }
 }
 
 export function currentPath() {

@@ -27,8 +27,8 @@ import {
   cartQueryKey,
   CommerceApiError,
   commerceFetch,
-  currentPath,
   loginHref,
+  savePendingCartItem,
 } from "@/lib/commerce/client";
 
 /* ==========================================================================
@@ -331,10 +331,11 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
       });
     } catch (error) {
       if (error instanceof CommerceApiError && error.status === 401) {
+        savePendingCartItem(variant.id, 1);
         toast.info("ابتدا وارد حساب شوید", {
-          description: "پس از ورود می‌توانید این انتخاب را به سبد اضافه کنید.",
+          description: "پس از ورود، این انتخاب خودکار به سبد اضافه می‌شود.",
         });
-        window.location.assign(loginHref(currentPath()));
+        window.location.assign(loginHref("/cart"));
         return;
       }
       toast.error("افزودن محصول ناموفق بود", {
