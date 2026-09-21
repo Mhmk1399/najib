@@ -65,9 +65,9 @@ export default async function Page({ params }: AboutPageProps) {
       <AboutHeroSection
         locale={locale}
         copy={copy.hero}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p4.webp"
         mobileImagePosition="68% center"
-        desktopImagePosition="center"
+        desktopImagePosition="top"
       />
 
       <AboutCraftSection
@@ -76,21 +76,21 @@ export default async function Page({ params }: AboutPageProps) {
         images={[
           {
             id: "fabric",
-            src: "/assets/images/banner.webp",
+            src: "/assets/images/p1.webp",
             alt: copy.craft.imageAlts.fabric,
             position: "center",
           },
 
           {
             id: "hand",
-            src: "/assets/images/banner.webp",
+            src: "/assets/images/p2.webp",
             alt: copy.craft.imageAlts.hand,
             position: "center",
           },
 
           {
             id: "material",
-            src: "/assets/images/banner.webp",
+            src: "/assets/images/p3.webp",
             alt: copy.craft.imageAlts.material,
             position: "center",
           },
@@ -100,9 +100,9 @@ export default async function Page({ params }: AboutPageProps) {
       <AboutValuesSection
         locale={locale}
         copy={copy.values}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p6.webp"
         mobileImagePosition="68% center"
-        desktopImagePosition="center"
+        desktopImagePosition="top"
       />
     </main>
   );

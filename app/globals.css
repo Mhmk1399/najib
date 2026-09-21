@@ -17,7 +17,7 @@ html {
 }
 body {
   margin: 0;
-  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-family, Inter, "Helvetica Neue", Arial, sans-serif);
   color: #fff;
   background: #111;
 }
