@@ -4,102 +4,125 @@ import Image from "next/image";
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
+import { ArrowLeftIcon, ArrowRightIcon, Button } from "@/components/ui/Button";
+
+import type { AboutCopy } from "@/lib/i18n/about-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
+import { localizedHref } from "@/lib/i18n/routes";
+
 import { brandColors } from "@/theme/theme-colors";
 
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
-
 type AboutHeroSectionProps = {
-  imageSrc: string;
-  imageAlt?: string;
-  eyebrow?: string;
-  title?: string;
-  italicTitle?: string;
-  description?: string;
+  copy: AboutCopy["hero"];
 
-  action?: {
-    label: string;
-    href: string;
-  };
+  locale: Locale;
+
+  imageSrc: string;
 
   mobileImagePosition?: string;
+
   desktopImagePosition?: string;
+
   className?: string;
 };
 
 export function AboutHeroSection({
+  copy,
+  locale,
   imageSrc,
-  imageAlt = "",
-  eyebrow = "درباره نجیب‌زاده",
-  title = "ریشه‌دار در میراث.",
-  italicTitle = "تعریف‌شده با هدف.",
-  description = "نجیب‌زاده خانه‌ای مدرن برای خیاطی، عطر و اشیای ماندگار است؛ شکل‌گرفته از هنر دست، ظرافت، اصالت و جست‌وجویی آرام برای خلق تمایزی ماندگار.",
-  action,
   mobileImagePosition = "68% center",
   desktopImagePosition = "center",
   className = "",
 }: AboutHeroSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
+  const isRtl = direction === "rtl";
+
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
+
   const themeVars = {
     "--about-black": brandColors.black.hex,
+
     "--about-black-rgb": brandColors.black.rgb,
+
     "--about-white": brandColors.white.hex,
+
     "--about-copper": brandColors.copper.hex,
+
+    "--about-mobile-position": mobileImagePosition,
+
+    "--about-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
   return (
     <section
       ref={ref}
       style={themeVars}
-      dir="rtl"
+      dir={direction}
+      lang={htmlLang}
       className={`
         relative
         isolate
+
         min-h-[100svh]
+
         w-full
+
         overflow-hidden
+
         bg-[var(--about-black)]
+
         text-white
+
         md:min-h-[100svh]
+
         ${className}
       `}
     >
-      {/* =====================================================
-          IMAGE
-      ====================================================== */}
+      {/* IMAGE */}
 
       <Image
         src={imageSrc}
-        alt={imageAlt}
+        alt={copy.imageAlt}
         fill
         priority
         sizes="100vw"
         draggable={false}
         className="
           -z-30
+
           object-cover
+
+          object-[var(--about-mobile-position)]
+
+          md:object-[var(--about-desktop-position)]
         "
-        style={
-          {
-            objectPosition: desktopImagePosition,
-            "--mobile-position": mobileImagePosition,
-            "--desktop-position": desktopImagePosition,
-          } as CSSProperties
-        }
       />
 
-      {/* =====================================================
-          DARK OVERLAYS
-      ====================================================== */}
+      {/* DARK OVERLAYS */}
 
       <div
         aria-hidden="true"
         className="
           pointer-events-none
+
           absolute
           inset-0
+
           -z-20
+
           bg-[linear-gradient(180deg,rgb(var(--about-black-rgb)/0.22)_0%,rgb(var(--about-black-rgb)/0.30)_45%,rgb(var(--about-black-rgb)/0.82)_100%)]
+
           md:bg-[linear-gradient(90deg,rgb(var(--about-black-rgb)/0.52)_0%,rgb(var(--about-black-rgb)/0.34)_50%,rgb(var(--about-black-rgb)/0.52)_100%)]
         "
       />
@@ -108,75 +131,98 @@ export function AboutHeroSection({
         aria-hidden="true"
         className="
           pointer-events-none
+
           absolute
           inset-0
+
           -z-10
+
           bg-[radial-gradient(circle_at_center,transparent_20%,rgb(var(--about-black-rgb)/0.38)_120%)]
         "
       />
 
-      {/* =====================================================
-          HOUSE MARK
-      ====================================================== */}
+      {/* HOUSE MARK */}
 
       <div
         className={`
           absolute
+
           left-1/2
           top-24
+
           z-10
+
           hidden
+
           -translate-x-1/2
+
           text-center
+
           transition-[opacity,transform]
+
           duration-700
+
           md:block
           md:top-[16vh]
+
           ${revealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
         `}
       >
         <p
           className="
             text-[7px]
+
             font-semibold
+
             tracking-[0.16em]
+
             text-white/48
           "
         >
-          خانه نجیب‌زاده
+          {copy.houseEyebrow}
         </p>
 
         <p
           className="
             mt-2
+
             text-[12px]
+
             font-medium
+
             tracking-[0.12em]
+
             text-white/80
           "
         >
-          نجیب‌زاده
+          {copy.houseName}
         </p>
       </div>
 
-      {/* =====================================================
-          CONTENT
-      ====================================================== */}
+      {/* CONTENT */}
 
       <div
         className="
           relative
           z-10
+
           flex
+
           min-h-[78svh]
+
           items-end
           justify-center
+
           px-6
+
           pb-16
           pt-32
+
           sm:px-10
+
           md:min-h-[86svh]
           md:items-center
+
           md:px-[7vw]
           md:pb-0
           md:pt-20
@@ -185,12 +231,18 @@ export function AboutHeroSection({
         <div
           className={`
             mx-auto
+
             w-full
             max-w-[620px]
+
             text-center
+
             transition-[opacity,transform]
+
             duration-[900ms]
+
             ease-[cubic-bezier(0.22,1,0.36,1)]
+
             ${
               revealed
                 ? "translate-y-0 opacity-100"
@@ -203,22 +255,46 @@ export function AboutHeroSection({
           <div
             className="
               mb-5
+
               flex
+
               items-center
               justify-center
+
               gap-3
+
               text-[7px]
+
               font-semibold
+
               tracking-[0.12em]
+
               text-[var(--about-copper)]
+
               sm:text-[8px]
             "
           >
-            <span className="h-px w-7 bg-[var(--about-copper)]" />
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
 
-            <span>{eyebrow}</span>
+                bg-[var(--about-copper)]
+              "
+            />
 
-            <span className="h-px w-7 bg-[var(--about-copper)]" />
+            <span>{copy.eyebrow}</span>
+
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
+
+                bg-[var(--about-copper)]
+              "
+            />
           </div>
 
           {/* TITLE */}
@@ -227,106 +303,129 @@ export function AboutHeroSection({
             className="
               flex
               flex-col
+
               items-center
+
               text-center
-               
+
               text-[clamp(3.3rem,13vw,5.2rem)]
+
               font-normal
+
               leading-[1]
+
               tracking-[-0.045em]
+
               text-white
+
               md:text-[clamp(4.7rem,6vw,7rem)]
             "
           >
-            <span>{title}</span>
+            <span>{copy.title}</span>
 
             <span
               className="
                 mt-[0.1em]
+
                 text-white/78
               "
             >
-              {italicTitle}
+              {copy.italicTitle}
             </span>
           </h1>
 
           {/* DESCRIPTION */}
 
-          {description && (
+          {copy.description ? (
             <p
               className="
                 mx-auto
                 mt-7
+
                 max-w-[430px]
+
                 text-center
+
                 text-[9px]
+
                 leading-[2]
+
                 text-white/60
+
                 sm:text-[10px]
+
                 md:text-[11px]
               "
             >
-              {description}
+              {copy.description}
             </p>
-          )}
+          ) : null}
 
           {/* ACTION */}
 
-          {action && (
+          {copy.action ? (
             <div
               className="
                 mx-auto
                 mt-8
+
                 w-full
                 max-w-[240px]
               "
             >
               <Button
-                href={action.href}
+                href={localizedHref(copy.action.href, locale)}
                 variant="outline"
                 size="lg"
-                icon={<ArrowRightIcon />}
+                icon={<ActionIcon />}
                 fullWidth
               >
-                {action.label}
+                {copy.action.label}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
 
-      {/* =====================================================
-          BOTTOM HAIRLINE
-      ====================================================== */}
+      {/* BOTTOM HAIRLINE */}
 
       <div
         aria-hidden="true"
         className="
           absolute
+
           inset-x-[7vw]
           bottom-6
+
           hidden
+
           items-center
           justify-center
+
           gap-4
+
           md:flex
         "
       >
         <span
           className="
             text-[6px]
+
             font-medium
+
             tracking-[0.1em]
+
             text-white/30
           "
         >
-          بنیان‌گذاری‌شده با هدف
+          {copy.bottomLabel}
         </span>
 
         <span
           className="
             h-px
             flex-1
+
             bg-white/12
           "
         />
@@ -334,11 +433,13 @@ export function AboutHeroSection({
         <span
           className="
             text-[6px]
+
             tracking-[0.1em]
+
             text-white/30
           "
         >
-          نجیب‌زاده
+          {copy.bottomBrand}
         </span>
       </div>
     </section>
@@ -347,6 +448,7 @@ export function AboutHeroSection({
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
+
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
@@ -355,7 +457,10 @@ function useRevealOnce<T extends HTMLElement>() {
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const frame = requestAnimationFrame(() => setRevealed(true));
+      const frame = requestAnimationFrame(() => {
+        setRevealed(true);
+      });
+
       return () => cancelAnimationFrame(frame);
     }
 
@@ -365,7 +470,10 @@ function useRevealOnce<T extends HTMLElement>() {
           return;
         }
 
-        requestAnimationFrame(() => setRevealed(true));
+        requestAnimationFrame(() => {
+          setRevealed(true);
+        });
+
         observer.disconnect();
       },
       {

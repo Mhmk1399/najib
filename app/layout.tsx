@@ -42,6 +42,8 @@ import {
   siteUrl,
 } from "@/lib/i18n/metadata";
 import { estedad } from "@/next-persian-fonts/estedad";
+import { Dana } from "@/next-persian-fonts/dana";
+import { Aria } from "@/next-persian-fonts/Aria Family";
  
 export const metadata: Metadata = {
   title: "Najibzadeh | Luxury Menswear & Tailoring",
@@ -100,6 +102,12 @@ export default async function RootLayout({
   const locale = isLocale(candidateLocale) ? candidateLocale : defaultLocale;
   const direction = getLocaleDirection(locale);
 
+  // Select font based on locale
+  const fontClass = locale === "en" ? Aria.className : estedad.className;
+  
+  // Set CSS variable for font family
+  const fontVariable = locale === "en" ? "--font-aria" : "--font-estedad";
+
   return (
     /*
      * suppressHydrationWarning is required on <html> because ThemeScript
@@ -112,12 +120,13 @@ export default async function RootLayout({
       lang={getHtmlLang(locale)}
       dir={direction}
       suppressHydrationWarning
+      style={{ '--font-family': fontVariable } as React.CSSProperties}
     >
       <head></head>
 
       <body
         dir={direction}
-        className={`antialiased  ${estedad.className} min-h-dvh`}
+        className={`antialiased ${fontClass} min-h-dvh`}
       >
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>

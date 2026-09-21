@@ -4,71 +4,68 @@ import Image from "next/image";
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
+import type { AboutCopy, AboutCraftIcon } from "@/lib/i18n/about-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 type CraftImage = {
   id: string;
+
   src: string;
-  alt?: string;
+
+  alt: string;
+
   position?: string;
 };
 
 type AboutCraftSectionProps = {
-  images: CraftImage[];
+  copy: AboutCopy["craft"];
 
-  eyebrow?: string;
-  title?: string;
-  description?: string;
-  secondaryDescription?: string;
+  locale: Locale;
+
+  images: CraftImage[];
 
   className?: string;
 };
 
-const CRAFT_VALUES = [
-  {
-    id: "materials",
-    title: "بهترین متریال",
-    icon: "material",
-  },
-  {
-    id: "precision",
-    title: "دوخت دقیق",
-    icon: "precision",
-  },
-  {
-    id: "finishing",
-    title: "پرداخت ظریف",
-    icon: "finishing",
-  },
-  {
-    id: "lasting",
-    title: "ساخته‌شده برای ماندگاری",
-    icon: "lasting",
-  },
-] as const;
+function formatIndex(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale), {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(value);
+}
 
 export function AboutCraftSection({
+  copy,
+  locale,
   images,
-
-  eyebrow = "هنر ما",
-
-  title = "جایی که هنر دست با ظرافت مدرن پیوند می‌خورد.",
-
-  description = "هر قطعه با یک هدف آغاز می‌شود. از انتخاب نخستین متریال تا آخرین بخیه، هر تصمیم با دقت، تناسب و احترام به هنر خیاطی شکل می‌گیرد.",
-
-  secondaryDescription = "نتیجه، پوشاک و اشیایی است که برای زندگی‌کردن، به‌یادماندن و ارزشمند ماندن فراتر از یک لحظه ساخته شده‌اند.",
-
   className = "",
 }: AboutCraftSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
+  const isRtl = direction === "rtl";
 
   const visibleImages = images.slice(0, 3);
 
   const themeVars = {
     "--craft-bg": lightTokens.surfaceBrand,
+
     "--craft-text": brandColors.black.hex,
+
     "--craft-muted": lightTokens.textMuted,
+
     "--craft-border": lightTokens.border,
+
     "--craft-copper": brandColors.copper.hex,
   } as CSSProperties;
 
@@ -76,21 +73,29 @@ export function AboutCraftSection({
     <section
       ref={ref}
       style={themeVars}
-      dir="rtl"
+      dir={direction}
+      lang={htmlLang}
       className={`
         w-full
+
         bg-[var(--craft-bg)]
+
         text-[var(--craft-text)]
+
         ${className}
       `}
     >
       <div
         className="
           mx-auto
+
           grid
+
           w-full
           max-w-[1600px]
+
           gap-12
+
           px-6
           py-16
 
@@ -98,8 +103,10 @@ export function AboutCraftSection({
           sm:py-20
 
           lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]
+
           lg:items-center
           lg:gap-16
+
           lg:px-12
           lg:py-28
 
@@ -107,24 +114,29 @@ export function AboutCraftSection({
           xl:px-16
         "
       >
-        {/* =====================================================
-            IMAGE TRIPTYCH
-        ====================================================== */}
+        {/* IMAGE TRIPTYCH */}
 
         <div
           className={`
             grid
+
             h-[500px]
+
             grid-cols-3
+
             overflow-hidden
+
             border
             border-[var(--craft-border)]
 
             transition-[opacity,transform]
+
             duration-[900ms]
+
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             sm:h-[620px]
+
             lg:h-[680px]
 
             ${
@@ -137,17 +149,25 @@ export function AboutCraftSection({
           {visibleImages.map((image, index) => (
             <div
               key={image.id}
-              className="
-                relative
-                overflow-hidden
-                border-l
-                border-black/10
-                last:border-l-0
-              "
+              className={`
+                  relative
+
+                  overflow-hidden
+
+                  border-black/10
+
+                  ${
+                    index < visibleImages.length - 1
+                      ? isRtl
+                        ? "border-l"
+                        : "border-r"
+                      : ""
+                  }
+                `}
             >
               <Image
                 src={image.src}
-                alt={image.alt ?? ""}
+                alt={image.alt}
                 fill
                 loading="lazy"
                 sizes="33vw"
@@ -156,60 +176,72 @@ export function AboutCraftSection({
                   objectPosition: image.position ?? "center",
                 }}
                 className="
-                  scale-[1.01]
-                  object-cover
-                  transition-transform
-                  duration-[1200ms]
-                  ease-[cubic-bezier(0.22,1,0.36,1)]
-                  hover:scale-[1.04]
-                "
+                    scale-[1.01]
+
+                    object-cover
+
+                    transition-transform
+
+                    duration-[1200ms]
+
+                    ease-[cubic-bezier(0.22,1,0.36,1)]
+
+                    hover:scale-[1.04]
+                  "
               />
 
               <div
                 aria-hidden="true"
                 className="
-                  pointer-events-none
-                  absolute
-                  inset-0
-                  bg-gradient-to-t
-                  from-black/22
-                  via-transparent
-                  to-black/[0.04]
-                "
+                    pointer-events-none
+
+                    absolute
+                    inset-0
+
+                    bg-gradient-to-t
+
+                    from-black/22
+                    via-transparent
+                    to-black/[0.04]
+                  "
               />
 
               <span
                 className="
-                  absolute
-                  bottom-4
-                  left-1/2
-                  -translate-x-1/2
-                  text-center
-                  text-[6px]
-                  font-medium
-                  tracking-[0.12em]
-                  text-white/55
-                "
+                    absolute
+
+                    bottom-4
+                    left-1/2
+
+                    -translate-x-1/2
+
+                    text-center
+
+                    text-[6px]
+
+                    font-medium
+
+                    tracking-[0.12em]
+
+                    text-white/55
+                  "
               >
-                {new Intl.NumberFormat("fa-IR", {
-                  minimumIntegerDigits: 2,
-                  useGrouping: false,
-                }).format(index + 1)}
+                {formatIndex(index + 1, locale)}
               </span>
             </div>
           ))}
         </div>
 
-        {/* =====================================================
-            CONTENT
-        ====================================================== */}
+        {/* CONTENT */}
 
         <div
           className={`
             text-center
 
             transition-[opacity,transform]
+
             duration-[900ms]
+
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             ${
@@ -224,31 +256,43 @@ export function AboutCraftSection({
           <div
             className="
               mb-5
+
               flex
+
               items-center
               justify-center
+
               gap-3
+
               text-[7px]
+
               font-semibold
+
               tracking-[0.12em]
+
               text-[var(--craft-copper)]
+
               sm:text-[8px]
             "
           >
             <span
+              aria-hidden="true"
               className="
                 h-px
                 w-6
+
                 bg-[var(--craft-copper)]
               "
             />
 
-            <span>{eyebrow}</span>
+            <span>{copy.eyebrow}</span>
 
             <span
+              aria-hidden="true"
               className="
                 h-px
                 w-6
+
                 bg-[var(--craft-copper)]
               "
             />
@@ -259,20 +303,27 @@ export function AboutCraftSection({
           <h2
             className="
               mx-auto
+
               max-w-[620px]
+
               text-center
-               
+
               text-[clamp(2.8rem,10vw,4.5rem)]
+
               font-normal
+
               leading-[1.05]
+
               tracking-[-0.04em]
+
               text-[var(--craft-text)]
 
               sm:text-[clamp(3.4rem,7vw,5rem)]
+
               lg:text-[clamp(3.8rem,4.5vw,5.5rem)]
             "
           >
-            {title}
+            {copy.title}
           </h2>
 
           {/* DESCRIPTION */}
@@ -281,87 +332,118 @@ export function AboutCraftSection({
             className="
               mx-auto
               mt-7
+
               max-w-[510px]
+
               text-center
+
               text-[10px]
+
               leading-[2]
+
               text-[var(--craft-muted)]
+
               sm:text-[11px]
             "
           >
-            {description}
+            {copy.description}
           </p>
 
           <p
             className="
               mx-auto
               mt-4
+
               max-w-[510px]
+
               text-center
+
               text-[10px]
+
               leading-[2]
+
               text-[var(--craft-muted)]
+
               sm:text-[11px]
             "
           >
-            {secondaryDescription}
+            {copy.secondaryDescription}
           </p>
 
-          {/* =================================================
-              VALUES
-          ================================================= */}
+          {/* VALUES */}
 
           <div
-            className="
+            className={`
               mt-10
+
               grid
               grid-cols-2
-              border-r
+
               border-t
               border-black/10
+
               lg:grid-cols-4
-            "
+
+              ${isRtl ? "border-r" : "border-l"}
+            `}
           >
-            {CRAFT_VALUES.map((item) => (
+            {copy.values.map((item) => (
               <div
                 key={item.id}
-                className="
-                  flex
-                  min-h-[135px]
-                  flex-col
-                  items-center
-                  justify-center
-                  border-b
-                  border-l
-                  border-black/10
-                  px-4
-                  py-5
-                  text-center
-                "
+                className={`
+                    flex
+
+                    min-h-[135px]
+
+                    flex-col
+
+                    items-center
+                    justify-center
+
+                    border-b
+                    border-black/10
+
+                    px-4
+                    py-5
+
+                    text-center
+
+                    ${isRtl ? "border-l" : "border-r"}
+                  `}
               >
                 <span
                   className="
-                    grid
-                    size-8
-                    place-items-center
-                    text-black/65
-                  "
+                      grid
+
+                      size-8
+
+                      place-items-center
+
+                      text-black/65
+                    "
                 >
                   <CraftIcon type={item.icon} />
                 </span>
 
                 <p
                   className="
-                    mx-auto
-                    mt-5
-                    max-w-[120px]
-                    text-center
-                    text-[7px]
-                    font-semibold
-                    leading-[1.8]
-                    tracking-[0.06em]
-                    text-black/60
-                  "
+                      mx-auto
+                      mt-5
+
+                      max-w-[120px]
+
+                      text-center
+
+                      text-[7px]
+
+                      font-semibold
+
+                      leading-[1.8]
+
+                      tracking-[0.06em]
+
+                      text-black/60
+                    "
                 >
                   {item.title}
                 </p>
@@ -374,7 +456,7 @@ export function AboutCraftSection({
   );
 }
 
-function CraftIcon({ type }: { type: string }) {
+function CraftIcon({ type }: { type: AboutCraftIcon }) {
   if (type === "material") {
     return (
       <svg
@@ -460,15 +542,22 @@ function useRevealOnce<T extends HTMLElement>() {
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const frame = requestAnimationFrame(() => setRevealed(true));
+      const frame = requestAnimationFrame(() => {
+        setRevealed(true);
+      });
+
       return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!entry?.isIntersecting) {
+          return;
+        }
 
-        requestAnimationFrame(() => setRevealed(true));
+        requestAnimationFrame(() => {
+          setRevealed(true);
+        });
 
         observer.disconnect();
       },

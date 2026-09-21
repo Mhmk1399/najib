@@ -6,408 +6,163 @@ import Link from "next/link";
 import {
   type CSSProperties,
   type FormEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
-
+import { ArrowLeftIcon, ArrowRightIcon, Button } from "@/components/ui/Button";
 import { CustomInput } from "@/components/ui/CustomInput";
-
 import { CustomSelect, type SelectOption } from "@/components/ui/CustomSelect";
 
+import type {
+  BlogCategoryKey,
+  BlogCopy,
+  BlogPostCopy,
+} from "@/lib/i18n/blog-copy";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
-/* ==========================================================================
+/* ========================================================================== 
    TYPES
 ============================================================================ */
 
-export type BlogPost = {
-  id: string;
+export type BlogPost = BlogPostCopy;
 
-  slug: string;
-
-  title: string;
-
-  excerpt: string;
-
-  image: string;
-
-  imageAlt?: string;
-
-  imagePosition?: string;
-
-  category: string;
-
-  publishedAt: string;
-
-  readingTime?: string;
-
-  author?: string;
-
-  featured?: boolean;
-};
-
-export type BlogHeroData = {
-  eyebrow?: string;
-
-  title: string;
-
-  description?: string;
-
-  image: string;
-
-  imageAlt?: string;
-
-  mobileImagePosition?: string;
-
-  desktopImagePosition?: string;
-
-  action?: {
-    label: string;
-    href: string;
-  };
-};
-
-export type BlogNewsletterData = {
-  eyebrow?: string;
-
-  title: string;
-
-  description?: string;
-};
+type BlogSort = "latest" | "oldest" | "title";
+type BlogCategoryFilter = BlogCategoryKey | "all";
 
 type BlogListingPageProps = {
-  hero: BlogHeroData;
-
-  posts: BlogPost[];
-
-  categories?: string[];
-
-  newsletter?: BlogNewsletterData;
-
+  locale: Locale;
+  copy: BlogCopy;
+  heroImage: string;
+  heroMobileImagePosition?: string;
+  heroDesktopImagePosition?: string;
+  posts?: BlogPost[];
   loading?: boolean;
-
   postsPerPage?: number;
-
   className?: string;
 };
 
-/* ==========================================================================
-   FAKE DATA
+/* ========================================================================== 
+   HELPERS
 ============================================================================ */
 
-export const fakeBlogPosts: BlogPost[] = [
-  {
-    id: "blog-01",
-
-    slug: "the-new-language-of-modern-dressing",
-
-    title: "زبان تازه پوشش مدرن",
-
-    excerpt:
-      "نگاهی سنجیده به تناسب، متریال و سادگی؛ روایتی از اینکه کمد لباس مدرن چگونه آرام‌تر، شخصی‌تر و ماندگارتر می‌شود.",
-
-        image: "/assets/images/hero4.webp",
-
-    imagePosition: "center 30%",
-
-    category: "یادداشت‌های استایل",
-
-    publishedAt: "2026-08-24",
-
-    readingTime: "۶ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-
-    featured: true,
-  },
-
-  {
-    id: "blog-02",
-
-    slug: "why-material-matters",
-
-    title: "چرا کیفیت متریال بیش از همیشه اهمیت دارد",
-
-    excerpt:
-      "از کشمیر تا پشم ظریف، کیفیت یک لباس مدت‌ها پیش از شکل‌گرفتن فرم نهایی آن آغاز می‌شود.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "هنر ساخت",
-
-    publishedAt: "2026-08-21",
-
-    readingTime: "۵ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-03",
-
-    slug: "building-a-timeless-wardrobe",
-
-    title: "ساختن کمدی فراتر از فصل",
-
-    excerpt:
-      "قطعاتی که ارزش نگه‌داشتن دارند، معمولاً پرهیاهوترین‌ها نیستند؛ نگاهی به انعطاف‌پذیری، ماندگاری و طراحی سنجیده.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "یادداشت‌های استایل",
-
-    publishedAt: "2026-08-18",
-
-    readingTime: "۴ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-04",
-
-    slug: "inside-the-atelier",
-
-    title: "درون آتلیه؛ جزئیاتی که هرگز نمی‌بینید",
-
-    excerpt:
-      "نگاهی نزدیک به ساخت، پرداخت نهایی و تصمیم‌های ظریفی که خیاطی ممتاز را شکل می‌دهند.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "درون خانه",
-
-    publishedAt: "2026-08-14",
-
-    readingTime: "۸ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-05",
-
-    slug: "the-art-of-quiet-luxury",
-
-    title: "تجمل آرام به معنای نامرئی بودن نیست",
-
-    excerpt:
-      "سادگی واقعی به معنای حذف نیست؛ یعنی اطمینان از اینکه دقیقاً چه چیزی شایسته توجه است.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "دیدگاه‌ها",
-
-    publishedAt: "2026-08-09",
-
-    readingTime: "۷ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-06",
-
-    slug: "a-study-in-black",
-
-    title: "مطالعه‌ای در سیاه",
-
-    excerpt:
-      "بافت، سایه و تناسب نشان می‌دهند چگونه یک رنگ می‌تواند هویت یک کمد کامل را به دوش بکشد.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "الهام",
-
-    publishedAt: "2026-08-03",
-
-    readingTime: "۳ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-07",
-
-    slug: "care-for-cashmere",
-
-    title: "چگونه از کشمیر مراقبت کنیم",
-
-    excerpt:
-      "راهنمایی کاربردی برای شست‌وشو، نگهداری و حفظ یکی از ظریف‌ترین الیاف طبیعی جهان.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "راهنمای نگهداری",
-
-    publishedAt: "2026-07-29",
-
-    readingTime: "۵ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-08",
-
-    slug: "the-perfect-jacket",
-
-    title: "آناتومی یک کت بی‌نقص",
-
-    excerpt:
-      "سرشانه، یقه، تعادل و تناسب؛ چهار جزئیاتی که خیاطی را از یک پوشش ساده به شخصیت تبدیل می‌کنند.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "هنر ساخت",
-
-    publishedAt: "2026-07-23",
-
-    readingTime: "۷ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-
-  {
-    id: "blog-09",
-
-    slug: "objects-with-character",
-
-    title: "اشیایی با شخصیت",
-
-    excerpt:
-      "چرا چیزهایی که برای زندگی انتخاب می‌کنیم باید سنجیده، ملموس و با گذر زمان شخصی‌تر شوند.",
-
-        image: "/assets/images/banner.webp",
-
-    category: "الهام",
-
-    publishedAt: "2026-07-18",
-
-    readingTime: "۴ دقیقه مطالعه",
-
-    author: "تحریریه نجیب‌زاده",
-  },
-];
-
-/* ==========================================================================
-   SORT
-============================================================================ */
-
-type BlogSort = "latest" | "oldest" | "title";
-
-const SORT_OPTIONS: SelectOption[] = [
-  {
-    value: "latest",
-    label: "جدیدترین",
-  },
-
-  {
-    value: "oldest",
-    label: "قدیمی‌ترین",
-  },
-
-  {
-    value: "title",
-    label: "الفبا",
-  },
-];
-
-/* ==========================================================================
+function formatTemplate(
+  template: string,
+  values: Record<string, string | number>,
+) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
+  );
+}
+
+function formatNumber(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale)).format(value);
+}
+
+function formatIndex(value: number, locale: Locale) {
+  return new Intl.NumberFormat(getHtmlLang(locale), {
+    minimumIntegerDigits: 2,
+    useGrouping: false,
+  }).format(value);
+}
+
+function formatDate(date: string, locale: Locale) {
+  const parsed = new Date(`${date}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat(getHtmlLang(locale), {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function formatReadingTime(
+  minutes: number | undefined,
+  locale: Locale,
+  template: string,
+) {
+  if (!minutes) return "";
+
+  return formatTemplate(template, {
+    minutes: formatNumber(minutes, locale),
+  });
+}
+
+/* ========================================================================== 
    PAGE
 ============================================================================ */
 
 export function BlogListingPage({
-  hero,
-
-  posts,
-
-  categories,
-
-  newsletter = {
-    eyebrow: "ژورنال نجیب‌زاده",
-
-    title: "نزدیک به خانه نجیب‌زاده بمانید.",
-
-    description:
-      "روایت‌های تحریریه، کالکشن‌های تازه و نگاه‌های سنجیده را گاه‌به‌گاه دریافت کنید.",
-  },
-
+  locale,
+  copy,
+  heroImage,
+  heroMobileImagePosition = "62% center",
+  heroDesktopImagePosition = "center",
+  posts = copy.posts,
   loading = false,
-
   postsPerPage = 6,
-
   className = "",
 }: BlogListingPageProps) {
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+  const isRtl = direction === "rtl";
+
   const [search, setSearch] = useState("");
-
-  const [activeCategory, setActiveCategory] = useState("همه");
-
+  const [activeCategory, setActiveCategory] =
+    useState<BlogCategoryFilter>("all");
   const [sort, setSort] = useState<BlogSort>("latest");
-
   const [currentPage, setCurrentPage] = useState(1);
 
-  /* ------------------------------------------------------------------------
-     THEME
-  ------------------------------------------------------------------------- */
+  const sortOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "latest", label: copy.filters.sort.latest },
+      { value: "oldest", label: copy.filters.sort.oldest },
+      { value: "title", label: copy.filters.sort.title },
+    ],
+    [copy.filters.sort],
+  );
 
   const themeVars = {
     "--blog-bg": lightTokens.surfaceBrand,
-
     "--blog-surface": brandColors.white.hex,
-
     "--blog-black": "#0B0B0B",
-
     "--blog-muted": lightTokens.textMuted,
-
     "--blog-soft": lightTokens.textSoft,
-
     "--blog-border": lightTokens.border,
-
     "--blog-copper": brandColors.copper.hex,
   } as CSSProperties;
 
-  /* ------------------------------------------------------------------------
-     CATEGORIES
-
-     اگر از DB categories بدی، همونا استفاده میشن.
-     در غیر این صورت از posts استخراج میشن.
-  ------------------------------------------------------------------------- */
-
-  const availableCategories = useMemo(() => {
-    const source =
-      categories ?? Array.from(new Set(posts.map((post) => post.category)));
-
-    return ["همه", ...source.filter((category) => category !== "همه" && category !== "All")];
-  }, [categories, posts]);
-
-  /* ------------------------------------------------------------------------
-     FEATURED
-  ------------------------------------------------------------------------- */
-
-  const featuredPost = useMemo(() => {
-    return posts.find((post) => post.featured) ?? posts[0] ?? null;
+  const availableCategories = useMemo<BlogCategoryFilter[]>(() => {
+    const unique = Array.from(new Set(posts.map((post) => post.category)));
+    return ["all", ...unique];
   }, [posts]);
 
-  /* ------------------------------------------------------------------------
-     FILTER
-  ------------------------------------------------------------------------- */
+  const featuredPost = useMemo(
+    () => posts.find((post) => post.featured) ?? posts[0] ?? null,
+    [posts],
+  );
 
   const filteredPosts = useMemo(() => {
-    const query = search.trim().toLowerCase();
+    const query = search.trim().toLocaleLowerCase(htmlLang);
 
     let result = posts.filter((post) => {
-      /*
-       * Featured داخل لیست اصلی دوباره تکرار نشه
-       * فقط در حالت default.
-       */
       if (
         !search &&
-        activeCategory === "همه" &&
+        activeCategory === "all" &&
         featuredPost &&
         post.id === featuredPost.id
       ) {
@@ -415,14 +170,16 @@ export function BlogListingPage({
       }
 
       const categoryMatch =
-        activeCategory === "همه" || post.category === activeCategory;
+        activeCategory === "all" || post.category === activeCategory;
+
+      const categoryLabel = copy.categories[post.category];
 
       const searchMatch =
         !query ||
-        [post.title, post.excerpt, post.category, post.author]
+        [post.title, post.excerpt, categoryLabel, post.author]
           .filter(Boolean)
           .join(" ")
-          .toLowerCase()
+          .toLocaleLowerCase(htmlLang)
           .includes(query);
 
       return categoryMatch && searchMatch;
@@ -445,197 +202,146 @@ export function BlogListingPage({
     }
 
     if (sort === "title") {
-      result.sort((a, b) => a.title.localeCompare(b.title));
+      result.sort((a, b) => a.title.localeCompare(b.title, htmlLang));
     }
 
     return result;
-  }, [posts, search, activeCategory, sort, featuredPost]);
-
-  /* ------------------------------------------------------------------------
-     PAGINATION
-  ------------------------------------------------------------------------- */
+  }, [
+    activeCategory,
+    copy.categories,
+    featuredPost,
+    htmlLang,
+    posts,
+    search,
+    sort,
+  ]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredPosts.length / postsPerPage),
   );
-
   const safePage = Math.min(currentPage, totalPages);
 
   const paginatedPosts = useMemo(() => {
     const start = (safePage - 1) * postsPerPage;
-
     return filteredPosts.slice(start, start + postsPerPage);
-  }, [filteredPosts, safePage, postsPerPage]);
-
-  /* ------------------------------------------------------------------------
-     RESET PAGE
-  ------------------------------------------------------------------------- */
+  }, [filteredPosts, postsPerPage, safePage]);
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setCurrentPage(1));
     return () => cancelAnimationFrame(frame);
   }, [search, activeCategory, sort]);
 
-  /* ------------------------------------------------------------------------
-     SHOW FEATURE
-  ------------------------------------------------------------------------- */
-
   const showFeatured = Boolean(
-    featuredPost && !search && activeCategory === "همه" && safePage === 1,
+    featuredPost && !search && activeCategory === "all" && safePage === 1,
   );
 
   return (
     <main
       style={themeVars}
-      dir="rtl"
+      dir={direction}
+      lang={htmlLang}
       className={`
         w-full
-        overflow-hidden
-
+        overflow-x-clip
         bg-[var(--blog-bg)]
-
         text-[var(--blog-black)]
-
         ${className}
       `}
     >
-      {/* ===============================================================
-          HERO
-      ================================================================ */}
+      <BlogHero
+        locale={locale}
+        copy={copy}
+        image={heroImage}
+        mobileImagePosition={heroMobileImagePosition}
+        desktopImagePosition={heroDesktopImagePosition}
+      />
 
-      <BlogHero hero={hero} />
-
-      {/* ===============================================================
-          FEATURED STORY
-      ================================================================ */}
-
-      {showFeatured && featuredPost && <FeaturedArticle post={featuredPost} />}
-
-      {/* ===============================================================
-          JOURNAL
-      ================================================================ */}
+      {showFeatured && featuredPost ? (
+        <FeaturedArticle
+          locale={locale}
+          copy={copy}
+          post={featuredPost}
+          isRtl={isRtl}
+        />
+      ) : null}
 
       <section
         id="journal"
         className="
           mx-auto
-
           w-full
           max-w-[1680px]
-
           px-5
-
           py-14
-
           sm:px-8
           sm:py-18
-
           lg:px-10
           lg:py-24
-
           xl:px-14
         "
       >
-        {/* =============================================================
-            INTRO
-        ============================================================== */}
-
         <div
           className="
             grid
             justify-items-center
             gap-8
-
             border-b
             border-[var(--blog-border)]
-
             pb-10
             text-center
-
             lg:gap-10
             lg:pb-12
           "
         >
-          <div
-            className="
-              mx-auto
-              max-w-[780px]
-              text-center
-            "
-          >
-            <Eyebrow>ژورنال نجیب‌زاده</Eyebrow>
+          <div className="mx-auto max-w-[780px] text-center">
+            <Eyebrow>{copy.journal.eyebrow}</Eyebrow>
 
             <h2
               className="
                 mx-auto
                 mt-5
-
-                 
-
                 text-[clamp(3rem,10vw,5.7rem)]
                 font-normal
-
                 leading-[0.92]
                 tracking-[-0.06em]
-
                 text-black
               "
             >
-              ایده‌هایی که
+              {copy.journal.titleLine1}
               <br />
-              ارزش بازگشت دارند.
+              {copy.journal.titleLine2}
             </h2>
 
             <p
               className="
                 mx-auto
                 mt-6
-
                 max-w-[570px]
-
                 text-[11px]
-
                 leading-[1.85]
-
                 text-[var(--blog-muted)]
-
                 sm:text-[12px]
               "
             >
-              نگاه‌هایی به پوشاک، هنر ساخت، متریال و جزئیات آرامی که جهان نجیب‌زاده را شکل می‌دهند.
+              {copy.journal.description}
             </p>
           </div>
-
-          {/* ===========================================================
-              SEARCH
-          ============================================================ */}
 
           <div className="mx-auto w-full max-w-[420px]">
             <CustomInput
               type="search"
               value={search}
               onChange={(value) => setSearch(value)}
-              placeholder="جست‌وجو در ژورنال"
+              placeholder={copy.filters.searchPlaceholder}
               clearable
               leadingIcon={<SearchIcon />}
-              aria-label="جست‌وجو در ژورنال"
+              aria-label={copy.filters.searchAriaLabel}
             />
           </div>
         </div>
 
-        {/* =============================================================
-            FILTER BAR
-        ============================================================== */}
-
-        <div
-          className="
-            border-b
-            border-[var(--blog-border)]
-
-            py-5
-          "
-        >
+        <div className="border-b border-[var(--blog-border)] py-5">
           <div
             className="
               flex
@@ -643,32 +349,19 @@ export function BlogListingPage({
               items-center
               justify-center
               gap-5
-
               lg:flex-row
-              lg:items-center
-              lg:justify-center
             "
           >
-            {/* =========================================================
-                CATEGORY SCROLL
-            ========================================================== */}
-
             <div
               className="
                 -mx-5
                 w-full
-
                 overflow-x-auto
-
                 px-5
-
                 [scrollbar-width:none]
-
                 [&::-webkit-scrollbar]:hidden
-
                 sm:-mx-8
                 sm:px-8
-
                 lg:mx-0
                 lg:px-0
               "
@@ -676,7 +369,6 @@ export function BlogListingPage({
               <div
                 className="
                   group/categories
-
                   mx-auto
                   flex
                   w-max
@@ -686,6 +378,10 @@ export function BlogListingPage({
               >
                 {availableCategories.map((category) => {
                   const active = activeCategory === category;
+                  const label =
+                    category === "all"
+                      ? copy.filters.all
+                      : copy.categories[category];
 
                   return (
                     <button
@@ -693,93 +389,60 @@ export function BlogListingPage({
                       type="button"
                       onClick={() => setActiveCategory(category)}
                       className={`
-                          relative
-
-                          min-h-10
-
-                          whitespace-nowrap
-
-                          px-4
-
-                          text-[8px]
-                          font-semibold
-
-                          uppercase
-                          tracking-[0.14em]
-
-                          transition-[opacity,color]
-                          duration-300
-
-                          group-hover/categories:opacity-30
-
-                          hover:!opacity-100
-
-                          ${
-                            active
-                              ? `
-                                !opacity-100
-
-                                text-black
-                              `
-                              : `
-                                text-black/45
-                              `
-                          }
-                        `}
+                        relative
+                        min-h-10
+                        whitespace-nowrap
+                        px-4
+                        text-[8px]
+                        font-semibold
+                        uppercase
+                        tracking-[0.14em]
+                        transition-[opacity,color]
+                        duration-300
+                        group-hover/categories:opacity-30
+                        hover:!opacity-100
+                        ${active ? "!opacity-100 text-black" : "text-black/45"}
+                      `}
                     >
-                      {blogCategoryLabel(category)}
+                      {label}
 
-                      {active && (
+                      {active ? (
                         <span
+                          aria-hidden="true"
                           className="
-                              absolute
-
-                              inset-x-4
-                              bottom-0
-
-                              h-px
-
-                              bg-black
-                            "
+                            absolute
+                            inset-x-4
+                            bottom-0
+                            h-px
+                            bg-black
+                          "
                         />
-                      )}
+                      ) : null}
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            {/* =========================================================
-                SORT
-            ========================================================== */}
-
-            <div
-              className="
-                mx-auto
-                w-full
-
-                lg:w-[190px]
-                lg:shrink-0
-              "
-            >
+            <div className="mx-auto w-full lg:w-[190px] lg:shrink-0">
               <CustomSelect
                 value={sort}
-                options={SORT_OPTIONS}
+                options={sortOptions}
                 size="sm"
-                ariaLabel="مرتب‌سازی مقاله‌ها"
+                ariaLabel={copy.filters.sortAriaLabel}
                 onChange={(value) => {
-                  if (typeof value === "string") {
-                    setSort(value as BlogSort);
+                  if (
+                    value === "latest" ||
+                    value === "oldest" ||
+                    value === "title"
+                  ) {
+                    setSort(value);
                   }
                 }}
               />
             </div>
           </div>
         </div>
-
-        {/* =============================================================
-            RESULTS META
-        ============================================================== */}
 
         <div
           className="
@@ -788,7 +451,6 @@ export function BlogListingPage({
             items-center
             justify-center
             gap-2
-
             py-6
             text-center
           "
@@ -797,51 +459,35 @@ export function BlogListingPage({
             className="
               text-[7px]
               font-semibold
-
               uppercase
               tracking-[0.16em]
-
               text-black/40
             "
           >
             {loading
-              ? "در حال بارگذاری ژورنال"
-              : `${new Intl.NumberFormat("fa-IR").format(filteredPosts.length)} ${
-                  filteredPosts.length === 1 ? "مقاله" : "مقاله"
-                }`}
+              ? copy.filters.loading
+              : formatTemplate(copy.filters.articlesCountTemplate, {
+                  count: formatNumber(filteredPosts.length, locale),
+                })}
           </p>
 
-          {search && (
+          {search ? (
             <p
               className="
                 hidden
-
                 max-w-[320px]
-
                 truncate
-
                 text-[8px]
-
                 text-black/40
-
                 sm:block
               "
             >
-              نتایج برای &nbsp;
-              <span
-                className="
-                  text-black
-                "
-              >
-                “{search}”
-              </span>
+              {formatTemplate(copy.filters.resultsForTemplate, {
+                query: search,
+              })}
             </p>
-          )}
+          ) : null}
         </div>
-
-        {/* =============================================================
-            GRID
-        ============================================================== */}
 
         {loading ? (
           <BlogSkeleton />
@@ -849,39 +495,39 @@ export function BlogListingPage({
           <div
             className="
               grid
-
               grid-cols-1
-
               gap-x-px
               gap-y-12
-
               sm:grid-cols-2
-
               lg:grid-cols-3
-
               lg:gap-y-16
             "
           >
             {paginatedPosts.map((post, index) => (
-              <BlogCard key={post.id} post={post} index={index} />
+              <BlogCard
+                key={post.id}
+                post={post}
+                index={index}
+                locale={locale}
+                copy={copy}
+                isRtl={isRtl}
+              />
             ))}
           </div>
         ) : (
           <EmptyState
+            copy={copy}
             onReset={() => {
               setSearch("");
-
-              setActiveCategory("همه");
+              setActiveCategory("all");
             }}
           />
         )}
 
-        {/* =============================================================
-            PAGINATION
-        ============================================================== */}
-
-        {!loading && filteredPosts.length > 0 && totalPages > 1 && (
+        {!loading && filteredPosts.length > 0 && totalPages > 1 ? (
           <Pagination
+            locale={locale}
+            copy={copy}
             currentPage={safePage}
             totalPages={totalPages}
             onChange={(page) => {
@@ -892,71 +538,69 @@ export function BlogListingPage({
                   .matches
                   ? "auto"
                   : "smooth",
-
                 block: "start",
               });
             }}
           />
-        )}
+        ) : null}
       </section>
 
-      {/* ===============================================================
-          NEWSLETTER
-      ================================================================ */}
-
-      <NewsletterSection data={newsletter} />
+      <NewsletterSection copy={copy} locale={locale} isRtl={isRtl} />
     </main>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    HERO
 ============================================================================ */
 
-function BlogHero({ hero }: { hero: BlogHeroData }) {
+function BlogHero({
+  locale,
+  copy,
+  image,
+  mobileImagePosition,
+  desktopImagePosition,
+}: {
+  locale: Locale;
+  copy: BlogCopy;
+  image: string;
+  mobileImagePosition: string;
+  desktopImagePosition: string;
+}) {
+  const isRtl = getLocaleDirection(locale) === "rtl";
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
+
   return (
     <section
       style={
         {
-          "--hero-mobile-position": hero.mobileImagePosition ?? "center",
-
-          "--hero-desktop-position": hero.desktopImagePosition ?? "center",
+          "--hero-mobile-position": mobileImagePosition,
+          "--hero-desktop-position": desktopImagePosition,
         } as CSSProperties
       }
       className="
         relative
         isolate
-
         min-h-[100svh]
-
         overflow-hidden
-
         bg-black
-
         text-white
       "
     >
-      {/* IMAGE */}
-
       <Image
-        src={hero.image}
-        alt={hero.imageAlt ?? hero.title}
+        src={image}
+        alt={copy.hero.imageAlt}
         fill
         priority
         sizes="100vw"
         draggable={false}
         className="
           -z-30
-
           object-cover
-
           object-[var(--hero-mobile-position)]
-
           md:object-[var(--hero-desktop-position)]
         "
       />
-
-      {/* DESKTOP GRADIENT */}
 
       <div
         aria-hidden="true"
@@ -964,14 +608,10 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
           absolute
           inset-0
           -z-20
-
           bg-[linear-gradient(90deg,rgba(0,0,0,0.82)_0%,rgba(0,0,0,0.58)_35%,rgba(0,0,0,0.10)_72%)]
-
           max-md:bg-[linear-gradient(180deg,rgba(0,0,0,0.04)_0%,rgba(0,0,0,0.10)_38%,rgba(0,0,0,0.90)_100%)]
         "
       />
-
-      {/* VIGNETTE */}
 
       <div
         aria-hidden="true"
@@ -979,293 +619,195 @@ function BlogHero({ hero }: { hero: BlogHeroData }) {
           absolute
           inset-0
           -z-10
-
           bg-[radial-gradient(circle_at_center,transparent_35%,rgba(0,0,0,0.30)_130%)]
         "
       />
 
-      {/* CONTENT */}
-
       <div
         className="
           mx-auto
-
           flex
-
           min-h-[100svh]
           max-w-[1680px]
-
           items-end
           justify-center
-
           px-5
-
           pb-28
           pt-28
-
           sm:px-8
-
           md:items-center
           md:px-10
           md:pb-0
-
           xl:px-14
         "
       >
-        <div
-          className="
-            mx-auto
-            w-full
-            max-w-[760px]
-            text-center
-          "
-        >
-          {hero.eyebrow && (
-            <div
-              className="
-                mb-6
-
-                flex
-                items-center
-                justify-center
-
-                gap-3
-
-                text-[7px]
-                font-semibold
-
-                uppercase
-                tracking-[0.23em]
-
-                text-[var(--blog-copper)]
-
-                sm:text-[8px]
-              "
-            >
-              <span
-                className="
-                  h-px
-                  w-7
-                  bg-[var(--blog-copper)]
-                "
-              />
-
-              <span>{hero.eyebrow}</span>
-
-              <span
-                className="
-                  h-px
-                  w-7
-                  bg-[var(--blog-copper)]
-                "
-              />
-            </div>
-          )}
+        <div className="mx-auto w-full max-w-[760px] text-center">
+          <div
+            className="
+              mb-6
+              flex
+              items-center
+              justify-center
+              gap-3
+              text-[7px]
+              font-semibold
+              uppercase
+              tracking-[0.23em]
+              text-[var(--blog-copper)]
+              sm:text-[8px]
+            "
+          >
+            <span
+              aria-hidden="true"
+              className="h-px w-7 bg-[var(--blog-copper)]"
+            />
+            <span>{copy.hero.eyebrow}</span>
+            <span
+              aria-hidden="true"
+              className="h-px w-7 bg-[var(--blog-copper)]"
+            />
+          </div>
 
           <h1
             className="
               mx-auto
               max-w-[740px]
-
-               
-
               text-[clamp(3.8rem,14vw,6rem)]
               font-normal
-
               leading-[0.88]
               tracking-[-0.065em]
-
               text-white
-
               md:text-[clamp(5.5rem,7vw,8rem)]
             "
           >
-            {hero.title}
+            {copy.hero.title}
           </h1>
 
-          {hero.description && (
-            <p
-              className="
-                mx-auto
-                mt-7
+          <p
+            className="
+              mx-auto
+              mt-7
+              max-w-[520px]
+              text-[10px]
+              leading-[1.9]
+              text-white/62
+              sm:text-[11px]
+            "
+          >
+            {copy.hero.description}
+          </p>
 
-                max-w-[520px]
-
-                text-[10px]
-
-                leading-[1.9]
-
-                text-white/62
-
-                sm:text-[11px]
-              "
+          <div className="mx-auto mt-8 hidden w-full max-w-[240px] md:block">
+            <Button
+              href="#journal"
+              variant="copper"
+              size="lg"
+              icon={<ActionIcon />}
+              iconPosition="right"
+              fullWidth
             >
-              {hero.description}
-            </p>
-          )}
-
-          {/* CUSTOM BUTTON */}
-
-          {hero.action && (
-            <div
-              className="
-                mx-auto
-                mt-8
-
-                hidden
-
-                w-full
-                max-w-[240px]
-
-                md:block
-              "
-            >
-              <Button
-                href={hero.action.href}
-                variant="copper"
-                size="lg"
-                icon={<ArrowRightIcon />}
-                iconPosition="right"
-                fullWidth
-              >
-                {hero.action.label}
-              </Button>
-            </div>
-          )}
+              {copy.hero.actionLabel}
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* MOBILE CTA */}
-
-      {hero.action && (
-        <div
-          className="
-            absolute
-
-            inset-x-4
-
-            bottom-[max(18px,env(safe-area-inset-bottom))]
-
-            z-20
-
-            md:hidden
-          "
+      <div
+        className="
+          absolute
+          inset-x-4
+          bottom-[max(18px,env(safe-area-inset-bottom))]
+          z-20
+          md:hidden
+        "
+      >
+        <Button
+          href="#journal"
+          variant="black"
+          size="lg"
+          icon={<ActionIcon />}
+          iconPosition="right"
+          fullWidth
         >
-          <Button
-            href={hero.action.href}
-            variant="black"
-            size="lg"
-            icon={<ArrowRightIcon />}
-            iconPosition="right"
-            fullWidth
-          >
-            {hero.action.label}
-          </Button>
-        </div>
-      )}
+          {copy.hero.actionLabel}
+        </Button>
+      </div>
     </section>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    FEATURED ARTICLE
 ============================================================================ */
 
-function FeaturedArticle({ post }: { post: BlogPost }) {
+function FeaturedArticle({
+  post,
+  locale,
+  copy,
+  isRtl,
+}: {
+  post: BlogPost;
+  locale: Locale;
+  copy: BlogCopy;
+  isRtl: boolean;
+}) {
   const { ref, visible } = useRevealOnce<HTMLElement>();
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
+  const href = localizedHref(`/blog/${post.slug}`, locale);
 
   return (
     <section
       ref={ref}
       className="
         bg-white
-
         px-5
-
         py-14
-
         sm:px-8
         sm:py-18
-
         lg:px-10
         lg:py-24
-
         xl:px-14
       "
     >
       <div
         className={`
           mx-auto
-
           grid
-
           max-w-[1570px]
-
           overflow-hidden
-
           border-y
           border-black/10
-
           transition-[opacity,transform]
           duration-[900ms]
-
           ease-[cubic-bezier(0.22,1,0.36,1)]
-
           lg:grid-cols-[1.18fr_0.82fr]
-
-          ${
-            visible
-              ? `
-                translate-y-0
-                opacity-100
-              `
-              : `
-                translate-y-8
-                opacity-0
-              `
-          }
+          ${visible ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"}
         `}
       >
-        {/* IMAGE */}
-
         <Link
-          href={`/blog/${post.slug}`}
+          href={href}
           className="
             group
-
             relative
-
             min-h-[420px]
-
             overflow-hidden
-
             bg-[#EAE6DF]
-
             sm:min-h-[540px]
-
             lg:min-h-[680px]
           "
         >
           <Image
             src={post.image}
-            alt={post.imageAlt ?? post.title}
+            alt={post.imageAlt}
             fill
-            sizes="
-              (max-width: 1023px) 100vw,
-              60vw
-            "
+            sizes="(max-width: 1023px) 100vw, 60vw"
             draggable={false}
-            style={{
-              objectPosition: post.imagePosition ?? "center",
-            }}
+            style={{ objectPosition: post.imagePosition ?? "center" }}
             className="
               object-cover
-
               transition-transform
               duration-[1100ms]
-
               ease-[cubic-bezier(0.22,1,0.36,1)]
-
               group-hover:scale-[1.025]
             "
           />
@@ -1273,30 +815,22 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
           <span
             className="
               absolute
-
               left-1/2
               top-5
               -translate-x-1/2
-
               bg-black
-
               px-3
               py-2
-
               text-[6px]
               font-semibold
-
               uppercase
               tracking-[0.17em]
-
               text-white
             "
           >
-            داستان ویژه
+            {copy.featured.badge}
           </span>
         </Link>
-
-        {/* CONTENT */}
 
         <div
           className="
@@ -1304,40 +838,28 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
             flex-col
             items-center
             justify-center
-
             bg-[var(--blog-bg)]
-            text-center
-
             px-6
             py-10
-
+            text-center
             sm:px-10
             sm:py-14
-
             lg:px-12
           "
         >
-          <Eyebrow>{blogCategoryLabel(post.category)}</Eyebrow>
+          <Eyebrow>{copy.categories[post.category]}</Eyebrow>
 
-          <Link href={`/blog/${post.slug}`}>
+          <Link href={href}>
             <h2
               className="
                 mx-auto
                 mt-6
-
                 max-w-[560px]
-
-                 
-
                 text-[clamp(2.8rem,9vw,5rem)]
-
                 leading-[0.94]
                 tracking-[-0.055em]
-
                 text-black
-
                 transition-opacity
-
                 hover:opacity-55
               "
             >
@@ -1349,41 +871,33 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
             className="
               mx-auto
               mt-6
-
               max-w-[480px]
-
               text-[10px]
-
               leading-[1.85]
-
               text-[var(--blog-muted)]
-
               sm:text-[11px]
             "
           >
             {post.excerpt}
           </p>
 
-          <ArticleMeta post={post} className="mt-6" />
+          <ArticleMeta
+            post={post}
+            locale={locale}
+            copy={copy}
+            className="mt-6"
+          />
 
-          <div
-            className="
-              mx-auto
-              mt-8
-
-              w-full
-              max-w-[210px]
-            "
-          >
+          <div className="mx-auto mt-8 w-full max-w-[210px]">
             <Button
-              href={`/blog/${post.slug}`}
+              href={href}
               variant="black"
               size="lg"
-              icon={<ArrowRightIcon />}
+              icon={<ActionIcon />}
               iconPosition="right"
               fullWidth
             >
-              مطالعه مقاله
+              {copy.featured.readArticle}
             </Button>
           </div>
         </div>
@@ -1392,201 +906,133 @@ function FeaturedArticle({ post }: { post: BlogPost }) {
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    BLOG CARD
 ============================================================================ */
 
 function BlogCard({
   post,
-
   index,
+  locale,
+  copy,
+  isRtl,
 }: {
   post: BlogPost;
-
   index: number;
+  locale: Locale;
+  copy: BlogCopy;
+  isRtl: boolean;
 }) {
   const { ref, visible } = useRevealOnce<HTMLElement>();
+  const href = localizedHref(`/blog/${post.slug}`, locale);
+  const ReadIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
 
   return (
     <article
       ref={ref}
-      style={{
-        transitionDelay: `${Math.min(index * 60, 240)}ms`,
-      }}
+      style={{ transitionDelay: `${Math.min(index * 60, 240)}ms` }}
       className={`
         group
-
         min-w-0
-        text-center
-
         border-black/10
-
+        text-center
         transition-[opacity,transform]
         duration-700
-
         ease-[cubic-bezier(0.22,1,0.36,1)]
-
         sm:px-4
-
         sm:[&:nth-child(odd)]:border-r
-
         lg:border-r
         lg:px-5
-
         lg:[&:nth-child(3n)]:border-r-0
-
-        ${
-          visible
-            ? `
-              translate-y-0
-              opacity-100
-            `
-            : `
-              translate-y-6
-              opacity-0
-            `
-        }
+        ${visible ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"}
       `}
     >
-      {/* IMAGE */}
-
       <Link
-        href={`/blog/${post.slug}`}
-        className="
-          relative
-
-          block
-
-          aspect-[4/3]
-
-          overflow-hidden
-
-          bg-[#E8E4DD]
-        "
+        href={href}
+        className="relative block aspect-[4/3] overflow-hidden bg-[#E8E4DD]"
       >
         <Image
           src={post.image}
-          alt={post.imageAlt ?? post.title}
+          alt={post.imageAlt}
           fill
           loading="lazy"
-          sizes="
-            (max-width: 639px) 100vw,
-            (max-width: 1023px) 50vw,
-            33vw
-          "
+          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
           draggable={false}
-          style={{
-            objectPosition: post.imagePosition ?? "center",
-          }}
+          style={{ objectPosition: post.imagePosition ?? "center" }}
           className="
             object-cover
-
             transition-transform
             duration-[900ms]
-
             ease-[cubic-bezier(0.22,1,0.36,1)]
-
             group-hover:scale-[1.03]
           "
         />
 
-        {/* INDEX */}
-
         <span
           className="
             absolute
-
             bottom-4
             left-1/2
-            -translate-x-1/2
-
             grid
             size-8
-
+            -translate-x-1/2
             place-items-center
-
             bg-white
-
             text-[7px]
             font-semibold
-
             text-black
           "
         >
-          {new Intl.NumberFormat("fa-IR", { minimumIntegerDigits: 2, useGrouping: false }).format(index + 1)}
+          {formatIndex(index + 1, locale)}
         </span>
       </Link>
 
-      {/* CONTENT */}
-
-      <div
-        className="
-          pt-5
-        "
-      >
-        <div
-          className="
-            flex
-
-            items-center
-            justify-center
-
-            gap-4
-          "
-        >
+      <div className="pt-5">
+        <div className="flex items-center justify-center gap-4">
           <p
             className="
               text-[7px]
               font-semibold
-
               uppercase
               tracking-[0.17em]
-
               text-[var(--blog-copper)]
             "
           >
-            {blogCategoryLabel(post.category)}
+            {copy.categories[post.category]}
           </p>
 
-          {post.readingTime && (
+          {post.readingMinutes ? (
             <span
               className="
                 text-[6.5px]
                 font-medium
-
                 uppercase
                 tracking-[0.13em]
-
                 text-black/30
               "
             >
-              {formatReadingTime(post.readingTime)}
+              {formatReadingTime(
+                post.readingMinutes,
+                locale,
+                copy.article.readingTimeTemplate,
+              )}
             </span>
-          )}
+          ) : null}
         </div>
 
-        <Link href={`/blog/${post.slug}`}>
+        <Link href={href}>
           <h3
             className="
               mx-auto
               mt-4
-
               max-w-[480px]
-
-               
-
               text-[26px]
-
               leading-[1.02]
               tracking-[-0.04em]
-
               text-black
-
               transition-opacity
               duration-300
-
               group-hover:opacity-55
-
               sm:text-[29px]
             "
           >
@@ -1598,15 +1044,10 @@ function BlogCard({
           className="
             mx-auto
             mt-4
-
             line-clamp-3
-
             max-w-[450px]
-
             text-[9.5px]
-
             leading-[1.8]
-
             text-[var(--blog-muted)]
           "
         >
@@ -1616,17 +1057,12 @@ function BlogCard({
         <div
           className="
             mt-5
-
             flex
-
             items-center
             justify-center
-
             gap-6
-
             border-t
             border-black/10
-
             pt-4
           "
         >
@@ -1635,41 +1071,34 @@ function BlogCard({
             className="
               text-[6.5px]
               font-semibold
-
               uppercase
               tracking-[0.13em]
-
               text-black/30
             "
           >
-            {formatDate(post.publishedAt)}
+            {formatDate(post.publishedAt, locale)}
           </time>
 
           <Link
-            href={`/blog/${post.slug}`}
-            aria-label={`مطالعه ${post.title}`}
+            href={href}
+            aria-label={formatTemplate(copy.article.readAriaTemplate, {
+              title: post.title,
+            })}
             className="
               flex
-
               items-center
               gap-2
-
               text-[7px]
               font-semibold
-
               uppercase
               tracking-[0.14em]
-
               text-black/50
-
               transition-[opacity,transform]
-
-              hover:translate-x-1
               hover:text-black
             "
           >
-            مطالعه
-            <span>←</span>
+            <span>{copy.article.read}</span>
+            <ReadIcon aria-hidden="true" />
           </Link>
         </div>
       </div>
@@ -1677,165 +1106,137 @@ function BlogCard({
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    ARTICLE META
 ============================================================================ */
 
 function ArticleMeta({
   post,
-
+  locale,
+  copy,
   className = "",
 }: {
   post: BlogPost;
-
+  locale: Locale;
+  copy: BlogCopy;
   className?: string;
 }) {
   return (
     <div
       className={`
         flex
-
         flex-wrap
         items-center
         justify-center
-
         gap-x-4
         gap-y-2
-
         text-[6.5px]
         font-semibold
-
         uppercase
         tracking-[0.13em]
-
         text-black/35
-
         ${className}
       `}
     >
-      <time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time>
+      <time dateTime={post.publishedAt}>
+        {formatDate(post.publishedAt, locale)}
+      </time>
 
-      {post.readingTime && (
+      {post.readingMinutes ? (
         <>
-          <span
-            className="
-              size-[2px]
-
-              bg-black/25
-            "
-          />
-
-          <span>{formatReadingTime(post.readingTime)}</span>
+          <MetaDot />
+          <span>
+            {formatReadingTime(
+              post.readingMinutes,
+              locale,
+              copy.article.readingTimeTemplate,
+            )}
+          </span>
         </>
-      )}
+      ) : null}
 
-      {post.author && (
+      {post.author ? (
         <>
-          <span
-            className="
-              size-[2px]
-
-              bg-black/25
-            "
-          />
-
-          <span>{formatAuthor(post.author)}</span>
+          <MetaDot />
+          <span>{post.author}</span>
         </>
-      )}
+      ) : null}
     </div>
   );
 }
 
-/* ==========================================================================
+function MetaDot() {
+  return <span aria-hidden="true" className="size-[2px] bg-black/25" />;
+}
+
+/* ========================================================================== 
    PAGINATION
 ============================================================================ */
 
 function Pagination({
   currentPage,
-
   totalPages,
-
   onChange,
+  locale,
+  copy,
 }: {
   currentPage: number;
-
   totalPages: number;
-
   onChange: (page: number) => void;
+  locale: Locale;
+  copy: BlogCopy;
 }) {
   const pages = createPageRange(currentPage, totalPages);
 
   return (
     <nav
-      aria-label="صفحه‌بندی وبلاگ"
+      aria-label={copy.pagination.ariaLabel}
       className="
         mt-16
-
         flex
-
         items-center
         justify-center
         gap-5
-
         border-t
         border-[var(--blog-border)]
-
         pt-7
-
         lg:mt-20
       "
     >
-      {/* PREVIOUS */}
-
       <button
         type="button"
         disabled={currentPage === 1}
         onClick={() => onChange(currentPage - 1)}
         className="
           min-h-10
-
           text-[7px]
           font-semibold
-
           uppercase
           tracking-[0.15em]
-
           text-black/50
-
           transition-colors
-
           hover:text-black
-
           disabled:cursor-not-allowed
           disabled:opacity-20
         "
       >
-        قبلی
+        {copy.pagination.previous}
       </button>
 
-      {/* NUMBERS */}
-
-      <div
-        className="
-          flex
-          items-center
-        "
-      >
+      <div className="flex items-center">
         {pages.map((page, index) => {
           if (page === "ellipsis") {
             return (
               <span
                 key={`ellipsis-${index}`}
+                aria-hidden="true"
                 className="
-                    grid
-                    size-9
-
-                    place-items-center
-
-                    text-[8px]
-
-                    text-black/30
-                  "
+                  grid
+                  size-9
+                  place-items-center
+                  text-[8px]
+                  text-black/30
+                "
               >
                 •••
               </span>
@@ -1843,47 +1244,36 @@ function Pagination({
           }
 
           const active = page === currentPage;
+          const formattedPage = formatNumber(page, locale);
 
           return (
             <button
               key={page}
               type="button"
               aria-current={active ? "page" : undefined}
+              aria-label={formatTemplate(copy.pagination.pageAriaTemplate, {
+                page: formattedPage,
+              })}
               onClick={() => onChange(page)}
               className={`
-                  grid
-                  size-9
-
-                  place-items-center
-
-                  text-[8px]
-                  font-semibold
-
-                  transition-[background-color,color]
-
-                  ${
-                    active
-                      ? `
-                        bg-black
-
-                        text-white
-                      `
-                      : `
-                        text-black/45
-
-                        hover:bg-black/5
-                        hover:text-black
-                      `
-                  }
-                `}
+                grid
+                size-9
+                place-items-center
+                text-[8px]
+                font-semibold
+                transition-[background-color,color]
+                ${
+                  active
+                    ? "bg-black text-white"
+                    : "text-black/45 hover:bg-black/5 hover:text-black"
+                }
+              `}
             >
-              {new Intl.NumberFormat("fa-IR").format(page)}
+              {formattedPage}
             </button>
           );
         })}
       </div>
-
-      {/* NEXT */}
 
       <button
         type="button"
@@ -1891,219 +1281,137 @@ function Pagination({
         onClick={() => onChange(currentPage + 1)}
         className="
           min-h-10
-
           text-[7px]
           font-semibold
-
           uppercase
           tracking-[0.15em]
-
           text-black/50
-
           transition-colors
-
           hover:text-black
-
           disabled:cursor-not-allowed
           disabled:opacity-20
         "
       >
-        بعدی
+        {copy.pagination.next}
       </button>
     </nav>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    NEWSLETTER
 ============================================================================ */
 
-function NewsletterSection({ data }: { data: BlogNewsletterData }) {
+function NewsletterSection({
+  copy,
+  locale,
+  isRtl,
+}: {
+  copy: BlogCopy;
+  locale: Locale;
+  isRtl: boolean;
+}) {
   const [email, setEmail] = useState("");
-
   const [submitted, setSubmitted] = useState(false);
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
 
-  function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!email.trim()) {
-      return;
-    }
-
-    /*
-     * بعداً:
-     *
-     * await subscribeToNewsletter(email)
-     */
+    if (!email.trim()) return;
 
     setSubmitted(true);
   }
 
   return (
-    <section
-      className="
-        bg-[#0B0B0B]
-
-        text-white
-      "
-    >
+    <section className="bg-[#0B0B0B] text-white">
       <div
         className="
           mx-auto
-
           grid
-          justify-items-center
-
           max-w-[900px]
-
+          justify-items-center
           gap-10
-
           px-5
-
           py-14
-
           sm:px-8
           sm:py-18
-
           lg:px-10
           lg:py-20
-
           xl:px-14
         "
       >
-        {/* CONTENT */}
-
-        <div
-          className="
-            mx-auto
-            max-w-[760px]
-            text-center
-          "
-        >
-          {data.eyebrow && (
-            <div
-              className="
-                flex
-                items-center
-                justify-center
-
-                gap-3
-
-                text-[7px]
-                font-semibold
-
-                uppercase
-                tracking-[0.22em]
-
-                text-[var(--blog-copper)]
-              "
-            >
-              <span
-                className="
-                  h-px
-                  w-6
-                  bg-[var(--blog-copper)]
-                "
-              />
-
-              {data.eyebrow}
-
-              <span
-                className="
-                  h-px
-                  w-6
-                  bg-[var(--blog-copper)]
-                "
-              />
-            </div>
-          )}
+        <div className="mx-auto max-w-[760px] text-center">
+          <div
+            className="
+              flex
+              items-center
+              justify-center
+              gap-3
+              text-[7px]
+              font-semibold
+              uppercase
+              tracking-[0.22em]
+              text-[var(--blog-copper)]
+            "
+          >
+            <span
+              aria-hidden="true"
+              className="h-px w-6 bg-[var(--blog-copper)]"
+            />
+            <span>{copy.newsletter.eyebrow}</span>
+            <span
+              aria-hidden="true"
+              className="h-px w-6 bg-[var(--blog-copper)]"
+            />
+          </div>
 
           <h2
             className="
               mt-5
-
-               
-
               text-[clamp(3rem,10vw,5.8rem)]
-
               leading-[0.92]
               tracking-[-0.06em]
             "
           >
-            {data.title}
+            {copy.newsletter.title}
           </h2>
 
-          {data.description && (
-            <p
-              className="
-                mx-auto
-                mt-5
-
-                max-w-[530px]
-
-                text-[10px]
-
-                leading-[1.85]
-
-                text-white/48
-
-                sm:text-[11px]
-              "
-            >
-              {data.description}
-            </p>
-          )}
+          <p
+            className="
+              mx-auto
+              mt-5
+              max-w-[530px]
+              text-[10px]
+              leading-[1.85]
+              text-white/48
+              sm:text-[11px]
+            "
+          >
+            {copy.newsletter.description}
+          </p>
         </div>
-
-        {/* FORM */}
 
         <form
           onSubmit={handleSubmit}
           className="mx-auto w-full max-w-[480px] text-center"
+          dir={getLocaleDirection(locale)}
         >
           {submitted ? (
-            <div
-              className="
-                border-t
-                border-white/20
-
-                py-6
-              "
-            >
-              <p
-                className="
-                   
-
-                  text-[24px]
-                "
-              >
-                عضویت شما ثبت شد.
-              </p>
-
-              <p
-                className="
-                  mt-2
-
-                  text-[9px]
-
-                  text-white/40
-                "
-              >
-                از همراهی شما با ژورنال نجیب‌زاده سپاسگزاریم.
+            <div className="border-t border-white/20 py-6">
+              <p className="text-[24px]">{copy.newsletter.successTitle}</p>
+              <p className="mt-2 text-[9px] text-white/40">
+                {copy.newsletter.successDescription}
               </p>
             </div>
           ) : (
-            <div
-              className="
-                space-y-3
-              "
-            >
+            <div className="space-y-3">
               <CustomInput
                 type="email"
                 tone="dark"
                 value={email}
                 onChange={(value) => setEmail(value)}
-                placeholder="آدرس ایمیل"
+                placeholder={copy.newsletter.emailPlaceholder}
                 autoComplete="email"
                 required
               />
@@ -2112,23 +1420,15 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
                 type="submit"
                 variant="cream"
                 size="lg"
-                icon={<ArrowRightIcon />}
+                icon={<ActionIcon />}
                 iconPosition="right"
                 fullWidth
               >
-                عضویت
+                {copy.newsletter.submit}
               </Button>
 
-              <p
-                className="
-                  text-[6.5px]
-
-                  leading-[1.6]
-
-                  text-white/25
-                "
-              >
-                با عضویت، با دریافت گاه‌به‌گاه مطالب تحریریه نجیب‌زاده موافقت می‌کنید.
+              <p className="text-[6.5px] leading-[1.6] text-white/25">
+                {copy.newsletter.consent}
               </p>
             </div>
           )}
@@ -2138,71 +1438,48 @@ function NewsletterSection({ data }: { data: BlogNewsletterData }) {
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    EMPTY STATE
 ============================================================================ */
 
-function EmptyState({ onReset }: { onReset: () => void }) {
+function EmptyState({
+  onReset,
+  copy,
+}: {
+  onReset: () => void;
+  copy: BlogCopy;
+}) {
   return (
     <div
       className="
         flex
-
         min-h-[420px]
-
         flex-col
-
         items-center
         justify-center
-
         border-y
         border-[var(--blog-border)]
-
         px-6
-
         text-center
       "
     >
       <SearchLargeIcon />
 
-      <p
-        className="
-          mt-6
-
-           
-
-          text-[36px]
-
-          tracking-[-0.045em]
-        "
-      >
-        نتیجه‌ای پیدا نشد.
-      </p>
+      <p className="mt-6 text-[36px] tracking-[-0.045em]">{copy.empty.title}</p>
 
       <p
         className="
           mt-3
-
           max-w-[340px]
-
           text-[10px]
-
           leading-[1.8]
-
           text-[var(--blog-muted)]
         "
       >
-        عبارت دیگری جست‌وجو کنید یا همه داستان‌های ژورنال را ببینید.
+        {copy.empty.description}
       </p>
 
-      <div
-        className="
-          mt-7
-
-          w-full
-          max-w-[190px]
-        "
-      >
+      <div className="mt-7 w-full max-w-[190px]">
         <Button
           type="button"
           variant="black"
@@ -2210,14 +1487,14 @@ function EmptyState({ onReset }: { onReset: () => void }) {
           onClick={onReset}
           fullWidth
         >
-          پاک‌کردن فیلترها
+          {copy.empty.reset}
         </Button>
       </div>
     </div>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    SKELETON
 ============================================================================ */
 
@@ -2226,93 +1503,22 @@ function BlogSkeleton() {
     <div
       className="
         grid
-
         grid-cols-1
-
         gap-x-5
         gap-y-14
-
         sm:grid-cols-2
-
         lg:grid-cols-3
       "
     >
-      {Array.from({
-        length: 6,
-      }).map((_, index) => (
-        <div
-          key={index}
-          className="
-              animate-pulse
-
-              motion-reduce:animate-none
-            "
-        >
-          <div
-            className="
-                aspect-[4/3]
-
-                bg-black/[0.07]
-              "
-          />
-
-          <div
-            className="
-                mt-5
-              "
-          >
-            <div
-              className="
-                  h-2
-                  w-20
-
-                  bg-black/[0.08]
-                "
-            />
-
-            <div
-              className="
-                  mt-4
-
-                  h-7
-                  w-[82%]
-
-                  bg-black/[0.08]
-                "
-            />
-
-            <div
-              className="
-                  mt-2
-
-                  h-7
-                  w-[64%]
-
-                  bg-black/[0.08]
-                "
-            />
-
-            <div
-              className="
-                  mt-5
-
-                  h-2
-                  w-full
-
-                  bg-black/[0.06]
-                "
-            />
-
-            <div
-              className="
-                  mt-2
-
-                  h-2
-                  w-[76%]
-
-                  bg-black/[0.06]
-                "
-            />
+      {Array.from({ length: 6 }).map((_, index) => (
+        <div key={index} className="animate-pulse motion-reduce:animate-none">
+          <div className="aspect-[4/3] bg-black/[0.07]" />
+          <div className="mt-5">
+            <div className="h-2 w-20 bg-black/[0.08]" />
+            <div className="mt-4 h-7 w-[82%] bg-black/[0.08]" />
+            <div className="mt-2 h-7 w-[64%] bg-black/[0.08]" />
+            <div className="mt-5 h-2 w-full bg-black/[0.06]" />
+            <div className="mt-2 h-2 w-[76%] bg-black/[0.06]" />
           </div>
         </div>
       ))}
@@ -2320,11 +1526,11 @@ function BlogSkeleton() {
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    EYEBROW
 ============================================================================ */
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <div
       className="
@@ -2332,37 +1538,31 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
         items-center
         justify-center
         gap-3
-
         text-center
         text-[7px]
         font-semibold
         tracking-[0.12em]
-
         text-[var(--blog-copper)]
       "
     >
-      <span className="h-px w-6 bg-[var(--blog-copper)]" />
+      <span aria-hidden="true" className="h-px w-6 bg-[var(--blog-copper)]" />
       <span>{children}</span>
-      <span className="h-px w-6 bg-[var(--blog-copper)]" />
+      <span aria-hidden="true" className="h-px w-6 bg-[var(--blog-copper)]" />
     </div>
   );
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    REVEAL
 ============================================================================ */
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
-
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
-
-    if (!node) {
-      return;
-    }
+    if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const frame = requestAnimationFrame(() => setVisible(true));
@@ -2371,50 +1571,33 @@ function useRevealOnce<T extends HTMLElement>() {
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
+        if (!entry?.isIntersecting) return;
         setVisible(true);
-
         observer.disconnect();
       },
       {
         threshold: 0.08,
-
         rootMargin: "0px 0px -5% 0px",
       },
     );
 
     observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
-  return {
-    ref,
-    visible,
-  };
+  return { ref, visible };
 }
 
-/* ==========================================================================
+/* ========================================================================== 
    PAGINATION HELPER
 ============================================================================ */
 
 function createPageRange(
   currentPage: number,
-
   totalPages: number,
 ): Array<number | "ellipsis"> {
   if (totalPages <= 5) {
-    return Array.from(
-      {
-        length: totalPages,
-      },
-      (_, index) => index + 1,
-    );
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
   }
 
   if (currentPage <= 3) {
@@ -2434,76 +1617,16 @@ function createPageRange(
 
   return [
     1,
-
     "ellipsis",
-
     currentPage - 1,
-
     currentPage,
-
     currentPage + 1,
-
     "ellipsis",
-
     totalPages,
   ];
 }
 
-/* ==========================================================================
-   LOCALIZATION HELPERS
-============================================================================ */
-
-function blogCategoryLabel(category: string) {
-  const labels: Record<string, string> = {
-    "All": "همه",
-    "Style Notes": "یادداشت‌های استایل",
-    "Craftsmanship": "هنر ساخت",
-    "Inside The House": "درون خانه",
-    "Perspectives": "دیدگاه‌ها",
-    "Inspiration": "الهام",
-    "Care Guide": "راهنمای نگهداری",
-  };
-
-  return labels[category] ?? category;
-}
-
-function formatReadingTime(value?: string) {
-  if (!value) return "";
-
-  const minutes = value.match(/(\d+)\s*min/i)?.[1];
-
-  if (!minutes) return value;
-
-  return `${new Intl.NumberFormat("fa-IR").format(Number(minutes))} دقیقه مطالعه`;
-}
-
-function formatAuthor(value?: string) {
-  if (!value) return "";
-
-  return value === "Najibzadeh Editorial" ? "تحریریه نجیب‌زاده" : value;
-}
-
-/* ==========================================================================
-   DATE
-============================================================================ */
-
-function formatDate(date: string) {
-  const parsed = new Date(`${date}T00:00:00`);
-
-  if (Number.isNaN(parsed.getTime())) {
-    return date;
-  }
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    day: "2-digit",
-
-    month: "short",
-
-    year: "numeric",
-  }).format(parsed);
-}
-
-/* ==========================================================================
+/* ========================================================================== 
    ICONS
 ============================================================================ */
 
@@ -2511,7 +1634,6 @@ function SearchIcon() {
   return (
     <svg viewBox="0 0 18 18" fill="none" aria-hidden="true" className="size-4">
       <circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1" />
-
       <path d="M12 12L16 16" stroke="currentColor" strokeWidth="1" />
     </svg>
   );
@@ -2523,14 +1645,9 @@ function SearchLargeIcon() {
       viewBox="0 0 48 48"
       fill="none"
       aria-hidden="true"
-      className="
-        size-12
-
-        text-black/25
-      "
+      className="size-12 text-black/25"
     >
       <circle cx="21" cy="21" r="13" stroke="currentColor" strokeWidth="1" />
-
       <path d="M30.5 30.5L41 41" stroke="currentColor" strokeWidth="1" />
     </svg>
   );

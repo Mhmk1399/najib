@@ -177,7 +177,7 @@ export const homeCopy: Record<Locale, HomeCopy> = {
         "خیاطی مدرن، عطرهای امضادار و جزئیاتی سنجیده؛ برای مردی که حضورش را با انتخاب‌های دقیق تعریف می‌کند.",
       primaryAction: {
         label: "مشاهده پوشاک",
-        href: "/clothing",
+        href: "/shop",
       },
       secondaryAction: {
         label: "ورود به فروشگاه",
@@ -527,7 +527,7 @@ export const homeCopy: Record<Locale, HomeCopy> = {
         "Modern tailoring, signature fragrances, and considered details for men who define presence through precise choices.",
       primaryAction: {
         label: "Explore Clothing",
-        href: "/clothing",
+        href: "/shop",
       },
       secondaryAction: {
         label: "Enter the Store",
@@ -880,7 +880,7 @@ Everything we create should feel personal, enduring, and complete without unnece
         "خياطة عصرية، عطور مميزة، وتفاصيل مدروسة للرجل الذي يصنع حضوره باختيارات دقيقة.",
       primaryAction: {
         label: "استكشف الأزياء",
-        href: "/clothing",
+        href: "/shop",
       },
       secondaryAction: {
         label: "ادخل المتجر",

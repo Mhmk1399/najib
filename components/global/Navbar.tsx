@@ -148,7 +148,7 @@ function getClampedScrollY(scrollY: number) {
     document.documentElement.scrollHeight - window.innerHeight,
   );
 
-  return Math.min(scrollY, maxScrollY);
+  return Math.max(0, Math.min(scrollY, maxScrollY));
 }
 
 const BADGE_LABELS: Record<Locale, Record<string, string>> = {
@@ -582,12 +582,18 @@ function localizeBreadcrumbLabel(
 const MENU_ANIMATION_MS = 320;
 
 const NAVBAR_GLASS_CLASSES = [
-  "bg-[#F7F5F0]/[0.86]",
-  "backdrop-blur-2xl",
-  "backdrop-saturate-150",
-  "shadow-[0_10px_40px_rgba(9,9,9,0.055)]",
-  "dark:bg-[#0A0A0A]/[0.86]",
-  "dark:shadow-[0_10px_40px_rgba(0,0,0,0.22)]",
+  "bg-[#F7F5F0]/[0.82]",
+  "backdrop-blur-[22px]",
+  "backdrop-saturate-[145%]",
+
+  "shadow-[0_18px_60px_rgba(9,9,9,0.10),0_4px_16px_rgba(9,9,9,0.045),inset_0_1px_0_rgba(255,255,255,0.72)]",
+
+  "ring-1",
+  "ring-black/[0.055]",
+
+  "dark:bg-[#0A0A0A]/[0.84]",
+  "dark:ring-white/[0.08]",
+  "dark:shadow-[0_20px_65px_rgba(0,0,0,0.34),0_4px_18px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]",
 ].join(" ");
 
 const NAVBAR_OVERLAY_CHROME_CLASSES = [
@@ -658,6 +664,7 @@ export default function Navbar({
   const [menuMounted, setMenuMounted] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [navbarVisible, setNavbarVisible] = useState(true);
   const [activeId, setActiveId] = useState(EMPTY_MENU_SECTION.id);
   const [mobileOpen, setMobileOpen] = useState<string | null>(
     EMPTY_MENU_SECTION.id,
@@ -802,29 +809,146 @@ export default function Navbar({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [closeLanguageModal, languageModalOpen]);
+  useEffect(() => {
+    setNavbarVisible(true);
+  }, [pathname]);
 
   useEffect(() => {
     let frame: number | null = null;
 
-    const updateScrolled = () => {
+    let lastScrollY = getClampedScrollY(window.scrollY);
+
+    let direction: "up" | "down" | null = null;
+
+    let directionalDistance = 0;
+
+    const TOP_ZONE = 32;
+
+    // navbar before this point should not hide
+    const HIDE_START = 150;
+
+    // user needs a more intentional downward movement
+    const HIDE_INTENT = 30;
+
+    // navbar should return faster than it disappears
+    const SHOW_INTENT = 12;
+
+    // ignore micro trackpad / momentum changes
+    const MIN_DELTA = 0.8;
+
+    const updateNavbar = () => {
       frame = null;
-      const next = window.scrollY > 24;
-      setScrolled((current) => (current === next ? current : next));
+
+      const currentScrollY = getClampedScrollY(window.scrollY);
+      const delta = currentScrollY - lastScrollY;
+
+      /*
+       * Surface mode
+       */
+      const nextScrolled = currentScrollY > 18;
+
+      setScrolled((current) =>
+        current === nextScrolled ? current : nextScrolled,
+      );
+
+      /*
+       * Never hide navbar while an interactive
+       * navbar UI is open.
+       */
+      if (menuMounted || languageModalOpen) {
+        setNavbarVisible(true);
+
+        lastScrollY = currentScrollY;
+        directionalDistance = 0;
+        direction = null;
+
+        return;
+      }
+
+      /*
+       * Top of page:
+       * navbar must always be visible.
+       */
+      if (currentScrollY <= TOP_ZONE) {
+        setNavbarVisible(true);
+
+        lastScrollY = currentScrollY;
+        directionalDistance = 0;
+        direction = null;
+
+        return;
+      }
+
+      /*
+       * Ignore tiny trackpad / touch momentum.
+       */
+      if (Math.abs(delta) < MIN_DELTA) {
+        lastScrollY = currentScrollY;
+        return;
+      }
+
+      const nextDirection: "up" | "down" = delta > 0 ? "down" : "up";
+
+      /*
+       * If direction changed,
+       * restart intentional-distance measurement.
+       */
+      if (nextDirection !== direction) {
+        direction = nextDirection;
+        directionalDistance = 0;
+      }
+
+      directionalDistance += Math.abs(delta);
+
+      /*
+       * SCROLL DOWN
+       *
+       * Require slightly more movement before hiding.
+       * This prevents annoying disappearing behavior.
+       */
+      if (
+        direction === "down" &&
+        currentScrollY > HIDE_START &&
+        directionalDistance >= HIDE_INTENT
+      ) {
+        setNavbarVisible(false);
+        directionalDistance = 0;
+      }
+
+      /*
+       * SCROLL UP
+       *
+       * Reveal sooner because upward scrolling usually
+       * means the user wants navigation.
+       */
+      if (direction === "up" && directionalDistance >= SHOW_INTENT) {
+        setNavbarVisible(true);
+        directionalDistance = 0;
+      }
+
+      lastScrollY = currentScrollY;
     };
 
     const handleScroll = () => {
       if (frame !== null) return;
-      frame = requestAnimationFrame(updateScrolled);
+
+      frame = requestAnimationFrame(updateNavbar);
     };
 
-    frame = requestAnimationFrame(updateScrolled);
-    window.addEventListener("scroll", handleScroll, { passive: true });
+    frame = requestAnimationFrame(updateNavbar);
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
-      if (frame !== null) cancelAnimationFrame(frame);
+
+      if (frame !== null) {
+        cancelAnimationFrame(frame);
+      }
     };
-  }, []);
+  }, [menuMounted, languageModalOpen]);
 
   useEffect(() => {
     if (!menuMounted) return;
@@ -921,6 +1045,12 @@ export default function Navbar({
   const commerceSurface = pathname === "/cart" || pathname === "/checkout";
   const commerceLightSurface = commerceSurface && !menuMounted;
   const readableNavbar = menuMounted || scrolled || commerceSurface;
+
+  const navbarLockedOpen = menuMounted || languageModalOpen;
+
+  const navbarShown = navbarVisible || navbarLockedOpen;
+
+  const navbarFloating = scrolled && !menuMounted;
   const overlayBreadcrumbClass =
     overlayTone === "dark" ? "text-white" : "text-white";
   if (
@@ -938,113 +1068,201 @@ export default function Navbar({
         className={cx(
           "fixed inset-x-0 top-0 z-[999999999]",
           "h-[70px] md:h-[78px]",
-          "border-b",
-          "transition-[background-color,border-color,box-shadow,color,backdrop-filter]",
-          "duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
-          "motion-reduce:transition-none",
-          menuMounted
-            ? cx(themeClasses.megaMenu, themeClasses.border)
-            : commerceLightSurface
-              ? "border-black/[0.08] bg-[#F7F5F0]/[0.96] text-[#231F20] shadow-[0_10px_40px_rgba(9,9,9,0.055)] backdrop-blur-2xl backdrop-saturate-150 dark:!border-black/[0.08] dark:!bg-[#F7F5F0]/[0.96] dark:!text-[#231F20]"
-            : scrolled
-              ? cx(
-                  NAVBAR_GLASS_CLASSES,
-                  "border-black/[0.06] dark:border-white/10",
-                )
-              : "border-transparent bg-transparent",
-          readableNavbar ? themeClasses.textPrimary : "text-white",
+          "transform-gpu will-change-transform [backface-visibility:hidden]",
+          navbarShown
+            ? [
+                "animate-[luxury-navbar-enter_640ms_cubic-bezier(0.16,1,0.3,1)_both]",
+                "pointer-events-auto",
+                "motion-reduce:translate-y-0 motion-reduce:opacity-100",
+              ].join(" ")
+            : [
+                "animate-[luxury-navbar-exit_260ms_cubic-bezier(0.55,0,1,0.45)_both]",
+                "pointer-events-none",
+                "motion-reduce:-translate-y-full motion-reduce:opacity-0",
+              ].join(" "),
+          "motion-reduce:animate-none",
         )}
       >
-        <div className="relative mx-auto flex h-full max-w-[1920px] items-center px-4 sm:px-6 lg:px-8 xl:px-10">
-          <div className="flex min-w-[104px] flex-1 items-center lg:min-w-[280px]">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              uppercase={false}
-              aria-expanded={open}
-              aria-controls="najibzadeh-luxury-menu"
-              aria-label={open ? copy.navbar.closeMenu : copy.navbar.openMenu}
-              onClick={toggleMenu}
-              icon={open ? <CloseIcon /> : <MenuIcon />}
-              iconPosition="right"
+        <div
+          className={cx(
+            "relative h-full overflow-visible border",
+            "transition-[margin,border-radius,background-color,border-color,box-shadow,backdrop-filter]",
+            "duration-[650ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+            "motion-reduce:transition-none",
+            navbarFloating && !menuMounted
+              ? [
+                  "mx-3 mt-2.5 rounded-[20px]",
+                  "sm:mx-5",
+                  "lg:mx-8",
+                  "xl:mx-10",
+                  "md:rounded-[22px]",
+                ].join(" ")
+              : "mx-0 mt-0 rounded-none",
+            menuMounted
+              ? cx(themeClasses.megaMenu, themeClasses.border)
+              : commerceLightSurface
+                ? [
+                    "border-black/[0.07]",
+                    "bg-[#F7F5F0]/[0.94]",
+                    "text-[#231F20]",
+                    "backdrop-blur-[22px]",
+                    "backdrop-saturate-[145%]",
+                    "shadow-[0_16px_52px_rgba(9,9,9,0.08),inset_0_1px_0_rgba(255,255,255,0.58)]",
+                    "dark:!border-black/[0.07]",
+                    "dark:!bg-[#F7F5F0]/[0.94]",
+                    "dark:!text-[#231F20]",
+                  ].join(" ")
+                : scrolled
+                  ? cx(
+                      NAVBAR_GLASS_CLASSES,
+                      "border-black/[0.045] dark:border-white/[0.08]",
+                    )
+                  : "border-transparent bg-transparent shadow-none",
+            readableNavbar ? themeClasses.textPrimary : "text-white",
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className={cx(
+              "pointer-events-none absolute inset-x-6 top-0 h-px",
+              "bg-gradient-to-r from-transparent via-white/65 to-transparent",
+              "transition-opacity duration-500 ease-out motion-reduce:transition-none",
+              navbarFloating && !menuMounted ? "opacity-70" : "opacity-0",
+            )}
+          />
+
+          <div
+            className={cx(
+              "relative mx-auto flex h-full w-full max-w-[1920px] items-center",
+              "px-4 sm:px-6 lg:px-8 xl:px-10",
+              "transition-[padding] duration-[650ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+              "motion-reduce:transition-none",
+              navbarFloating && !menuMounted && "lg:px-7 xl:px-8",
+            )}
+          >
+            <div
               className={cx(
-                "h-11 !min-h-0 !border-0 !bg-transparent !px-0 !text-current",
-                "gap-3 !tracking-normal",
-                "transition-opacity duration-200 hover:!border-0 hover:!bg-transparent hover:opacity-60",
+                "flex min-w-[104px] flex-1 items-center lg:min-w-[280px]",
+                "transform-gpu transition-[transform,opacity]",
+                "ease-[cubic-bezier(0.16,1,0.3,1)]",
+                "motion-reduce:transition-none",
+                navbarShown
+                  ? "translate-y-0 opacity-100 duration-[520ms] delay-[90ms]"
+                  : "-translate-y-1 opacity-0 duration-150 delay-0",
+              )}
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                uppercase={false}
+                aria-expanded={open}
+                aria-controls="najibzadeh-luxury-menu"
+                aria-label={open ? copy.navbar.closeMenu : copy.navbar.openMenu}
+                onClick={toggleMenu}
+                icon={open ? <CloseIcon /> : <MenuIcon />}
+                iconPosition="right"
+                className={cx(
+                  "!h-10 !w-10 !min-h-0  border-none !p-0 !text-current",
+                  "transform-gpu transition-[transform,opacity,background-color,border-color]",
+                  "duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "hover:scale-[1.04] active:scale-[0.96]",
+                  "motion-reduce:transition-none",
+                )}
+              />
+            </div>
+
+            <Link
+              href="/"
+              onClick={hideMenu}
+              aria-label="صفحه اصلی نجیب‌زاده"
+              className={cx(
+                "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
+                "transform-gpu transition-[opacity,transform,filter] duration-300",
+                "ease-[cubic-bezier(0.16,1,0.3,1)]",
+                "hover:scale-[1.025] hover:opacity-80",
+                "motion-reduce:transition-none",
                 commerceLightSurface
                   ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
                   : readableNavbar
-                  ? NAVBAR_SURFACE_CHROME_CLASSES
-                  : NAVBAR_OVERLAY_CHROME_CLASSES,
+                    ? NAVBAR_SURFACE_CHROME_CLASSES
+                    : NAVBAR_OVERLAY_CHROME_CLASSES,
               )}
-            ></Button>
-          </div>
-       
+            >
+              <span
+                className={cx(
+                  "block transform-gpu transition-[transform,opacity]",
+                  "ease-[cubic-bezier(0.16,1,0.3,1)]",
+                  "motion-reduce:transition-none",
+                  navbarShown
+                    ? "translate-y-0 opacity-100 duration-[600ms] delay-[40ms]"
+                    : "-translate-y-1 opacity-0 duration-150 delay-0",
+                )}
+              >
+                <Image
+                  src="/assets/images/logo.png"
+                  alt="نجیب‌زاده"
+                  width={84}
+                  height={84}
+                  priority
+                  className={cx(
+                    "h-auto w-[66px] sm:w-[72px] md:w-[78px]",
+                    "transform-gpu transition-[transform,filter] duration-[650ms]",
+                    "ease-[cubic-bezier(0.16,1,0.3,1)]",
+                    "motion-reduce:transition-none",
+                    navbarFloating && !menuMounted
+                      ? "scale-[0.94]"
+                      : "scale-100",
+                    commerceLightSurface
+                      ? "brightness-0"
+                      : readableNavbar && "brightness-0 dark:invert",
+                  )}
+                />
+              </span>
+            </Link>
 
-          <Link
-            href="/"
-            onClick={hideMenu}
-            aria-label="صفحه اصلی نجیب‌زاده"
-            className={cx(
-              "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
-              "transition-[opacity,transform,filter] duration-300",
-              "hover:scale-[1.025] hover:opacity-80",
-              commerceLightSurface
-                ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
-                : readableNavbar
-                ? NAVBAR_SURFACE_CHROME_CLASSES
-                : NAVBAR_OVERLAY_CHROME_CLASSES,
-            )}
-          >
-            <Image
-              src={
-                   
-                 "/assets/images/logo.png"
-              }
-              alt="نجیب‌زاده"
-              width={84}
-              height={84}
-              priority
+            <div
               className={cx(
-                "h-auto w-[66px] sm:w-[72px] md:w-[78px]",
-                commerceLightSurface
-                  ? "brightness-0"
-                  : readableNavbar && "brightness-0 dark:invert",
+                "flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5",
+                "transform-gpu transition-[transform,opacity]",
+                "ease-[cubic-bezier(0.16,1,0.3,1)]",
+                "motion-reduce:transition-none",
+                navbarShown
+                  ? "translate-y-0 opacity-100 duration-[560ms] delay-[120ms]"
+                  : "-translate-y-1 opacity-0 duration-150 delay-0",
               )}
-            />
-          </Link>
+            >
+              <LanguageToggle
+                buttonRef={languageButtonRef}
+                currentLocale={locale}
+                label={languageCopy.openButton}
+                onClick={openLanguageModal}
+                onReadableSurface={readableNavbar}
+              />
 
-          <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
-            <LanguageToggle
-              buttonRef={languageButtonRef}
-              currentLocale={locale}
-              label={languageCopy.openButton}
-              onClick={openLanguageModal}
-              onReadableSurface={readableNavbar}
-            />
+              <div className="hidden sm:block">
+                <NavAction
+                  href={toLocalizedHref("/profile")}
+                  label={copy.navbar.profile}
+                  onReadableSurface={readableNavbar}
+                  forceLightSurface={commerceLightSurface}
+                  locale={locale}
+                >
+                  <ProfileIcon />
+                </NavAction>
+              </div>
 
-            <div className="hidden sm:block">
               <NavAction
-                href={toLocalizedHref("/profile")}
-                label={copy.navbar.profile}
+                href={toLocalizedHref("/cart")}
+                label={copy.navbar.cart}
+                badge={cartItemCount}
                 onReadableSurface={readableNavbar}
                 forceLightSurface={commerceLightSurface}
                 locale={locale}
               >
-                <ProfileIcon />
+                <BagIcon />
               </NavAction>
             </div>
-
-            <NavAction
-              href={toLocalizedHref("/cart")}
-              label={copy.navbar.cart}
-              badge={cartItemCount}
-              onReadableSurface={readableNavbar}
-              locale={locale}
-            >
-              <BagIcon />
-            </NavAction>
           </div>
         </div>
       </header>
@@ -2026,8 +2244,8 @@ function NavAction({
           forceLightSurface
             ? "text-[#231F20] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#A94420]/70"
             : onReadableSurface
-            ? NAVBAR_SURFACE_CHROME_CLASSES
-            : NAVBAR_OVERLAY_CHROME_CLASSES,
+              ? NAVBAR_SURFACE_CHROME_CLASSES
+              : NAVBAR_OVERLAY_CHROME_CLASSES,
         )}
       />
 
@@ -2038,8 +2256,8 @@ function NavAction({
             forceLightSurface
               ? "bg-[#0B0B0B] text-white"
               : onReadableSurface
-              ? "bg-[#0B0B0B] text-white dark:bg-white dark:text-[#0B0B0B]"
-              : "bg-white text-black",
+                ? "bg-[#0B0B0B] text-white dark:bg-white dark:text-[#0B0B0B]"
+                : "bg-white text-black",
           )}
         >
           {formatShellNumber(badge, locale)}
@@ -2120,8 +2338,17 @@ function LightUtilityLink({
 ============================================================================ */
 
 function MenuIcon() {
+  // Get locale from context or props
+  const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const direction = getLocaleDirection(locale);
+
+  // Rotate 180 degrees for RTL languages (Persian, Arabic), 0 degrees for LTR (English)
+  const rotationClass = direction === "rtl" ? "rotate-180" : "rotate-0";
+
   return (
     <svg
+      className={rotationClass}
       viewBox="0 0 16 16"
       fill="none"
       stroke="currentColor"
