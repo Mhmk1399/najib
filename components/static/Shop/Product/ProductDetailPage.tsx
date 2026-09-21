@@ -30,6 +30,13 @@ import {
   loginHref,
   savePendingCartItem,
 } from "@/lib/commerce/client";
+import { getHtmlLang, getLocaleDirection, type Locale } from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
+import {
+  formatProductMoney,
+  formatProductNumber,
+  type ProductDetailCopy,
+} from "@/lib/i18n/product-detail-copy";
 
 /* ==========================================================================
    TYPES
@@ -128,15 +135,25 @@ export type ProductDetailData = {
 
 type ProductDetailPageProps = {
   product: ProductDetailData;
+
+  locale: Locale;
+
+  copy: ProductDetailCopy;
 };
 
 /* ==========================================================================
    COMPONENT
 ============================================================================ */
 
-export function ProductDetailPage({ product }: ProductDetailPageProps) {
+export function ProductDetailPage({
+  product,
+  locale,
+  copy,
+}: ProductDetailPageProps) {
   const toast = useToast();
   const queryClient = useQueryClient();
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
 
   const stageRef = useRef<HTMLElement | null>(null);
 
@@ -288,12 +305,12 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
   async function addToBag() {
     if (product.sizes?.length && !selectedSize) {
-      setSizeError("لطفاً سایز را انتخاب کنید.");
+      setSizeError(copy.sizeRequired);
 
       setMobileSheetExpanded(true);
 
-      toast.error("سایز را انتخاب کنید", {
-        description: "قبل از افزودن محصول به سبد خرید، یک سایز انتخاب کنید.",
+      toast.error(copy.sizeRequiredTitle, {
+        description: copy.sizeRequiredDescription,
       });
 
       return;
@@ -308,9 +325,9 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
     );
 
     if (!variant) {
-      setSizeError("این ترکیب رنگ و سایز قابل فروش نیست.");
-      toast.error("این انتخاب موجود نیست", {
-        description: "ترکیب دیگری از رنگ و سایز را انتخاب کنید.",
+      setSizeError(copy.unavailableCombination);
+      toast.error(copy.unavailableTitle, {
+        description: copy.unavailableDescription,
       });
       return;
     }
@@ -326,21 +343,21 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
       const sizeLabel = product.sizes?.find(
         (size) => size.value === selectedSize,
       )?.label;
-      toast.success("به سبد خرید اضافه شد", {
-        description: `${product.name}${sizeLabel ? ` — سایز ${sizeLabel}` : ""}`,
+      toast.success(copy.addSuccessTitle, {
+        description: `${product.name}${sizeLabel ? ` - ${copy.addSuccessSize(sizeLabel)}` : ""}`,
       });
     } catch (error) {
       if (error instanceof CommerceApiError && error.status === 401) {
         savePendingCartItem(variant.id, 1);
-        toast.info("ابتدا وارد حساب شوید", {
-          description: "پس از ورود، این انتخاب خودکار به سبد اضافه می‌شود.",
+        toast.info(copy.loginTitle, {
+          description: copy.loginDescription,
         });
-        window.location.assign(loginHref("/cart"));
+        window.location.assign(loginHref(localizedHref("/cart", locale)));
         return;
       }
-      toast.error("افزودن محصول ناموفق بود", {
+      toast.error(copy.addErrorTitle, {
         description:
-          error instanceof Error ? error.message : "دوباره تلاش کنید.",
+          error instanceof Error ? error.message : copy.tryAgain,
       });
     } finally {
       setAddingToBag(false);
@@ -356,7 +373,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
     setFavorite(next);
 
-    toast.info(next ? "به علاقه‌مندی‌ها اضافه شد" : "از علاقه‌مندی‌ها حذف شد");
+    toast.info(next ? copy.favoriteAdded : copy.favoriteRemoved);
   }
 
   /* ------------------------------------------------------------------------
@@ -379,7 +396,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
       await navigator.clipboard.writeText(url);
 
-      toast.success("لینک کپی شد");
+      toast.success(copy.linkCopied);
     } catch {
       /*
        * Share cancel هم ممکن است اینجا بیاید.
@@ -389,7 +406,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
   return (
     <main
-      dir="rtl"
+      dir={direction}
+      lang={htmlLang}
       style={themeVars}
       className="
         min-h-screen
@@ -439,6 +457,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
         ============================================================== */}
 
         <ProductStackGallery
+          copy={copy}
+          locale={locale}
           productName={product.name}
           images={images}
           onZoom={setZoomIndex}
@@ -449,7 +469,7 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
         ============================================================== */}
 
         <aside
-          dir="rtl"
+          dir={direction}
           className="
             hidden
 
@@ -473,6 +493,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
             "
           >
             <ProductPurchasePanel
+              copy={copy}
+              locale={locale}
               product={product}
               selectedColorId={selectedColorId}
               selectedColor={selectedColor}
@@ -512,14 +534,18 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
           PRODUCT DETAILS
       ================================================================ */}
 
-      <ProductDetailsSections sections={product.sections} />
+      <ProductDetailsSections copy={copy} locale={locale} sections={product.sections} />
 
       {/* ===============================================================
           RELATED PRODUCTS
       ================================================================ */}
 
       {product.relatedProducts && product.relatedProducts.length > 0 && (
-        <RelatedProductsSection products={product.relatedProducts} />
+        <RelatedProductsSection
+          copy={copy}
+          locale={locale}
+          products={product.relatedProducts}
+        />
       )}
 
       {/* ===============================================================
@@ -528,6 +554,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
       {mobileSheetVisible && (
         <MobileProductSheet
+          copy={copy}
+          locale={locale}
           product={product}
           selectedColorId={selectedColorId}
           selectedColor={selectedColor}
@@ -556,6 +584,8 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 
       {zoomIndex !== null && images[zoomIndex] && (
         <ProductZoom
+          copy={copy}
+          locale={locale}
           image={images[zoomIndex]}
           index={zoomIndex}
           count={images.length}
@@ -589,12 +619,20 @@ export function ProductDetailPage({ product }: ProductDetailPageProps) {
 ============================================================================ */
 
 function ProductStackGallery({
+  copy,
+
+  locale,
+
   productName,
 
   images,
 
   onZoom,
 }: {
+  copy: ProductDetailCopy;
+
+  locale: Locale;
+
   productName: string;
 
   images: ProductDetailImage[];
@@ -614,7 +652,10 @@ function ProductStackGallery({
         <button
           key={image.id}
           type="button"
-          aria-label={`مشاهده تصویر ${new Intl.NumberFormat("fa-IR").format(index + 1)} ${productName}`}
+          aria-label={copy.viewImage(
+            formatProductNumber(index + 1, locale),
+            productName,
+          )}
           onClick={() => onZoom(index)}
           className="
               group
@@ -696,8 +737,8 @@ function ProductStackGallery({
                 lg:left-7
               "
           >
-            {String(index + 1).padStart(2, "0")}/
-            {String(images.length).padStart(2, "0")}
+            {formatProductNumber(index + 1, locale)}/
+            {formatProductNumber(images.length, locale)}
           </span>
 
           {/* ZOOM */}
@@ -744,6 +785,10 @@ function ProductStackGallery({
 ============================================================================ */
 
 type PurchasePanelProps = {
+  copy: ProductDetailCopy;
+
+  locale: Locale;
+
   product: ProductDetailData;
 
   selectedColorId: string;
@@ -772,6 +817,10 @@ type PurchasePanelProps = {
 };
 
 function ProductPurchasePanel({
+  copy,
+
+  locale,
+
   product,
 
   selectedColorId,
@@ -798,9 +847,12 @@ function ProductPurchasePanel({
 
   onAddToBag,
 }: PurchasePanelProps) {
+  const direction = getLocaleDirection(locale);
+  const isRtl = direction === "rtl";
+
   return (
     <div
-      dir="rtl"
+      dir={direction}
       className="
         mx-auto
 
@@ -835,7 +887,7 @@ function ProductPurchasePanel({
             text-[var(--product-muted)]
           "
         >
-          کد محصول: {product.sku}
+          {copy.productCode}: {product.sku}
         </span>
 
         <div
@@ -845,12 +897,12 @@ function ProductPurchasePanel({
             gap-1
           "
         >
-          <UtilityButton label="اشتراک‌گذاری محصول" onClick={onShare}>
+          <UtilityButton label={copy.shareProduct} onClick={onShare}>
             <ShareIcon />
           </UtilityButton>
 
           <UtilityButton
-            label={favorite ? "حذف از علاقه‌مندی‌ها" : "افزودن به علاقه‌مندی‌ها"}
+            label={favorite ? copy.favoriteRemove : copy.favoriteAdd}
             active={favorite}
             onClick={onFavorite}
           >
@@ -901,7 +953,7 @@ function ProductPurchasePanel({
           text-black
         "
       >
-        {money(product.price, product.currency)}
+        {formatProductMoney(product.price, product.currency, locale)}
       </p>
 
       {product.shortDescription && (
@@ -955,7 +1007,7 @@ function ProductPurchasePanel({
               text-black
             "
           >
-            رنگ
+            {copy.color}
           </p>
 
           <p
@@ -988,7 +1040,7 @@ function ProductPurchasePanel({
               <button
                 key={color.id}
                 type="button"
-                aria-label={`انتخاب ${color.name}`}
+                aria-label={copy.chooseColor(color.name)}
                 aria-pressed={active}
                 onClick={() => onColorChange(color.id)}
                 className={`
@@ -1083,7 +1135,7 @@ function ProductPurchasePanel({
                 text-black
               "
             >
-              انتخاب سایز
+              {copy.chooseSize}
             </p>
 
             <button
@@ -1107,14 +1159,14 @@ function ProductPurchasePanel({
                 hover:text-black
               "
             >
-              راهنمای سایز
+              {copy.sizeGuide}
             </button>
           </div>
 
           <CustomSelect
             value={selectedSize}
             options={sizeOptions}
-            placeholder="سایز را انتخاب کنید"
+            placeholder={copy.sizePlaceholder}
             size="lg"
             clearable
             error={sizeError}
@@ -1143,7 +1195,7 @@ function ProductPurchasePanel({
           fullWidth
           onClick={onAddToBag}
         >
-          افزودن به سبد خرید
+          {copy.addToBag}
         </Button>
       </div>
 
@@ -1170,8 +1222,7 @@ function ProductPurchasePanel({
         <BoxIcon />
 
         <span>
-          {product.shippingNote ??
-            "ارسال و پشتیبانی خرید طبق شرایط فروشگاه انجام می‌شود."}
+          {product.shippingNote ?? copy.shippingNote}
         </span>
       </div>
 
@@ -1193,8 +1244,8 @@ function ProductPurchasePanel({
         "
       >
         <Link
-          href="/contact-us#location"
-          className="
+          href={localizedHref("/contact-us#location", locale)}
+          className={`
             group/service
 
             flex
@@ -1202,10 +1253,7 @@ function ProductPurchasePanel({
             items-center
             gap-3
 
-            border-l
             border-[var(--product-border)]
-
-            pl-5
 
             text-[7px]
             font-semibold
@@ -1218,23 +1266,22 @@ function ProductPurchasePanel({
             transition-colors
 
             hover:text-black
-          "
+            ${isRtl ? "border-l pl-5" : "border-r pr-5"}
+          `}
         >
           <PinIcon />
-          موجودی بوتیک
+          {copy.boutiqueAvailability}
         </Link>
 
         <Link
-          href="/contact-us"
-          className="
+          href={localizedHref("/contact-us", locale)}
+          className={`
             group/service
 
             flex
 
             items-center
             gap-3
-
-            pr-6
 
             text-[7px]
             font-semibold
@@ -1247,10 +1294,11 @@ function ProductPurchasePanel({
             transition-colors
 
             hover:text-black
-          "
+            ${isRtl ? "pr-6" : "pl-6"}
+          `}
         >
           <MailIcon />
-          پشتیبانی مشتریان
+          {copy.customerSupport}
         </Link>
       </div>
     </div>
@@ -1296,6 +1344,10 @@ function getMobileSheetOpenProgress(
 }
 
 function MobileProductSheet({
+  copy,
+
+  locale,
+
   product,
 
   selectedColorId,
@@ -1330,6 +1382,8 @@ function MobileProductSheet({
 
   onExpandedChange: (value: boolean) => void;
 }) {
+  const direction = getLocaleDirection(locale);
+  const isRtl = direction === "rtl";
   const expandedContentRef = useRef<HTMLDivElement | null>(null);
 
   const activePointerIdRef = useRef<number | null>(null);
@@ -1472,6 +1526,7 @@ function MobileProductSheet({
 
   return (
     <aside
+      dir={direction}
       className="
         fixed
 
@@ -1502,8 +1557,8 @@ function MobileProductSheet({
         type="button"
         aria-label={
           expanded
-            ? "بستن اطلاعات محصول"
-            : "باز کردن اطلاعات محصول"
+            ? copy.mobileClose
+            : copy.mobileOpen
         }
         aria-expanded={expanded}
         aria-controls="mobile-product-sheet-options"
@@ -1621,7 +1676,7 @@ function MobileProductSheet({
           >
             <p
               className="
-                mr-1
+                ms-1
 
                 pt-1
 
@@ -1632,15 +1687,15 @@ function MobileProductSheet({
                 text-black
               "
             >
-              {money(product.price, product.currency)}
+              {formatProductMoney(product.price, product.currency, locale)}
             </p>
 
-            <UtilityButton label="اشتراک‌گذاری" onClick={onShare}>
+            <UtilityButton label={copy.shareProduct} onClick={onShare}>
               <ShareIcon />
             </UtilityButton>
 
             <UtilityButton
-              label="علاقه‌مندی‌ها"
+              label={favorite ? copy.favoriteRemove : copy.favoriteAdd}
               active={favorite}
               onClick={onFavorite}
             >
@@ -1704,7 +1759,7 @@ function MobileProductSheet({
                     tracking-[0.16em]
                   "
               >
-                رنگ
+                {copy.color}
               </span>
 
               <span
@@ -1733,6 +1788,8 @@ function MobileProductSheet({
                   <button
                     key={color.id}
                     type="button"
+                    aria-label={copy.chooseColor(color.name)}
+                    aria-pressed={active}
                     onClick={() => onColorChange(color.id)}
                     className={`
                           grid
@@ -1775,11 +1832,11 @@ function MobileProductSheet({
                   "
               >
                 <CustomSelect
-                  label="سایز"
+                  label={copy.chooseSize}
                   value={selectedSize}
                   options={sizeOptions}
                   size="md"
-                  placeholder="سایز را انتخاب کنید"
+                  placeholder={copy.sizePlaceholder}
                   error={sizeError}
                   onChange={(value) =>
                     onSizeChange(typeof value === "string" ? value : "")
@@ -1804,12 +1861,9 @@ function MobileProductSheet({
                 "
             >
               <Link
-                href="/contact-us#location"
-                className="
-                    border-l
+                href={localizedHref("/contact-us#location", locale)}
+                className={`
                     border-[var(--product-border)]
-
-                    pl-3
 
                     text-[6.5px]
                     font-semibold
@@ -1818,16 +1872,15 @@ function MobileProductSheet({
                     tracking-[0.13em]
 
                     text-black/45
-                  "
+                    ${isRtl ? "border-l pl-3" : "border-r pr-3"}
+                  `}
               >
-                موجودی بوتیک
+                {copy.boutiqueAvailability}
               </Link>
 
               <Link
-                href="/contact-us"
-                className="
-                    pr-4
-
+                href={localizedHref("/contact-us", locale)}
+                className={`
                     text-[6.5px]
                     font-semibold
 
@@ -1835,9 +1888,10 @@ function MobileProductSheet({
                     tracking-[0.13em]
 
                     text-black/45
-                  "
+                    ${isRtl ? "pr-4" : "pl-4"}
+                  `}
               >
-                پشتیبانی مشتریان
+                {copy.customerSupport}
               </Link>
             </div>
           </div>
@@ -1867,7 +1921,7 @@ function MobileProductSheet({
               <ShoppingBag />
             }
            >
-            افزودن به سبد خرید
+            {copy.addToBag}
           </Button>
         </div>
       </div>
@@ -1880,13 +1934,21 @@ function MobileProductSheet({
 ============================================================================ */
 
 function ProductDetailsSections({
+  copy,
+
+  locale,
+
   sections,
 }: {
+  copy: ProductDetailCopy;
+
+  locale: Locale;
+
   sections: ProductDetailSection[];
 }) {
   return (
     <section
-      dir="rtl"
+      dir={getLocaleDirection(locale)}
       className="
         bg-white
 
@@ -1937,7 +1999,7 @@ function ProductDetailsSections({
               text-[var(--product-copper)]
             "
           >
-            یادداشت‌های محصول
+            {copy.productNotesEyebrow}
             <span
               className="
                 h-px
@@ -1962,9 +2024,9 @@ function ProductDetailsSections({
               text-black
             "
           >
-            جزئیات است که
+            {copy.productNotesTitleTop}
             <br />
-            تفاوت می‌سازد.
+            {copy.productNotesTitleBottom}
           </h2>
         </div>
 
@@ -2032,7 +2094,7 @@ function ProductAccordion({
 
           gap-6
 
-          text-right
+          text-start
         "
       >
         <span
@@ -2057,7 +2119,7 @@ function ProductAccordion({
             text-black/50
           "
         >
-          {open ? "−" : "+"}
+          {open ? "-" : "+"}
         </span>
       </button>
 
@@ -2090,7 +2152,7 @@ function ProductAccordion({
 
               pb-8
 
-              pr-6
+              ps-6
             "
           >
             {section.paragraphs.map((paragraph, index) => (
@@ -2123,13 +2185,21 @@ function ProductAccordion({
 ============================================================================ */
 
 function RelatedProductsSection({
+  copy,
+
+  locale,
+
   products,
 }: {
+  copy: ProductDetailCopy;
+
+  locale: Locale;
+
   products: RelatedProductItem[];
 }) {
   return (
     <section
-      dir="rtl"
+      dir={getLocaleDirection(locale)}
       className="
         bg-[var(--product-cream)]
 
@@ -2175,7 +2245,7 @@ function RelatedProductsSection({
                 text-[var(--product-copper)]
               "
             >
-              انتخاب‌شده برای شما
+              {copy.relatedEyebrow}
             </p>
 
             <h2
@@ -2193,12 +2263,12 @@ function RelatedProductsSection({
                 sm:text-[46px]
               "
             >
-              شاید بپسندید.
+              {copy.relatedTitle}
             </h2>
           </div>
 
           <Link
-            href="/shop"
+            href={localizedHref("/shop", locale)}
             className="
               hidden
 
@@ -2217,7 +2287,7 @@ function RelatedProductsSection({
               sm:block
             "
           >
-            مشاهده کالکشن
+            {copy.viewCollection}
           </Link>
         </div>
 
@@ -2242,7 +2312,11 @@ function RelatedProductsSection({
           "
         >
           {products.map((product) => (
-            <RelatedProductCard key={product.id} product={product} />
+            <RelatedProductCard
+              key={product.id}
+              locale={locale}
+              product={product}
+            />
           ))}
         </div>
       </div>
@@ -2250,10 +2324,16 @@ function RelatedProductsSection({
   );
 }
 
-function RelatedProductCard({ product }: { product: RelatedProductItem }) {
+function RelatedProductCard({
+  locale,
+  product,
+}: {
+  locale: Locale;
+  product: RelatedProductItem;
+}) {
   return (
     <Link
-      href={`/shop/${product.slug}`}
+      href={localizedHref(`/shop/${product.slug}`, locale)}
       className="
         group
 
@@ -2355,7 +2435,7 @@ function RelatedProductCard({ product }: { product: RelatedProductItem }) {
             text-black
           "
         >
-          {money(product.price, product.currency)}
+          {formatProductMoney(product.price, product.currency, locale)}
         </p>
       </div>
     </Link>
@@ -2367,6 +2447,10 @@ function RelatedProductCard({ product }: { product: RelatedProductItem }) {
 ============================================================================ */
 
 function ProductZoom({
+  copy,
+
+  locale,
+
   image,
 
   index,
@@ -2379,6 +2463,10 @@ function ProductZoom({
 
   onNext,
 }: {
+  copy: ProductDetailCopy;
+
+  locale: Locale;
+
   image: ProductDetailImage;
 
   index: number;
@@ -2395,7 +2483,8 @@ function ProductZoom({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="نمایشگر تصویر محصول"
+      aria-label={copy.zoomDialogLabel}
+      dir={getLocaleDirection(locale)}
       className="
         fixed
         inset-0
@@ -2440,12 +2529,13 @@ function ProductZoom({
             text-white/45
           "
         >
-          {String(index + 1).padStart(2, "0")}/{String(count).padStart(2, "0")}
+          {formatProductNumber(index + 1, locale)}/
+          {formatProductNumber(count, locale)}
         </span>
 
         <button
           type="button"
-          aria-label="بستن نمایشگر تصویر"
+          aria-label={copy.closeZoom}
           onClick={onClose}
           className="
             grid
@@ -2480,7 +2570,7 @@ function ProductZoom({
       >
         <Image
           src={image.src}
-          alt={image.alt ?? "تصویر محصول"}
+          alt={image.alt ?? copy.productImage}
           fill
           priority
           sizes="100vw"
@@ -2494,7 +2584,7 @@ function ProductZoom({
         <>
           <button
             type="button"
-            aria-label="تصویر قبلی"
+            aria-label={copy.previousImage}
             onClick={onPrevious}
             className="
               absolute
@@ -2528,7 +2618,7 @@ function ProductZoom({
 
           <button
             type="button"
-            aria-label="تصویر بعدی"
+            aria-label={copy.nextImage}
             onClick={onNext}
             className="
               absolute
@@ -2618,20 +2708,6 @@ function UtilityButton({
       {children}
     </button>
   );
-}
-
-/* ==========================================================================
-   MONEY
-============================================================================ */
-
-function money(value: number, currency = "USD") {
-  return new Intl.NumberFormat("fa-IR", {
-    style: "currency",
-
-    currency,
-
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 /* ==========================================================================

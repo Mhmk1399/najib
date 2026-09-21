@@ -109,7 +109,16 @@ const queryOptions = {
   retry: 1,
 } as const;
 
-const glassSurface = "backdrop-blur-[32px] backdrop-saturate-[145%]";
+const glassSurface = [
+  // Solid fallback first. Real glass is progressively enhanced only where supported.
+  "bg-[#151619]/[0.94]",
+  "supports-[backdrop-filter]:bg-[#151619]/[0.62]",
+  "supports-[backdrop-filter]:backdrop-blur-[20px]",
+  "supports-[backdrop-filter]:backdrop-saturate-[165%]",
+  "ring-1",
+  "ring-inset",
+  "ring-white/[0.055]",
+].join(" ");
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
@@ -658,25 +667,33 @@ export function DynamicImageIsland() {
             return;
           setFocusOpen(false);
         }}
-        className={`pointer-events-auto relative isolate origin-bottom overflow-hidden border text-white [text-rendering:geometricPrecision] ${glassSurface} shadow-[0_24px_90px_rgba(0,0,0,0.42),0_8px_28px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.16)] transition-[width,max-width,border-color,box-shadow,background-color,transform] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+        className={`pointer-events-auto relative isolate origin-bottom overflow-hidden border text-white [text-rendering:geometricPrecision] ${glassSurface} transform-gpu shadow-[0_26px_84px_rgba(0,0,0,0.40),0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.035)] transition-[width,max-width,transform,border-color] duration-[460ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
           panelOpen
-            ? "w-[calc(100vw-16px)] max-w-[560px] rounded-[26px] border-white/[0.26] bg-[#090807]/[0.88] sm:w-[560px] sm:rounded-[30px]"
-            : "w-[min(90vw,392px)] max-w-[392px] rounded-[26px] border-white/[0.24] bg-[#090807]/[0.84] hover:border-[#D0AA86]/65 hover:shadow-[0_26px_92px_rgba(0,0,0,0.58),0_8px_30px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.22)] sm:rounded-[30px]"
+            ? "w-[calc(100vw-16px)] max-w-[560px] rounded-[32px] border-white/[0.24] sm:w-[560px]"
+            : "w-[min(92vw,392px)] max-w-[392px] rounded-[30px] border-white/[0.20] hover:border-white/[0.30] sm:rounded-[32px]"
         }`}
       >
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.075)_9%,rgba(8,7,6,0.26)_32%,rgba(6,5,4,0.62)_100%)]"
+          className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(255,255,255,0.18)_0%,rgba(255,255,255,0.075)_12%,rgba(255,255,255,0.018)_38%,rgba(0,0,0,0.12)_100%)]"
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_-8%,rgba(255,255,255,0.20),transparent_27%),radial-gradient(circle_at_84%_2%,rgba(194,145,103,0.20),transparent_30%),radial-gradient(circle_at_50%_115%,rgba(0,0,0,0.42),transparent_44%)]"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_14%_-18%,rgba(255,255,255,0.34),transparent_30%),radial-gradient(circle_at_88%_-6%,rgba(226,183,145,0.16),transparent_30%),radial-gradient(circle_at_62%_128%,rgba(102,122,255,0.085),transparent_38%),radial-gradient(circle_at_42%_145%,rgba(0,0,0,0.28),transparent_42%)]"
         />
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-x-7 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.3),rgba(183,131,90,0.9),rgba(255,255,255,0.3),transparent)] transition-opacity duration-500 ${
-            panelOpen ? "opacity-95" : "opacity-55"
+          className={`pointer-events-none absolute inset-x-[12%] top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.24),rgba(255,255,255,0.72),rgba(220,174,134,0.48),rgba(255,255,255,0.22),transparent)] transition-opacity duration-300 ${
+            panelOpen ? "opacity-100" : "opacity-70"
           }`}
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-[1px] -z-[5] rounded-[inherit] border border-white/[0.045]"
+        />
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute left-[6%] top-[8%] -z-[5] h-[34%] w-[44%] rounded-full bg-white/[0.025]"
         />
 
         {panelOpen ? (
@@ -696,14 +713,12 @@ export function DynamicImageIsland() {
           <button
             ref={triggerRef}
             type="button"
-            className={`group grid size-10 shrink-0 cursor-pointer place-items-center rounded-full border transition-[border-color,background-color,color,transform,box-shadow] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/80 active:scale-[0.95] motion-reduce:transition-none ${
+            className={`group grid size-10 shrink-0 cursor-pointer place-items-center rounded-[18px] border shadow-[inset_0_1px_0_rgba(255,255,255,0.10)] transform-gpu transition-[border-color,background-color,color,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60 active:scale-[0.95] motion-reduce:transition-none ${
               panelOpen
-                ? "border-white/[0.18] bg-white/[0.08] text-white/74 hover:border-white/34 hover:bg-white/[0.12] hover:text-white"
-                : "border-[#B7835A]/50 bg-white/[0.055] text-[#E1BE98] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] hover:border-[#D5B08D]/75 hover:bg-[#B7835A]/[0.15] hover:shadow-[0_0_0_1px_rgba(183,131,90,0.18)]"
+                ? "border-white/[0.16] bg-white/[0.075] text-white/78 hover:border-white/[0.28] hover:bg-white/[0.11] hover:text-white"
+                : "border-white/[0.15] bg-white/[0.065] text-[#E7C4A5] hover:scale-[1.025] hover:border-white/[0.28] hover:bg-white/[0.11] hover:text-white"
             }`}
-            aria-label={
-              panelOpen ? copy.close : copy.open
-            }
+            aria-label={panelOpen ? copy.close : copy.open}
             title={panelOpen ? copy.close : copy.open}
             aria-expanded={panelOpen}
             aria-controls={panelId}
@@ -731,7 +746,7 @@ export function DynamicImageIsland() {
 
           <button
             type="button"
-            className="group min-w-0 flex-1 cursor-pointer rounded-[22px] px-1.5 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+            className="group min-w-0 flex-1 cursor-pointer rounded-[22px] px-1.5 py-1 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55"
             aria-label={
               panelOpen ? copy.closePanel : `${copy.open}: ${activeTitle}`
             }
@@ -759,7 +774,7 @@ export function DynamicImageIsland() {
               </span>
 
               {products.length ? (
-                <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.18] bg-black/[0.32] py-1 pe-2 ps-1.5 text-[8px] text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
+                <span className="flex shrink-0 items-center gap-1.5 rounded-full border border-white/[0.14] bg-white/[0.065] py-1 pe-2 ps-1.5 text-[8px] text-white/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
                   <span
                     aria-hidden="true"
                     className="flex items-center -space-x-2 space-x-reverse"
@@ -788,11 +803,13 @@ export function DynamicImageIsland() {
                     ))}
                   </span>
                   <span className="tabular-nums">
-                    {copy.productCount(formatStoryNumber(products.length, locale))}
+                    {copy.productCount(
+                      formatStoryNumber(products.length, locale),
+                    )}
                   </span>
                 </span>
               ) : (
-                <span className="grid size-8 shrink-0 place-items-center rounded-full border border-white/[0.18] bg-black/[0.34] text-white/82">
+                <span className="grid size-8 shrink-0 place-items-center rounded-[14px] border border-white/[0.14] bg-white/[0.06] text-white/82 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]">
                   <Search className="size-3.5" aria-hidden="true" />
                 </span>
               )}
@@ -804,23 +821,23 @@ export function DynamicImageIsland() {
           id={panelId}
           aria-hidden={!panelOpen}
           inert={!panelOpen}
-          className={`relative z-10 grid transition-[grid-template-rows,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          className={`relative z-10 grid transition-[grid-template-rows,border-color] duration-[460ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
             panelOpen
-              ? "grid-rows-[1fr] border-t border-white/[0.12]"
+              ? "grid-rows-[1fr] border-t border-white/[0.10]"
               : "grid-rows-[0fr] border-t border-transparent"
           }`}
         >
           <div className="min-h-0 overflow-hidden">
             <div
-              className={`px-2.5 pb-2.5 pt-2 transition-[opacity,transform] duration-300 sm:px-3 sm:pb-3 sm:pt-2.5 ${
+              className={`px-2.5 pb-2.5 pt-2 transform-gpu transition-[opacity,transform] duration-[360ms] ease-[cubic-bezier(0.16,1,0.3,1)] sm:px-3 sm:pb-3 sm:pt-2.5 ${
                 panelOpen
-                  ? "translate-y-0 opacity-100 delay-75"
-                  : "pointer-events-none translate-y-1 opacity-0"
+                  ? "translate-y-0 scale-100 opacity-100 delay-[70ms]"
+                  : "pointer-events-none translate-y-1.5 scale-[0.992] opacity-0"
               }`}
             >
               {activeStory ? (
                 <div className="grid gap-2.5 sm:grid-cols-[158px_minmax(0,1fr)] sm:gap-3">
-                  <figure className="relative min-h-[132px] overflow-hidden rounded-[18px] border border-white/[0.18] bg-black/[0.34] shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] sm:min-h-[220px] sm:rounded-[20px]">
+                  <figure className="relative min-h-[132px] overflow-hidden rounded-[20px] border border-white/[0.14] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_26px_rgba(0,0,0,0.14)] sm:min-h-[220px] sm:rounded-[22px]">
                     <Image
                       src={activeStory.image.url}
                       alt={text(activeStory.image.alt, locale, activeTitle)}
@@ -844,15 +861,15 @@ export function DynamicImageIsland() {
                     </span>
                   </figure>
 
-                    <div className="min-w-0 overflow-hidden rounded-[20px] border border-white/[0.16] bg-black/[0.42] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-white/[0.12] px-3.5">
-                        <span className="text-[9px] font-semibold text-white/94">
-                          {copy.relatedProducts}
-                        </span>
-                        <span className="text-[8px] font-medium text-[#E3BC96]">
-                          {copy.choosePreview}
-                        </span>
-                      </div>
+                  <div className="min-w-0 overflow-hidden rounded-[22px] border border-white/[0.12] bg-white/[0.045] shadow-[inset_0_1px_0_rgba(255,255,255,0.065)]">
+                    <div className="flex min-h-10 items-center justify-between gap-3 border-b border-white/[0.12] px-3.5">
+                      <span className="text-[9px] font-semibold text-white/94">
+                        {copy.relatedProducts}
+                      </span>
+                      <span className="text-[8px] font-medium text-[#E3BC96]">
+                        {copy.choosePreview}
+                      </span>
+                    </div>
 
                     {products.length ? (
                       <div className="max-h-[min(38vh,280px)] divide-y divide-white/[0.075] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible">
@@ -881,7 +898,7 @@ export function DynamicImageIsland() {
                                   ? `${index * 45}ms`
                                   : "0ms",
                               }}
-                              className="group flex min-h-[64px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-start transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[#D2B08D]/75"
+                              className="group flex min-h-[64px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-start transform-gpu transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/55 motion-reduce:transition-none"
                             >
                               <span className="relative aspect-[4/5] w-10 shrink-0 overflow-hidden rounded-[7px] border border-white/[0.08] bg-white/[0.05]">
                                 {product.image?.url ? (
@@ -934,7 +951,7 @@ export function DynamicImageIsland() {
                 <div className="grid gap-2.5">
                   <form
                     noValidate
-                    className="flex h-11 items-center gap-2 rounded-full border border-white/[0.14] bg-black/[0.44] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-[border-color,background-color,box-shadow] duration-300 focus-within:border-[#B7835A]/60 focus-within:bg-white/[0.05] focus-within:shadow-[0_0_0_3px_rgba(183,131,90,0.07)] motion-reduce:transition-none"
+                    className="flex h-11 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.055] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.065)] transition-[border-color,background-color] duration-300 focus-within:border-white/[0.28] focus-within:bg-white/[0.085] motion-reduce:transition-none"
                     role="search"
                     aria-label={copy.searchLabel}
                     onKeyDown={(event) => {
@@ -997,7 +1014,7 @@ export function DynamicImageIsland() {
                       <button
                         key={prompt}
                         type="button"
-                        className="shrink-0 cursor-pointer rounded-full border border-white/[0.18] bg-black/[0.30] px-2.5 py-1.5 text-[8.5px] text-white/86 transition-[border-color,color,background-color] duration-200 hover:border-[#B7835A]/55 hover:bg-[#B7835A]/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
+                        className="shrink-0 cursor-pointer rounded-full border border-white/[0.12] bg-white/[0.05] px-2.5 py-1.5 text-[8.5px] text-white/82 transition-[border-color,color,background-color,transform] duration-200 hover:-translate-y-px hover:border-white/[0.24] hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55 motion-reduce:transition-none"
                         onClick={() => {
                           setQuery(prompt);
                           submitSearch(prompt);

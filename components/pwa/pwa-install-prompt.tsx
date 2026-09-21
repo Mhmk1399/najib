@@ -1,33 +1,13 @@
 "use client";
 
-import { type CSSProperties, useEffect, useState } from "react";
-
-import { Download, Share2, ShieldCheck, Smartphone, X } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import { Download, Share, X } from "lucide-react";
 import { usePathname } from "next/navigation";
-
-import { pwaInstallCopy } from "@/lib/i18n/pwa-install-copy";
-
-import {
-  defaultLocale,
-  getHtmlLang,
-  getLocaleDirection,
-  locales,
-  type Locale,
-} from "@/lib/i18n/config";
-
-import { brandColors } from "@/theme/theme-colors";
-
-/* ==========================================================================
-   TYPES
-============================================================================ */
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
-
   userChoice: Promise<{
     outcome: "accepted" | "dismissed";
-
     platform: string;
   }>;
 }
@@ -36,14 +16,10 @@ type NavigatorWithStandalone = Navigator & {
   standalone?: boolean;
 };
 
-/* ==========================================================================
-   CONSTANTS
-============================================================================ */
-
 const DISMISS_KEY = "najibzadeh:pwa-install-dismissed";
 
 /* ==========================================================================
-   HELPERS
+   PWA HELPERS
 ============================================================================ */
 
 function wasInstallDismissed() {
@@ -58,18 +34,18 @@ function rememberInstallDismissal() {
   try {
     window.sessionStorage.setItem(DISMISS_KEY, "true");
   } catch {
-    // Storage may be unavailable in privacy-restricted browsers.
+    // Storage can be unavailable in privacy-restricted browser modes.
   }
 }
 
 function isIosDevice() {
   const navigatorWithStandalone = navigator as NavigatorWithStandalone;
 
-  const isIos =
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-
-  return isIos && !navigatorWithStandalone.standalone;
+  return (
+    (/iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) &&
+    !navigatorWithStandalone.standalone
+  );
 }
 
 function isStandaloneMode() {
@@ -81,44 +57,34 @@ function isStandaloneMode() {
   );
 }
 
-function resolveLocaleFromPathname(pathname: string): Locale {
-  const firstSegment = pathname.split("/").filter(Boolean)[0];
+/* ==========================================================================
+   LIQUID GLASS CLASSES
 
-  if (firstSegment && locales.includes(firstSegment as Locale)) {
-    return firstSegment as Locale;
-  }
+   Important:
+   - No blur/filter animation.
+   - Blur is restricted to a very small surface.
+   - A solid translucent fallback exists when backdrop-filter is unavailable.
+============================================================================ */
 
-  return defaultLocale;
-}
+const LIQUID_GLASS_SURFACE = [
+  "relative isolate overflow-hidden",
 
-function stripLocalePrefix(pathname: string) {
-  const segments = pathname.split("/").filter(Boolean);
+  "border border-white/[0.16]",
+  "bg-[#111214]/[0.92]",
+  "text-white",
 
-  if (!segments.length) {
-    return "/";
-  }
+  "shadow-[0_24px_80px_rgba(0,0,0,0.38),0_8px_28px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.22),inset_0_-1px_0_rgba(255,255,255,0.045)]",
 
-  if (locales.includes(segments[0] as Locale)) {
-    const rest = segments.slice(1);
+  // Enhanced glass only where supported.
+  "supports-[backdrop-filter]:bg-[#141518]/[0.58]",
+  "supports-[backdrop-filter]:backdrop-blur-[26px]",
+  "supports-[backdrop-filter]:backdrop-saturate-[175%]",
 
-    return rest.length ? `/${rest.join("/")}` : "/";
-  }
+  "transform-gpu",
+  "will-change-transform",
 
-  return pathname;
-}
-
-function isPrivateWorkspacePath(pathname: string) {
-  const route = stripLocalePrefix(pathname);
-
-  return (
-    route === "/auth" ||
-    route.startsWith("/auth/") ||
-    route === "/admin" ||
-    route.startsWith("/admin/") ||
-    route === "/customer-dashboard" ||
-    route.startsWith("/customer-dashboard/")
-  );
-}
+  "motion-reduce:transition-none",
+].join(" ");
 
 /* ==========================================================================
    COMPONENT
@@ -127,45 +93,20 @@ function isPrivateWorkspacePath(pathname: string) {
 export function PwaInstallPrompt() {
   const pathname = usePathname();
 
-  const locale = resolveLocaleFromPathname(pathname);
-
-  const copy = pwaInstallCopy[locale];
-
-  const direction = getLocaleDirection(locale);
-
-  const htmlLang = getHtmlLang(locale);
-
-  const isRtl = direction === "rtl";
-
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
 
   const [showIosHelp, setShowIosHelp] = useState(false);
-
   const [isIos, setIsIos] = useState(false);
-
   const [isDismissed, setIsDismissed] = useState(true);
-
   const [isInstalling, setIsInstalling] = useState(false);
 
-  const themeVars = {
-    "--pwa-black": brandColors.black.hex,
-
-    "--pwa-black-rgb": brandColors.black.rgb,
-
-    "--pwa-copper": brandColors.copper.hex,
-
-    "--pwa-copper-rgb": brandColors.copper.rgb,
-  } as CSSProperties;
-
-  /* ==========================================================================
+  /* ------------------------------------------------------------------------
      SERVICE WORKER
-  ========================================================================== */
+  ------------------------------------------------------------------------ */
 
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) {
-      return;
-    }
+    if (!("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker
       .register("/sw.js", {
@@ -173,42 +114,35 @@ export function PwaInstallPrompt() {
         updateViaCache: "none",
       })
       .catch(() => {
-        // PWA installation stays optional.
+        // Installation remains optional when service workers are unavailable.
       });
   }, []);
 
-  /* ==========================================================================
-     INSTALL AVAILABILITY
-  ========================================================================== */
+  /* ------------------------------------------------------------------------
+     INSTALL CAPABILITY
+  ------------------------------------------------------------------------ */
 
   useEffect(() => {
     const dismissed = wasInstallDismissed();
-
     const standalone = isStandaloneMode();
 
     const frame = window.requestAnimationFrame(() => {
       setIsDismissed(dismissed || standalone);
-
       setIsIos(!standalone && isIosDevice());
     });
 
-    function handleInstallPrompt(event: Event) {
+    const handleInstallPrompt = (event: Event) => {
       event.preventDefault();
 
       setInstallPrompt(event as BeforeInstallPromptEvent);
-
       setIsDismissed(wasInstallDismissed());
-    }
+    };
 
-    function handleInstalled() {
+    const handleInstalled = () => {
       setInstallPrompt(null);
-
       setShowIosHelp(false);
-
       setIsDismissed(true);
-
-      setIsInstalling(false);
-    }
+    };
 
     window.addEventListener("beforeinstallprompt", handleInstallPrompt);
 
@@ -223,54 +157,54 @@ export function PwaInstallPrompt() {
     };
   }, []);
 
-  /* ==========================================================================
-     KEYBOARD
-  ========================================================================== */
+  /* ------------------------------------------------------------------------
+     ESCAPE KEY
+  ------------------------------------------------------------------------ */
 
   useEffect(() => {
-    if (!showIosHelp) {
-      return;
-    }
+    if (!showIosHelp) return;
 
-    function handleEscape(event: KeyboardEvent) {
+    const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setShowIosHelp(false);
       }
-    }
+    };
 
     window.addEventListener("keydown", handleEscape);
 
-    return () => window.removeEventListener("keydown", handleEscape);
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
   }, [showIosHelp]);
 
-  /* ==========================================================================
-     STATE
-  ========================================================================== */
+  /* ------------------------------------------------------------------------
+     VISIBILITY
+  ------------------------------------------------------------------------ */
 
-  const privateWorkspace = isPrivateWorkspacePath(pathname);
+  const isPrivateWorkspace =
+    pathname.startsWith("/admin") ||
+    pathname === "/auth" ||
+    pathname.startsWith("/customer-dashboard");
 
   const canInstall = Boolean(installPrompt) || isIos;
 
-  if (privateWorkspace || isDismissed || !canInstall) {
+  if (isPrivateWorkspace || isDismissed || !canInstall) {
     return null;
   }
 
-  /* ==========================================================================
+  /* ------------------------------------------------------------------------
      ACTIONS
-  ========================================================================== */
+  ------------------------------------------------------------------------ */
 
-  function dismiss() {
+  const dismiss = () => {
     rememberInstallDismissal();
-
     setShowIosHelp(false);
-
     setIsDismissed(true);
-  }
+  };
 
-  async function install() {
+  const install = async () => {
     if (!installPrompt) {
       setShowIosHelp(true);
-
       return;
     }
 
@@ -285,712 +219,573 @@ export function PwaInstallPrompt() {
 
       if (choice.outcome === "dismissed") {
         dismiss();
-
-        return;
       }
-
-      setIsDismissed(true);
     } finally {
       setIsInstalling(false);
     }
-  }
+  };
 
   /* ==========================================================================
      RENDER
-  ========================================================================== */
+  ============================================================================ */
 
   return (
     <aside
-      dir={direction}
-      lang={htmlLang}
-      style={themeVars}
-      aria-label={copy.card.ariaLabel}
-      className={`
-        fixed
+      dir="rtl"
+      aria-label="نصب اپلیکیشن نجیب‌زاده"
+      className={[
+        "pointer-events-none fixed z-[135]",
 
-        bottom-[max(12px,env(safe-area-inset-bottom))]
+        /*
+         * Mobile:
+         * centered like a native iOS floating surface.
+         */
+        "top-[max(100px,env(safe-area-inset-bottom))]",
+        "left-1/2",
+        "-translate-x-1/2",
 
-        left-1/2
+        /*
+         * Tablet / Desktop:
+         * elegant bottom-left placement.
+         */
+        "sm:bottom-[max(120px,env(safe-area-inset-bottom))]",
+        "sm:left-[max(20px,env(safe-area-inset-left))]",
+        "sm:translate-x-0",
 
-        z-[135]
-
-        flex
-
-        w-[min(400px,calc(100vw-24px))]
-
-        -translate-x-1/2
-
-        flex-col
-
-        gap-2.5
-
-        sm:bottom-[max(20px,env(safe-area-inset-bottom))]
-        sm:w-[390px]
-        sm:translate-x-0
-
-        ${
-          isRtl
-            ? `
-                sm:left-auto
-                sm:right-[max(20px,env(safe-area-inset-right))]
-              `
-            : `
-                sm:left-[max(20px,env(safe-area-inset-left))]
-              `
-        }
-      `}
+        "flex",
+        "w-max",
+        "max-w-[calc(100vw-24px)]",
+        "flex-col",
+        "items-start",
+        "gap-2.5",
+      ].join(" ")}
     >
-      {/* ================================================================
-          IOS INSTALL GUIDE
-      ================================================================= */}
+      {/* ====================================================================
+          iOS INSTALL HELP
+      ==================================================================== */}
 
       {showIosHelp ? (
-        <div
-          className="
-            relative
+        <section
+          role="dialog"
+          aria-label="راهنمای نصب اپلیکیشن"
+          className={[
+            LIQUID_GLASS_SURFACE,
 
-            overflow-hidden
+            "pointer-events-auto",
+            "w-[min(348px,calc(100vw-24px))]",
+            "rounded-[30px]",
 
-            rounded-[22px]
-
-            border
-            border-white/[0.12]
-
-            bg-[rgb(var(--pwa-black-rgb)/0.96)]
-
-            p-5
-
-            text-white
-
-            shadow-[0_24px_70px_-20px_rgba(0,0,0,0.72)]
-
-            supports-[backdrop-filter]:bg-[rgb(var(--pwa-black-rgb)/0.88)]
-            supports-[backdrop-filter]:backdrop-blur-[24px]
-
-            motion-safe:animate-[pwa-panel-in_.28s_cubic-bezier(.22,1,.36,1)_both]
-          "
+            /*
+             * Motion stays GPU friendly.
+             */
+            "animate-in",
+            "fade-in",
+            "slide-in-from-bottom-3",
+            "zoom-in-[0.985]",
+            "duration-500",
+            "ease-[cubic-bezier(0.16,1,0.3,1)]",
+          ].join(" ")}
         >
-          {/* AMBIENT LIGHT */}
+          {/* --------------------------------------------------------------
+              Soft top glass reflection
+          -------------------------------------------------------------- */}
 
           <div
             aria-hidden="true"
             className="
               pointer-events-none
-
               absolute
               inset-0
-
-              bg-[radial-gradient(circle_at_15%_0%,rgb(var(--pwa-copper-rgb)/0.18),transparent_42%)]
+              -z-20
+              bg-[linear-gradient(180deg,rgba(255,255,255,0.16)_0%,rgba(255,255,255,0.055)_14%,rgba(255,255,255,0.012)_38%,rgba(0,0,0,0.08)_100%)]
             "
           />
 
-          {/* TOP HAIRLINE */}
+          {/* --------------------------------------------------------------
+              Liquid specular lights
+          -------------------------------------------------------------- */}
 
           <div
             aria-hidden="true"
             className="
+              pointer-events-none
               absolute
-
-              inset-x-8
-              top-0
-
-              h-px
-
-              bg-[linear-gradient(90deg,transparent,var(--pwa-copper),transparent)]
-
-              opacity-80
+              inset-0
+              -z-10
+              bg-[radial-gradient(circle_at_18%_-12%,rgba(255,255,255,0.28),transparent_31%),radial-gradient(circle_at_92%_4%,rgba(194,139,95,0.20),transparent_31%),radial-gradient(circle_at_45%_115%,rgba(105,124,255,0.08),transparent_42%)]
             "
           />
 
-          <div className="relative">
-            {/* HEADER */}
+          {/* --------------------------------------------------------------
+              Precision inner edge
+          -------------------------------------------------------------- */}
 
-            <div
-              className="
-                flex
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              inset-[1px]
+              rounded-[29px]
+              ring-1
+              ring-inset
+              ring-white/[0.055]
+            "
+          />
 
-                items-start
-                justify-between
+          {/* --------------------------------------------------------------
+              Glass highlight streak
+          -------------------------------------------------------------- */}
 
-                gap-5
-              "
-            >
-              <div className="min-w-0">
-                <div
+          <div
+            aria-hidden="true"
+            className="
+              pointer-events-none
+              absolute
+              left-[12%]
+              right-[12%]
+              top-0
+              h-px
+              bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.38),rgba(255,255,255,0.66),rgba(255,255,255,0.30),transparent)]
+            "
+          />
+
+          <div className="relative z-10 p-3">
+            {/* Header */}
+
+            <div className="flex items-start gap-3">
+              <div
+                className="
+                  grid
+                  size-11
+                  shrink-0
+                  place-items-center
+                  rounded-[17px]
+                  border
+                  border-white/[0.13]
+                  bg-white/[0.085]
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.13),0_6px_18px_rgba(0,0,0,0.12)]
+                "
+              >
+                <Share
+                  aria-hidden="true"
+                  className="size-[18px] text-white/90"
+                  strokeWidth={1.65}
+                />
+              </div>
+
+              <div className="min-w-0 flex-1 pt-0.5">
+                <span
                   className="
-                    flex
-
-                    items-center
-
-                    gap-2.5
+                    block
+                    text-[9px]
+                    font-medium
+                    tracking-[0.02em]
+                    text-[#D7B18E]
                   "
                 >
-                  <span
-                    className="
-                      grid
-
-                      size-8
-
-                      shrink-0
-
-                      place-items-center
-
-                      rounded-full
-
-                      border
-                      border-[rgb(var(--pwa-copper-rgb)/0.32)]
-
-                      bg-[rgb(var(--pwa-copper-rgb)/0.08)]
-
-                      text-[var(--pwa-copper)]
-                    "
-                  >
-                    <Smartphone
-                      aria-hidden="true"
-                      size={15}
-                      strokeWidth={1.6}
-                    />
-                  </span>
-
-                  <p
-                    className="
-                      text-[9px]
-
-                      font-semibold
-
-                      uppercase
-
-                      tracking-[0.16em]
-
-                      text-[var(--pwa-copper)]
-                    "
-                  >
-                    {copy.iosHelp.badge}
-                  </p>
-                </div>
+                  نجیب‌زاده
+                </span>
 
                 <h2
                   className="
-                    mt-4
-
-                    max-w-[290px]
-
-                    text-[14px]
-
-                    font-medium
-
-                    leading-[1.4]
-
-                    tracking-[-0.025em]
-
+                    mt-0.5
+                    text-[15px]
+                    font-semibold
+                    leading-6
+                    tracking-[-0.02em]
                     text-white
                   "
                 >
-                  {copy.iosHelp.title}
+                  نصب روی آیفون یا آیپد
                 </h2>
+
+                <p
+                  className="
+                    mt-1
+                    max-w-[235px]
+                    text-[10.5px]
+                    leading-[1.85]
+                    text-white/60
+                  "
+                >
+                  اپلیکیشن را مستقیماً به صفحه اصلی اضافه کنید تا مثل یک اپ
+                  مستقل اجرا شود.
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowIosHelp(false)}
-                aria-label={copy.iosHelp.closeAriaLabel}
-                title={copy.iosHelp.closeTitle}
+                aria-label="بستن راهنمای نصب"
+                title="بستن"
                 className="
                   grid
-
                   size-9
-
                   shrink-0
-
                   cursor-pointer
-
                   place-items-center
-
                   rounded-full
-
                   border
-                  border-white/10
+                  border-white/[0.12]
+                  bg-white/[0.055]
+                  text-white/58
 
-                  bg-white/[0.035]
+                  shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]
 
-                  text-white/55
+                  transform-gpu
+                  transition-[background-color,border-color,color,transform]
+                  duration-300
+                  ease-[cubic-bezier(0.16,1,0.3,1)]
 
-                  transition
-
-                  duration-200
-
-                  hover:border-white/20
-                  hover:bg-white/[0.07]
+                  hover:scale-[1.04]
+                  hover:border-white/[0.22]
+                  hover:bg-white/[0.11]
                   hover:text-white
+
+                  active:scale-[0.94]
 
                   focus-visible:outline-none
                   focus-visible:ring-2
-                  focus-visible:ring-[var(--pwa-copper)]
-                  focus-visible:ring-offset-2
-                  focus-visible:ring-offset-black
+                  focus-visible:ring-white/65
+
+                  motion-reduce:transition-none
                 "
               >
-                <X aria-hidden="true" size={15} strokeWidth={1.7} />
+                <X
+                  aria-hidden="true"
+                  className="size-[15px]"
+                  strokeWidth={1.7}
+                />
               </button>
             </div>
 
-            <p
-              className="
-                mt-3
-
-                max-w-[330px]
-
-                text-[11px]
-
-                leading-[1.85]
-
-                text-white/48
-              "
-            >
-              {copy.iosHelp.description}
-            </p>
-
-            {/* STEP */}
+            {/* Instruction */}
 
             <div
               className="
-                mt-5
-
+                mt-3
                 flex
-
                 items-center
-
-                gap-4
-
-                rounded-[15px]
-
+                gap-3
+                rounded-[21px]
                 border
-                border-white/[0.09]
+                border-white/[0.10]
+                bg-black/[0.18]
+                px-3
+                py-3
 
-                bg-white/[0.035]
-
-                p-4
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.055)]
               "
             >
               <span
                 className="
                   grid
-
-                  size-10
-
+                  size-9
                   shrink-0
-
                   place-items-center
-
-                  rounded-[12px]
-
-                  bg-white
-
-                  text-black
-
-                  shadow-[0_8px_26px_-12px_rgba(255,255,255,0.35)]
+                  rounded-[14px]
+                  border
+                  border-[#C89266]/30
+                  bg-[#C89266]/[0.10]
+                  text-[#E4C09F]
                 "
               >
-                <Share2 aria-hidden="true" size={17} strokeWidth={1.7} />
+                <Share
+                  aria-hidden="true"
+                  className="size-4"
+                  strokeWidth={1.6}
+                />
               </span>
 
               <div className="min-w-0">
-                <p
-                  className="
-                    text-[11px]
-
-                    font-semibold
-
-                    text-white
-                  "
-                >
-                  {copy.iosHelp.stepTitle}
+                <p className="text-[10px] font-medium leading-5 text-white/90">
+                  ابتدا دکمه اشتراک‌گذاری را بزنید
                 </p>
 
-                <p
-                  className="
-                    mt-1
-
-                    text-[10px]
-
-                    leading-[1.7]
-
-                    text-white/48
-                  "
-                >
-                  {copy.iosHelp.stepDescription}
+                <p className="text-[9px] leading-5 text-white/48">
+                  سپس «افزودن به صفحه اصلی» را انتخاب کنید.
                 </p>
               </div>
             </div>
-
-            {/* NOTE */}
-
-            <div
-              className="
-                mt-4
-
-                flex
-
-                items-start
-
-                gap-2.5
-
-                text-[9px]
-
-                leading-[1.75]
-
-                text-white/35
-              "
-            >
-              <ShieldCheck
-                aria-hidden="true"
-                size={14}
-                strokeWidth={1.5}
-                className="
-                  mt-0.5
-
-                  shrink-0
-
-                  text-[var(--pwa-copper)]
-                "
-              />
-
-              <p>{copy.iosHelp.note}</p>
-            </div>
           </div>
-        </div>
+        </section>
       ) : null}
 
-      {/* ================================================================
-          MAIN INSTALL CARD
-      ================================================================= */}
+      {/* ====================================================================
+          MAIN INSTALL ISLAND
+      ==================================================================== */}
 
       <div
-        className="
-          group/pwa
+        className={[
+          LIQUID_GLASS_SURFACE,
 
-          relative
+          "pointer-events-auto",
 
-          overflow-hidden
+          "rounded-[25px]",
+          "p-[5px]",
 
-          rounded-[20px]
+          /*
+           * Only transform / opacity transitions.
+           * Blur itself never animates.
+           */
+          "transition-[transform,box-shadow,border-color]",
+          "duration-500",
+          "ease-[cubic-bezier(0.16,1,0.3,1)]",
 
-          border
-          border-white/[0.12]
-
-          bg-[rgb(var(--pwa-black-rgb)/0.96)]
-
-          text-white
-
-          shadow-[0_20px_65px_-22px_rgba(0,0,0,0.78)]
-
-          supports-[backdrop-filter]:bg-[rgb(var(--pwa-black-rgb)/0.88)]
-          supports-[backdrop-filter]:backdrop-blur-[24px]
-
-          motion-safe:animate-[pwa-card-in_.42s_cubic-bezier(.22,1,.36,1)_both]
-        "
+          "hover:border-white/[0.22]",
+          "hover:shadow-[0_26px_84px_rgba(0,0,0,0.46),0_8px_30px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.25)]",
+        ].join(" ")}
       >
-        {/* AMBIENT GLOW */}
+        {/* --------------------------------------------------------------
+            Main translucent glass gradient
+        -------------------------------------------------------------- */}
 
         <div
           aria-hidden="true"
           className="
             pointer-events-none
-
             absolute
             inset-0
-
-            bg-[radial-gradient(circle_at_8%_10%,rgb(var(--pwa-copper-rgb)/0.17),transparent_34%)]
-
-            opacity-80
-
-            transition-opacity
-
-            duration-500
-
-            group-hover/pwa:opacity-100
+            -z-20
+            bg-[linear-gradient(180deg,rgba(255,255,255,0.17)_0%,rgba(255,255,255,0.055)_20%,rgba(0,0,0,0.04)_55%,rgba(0,0,0,0.14)_100%)]
           "
         />
 
-        {/* TOP COPPER LINE */}
+        {/* --------------------------------------------------------------
+            Liquid reflection / color refraction
+        -------------------------------------------------------------- */}
 
         <div
           aria-hidden="true"
           className="
+            pointer-events-none
             absolute
-
-            inset-x-7
-            top-0
-
-            h-px
-
-            bg-[linear-gradient(90deg,transparent,var(--pwa-copper),transparent)]
-
-            opacity-75
+            inset-0
+            -z-10
+            bg-[radial-gradient(circle_at_16%_-18%,rgba(255,255,255,0.32),transparent_32%),radial-gradient(circle_at_82%_-8%,rgba(207,157,115,0.19),transparent_29%),radial-gradient(circle_at_62%_135%,rgba(82,104,255,0.075),transparent_38%)]
           "
         />
 
+        {/* --------------------------------------------------------------
+            Internal ring
+        -------------------------------------------------------------- */}
+
         <div
+          aria-hidden="true"
           className="
-            relative
-
-            flex
-
-            items-center
-
-            gap-3
-
-            p-3
+            pointer-events-none
+            absolute
+            inset-px
+            rounded-[24px]
+            ring-1
+            ring-inset
+            ring-white/[0.055]
           "
-        >
-          {/* APP MARK */}
+        />
 
-          <div
+        {/* --------------------------------------------------------------
+            Apple-like top specular highlight
+        -------------------------------------------------------------- */}
+
+        <div
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            absolute
+            left-[12%]
+            right-[12%]
+            top-0
+            h-px
+            bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.30),rgba(255,255,255,0.58),rgba(255,255,255,0.26),transparent)]
+          "
+        />
+
+        <div className="relative z-10 flex items-center gap-1.5">
+          {/* ==============================================================
+              INSTALL BUTTON
+          ============================================================== */}
+
+          <button
+            type="button"
+            onClick={install}
+            disabled={isInstalling}
+            aria-live="polite"
             className="
+              group
               relative
-
-              grid
-
-              size-[52px]
-
-              shrink-0
-
-              place-items-center
-
+              flex
+              h-[52px]
+              min-w-[152px]
+              cursor-pointer
+              items-center
+              gap-2.5
               overflow-hidden
-
-              rounded-[15px]
-
+              rounded-[20px]
               border
               border-white/[0.12]
+              bg-white/[0.075]
+              px-3.5
+              text-start
+              text-white
 
-              bg-[linear-gradient(145deg,#191919,#050505)]
+              shadow-[inset_0_1px_0_rgba(255,255,255,0.09)]
 
-              shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_10px_30px_-15px_rgba(0,0,0,0.8)]
+              transform-gpu
+              transition-[transform,background-color,border-color,box-shadow]
+              duration-300
+              ease-[cubic-bezier(0.16,1,0.3,1)]
+
+              hover:scale-[1.012]
+              hover:border-white/[0.20]
+              hover:bg-white/[0.115]
+              hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.15),0_4px_16px_rgba(0,0,0,0.10)]
+
+              active:scale-[0.975]
+
+              disabled:cursor-wait
+              disabled:opacity-60
+              disabled:hover:scale-100
+
+              focus-visible:outline-none
+              focus-visible:ring-2
+              focus-visible:ring-white/70
+              focus-visible:ring-offset-1
+              focus-visible:ring-offset-transparent
+
+              motion-reduce:transition-none
             "
           >
-            <div
+            {/* Button reflection */}
+
+            <span
               aria-hidden="true"
               className="
+                pointer-events-none
                 absolute
-
-                inset-0
-
-                bg-[radial-gradient(circle_at_25%_15%,rgb(var(--pwa-copper-rgb)/0.22),transparent_55%)]
+                inset-x-0
+                top-0
+                h-1/2
+                bg-[linear-gradient(180deg,rgba(255,255,255,0.06),transparent)]
               "
             />
+
+            {/* Icon */}
 
             <span
               className="
                 relative
-
-                text-[17px]
-
-                font-medium
-
-                tracking-[0.08em]
-
-                text-[var(--pwa-copper)]
-              "
-            >
-              {copy.card.brandMark}
-            </span>
-          </div>
-
-          {/* COPY */}
-
-          <div
-            className="
-              min-w-0
-              flex-1
-            "
-          >
-            <p
-              className="
-                truncate
-
-                text-[7px]
-
-                font-semibold
-
-                uppercase
-
-                tracking-[0.18em]
-
-                text-[var(--pwa-copper)]
-              "
-            >
-              {copy.card.eyebrow}
-            </p>
-
-            <p
-              className="
-                mt-1
-
-                truncate
-
-                text-[12px]
-
-                font-semibold
-
-                tracking-[-0.015em]
-
-                text-white
-              "
-            >
-              {copy.card.title}
-            </p>
-
-            <p
-              className="
-                mt-0.5
-
-                hidden
-
-                max-w-[210px]
-
-                truncate
-
-                text-[8px]
-
-                text-white/38
-
-                min-[360px]:block
-              "
-            >
-              {copy.card.description}
-            </p>
-          </div>
-
-          {/* ACTIONS */}
-
-          <div
-            className="
-              flex
-
-              shrink-0
-
-              items-center
-
-              gap-1.5
-            "
-          >
-            <button
-              type="button"
-              onClick={install}
-              disabled={isInstalling}
-              className="
-                inline-flex
-
-                h-10
-
-                cursor-pointer
-
-                items-center
-                justify-center
-
-                gap-2
-
-                rounded-[12px]
-
+                grid
+                size-9
+                shrink-0
+                place-items-center
+                overflow-hidden
+                rounded-[14px]
                 border
-                border-[rgb(var(--pwa-copper-rgb)/0.35)]
+                border-[#D19B6D]/30
+                bg-[#C89266]/[0.11]
+                text-[#E8C4A3]
 
-                bg-[var(--pwa-copper)]
-
-                px-3.5
-
-                text-[10px]
-
-                font-semibold
-
-                text-black
-
-                shadow-[0_10px_28px_-15px_rgb(var(--pwa-copper-rgb)/0.95)]
-
-                transition
-
-                duration-200
-
-                hover:brightness-110
-
-                active:scale-[0.98]
-
-                disabled:cursor-wait
-                disabled:opacity-65
-
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-[var(--pwa-copper)]
-                focus-visible:ring-offset-2
-                focus-visible:ring-offset-black
+                shadow-[inset_0_1px_0_rgba(255,255,255,0.10)]
               "
             >
-              <Download
+              <span
                 aria-hidden="true"
-                size={14}
-                strokeWidth={1.8}
-                className={isInstalling ? "motion-safe:animate-pulse" : ""}
+                className="
+                  pointer-events-none
+                  absolute
+                  inset-0
+                  bg-[radial-gradient(circle_at_30%_0%,rgba(255,255,255,0.18),transparent_55%)]
+                "
               />
 
+              <Download
+                aria-hidden="true"
+                className={[
+                  "relative size-[17px]",
+                  isInstalling ? "animate-pulse" : "",
+                ].join(" ")}
+                strokeWidth={1.7}
+              />
+            </span>
+
+            {/* Copy */}
+
+            <span className="relative min-w-0 pe-1">
               <span
                 className="
-                  whitespace-nowrap
+                  block
+                  text-[8px]
+                  font-medium
+                  leading-4
+                  text-[#D6AE89]
                 "
               >
-                {isInstalling ? copy.actions.installing : copy.actions.install}
+                اپلیکیشن نجیب‌زاده
               </span>
-            </button>
 
-            <button
-              type="button"
-              onClick={dismiss}
-              aria-label={copy.actions.dismissAriaLabel}
-              title={copy.actions.dismissTitle}
-              className="
-                grid
+              <strong
+                className="
+                  block
+                  whitespace-nowrap
+                  text-[11.5px]
+                  font-semibold
+                  leading-5
+                  tracking-[-0.01em]
+                  text-white
+                "
+              >
+                {isInstalling ? "در حال نصب…" : "نصب اپلیکیشن"}
+              </strong>
+            </span>
+          </button>
 
-                size-10
+          {/* ==============================================================
+              CLOSE
+          ============================================================== */}
 
-                cursor-pointer
+          <button
+            type="button"
+            onClick={dismiss}
+            aria-label="بستن پیشنهاد نصب"
+            title="بستن"
+            className="
+              grid
+              size-[52px]
+              shrink-0
+              cursor-pointer
+              place-items-center
+              rounded-[20px]
+              border
+              border-white/[0.10]
+              bg-white/[0.045]
+              text-white/52
 
-                place-items-center
+              shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]
 
-                rounded-[12px]
+              transform-gpu
+              transition-[transform,background-color,border-color,color]
+              duration-300
+              ease-[cubic-bezier(0.16,1,0.3,1)]
 
-                border
-                border-transparent
+              hover:scale-[1.035]
+              hover:border-white/[0.20]
+              hover:bg-white/[0.09]
+              hover:text-white
 
-                bg-white/[0.035]
+              active:scale-[0.94]
 
-                text-white/45
+              focus-visible:outline-none
+              focus-visible:ring-2
+              focus-visible:ring-white/65
 
-                transition
-
-                duration-200
-
-                hover:border-white/10
-                hover:bg-white/[0.07]
-                hover:text-white
-
-                focus-visible:outline-none
-                focus-visible:ring-2
-                focus-visible:ring-[var(--pwa-copper)]
-                focus-visible:ring-offset-2
-                focus-visible:ring-offset-black
-              "
-            >
-              <X aria-hidden="true" size={15} strokeWidth={1.7} />
-            </button>
-          </div>
+              motion-reduce:transition-none
+            "
+          >
+            <X aria-hidden="true" className="size-[16px]" strokeWidth={1.65} />
+          </button>
         </div>
       </div>
-
-      {/* ================================================================
-          ANIMATION
-      ================================================================= */}
-
- 
     </aside>
   );
 }

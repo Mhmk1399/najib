@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/Button";
-import { BrandSketchLoader } from "@/components/ui/SketchLoader";
+
 import {
   ProductDetailPage,
   type ProductColorVariant,
@@ -13,6 +12,16 @@ import {
   type ProductSizeOption,
   type RelatedProductItem,
 } from "@/components/static/Shop/Product/ProductDetailPage";
+import { Button } from "@/components/ui/Button";
+import { BrandSketchLoader } from "@/components/ui/SketchLoader";
+import {
+  defaultLocale,
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
+import { productDetailCopy } from "@/lib/i18n/product-detail-copy";
 
 type LocalizedText = {
   fa?: string;
@@ -93,6 +102,14 @@ type ProductDetailPayload = {
 };
 
 const FALLBACK_IMAGE = "/assets/images/banner.webp";
+const queryOptions = {
+  staleTime: Infinity,
+  gcTime: Infinity,
+  refetchOnWindowFocus: false,
+  refetchOnReconnect: false,
+  refetchOnMount: false,
+  retry: 1,
+} as const;
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
@@ -107,18 +124,37 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
     const body = (await response.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw new Error(body?.error ?? "دریافت محصول ناموفق بود.");
+    throw new Error(body?.error ?? "Product request failed.");
   }
 
   return (await response.json()) as T;
 }
 
-function fa(value: LocalizedText | null | undefined, fallback = "") {
-  return value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback;
+function localized(
+  value: LocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  return (
+    value?.[locale]?.trim() ||
+    value?.fa?.trim() ||
+    value?.en?.trim() ||
+    value?.ar?.trim() ||
+    fallback
+  );
 }
 
-function faList(value: LocalizedTextList | null | undefined) {
-  return value?.fa?.filter(Boolean) ?? value?.en?.filter(Boolean) ?? [];
+function localizedList(
+  value: LocalizedTextList | null | undefined,
+  locale: Locale,
+) {
+  return (
+    value?.[locale]?.filter(Boolean) ??
+    value?.fa?.filter(Boolean) ??
+    value?.en?.filter(Boolean) ??
+    value?.ar?.filter(Boolean) ??
+    []
+  );
 }
 
 function idOf(value: unknown) {
@@ -140,13 +176,17 @@ function imageMapFrom(images: CatalogImageAsset[]) {
 function productImages(
   product: CatalogProductRecord,
   images: CatalogImageAsset[],
+  locale: Locale,
 ): ProductDetailImage[] {
   const imageMap = imageMapFrom(images);
   const imageIds = [
     product.primaryImageId,
     ...(Array.isArray(product.imageIds) ? product.imageIds : []),
-  ].filter(Boolean).map(String);
+  ]
+    .filter(Boolean)
+    .map(String);
   const uniqueIds = [...new Set(imageIds)];
+  const productName = localized(product.name, locale, product.slug);
 
   const mapped = uniqueIds.reduce<ProductDetailImage[]>(
     (items, imageId, index) => {
@@ -156,7 +196,7 @@ function productImages(
       items.push({
         id: `${product._id}-${index + 1}`,
         src: image.url,
-        alt: fa(image.alt, fa(product.name, product.slug)),
+        alt: localized(image.alt, locale, productName),
         position:
           index === 0
             ? product.primaryImageObjectPosition ?? image.objectPosition
@@ -174,7 +214,7 @@ function productImages(
         {
           id: `${product._id}-fallback`,
           src: FALLBACK_IMAGE,
-          alt: fa(product.name, product.slug),
+          alt: productName,
           position: "center",
         },
       ];
@@ -188,12 +228,13 @@ function rotateImages(images: ProductDetailImage[], offset: number) {
 function buildColors(
   payload: ProductDetailPayload,
   images: ProductDetailImage[],
+  locale: Locale,
 ): ProductColorVariant[] {
   if (payload.colors.length === 0) {
     return [
       {
         id: "default",
-        name: "اصلی",
+        name: productDetailCopy[locale].defaultColor,
         code: payload.product.slug,
         swatch: "#111111",
         images,
@@ -208,19 +249,24 @@ function buildColors(
   );
 
   return payload.colors
-    .filter((color) => activeColorIds.size === 0 || activeColorIds.has(idOf(color._id)))
+    .filter(
+      (color) => activeColorIds.size === 0 || activeColorIds.has(idOf(color._id)),
+    )
     .map((color, index) => ({
-    id: idOf(color._id),
-    name: fa(color.name, color.slug),
-    code: payload.variants.find(
-      (variant) => idOf(variant.colorId) === idOf(color._id),
-    )?.sku,
-    swatch: color.hex || "#111111",
-    images: rotateImages(images, index),
+      id: idOf(color._id),
+      name: localized(color.name, locale, color.slug),
+      code: payload.variants.find(
+        (variant) => idOf(variant.colorId) === idOf(color._id),
+      )?.sku,
+      swatch: color.hex || "#111111",
+      images: rotateImages(images, index),
     }));
 }
 
-function buildSizes(payload: ProductDetailPayload): ProductSizeOption[] {
+function buildSizes(
+  payload: ProductDetailPayload,
+  locale: Locale,
+): ProductSizeOption[] {
   const activeSizeIds = new Set(
     payload.variants
       .filter((variant) => variant.isActive)
@@ -232,59 +278,67 @@ function buildSizes(payload: ProductDetailPayload): ProductSizeOption[] {
     .sort((first, second) => (first.sortOrder ?? 0) - (second.sortOrder ?? 0))
     .map((size) => ({
       value: idOf(size._id),
-      label: fa(size.name, size.code),
+      label: localized(size.name, locale, size.code),
       disabled: payload.variants.length > 0 && !activeSizeIds.has(idOf(size._id)),
     }));
 }
 
-function sentence(items: string[], fallback: string) {
-  return items.length ? items.join("، ") : fallback;
+function sentence(items: string[], fallback: string, locale: Locale) {
+  if (!items.length) return fallback;
+  return items.join(locale === "en" ? ", " : "، ");
 }
 
-function buildSections(product: CatalogProductRecord): ProductDetailSection[] {
-  const material = faList(product.material);
-  const seasons = faList(product.seasons);
-  const occasions = faList(product.occasions);
-  const styleTags = faList(product.styleTags);
+function buildSections(
+  product: CatalogProductRecord,
+  locale: Locale,
+): ProductDetailSection[] {
+  const copy = productDetailCopy[locale];
+  const material = localizedList(product.material, locale);
+  const seasons = localizedList(product.seasons, locale);
+  const occasions = localizedList(product.occasions, locale);
+  const styleTags = localizedList(product.styleTags, locale);
   const specs = [
-    product.fit ? `فرم: ${fa(product.fit)}` : "",
-    product.silhouette ? `سیلوئت: ${fa(product.silhouette)}` : "",
-    product.pattern ? `طرح: ${fa(product.pattern)}` : "",
+    product.fit ? `${copy.fitLabel}: ${localized(product.fit, locale)}` : "",
+    product.silhouette
+      ? `${copy.silhouetteLabel}: ${localized(product.silhouette, locale)}`
+      : "",
+    product.pattern
+      ? `${copy.patternLabel}: ${localized(product.pattern, locale)}`
+      : "",
   ].filter(Boolean);
 
   return [
     {
       id: "description",
-      title: "توضیحات",
+      title: copy.sectionDescription,
       paragraphs: [
-        fa(product.description, "توضیحات این محصول به‌زودی تکمیل می‌شود."),
+        localized(product.description, locale, copy.sectionFallbackDescription),
       ],
     },
     {
       id: "materials",
-      title: "متریال و ساخت",
+      title: copy.sectionMaterials,
       paragraphs: [
-        `متریال: ${sentence(material, "اطلاعات متریال ثبت نشده است.")}`,
-        specs.length
-          ? specs.join("، ")
-          : "جزئیات فرم و ساخت این محصول به‌زودی تکمیل می‌شود.",
+        `${copy.materialLabel}: ${sentence(material, copy.materialFallback, locale)}`,
+        specs.length ? specs.join(locale === "en" ? ", " : "، ") : copy.specsFallback,
       ],
     },
     {
       id: "occasion",
-      title: "فصل و موقعیت",
+      title: copy.sectionOccasion,
       paragraphs: [
-        `فصل‌ها: ${sentence(seasons, "برای تمام فصل‌های منتخب.")}`,
-        `موقعیت‌ها: ${sentence([...occasions, ...styleTags], "استایل رسمی و روزمره.")}`,
+        `${copy.seasonsLabel}: ${sentence(seasons, copy.seasonsFallback, locale)}`,
+        `${copy.occasionsLabel}: ${sentence(
+          [...occasions, ...styleTags],
+          copy.occasionsFallback,
+          locale,
+        )}`,
       ],
     },
     {
       id: "shipping",
-      title: "ارسال و مرجوعی",
-      paragraphs: [
-        "ارسال و هماهنگی تحویل طبق شرایط فروشگاه انجام می‌شود.",
-        "برای راهنمایی درباره سایز، موجودی یا نگهداری محصول با پشتیبانی تماس بگیرید.",
-      ],
+      title: copy.sectionShipping,
+      paragraphs: copy.shippingParagraphs,
     },
   ];
 }
@@ -292,40 +346,48 @@ function buildSections(product: CatalogProductRecord): ProductDetailSection[] {
 function relatedProducts(
   payload: ProductDetailPayload,
   imageMap: Map<string, CatalogImageAsset>,
+  locale: Locale,
 ): RelatedProductItem[] {
   return payload.relatedProducts.slice(0, 3).map((product) => {
     const image = imageMap.get(idOf(product.primaryImageId));
-    const name = fa(product.name, product.slug);
+    const name = localized(product.name, locale, product.slug);
 
     return {
       id: idOf(product._id),
       slug: product.slug,
       name,
-      subtitle: fa(product.description),
+      subtitle: localized(product.description, locale),
       price: moneyMinor(product.basePriceMinor),
       currency: product.currency,
       image: image?.url ?? FALLBACK_IMAGE,
-      imageAlt: fa(image?.alt, name),
+      imageAlt: localized(image?.alt, locale, name),
     };
   });
 }
 
-function mapProduct(payload: ProductDetailPayload): ProductDetailData {
-  const images = productImages(payload.product, payload.images);
+function mapProduct(
+  payload: ProductDetailPayload,
+  locale: Locale,
+): ProductDetailData {
+  const images = productImages(payload.product, payload.images, locale);
   const imageMap = imageMapFrom(payload.images);
-  const name = fa(payload.product.name, payload.product.slug);
+  const copy = productDetailCopy[locale];
 
   return {
     id: idOf(payload.product._id),
     slug: payload.product.slug,
     sku: idOf(payload.product._id).slice(-8).toUpperCase(),
-    eyebrow: fa(payload.subcategory?.name, fa(payload.category?.name, "کالکشن")),
-    name,
-    shortDescription: fa(payload.product.description),
+    eyebrow: localized(
+      payload.subcategory?.name,
+      locale,
+      localized(payload.category?.name, locale, copy.collectionFallback),
+    ),
+    name: localized(payload.product.name, locale, payload.product.slug),
+    shortDescription: localized(payload.product.description, locale),
     price: moneyMinor(payload.product.basePriceMinor),
     currency: payload.product.currency,
-    colors: buildColors(payload, images),
-    sizes: buildSizes(payload),
+    colors: buildColors(payload, images, locale),
+    sizes: buildSizes(payload, locale),
     variants: payload.variants
       .filter((variant) => variant.isActive)
       .map((variant) => ({
@@ -334,42 +396,45 @@ function mapProduct(payload: ProductDetailPayload): ProductDetailData {
         sizeId: idOf(variant.sizeId),
         sku: variant.sku,
       })),
-    sections: buildSections(payload.product),
-    shippingNote: "ارسال و پشتیبانی خرید طبق شرایط فروشگاه نجیب‌زاده انجام می‌شود.",
-    relatedProducts: relatedProducts(payload, imageMap),
+    sections: buildSections(payload.product, locale),
+    shippingNote: copy.shippingNote,
+    relatedProducts: relatedProducts(payload, imageMap, locale),
   };
 }
 
-export function ProductDetailClient({ slug }: { slug: string }) {
+export function ProductDetailClient({
+  slug,
+  locale = defaultLocale,
+}: {
+  slug: string;
+  locale?: Locale;
+}) {
+  const copy = productDetailCopy[locale];
   const query = useQuery({
-    queryKey: ["storefront", "product-detail", slug],
+    queryKey: ["storefront", "product-detail", locale, slug],
     queryFn: ({ signal }) =>
       fetchJson<ProductDetailPayload>(`/api/storefront/products/${slug}`, {
         signal,
       }),
-    staleTime: Infinity,
-    gcTime: Infinity,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
-    retry: 1,
+    ...queryOptions,
   });
 
   const product = useMemo(
-    () => (query.data ? mapProduct(query.data) : null),
-    [query.data],
+    () => (query.data ? mapProduct(query.data, locale) : null),
+    [locale, query.data],
   );
 
   if (query.isLoading) {
-    return <BrandSketchLoader open label="در حال دریافت محصول" />;
+    return <BrandSketchLoader open label={copy.loading} />;
   }
 
   if (query.isError) {
     return (
       <ProductDetailState
-        title="دریافت محصول ناموفق بود"
-        description="اتصال دیتابیس یا وضعیت محصول را بررسی کنید."
-        actionLabel="تلاش دوباره"
+        locale={locale}
+        title={copy.loadErrorTitle}
+        description={copy.loadErrorDescription}
+        actionLabel={copy.retry}
         onAction={() => void query.refetch()}
       />
     );
@@ -378,44 +443,50 @@ export function ProductDetailClient({ slug }: { slug: string }) {
   if (!product) {
     return (
       <ProductDetailState
-        title="محصول پیدا نشد"
-        description="این محصول هنوز فعال نشده یا آدرس آن تغییر کرده است."
-        actionLabel="بازگشت به فروشگاه"
-        href="/shop"
+        locale={locale}
+        title={copy.notFoundTitle}
+        description={copy.notFoundDescription}
+        actionLabel={copy.backToShop}
+        href={localizedHref("/shop", locale)}
       />
     );
   }
 
-  return <ProductDetailPage product={product} />;
+  return <ProductDetailPage copy={copy} locale={locale} product={product} />;
 }
 
 function ProductDetailState({
+  locale,
   title,
-  description = "چند لحظه صبر کنید.",
+  description,
   actionLabel,
   href,
   onAction,
 }: {
+  locale: Locale;
   title: string;
   description?: string;
   actionLabel?: string;
   href?: string;
   onAction?: () => void;
 }) {
+  const copy = productDetailCopy[locale];
+
   return (
     <main
-      dir="rtl"
+      dir={getLocaleDirection(locale)}
+      lang={getHtmlLang(locale)}
       className="grid min-h-screen place-items-center bg-[#F6F2EB] px-6 text-center text-black"
     >
       <div className="max-w-[460px]">
         <p className="text-[8px] font-semibold uppercase tracking-[0.22em] text-black/40">
-          جزئیات محصول
+          {copy.stateEyebrow}
         </p>
-        <h1 className="mt-4   text-[clamp(2.8rem,12vw,4.8rem)] leading-[0.92] tracking-[-0.05em]">
+        <h1 className="mt-4 text-[clamp(2.8rem,12vw,4.8rem)] leading-[0.92] tracking-[-0.05em]">
           {title}
         </h1>
         <p className="mx-auto mt-5 max-w-[360px] text-[11px] leading-7 text-black/50">
-          {description}
+          {description ?? copy.tryAgain}
         </p>
         {actionLabel && (
           <div className="mx-auto mt-8 max-w-[220px]">
