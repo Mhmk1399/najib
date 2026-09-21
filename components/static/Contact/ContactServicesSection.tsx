@@ -14,16 +14,14 @@ import {
 
 import { brandColors } from "@/theme/theme-colors";
 
-type ContactHeroSectionProps = {
-  copy: ContactCopy["hero"];
+type ContactServicesSectionProps = {
+  copy: ContactCopy["services"];
 
   locale: Locale;
 
   imageSrc: string;
 
-  mobileImagePosition?: string;
-
-  desktopImagePosition?: string;
+  imagePosition?: string;
 
   className?: string;
 };
@@ -32,10 +30,9 @@ export function ContactSection({
   copy,
   locale,
   imageSrc,
-  mobileImagePosition = "68% center",
-  desktopImagePosition = "center",
+  imagePosition = "center",
   className = "",
-}: ContactHeroSectionProps) {
+}: ContactServicesSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
   const direction = getLocaleDirection(locale);
@@ -49,9 +46,7 @@ export function ContactSection({
 
     "--contact-copper": brandColors.copper.hex,
 
-    "--contact-mobile-position": mobileImagePosition,
-
-    "--contact-desktop-position": desktopImagePosition,
+    "--contact-image-position": imagePosition,
   } as CSSProperties;
 
   return (
@@ -93,9 +88,7 @@ export function ContactSection({
 
           object-cover
 
-          object-[var(--contact-mobile-position)]
-
-          md:object-[var(--contact-desktop-position)]
+          object-[var(--contact-image-position)]
         "
       />
 
@@ -131,7 +124,7 @@ export function ContactSection({
         "
       />
 
-      {/* HOUSE MARK */}
+      {/* IMAGE CAPTION */}
 
       <div
         className={`
@@ -166,7 +159,7 @@ export function ContactSection({
             text-white/70
           "
         >
-          {copy.houseMark}
+          {copy.imageCaption}
         </p>
       </div>
 
@@ -290,17 +283,7 @@ export function ContactSection({
           >
             <span>{copy.title}</span>
 
-            <span
-              className="
-                mt-[0.12em]
 
-                max-w-[620px]
-
-                text-white/78
-              "
-            >
-              {copy.italicTitle}
-            </span>
           </h1>
 
           <span
@@ -320,32 +303,11 @@ export function ContactSection({
 
           {/* DESCRIPTION */}
 
-          <p
-            className="
-              mx-auto
-              mt-7
 
-              max-w-[460px]
-
-              text-center
-
-              text-[10px]
-
-              font-normal
-
-              leading-[2]
-
-              text-white/58
-
-              sm:text-[11px]
-            "
-          >
-            {copy.description}
-          </p>
         </div>
       </div>
 
-      {/* BOTTOM DETAIL */}
+      {/* FOOTER NOTE */}
 
       <div
         aria-hidden="true"
@@ -375,28 +337,7 @@ export function ContactSection({
             text-white/30
           "
         >
-          {copy.bottomServiceLabel}
-        </span>
-
-        <span
-          className="
-            h-px
-            flex-1
-
-            bg-white/12
-          "
-        />
-
-        <span
-          className="
-            text-[6px]
-
-            tracking-[0.1em]
-
-            text-white/30
-          "
-        >
-          {copy.bottomBrandLabel}
+          {copy.footerNote}
         </span>
       </div>
     </section>
