@@ -71,6 +71,10 @@ type BalanceRecord = {
   safetyStock: number;
 };
 
+type AvailabilityCartRecord = {
+  items: Array<{ variantId: unknown; quantity: number }>;
+};
+
 type CheckoutRecord = {
   _id: unknown;
   cartId: string;
@@ -86,6 +90,17 @@ type CheckoutRecord = {
   paymentId?: unknown;
   createdAt?: Date;
   updatedAt?: Date;
+};
+
+type DestinationRecord = {
+  cities: Array<{ id: string; code: string; name: unknown }>;
+  stores: Array<{
+    id: string;
+    code: string;
+    cityId: string;
+    name: unknown;
+    address: unknown;
+  }>;
 };
 
 function duplicateKey(error: unknown) {
@@ -232,40 +247,104 @@ async function allocateInventory(
   return allocations;
 }
 
+async function loadDestinations(): Promise<DestinationRecord> {
+  const activeLocations = await InventoryLocation.find({ isActive: true, storeId: { $ne: null } })
+    .select("cityId storeId")
+    .lean();
+  const cityIds = [...new Set(activeLocations.map((item) => String(item.cityId)))];
+  const storeIds = [...new Set(activeLocations.map((item) => String(item.storeId)))];
+  const [cities, stores] = await Promise.all([
+    City.find({ _id: { $in: cityIds }, isActive: true })
+      .select("code name")
+      .sort({ code: 1 })
+      .lean(),
+    Store.find({ _id: { $in: storeIds }, cityId: { $in: cityIds }, isActive: true })
+      .select("code name cityId address")
+      .sort({ code: 1 })
+      .lean(),
+  ]);
+  const activeCityIds = new Set(cities.map((city) => String(city._id)));
+  return {
+    cities: cities.map((city) => ({
+      id: String(city._id),
+      code: city.code,
+      name: city.name,
+    })),
+    stores: stores
+      .filter((store) => activeCityIds.has(String(store.cityId)))
+      .map((store) => ({
+        id: String(store._id),
+        code: store.code,
+        cityId: String(store.cityId),
+        name: store.name,
+        address: store.address ?? null,
+      })),
+  };
+}
+
 export const checkoutService = {
   async destinations() {
     await connectToDatabase();
-    const activeLocations = await InventoryLocation.find({ isActive: true, storeId: { $ne: null } })
-      .select("cityId storeId")
-      .lean();
-    const cityIds = [...new Set(activeLocations.map((item) => String(item.cityId)))];
-    const storeIds = [...new Set(activeLocations.map((item) => String(item.storeId)))];
-    const [cities, stores] = await Promise.all([
-      City.find({ _id: { $in: cityIds }, isActive: true })
-        .select("code name")
-        .sort({ code: 1 })
-        .lean(),
-      Store.find({ _id: { $in: storeIds }, cityId: { $in: cityIds }, isActive: true })
-        .select("code name cityId address")
-        .sort({ code: 1 })
-        .lean(),
+    return loadDestinations();
+  },
+
+  async destinationsForCart(accountId: string) {
+    await connectToDatabase();
+    const [destinations, cart] = await Promise.all([
+      loadDestinations(),
+      Cart.findOne({
+        userId: accountId,
+        status: "active",
+        expiresAt: { $gt: new Date() },
+      }).select("items.variantId items.quantity").lean() as unknown as Promise<AvailabilityCartRecord | null>,
     ]);
-    const activeCityIds = new Set(cities.map((city) => String(city._id)));
+    if (!cart || cart.items.length === 0) conflict("سبد خرید فعال و غیرخالی پیدا نشد.");
+
+    const requestedByVariant = new Map<string, number>();
+    for (const item of cart.items) {
+      const variantId = String(item.variantId);
+      requestedByVariant.set(variantId, (requestedByVariant.get(variantId) ?? 0) + item.quantity);
+    }
+
+    const destinationPairs = destinations.stores.map((store) => ({
+      storeId: store.id,
+      cityId: store.cityId,
+    }));
+    const locations = destinationPairs.length > 0
+      ? await InventoryLocation.find({
+          isActive: true,
+          $or: destinationPairs,
+        }).select("storeId cityId").lean()
+      : [];
+    const locationToStore = new Map(locations.map((location) => [String(location._id), String(location.storeId)]));
+    const balances = await InventoryBalance.find({
+      variantId: { $in: [...requestedByVariant.keys()] },
+      locationId: { $in: locations.map((location) => location._id) },
+    }).select("variantId locationId onHand reserved safetyStock").lean() as unknown as BalanceRecord[];
+
+    const availableByStoreVariant = new Map<string, number>();
+    for (const balance of balances) {
+      const storeId = locationToStore.get(String(balance.locationId));
+      if (!storeId) continue;
+      const key = `${storeId}:${String(balance.variantId)}`;
+      const sellable = Math.max(balance.onHand - balance.reserved - balance.safetyStock, 0);
+      availableByStoreVariant.set(key, (availableByStoreVariant.get(key) ?? 0) + sellable);
+    }
+
+    const stores = destinations.stores.map((store) => {
+      let unavailableItemCount = 0;
+      for (const [variantId, quantity] of requestedByVariant) {
+        if ((availableByStoreVariant.get(`${store.id}:${variantId}`) ?? 0) < quantity) {
+          unavailableItemCount += 1;
+        }
+      }
+      return { ...store, available: unavailableItemCount === 0, unavailableItemCount };
+    });
+
     return {
-      cities: cities.map((city) => ({
-        id: String(city._id),
-        code: city.code,
-        name: city.name,
-      })),
-      stores: stores
-        .filter((store) => activeCityIds.has(String(store.cityId)))
-        .map((store) => ({
-          id: String(store._id),
-          code: store.code,
-          cityId: String(store.cityId),
-          name: store.name,
-          address: store.address ?? null,
-        })),
+      cities: destinations.cities,
+      stores,
+      availableStoreCount: stores.filter((store) => store.available).length,
     };
   },
 
