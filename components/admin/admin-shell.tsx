@@ -17,6 +17,7 @@ import {
   PanelRightClose,
   PanelRightOpen,
   Search,
+  ShoppingBag,
   ShieldCheck,
   SlidersHorizontal,
   Sun,
@@ -70,6 +71,12 @@ const PRIMARY_NAV: NavItem[] = [
     href: "/admin/inventory",
     icon: Warehouse,
     permission: "inventory.read",
+  },
+  {
+    label: "سفارش‌ها",
+    href: "/admin/orders",
+    icon: ShoppingBag,
+    permission: "orders.read",
   },
 ];
 

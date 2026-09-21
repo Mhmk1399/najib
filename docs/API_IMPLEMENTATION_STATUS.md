@@ -27,9 +27,9 @@ an API task is completed or its contract changes.
 ## Admin APIs
 
 This table tracks backend routes and notes their Admin UI state. The current
-Admin UI exposes dashboard, users, catalog, categories, references, images, and
-the Persian Inventory control center. Operational pages for orders, carts,
-checkout sessions, abandoned checkouts, and audit history still need to be
+Admin UI exposes dashboard, users, catalog, categories, references, images,
+the Persian Inventory control center, and the operational Orders console.
+Operational pages for carts, checkout sessions, abandoned checkouts, and audit history still need to be
 added to the Admin navigation and interface.
 
 | Area | Routes | Status |
@@ -39,7 +39,7 @@ added to the Admin navigation and interface.
 | Users and roles | `/api/admin/users`, `/api/admin/users/:id` | Complete |
 | Catalog | `/api/catalog/:resource`, `/api/catalog/:resource/:id` | Complete for categories, subcategories, products, variants, colors, sizes, size groups, collections, and images |
 | Uploads | `/api/admin/uploads/avatar`, `/api/admin/uploads/catalog-image` | Complete |
-| Orders | `/api/admin/orders`, `/api/admin/orders/:id` | Complete for list/detail and safe cancel, payment-retry, and fulfillment transitions |
+| Orders | `/api/admin/orders`, `/api/admin/orders/:id`, `/admin/orders` | Complete for Persian operational list/detail UI and safe cancel, payment-retry, and fulfillment transitions |
 | Carts | `/api/admin/carts`, `/api/admin/carts/:id` | Complete for list/detail and safe abandon/expire transitions |
 | Checkout sessions | `/api/admin/checkouts`, `/api/admin/checkouts/:id` | Complete, read-only operational view |
 | Abandoned checkouts | `/api/admin/abandoned-checkouts`, `/api/admin/abandoned-checkouts/:id` | Complete for list/detail and recovery workflow status |
@@ -118,8 +118,8 @@ cancel, mock payment outcomes, and order confirmation. The next batch is:
    with `Authorization: Bearer $CRON_SECRET`; the idempotent expiry worker,
    inventory release, cart abandonment, payment cancellation, and abandoned
    checkout snapshot are implemented.
-4. Add operational Admin pages for orders, carts, checkout sessions, abandoned
-   checkouts, and audit history.
+4. Add the remaining operational Admin pages for carts, checkout sessions,
+   abandoned checkouts, and audit history; Orders UI is complete.
 
 Payment intent and refund APIs follow only after reservation contracts exist, so
 the system cannot report a paid order without controlling exact-variant stock.
