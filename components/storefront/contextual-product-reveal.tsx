@@ -31,6 +31,18 @@ import {
   type ImageStoryProductRevealImage,
   type ImageStoryProductRevealRequest,
 } from "@/components/storefront/image-story-product-reveal";
+import {
+  formatStoryMoney,
+  formatStoryNumber,
+  imageStoryCopy,
+  localizedStoryText,
+} from "@/lib/i18n/image-story-i18n";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { getLocaleFromPathname, localizedHref } from "@/lib/i18n/routes";
 
 type CatalogImageAsset = {
   _id: string;
@@ -114,8 +126,6 @@ const productQueryOptions = {
   refetchOnMount: false,
   retry: 1,
 } as const;
-const numberFormatter = new Intl.NumberFormat("fa-IR");
-
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
     ...init,
@@ -129,16 +139,18 @@ async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
     const body = (await response.json().catch(() => null)) as {
       error?: string;
     } | null;
-    throw new Error(body?.error ?? "دریافت محصول ناموفق بود.");
+    throw new Error(body?.error ?? "Product could not be loaded.");
   }
 
   return (await response.json()) as T;
 }
 
-function fa(value: ImageStoryLocalizedText | null | undefined, fallback = "") {
-  return (
-    value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim() || fallback
-  );
+function text(
+  value: ImageStoryLocalizedText | null | undefined,
+  locale: Locale,
+  fallback = "",
+) {
+  return localizedStoryText(value, locale, fallback);
 }
 
 function idOf(value: unknown) {
@@ -161,20 +173,6 @@ function imageFit(value: string | undefined): CSSProperties["objectFit"] {
   }
 
   return "cover";
-}
-
-function formatMoney(minor: number | undefined, currency: string | undefined) {
-  if (typeof minor !== "number") return "";
-
-  try {
-    return new Intl.NumberFormat("fa-IR", {
-      style: "currency",
-      currency: currency || "IRR",
-      maximumFractionDigits: 0,
-    }).format(minor / 100);
-  } catch {
-    return `${numberFormatter.format(minor / 100)} ${currency ?? ""}`.trim();
-  }
 }
 
 function escapeSelectorValue(value: string) {
@@ -223,6 +221,8 @@ function ensureRevealMount(request: ImageStoryProductRevealRequest) {
 function productImages(
   payload: ProductDetailPayload | undefined,
   fallbackImage: ImageStoryProductRevealImage | null | undefined,
+  locale: Locale,
+  previewAlt: string,
 ): ProductRevealImage[] {
   if (!payload) {
     return fallbackImage?.url
@@ -230,7 +230,7 @@ function productImages(
           {
             id: fallbackImage.id ?? "preview",
             url: fallbackImage.url,
-            alt: fa(fallbackImage.alt, "پیش‌نمایش محصول"),
+            alt: text(fallbackImage.alt, locale, previewAlt),
             objectFit: fallbackImage.objectFit,
             objectPosition: fallbackImage.objectPosition,
           },
@@ -258,7 +258,11 @@ function productImages(
       items.push({
         id: `${payload.product._id}-${index + 1}`,
         url: image.url,
-        alt: fa(image.alt, fa(payload.product.name, payload.product.slug)),
+        alt: text(
+          image.alt,
+          locale,
+          text(payload.product.name, locale, payload.product.slug),
+        ),
         objectFit:
           index === 0
             ? (payload.product.primaryImageObjectFit ?? image.objectFit)
@@ -282,9 +286,10 @@ function productImages(
       {
         id: fallbackImage.id ?? "preview",
         url: fallbackImage.url,
-        alt: fa(
+        alt: text(
           fallbackImage.alt,
-          fa(payload.product.name, payload.product.slug),
+          locale,
+          text(payload.product.name, locale, payload.product.slug),
         ),
         objectFit: fallbackImage.objectFit,
         objectPosition: fallbackImage.objectPosition,
@@ -296,7 +301,7 @@ function productImages(
     {
       id: "fallback",
       url: FALLBACK_IMAGE,
-      alt: fa(payload.product.name, payload.product.slug),
+      alt: text(payload.product.name, locale, payload.product.slug),
       objectFit: "cover",
       objectPosition: "center",
     },
@@ -322,6 +327,10 @@ function scrollToSource(element: HTMLElement) {
 
 export function ContextualProductReveal() {
   const pathname = usePathname();
+  const locale = getLocaleFromPathname(pathname);
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+  const copy = imageStoryCopy[locale].reveal;
   const sectionRef = useRef<HTMLElement>(null);
   const exitButtonRef = useRef<HTMLButtonElement>(null);
   const revealRef = useRef<RevealState | null>(null);
@@ -374,7 +383,7 @@ export function ContextualProductReveal() {
   const activeReveal = reveal?.pathname === pathname ? reveal : null;
   const slug = activeReveal?.request.product.slug ?? "";
   const productQuery = useQuery({
-    queryKey: ["storefront", "product-detail", slug],
+    queryKey: ["storefront", "product-detail", locale, slug],
     queryFn: ({ signal }) =>
       fetchJson<ProductDetailPayload>(`/api/storefront/products/${slug}`, {
         signal,
@@ -412,8 +421,14 @@ export function ContextualProductReveal() {
   }, [activeReveal]);
 
   const images = useMemo(
-    () => productImages(productQuery.data, activeReveal?.request.product.image),
-    [activeReveal?.request.product.image, productQuery.data],
+    () =>
+      productImages(
+        productQuery.data,
+        activeReveal?.request.product.image,
+        locale,
+        copy.previewAlt,
+      ),
+    [activeReveal?.request.product.image, copy.previewAlt, locale, productQuery.data],
   );
 
   const closeReveal = useCallback(
@@ -454,16 +469,20 @@ export function ContextualProductReveal() {
   const product = productQuery.data?.product;
   const requestedProduct = activeReveal.request.product;
   const title = product
-    ? fa(product.name, product.slug)
-    : fa(
+    ? text(product.name, locale, product.slug)
+    : text(
         requestedProduct.label,
-        fa(requestedProduct.name, requestedProduct.slug),
+        locale,
+        text(requestedProduct.name, locale, requestedProduct.slug),
       );
   const price = product
-    ? formatMoney(product.basePriceMinor, product.currency)
+    ? formatStoryMoney(product.basePriceMinor, product.currency, locale)
     : "";
   const isLoading = productQuery.isLoading && !productQuery.data;
-  const detailsHref = requestedProduct.href || `/shop/${requestedProduct.slug}`;
+  const detailsHref = localizedHref(
+    requestedProduct.href || `/shop/${requestedProduct.slug}`,
+    locale,
+  );
   const colors = productQuery.data?.colors ?? [];
   const sourceImageUrl =
     activeReveal.request.storyUrl ||
@@ -473,8 +492,8 @@ export function ContextualProductReveal() {
   const revealPanel = (
     <section
       ref={sectionRef}
-      dir="rtl"
-      lang="fa"
+      dir={direction}
+      lang={htmlLang}
       role="dialog"
       aria-modal="true"
       aria-live="polite"
@@ -517,20 +536,20 @@ export function ContextualProductReveal() {
                 ref={exitButtonRef}
                 type="button"
                 onClick={() => closeReveal({ returnToSource: true })}
-                className="absolute inset-y-0 right-0 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/[0.22] bg-black/[0.34] px-3.5 text-[9px] font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D8AE86]/75 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/80 active:translate-y-0 sm:min-h-11 sm:px-4 sm:text-[10px]"
-                aria-label="خروج از پیش‌نمایش محصول"
+                className="absolute inset-y-0 end-0 inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-white/[0.22] bg-black/[0.34] px-3.5 text-[9px] font-semibold text-white shadow-[0_10px_30px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl transition-[border-color,background-color,transform] duration-200 hover:-translate-y-0.5 hover:border-[#D8AE86]/75 hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/80 active:translate-y-0 sm:min-h-11 sm:px-4 sm:text-[10px]"
+                aria-label={copy.exitPreview}
               >
                 <X className="size-4" aria-hidden="true" />
-                <span className="  min-[390px]:inline">خروج</span>
+                <span className="min-[390px]:inline">{copy.exit}</span>
               </button>
 
               <Link
                 href={detailsHref}
-                aria-label="مشاهده صفحه محصول"
-                title="مشاهده صفحه محصول"
-                className="absolute inset-y-0 left-0 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[#B7835A]/55 bg-[#B7835A]/[0.12] px-3 text-[8.5px] font-semibold text-[#E4BD97] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-[#D9AF87]/80 hover:bg-[#B7835A]/[0.22] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/75 sm:min-h-11 sm:px-4 sm:text-[9.5px]"
+                aria-label={copy.productPage}
+                title={copy.productPage}
+                className="absolute inset-y-0 start-0 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[#B7835A]/55 bg-[#B7835A]/[0.12] px-3 text-[8.5px] font-semibold text-[#E4BD97] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-[#D9AF87]/80 hover:bg-[#B7835A]/[0.22] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/75 sm:min-h-11 sm:px-4 sm:text-[9.5px]"
               >
-                <span className="  min-[430px]:inline">صفحه محصول</span>
+                <span className="min-[430px]:inline">{copy.productPage}</span>
                 <ExternalLink className="size-3.5" aria-hidden="true" />
               </Link>
             </div>
@@ -539,17 +558,17 @@ export function ContextualProductReveal() {
               {colors.length ? (
                 <div
                   className="flex items-center gap-2"
-                  aria-label="رنگ‌های محصول"
+                  aria-label={copy.colors}
                 >
                   <span className="text-[9px] text-white/[0.52] sm:text-[10px]">
-                    رنگ
+                    {copy.colors}
                   </span>
                   <span className="flex items-center gap-1.5">
                     {colors.slice(0, 5).map((color) => (
                       <span
                         key={color._id}
-                        title={fa(color.name)}
-                        aria-label={fa(color.name)}
+                        title={text(color.name, locale)}
+                        aria-label={text(color.name, locale)}
                         className="grid size-7 place-items-center rounded-full border border-white/[0.30] bg-black/[0.30] p-[4px] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] sm:size-8"
                       >
                         <span
@@ -586,6 +605,8 @@ export function ContextualProductReveal() {
               isError={productQuery.isError}
               detailsHref={detailsHref}
               productTitle={title}
+              locale={locale}
+              copy={copy}
             />
           </div>
 
@@ -594,7 +615,7 @@ export function ContextualProductReveal() {
               href={detailsHref}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-[#B7835A]/70 bg-[#B7835A]/[0.22] px-3 text-[9px] font-semibold text-[#E8C39E] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-[#E1B587] hover:bg-[#B7835A]/[0.34] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E7C8A8]/80 active:translate-y-0 sm:min-h-12 sm:text-[10px]"
             >
-              صفحه محصول
+              {copy.productPage}
               <ExternalLink className="size-3.5" aria-hidden="true" />
             </Link>
             <button
@@ -602,8 +623,11 @@ export function ContextualProductReveal() {
               onClick={() => closeReveal({ returnToSource: true })}
               className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[14px] border border-white/[0.18] bg-black/[0.28] px-3 text-[9px] font-semibold text-white/[0.82] backdrop-blur-xl transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-white/40 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/65 active:translate-y-0 sm:min-h-12 sm:text-[10px]"
             >
-              بازگشت
-              <ArrowRight className="size-3.5" aria-hidden="true" />
+              {copy.back}
+              <ArrowRight
+                className={`size-3.5 ${direction === "ltr" ? "rotate-180" : ""}`}
+                aria-hidden="true"
+              />
             </button>
           </div>
         </div>
@@ -620,6 +644,8 @@ type ProductGalleryProps = {
   isError: boolean;
   detailsHref: string;
   productTitle: string;
+  locale: Locale;
+  copy: (typeof imageStoryCopy)[Locale]["reveal"];
 };
 
 function ProductGallery({
@@ -628,6 +654,8 @@ function ProductGallery({
   isError,
   detailsHref,
   productTitle,
+  locale,
+  copy,
 }: ProductGalleryProps) {
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const safeModalIndex =
@@ -642,7 +670,7 @@ function ProductGallery({
     return (
       <div
         role="status"
-        aria-label="در حال دریافت تصاویر محصول"
+        aria-label={copy.loadingImages}
         className="flex h-full min-h-0 w-full items-center justify-center overflow-hidden rounded-[20px] border border-white/[0.11] bg-black/[0.18] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-2xl"
       >
         <span className="relative grid size-14 place-items-center rounded-full border border-[#B7835A]/55 bg-black/[0.30] text-[#E4BE99] shadow-[0_12px_40px_rgba(0,0,0,0.25),inset_0_1px_0_rgba(255,255,255,0.10)]">
@@ -660,13 +688,13 @@ function ProductGallery({
     return (
       <div className="flex h-full min-h-0 w-full flex-col items-center justify-center overflow-hidden rounded-[20px] border border-white/[0.11] bg-black/[0.18] px-5 text-center backdrop-blur-2xl">
         <p className="text-[11px] leading-6 text-white/[0.62]">
-          نمایش تصاویر در حال حاضر ممکن نیست.
+          {copy.imagesUnavailable}
         </p>
         <Link
           href={detailsHref}
           className="mt-3 inline-flex items-center gap-2 text-[9.5px] font-medium text-[#D0A179] transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D2B08D]/75"
         >
-          صفحه محصول
+          {copy.productPage}
           <ExternalLink className="size-3.5" aria-hidden="true" />
         </Link>
       </div>
@@ -692,16 +720,13 @@ function ProductGallery({
               type="button"
               onClick={() => setModalIndex(index)}
               aria-label={
-                "مشاهده کامل تصویر " +
-                numberFormatter.format(index + 1) +
-                " از " +
-                productTitle
+                copy.viewFullImage(formatStoryNumber(index + 1, locale), productTitle)
               }
               className="relative block h-full w-full cursor-zoom-in overflow-hidden outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#E1B586]/90"
             >
               <Image
                 src={image.url}
-                alt={image.alt + " - " + numberFormatter.format(index + 1)}
+                alt={image.alt + " - " + formatStoryNumber(index + 1, locale)}
                 fill
                 sizes={
                   "(max-width: 639px) " +
@@ -721,7 +746,7 @@ function ProductGallery({
                 aria-hidden="true"
                 className="absolute inset-0 bg-[linear-gradient(180deg,transparent_62%,rgba(0,0,0,0.44)_100%)] opacity-45 transition-opacity duration-300 group-hover:opacity-80"
               />
-              <span className="absolute bottom-2 left-2 grid size-7 place-items-center rounded-full border border-white/[0.18] bg-black/[0.34] text-white/[0.76] opacity-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-xl transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 sm:bottom-3 sm:left-3 sm:size-8">
+              <span className="absolute bottom-2 start-2 grid size-7 place-items-center rounded-full border border-white/[0.18] bg-black/[0.34] text-white/[0.76] opacity-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-xl transition-opacity duration-300 group-hover:opacity-100 group-focus-within:opacity-100 sm:bottom-3 sm:start-3 sm:size-8">
                 <Maximize2 className="size-3.5" aria-hidden="true" />
               </span>
             </button>
@@ -736,6 +761,8 @@ function ProductGallery({
               images={images}
               activeIndex={safeModalIndex ?? 0}
               productTitle={productTitle}
+              locale={locale}
+              copy={copy}
               onChange={setModalIndex}
               onClose={() => setModalIndex(null)}
             />,
@@ -752,6 +779,8 @@ type ProductImageModalProps = {
   productTitle: string;
   onChange: (index: number) => void;
   onClose: () => void;
+  locale: Locale;
+  copy: (typeof imageStoryCopy)[Locale]["reveal"];
 };
 
 function ProductImageModal({
@@ -760,6 +789,8 @@ function ProductImageModal({
   productTitle,
   onChange,
   onClose,
+  locale,
+  copy,
 }: ProductImageModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -889,8 +920,8 @@ function ProductImageModal({
       aria-modal="true"
       aria-labelledby="product-image-modal-title"
       aria-describedby="product-image-modal-description"
-      dir="rtl"
-      lang="fa"
+      dir={getLocaleDirection(locale)}
+      lang={getHtmlLang(locale)}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onPointerDown={(event) => {
@@ -912,7 +943,9 @@ function ProductImageModal({
             className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[#B7835A]/55 bg-black/[0.26] px-3 text-[8.5px] text-white/[0.74] shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,color] hover:border-[#D8AD84]/80 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E4BD97]/75 sm:min-h-11 sm:px-4 sm:text-[9.5px]"
           >
             <ExternalLink className="size-3.5" aria-hidden="true" />
-            <span className="hidden min-[390px]:inline">تصویر اصلی</span>
+            <span className="hidden min-[390px]:inline">
+              {copy.originalImage}
+            </span>
           </a>
 
           <div className="min-w-0 text-center">
@@ -926,8 +959,8 @@ function ProductImageModal({
               id="product-image-modal-description"
               className="mt-1 text-[8.5px] text-white/[0.48] sm:text-[9.5px]"
             >
-              {numberFormatter.format(activeIndex + 1)} /{" "}
-              {numberFormatter.format(images.length)}
+              {formatStoryNumber(activeIndex + 1, locale)} /{" "}
+              {formatStoryNumber(images.length, locale)}
             </p>
           </div>
 
@@ -935,8 +968,8 @@ function ProductImageModal({
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
-            aria-label="بستن نمایش تصویر"
-            title="بستن"
+            aria-label={copy.closeImageModal}
+            title={copy.close}
             className="grid size-10 cursor-pointer place-items-center rounded-full border border-[#B7835A]/70 bg-black/[0.30] text-white shadow-[0_8px_28px_rgba(0,0,0,0.26),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:size-11"
           >
             <X className="size-4.5" aria-hidden="true" />
@@ -976,16 +1009,16 @@ function ProductImageModal({
                 <button
                   type="button"
                   onClick={previousImage}
-                  aria-label="تصویر قبلی"
-                  className="absolute left-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:left-6 sm:size-12"
+                  aria-label={copy.previousImage}
+                  className="absolute start-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:start-6 sm:size-12"
                 >
                   <ChevronLeft className="size-5" aria-hidden="true" />
                 </button>
                 <button
                   type="button"
                   onClick={nextImage}
-                  aria-label="تصویر بعدی"
-                  className="absolute right-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:right-6 sm:size-12"
+                  aria-label={copy.nextImage}
+                  className="absolute end-2.5 top-1/2 z-30 grid size-10 -translate-y-1/2 cursor-pointer place-items-center rounded-full border border-[#B7835A]/65 bg-black/[0.42] text-white shadow-[0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-xl transition-[border-color,background-color,transform] hover:border-[#E0B487] hover:bg-white/[0.08] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#E5BE97]/80 active:scale-[0.96] sm:end-6 sm:size-12"
                 >
                   <ChevronRight className="size-5" aria-hidden="true" />
                 </button>
@@ -1010,7 +1043,7 @@ function ProductImageModal({
                   type="button"
                   onClick={() => onChange(index)}
                   aria-label={
-                    "نمایش تصویر " + numberFormatter.format(index + 1)
+                    copy.showImage(formatStoryNumber(index + 1, locale))
                   }
                   aria-current={active ? "true" : undefined}
                   className={

@@ -4,46 +4,53 @@ import Image from "next/image";
 
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
+import type { ContactCopy } from "@/lib/i18n/contact-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
 import { brandColors } from "@/theme/theme-colors";
 
 type ContactHeroSectionProps = {
+  copy: ContactCopy["hero"];
+
+  locale: Locale;
+
   imageSrc: string;
-  imageAlt?: string;
-  eyebrow?: string;
-  title?: string;
-  italicTitle?: string;
-  description?: string;
+
   mobileImagePosition?: string;
+
   desktopImagePosition?: string;
+
   className?: string;
 };
 
 export function ContactHeroSection({
+  copy,
+  locale,
   imageSrc,
-
-  imageAlt = "",
-
-  eyebrow = "ارتباط با نجیب‌زاده",
-
-  title = "آغاز یک گفت‌وگو.",
-
-  italicTitle = "برای همراهی شما در تمام جزئیات اینجاییم.",
-
-  description = "از قرارهای ملاقات خصوصی تا راهنمایی‌های اختصاصی، تیم نجیب‌زاده آماده است تا تجربه‌ای دقیق، آرام و متناسب با نیاز شما فراهم کند.",
-
   mobileImagePosition = "68% center",
-
   desktopImagePosition = "center",
-
   className = "",
 }: ContactHeroSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
   const themeVars = {
     "--contact-black": brandColors.black.hex,
+
     "--contact-black-rgb": brandColors.black.rgb,
+
     "--contact-copper": brandColors.copper.hex,
+
     "--contact-mobile-position": mobileImagePosition,
+
     "--contact-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
@@ -51,16 +58,24 @@ export function ContactHeroSection({
     <section
       ref={ref}
       style={themeVars}
-      dir="rtl"
+      dir={direction}
+      lang={htmlLang}
       className={`
         relative
         isolate
+
         min-h-[100svh]
+
         w-full
+
         overflow-hidden
+
         bg-[var(--contact-black)]
+
         text-white
+
         md:min-h-[100svh]
+
         ${className}
       `}
     >
@@ -68,27 +83,32 @@ export function ContactHeroSection({
 
       <Image
         src={imageSrc}
-        alt={imageAlt}
+        alt={copy.imageAlt}
         fill
         priority
         sizes="100vw"
         draggable={false}
         className="
           -z-30
+
           object-cover
+
           object-[var(--contact-mobile-position)]
+
           md:object-[var(--contact-desktop-position)]
         "
       />
 
-      {/* OVERLAY */}
+      {/* OVERLAYS */}
 
       <div
         aria-hidden="true"
         className="
           pointer-events-none
+
           absolute
           inset-0
+
           -z-20
 
           bg-[linear-gradient(180deg,rgb(var(--contact-black-rgb)/0.14)_0%,rgb(var(--contact-black-rgb)/0.28)_45%,rgb(var(--contact-black-rgb)/0.92)_100%)]
@@ -101,9 +121,12 @@ export function ContactHeroSection({
         aria-hidden="true"
         className="
           pointer-events-none
+
           absolute
           inset-0
+
           -z-10
+
           bg-[radial-gradient(circle_at_center,transparent_28%,rgb(var(--contact-black-rgb)/0.38)_120%)]
         "
       />
@@ -113,15 +136,23 @@ export function ContactHeroSection({
       <div
         className={`
           absolute
+
           left-1/2
           top-[16vh]
+
           z-10
+
           hidden
+
           -translate-x-1/2
+
           text-center
+
           transition-[opacity,transform]
           duration-700
+
           md:block
+
           ${revealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
         `}
       >
@@ -129,11 +160,13 @@ export function ContactHeroSection({
           className="
             text-[12px]
             font-medium
+
             tracking-[0.16em]
+
             text-white/70
           "
         >
-          نجیب‌زاده
+          {copy.houseMark}
         </p>
       </div>
 
@@ -143,11 +176,16 @@ export function ContactHeroSection({
         className="
           relative
           z-10
+
           flex
+
           min-h-[100svh]
+
           items-end
           justify-center
+
           px-6
+
           pb-14
           pt-32
 
@@ -163,12 +201,16 @@ export function ContactHeroSection({
         <div
           className={`
             mx-auto
+
             w-full
             max-w-[680px]
+
             text-center
 
             transition-[opacity,transform]
+
             duration-[900ms]
+
             ease-[cubic-bezier(0.22,1,0.36,1)]
 
             ${
@@ -183,22 +225,43 @@ export function ContactHeroSection({
           <div
             className="
               mb-6
+
               flex
               items-center
               justify-center
               gap-3
+
               text-[7px]
               font-semibold
+
               tracking-[0.12em]
+
               text-[var(--contact-copper)]
+
               sm:text-[8px]
             "
           >
-            <span className="h-px w-7 bg-[var(--contact-copper)]" />
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
 
-            <span>{eyebrow}</span>
+                bg-[var(--contact-copper)]
+              "
+            />
 
-            <span className="h-px w-7 bg-[var(--contact-copper)]" />
+            <span>{copy.eyebrow}</span>
+
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
+
+                bg-[var(--contact-copper)]
+              "
+            />
           </div>
 
           {/* TITLE */}
@@ -207,41 +270,50 @@ export function ContactHeroSection({
             className="
               flex
               flex-col
+
               items-center
+
               text-center
-               
+
               text-[clamp(3.1rem,12vw,5rem)]
+
               font-normal
+
               leading-[1.02]
+
               tracking-[-0.045em]
+
               text-white
 
               md:text-[clamp(4.5rem,5.8vw,6.8rem)]
             "
           >
-            <span>{title}</span>
+            <span>{copy.title}</span>
 
             <span
               className="
                 mt-[0.12em]
+
                 max-w-[620px]
+
                 text-white/78
               "
             >
-              {italicTitle}
+              {copy.italicTitle}
             </span>
           </h1>
-
-          {/* SMALL LINE */}
 
           <span
             aria-hidden="true"
             className="
               mx-auto
               mt-8
+
               block
+
               h-px
               w-10
+
               bg-[var(--contact-copper)]
             "
           />
@@ -252,16 +324,23 @@ export function ContactHeroSection({
             className="
               mx-auto
               mt-7
+
               max-w-[460px]
+
               text-center
+
               text-[10px]
+
               font-normal
+
               leading-[2]
+
               text-white/58
+
               sm:text-[11px]
             "
           >
-            {description}
+            {copy.description}
           </p>
         </div>
       </div>
@@ -272,23 +351,52 @@ export function ContactHeroSection({
         aria-hidden="true"
         className="
           absolute
+
           inset-x-[7vw]
           bottom-6
+
           hidden
+
           items-center
           justify-center
           gap-4
+
           md:flex
         "
       >
-        <span className="text-[6px] font-medium tracking-[0.1em] text-white/30">
-          خدمات اختصاصی مشتریان
+        <span
+          className="
+            text-[6px]
+
+            font-medium
+
+            tracking-[0.1em]
+
+            text-white/30
+          "
+        >
+          {copy.bottomServiceLabel}
         </span>
 
-        <span className="h-px flex-1 bg-white/12" />
+        <span
+          className="
+            h-px
+            flex-1
 
-        <span className="text-[6px] tracking-[0.1em] text-white/30">
-          نجیب‌زاده
+            bg-white/12
+          "
+        />
+
+        <span
+          className="
+            text-[6px]
+
+            tracking-[0.1em]
+
+            text-white/30
+          "
+        >
+          {copy.bottomBrandLabel}
         </span>
       </div>
     </section>
@@ -307,12 +415,15 @@ function useRevealOnce<T extends HTMLElement>() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const frame = requestAnimationFrame(() => setRevealed(true));
+
       return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!entry?.isIntersecting) {
+          return;
+        }
 
         requestAnimationFrame(() => {
           setRevealed(true);

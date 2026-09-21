@@ -652,6 +652,7 @@ export default function Navbar({
     queryFn: ({ signal }) => fetchAccountCart(signal),
     retry: false,
   });
+  const cartItemCount = cartQuery.data?.itemCount ?? 0;
 
   const [open, setOpen] = useState(false);
   const [menuMounted, setMenuMounted] = useState(false);
@@ -1015,10 +1016,18 @@ export default function Navbar({
           </Link>
 
           <div className="flex min-w-[104px] flex-1 items-center justify-end gap-0.5 lg:min-w-[280px] lg:gap-1.5">
+            <LanguageToggle
+              buttonRef={languageButtonRef}
+              currentLocale={locale}
+              label={languageCopy.openButton}
+              onClick={openLanguageModal}
+              onReadableSurface={readableNavbar}
+            />
+
             <div className="hidden sm:block">
               <NavAction
-                href="/profile"
-                label="حساب کاربری"
+                href={toLocalizedHref("/profile")}
+                label={copy.navbar.profile}
                 onReadableSurface={readableNavbar}
                 forceLightSurface={commerceLightSurface}
                 locale={locale}
@@ -1027,28 +1036,17 @@ export default function Navbar({
               </NavAction>
             </div>
 
-          <div className="hidden sm:block">
             <NavAction
-              href={toLocalizedHref("/profile")}
-              label={copy.navbar.profile}
+              href={toLocalizedHref("/cart")}
+              label={copy.navbar.cart}
+              badge={cartItemCount}
               onReadableSurface={readableNavbar}
-              forceLightSurface={commerceLightSurface}
+              locale={locale}
             >
-              <ProfileIcon />
+              <BagIcon />
             </NavAction>
           </div>
-
-          <NavAction
-            href={toLocalizedHref("/cart")}
-            label={copy.navbar.cart}
-            badge={2}
-            onReadableSurface={readableNavbar}
-            locale={locale}
-          >
-            <BagIcon />
-          </NavAction>
         </div>
-         </div>
       </header>
 
       {languageModalOpen && (

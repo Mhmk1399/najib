@@ -1,241 +1,217 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+
+import { type CSSProperties, useEffect, useRef, useState } from "react";
+
+import type { ContactCopy } from "@/lib/i18n/contact-copy";
 
 import {
-  type CSSProperties,
-  type ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
 
-import { brandColors, lightTokens } from "@/theme/theme-colors";
+import { brandColors } from "@/theme/theme-colors";
 
-type ContactMethod = {
-  id: string;
+type ContactHeroSectionProps = {
+  copy: ContactCopy["hero"];
 
-  title: string;
+  locale: Locale;
 
-  description: ReactNode;
-
-  action?: {
-    label: string;
-    href: string;
-    external?: boolean;
-  };
-
-  icon: "appointment" | "service" | "location" | "contact";
-};
-
-type ContactServicesSectionProps = {
   imageSrc: string;
 
-  imageAlt?: string;
+  mobileImagePosition?: string;
 
-  imagePosition?: string;
-
-  methods?: ContactMethod[];
-
-  footerNote?: string;
+  desktopImagePosition?: string;
 
   className?: string;
 };
 
-const DEFAULT_METHODS: ContactMethod[] = [
-  {
-    id: "appointment",
-
-    title: "قرار ملاقات خصوصی",
-
-    description: (
-      <>
-        کالکشن‌های نجیب‌زاده را در فضایی خصوصی، آرام و اختصاصی تجربه کنید.
-        <br />
-        <br />
-        پذیرش تنها با رزرو قبلی انجام می‌شود.
-      </>
-    ),
-
-    action: {
-      label: "رزرو قرار ملاقات",
-      href: "/contact-us#appointment",
-    },
-
-    icon: "appointment",
-  },
-
-  {
-    id: "services",
-
-    title: "خدمات مشتریان",
-
-    description: (
-      <>
-        تیم ما برای پاسخ‌گویی درباره محصولات، راهنمایی استایل، سفارش‌ها و خدمات
-        پس از خرید در کنار شماست.
-      </>
-    ),
-
-    action: {
-      label: "خدمات مشتریان",
-      href: "/contact-us#services",
-    },
-
-    icon: "service",
-  },
-
-  {
-    id: "location",
-
-    title: "دیدار از خانه نجیب‌زاده",
-
-    description: (
-      <>
-        آتلیه نجیب‌زاده
-        <br />
-        ۷۴ ماونت استریت
-        <br />
-        می‌فر، لندن
-        <br />
-        بریتانیا
-      </>
-    ),
-
-    action: {
-      label: "مشاهده مسیر",
-      href: "/contact-us#location",
-    },
-
-    icon: "location",
-  },
-
-  {
-    id: "contact",
-
-    title: "ایمیل و تلفن",
-
-    description: (
-      <>
-        info@najibzadeh.com
-        <br />
-        +44 (0)20 4571 8900
-        <br />
-        <br />
-        دوشنبه تا جمعه
-        <br />
-        ۱۰:۰۰ تا ۱۸:۰۰
-      </>
-    ),
-
-    action: {
-      label: "ارسال ایمیل",
-      href: "mailto:info@najibzadeh.com",
-      external: true,
-    },
-
-    icon: "contact",
-  },
-];
-
-export function ContactServicesSection({
+export function ContactSection({
+  copy,
+  locale,
   imageSrc,
-
-  imageAlt = "",
-
-  imagePosition = "center",
-
-  methods = DEFAULT_METHODS,
-
-  footerNote = "حریم خصوصی شما برای ما اهمیت دارد. تمام درخواست‌ها با نهایت احترام و محرمانگی بررسی می‌شوند.",
+  mobileImagePosition = "68% center",
+  desktopImagePosition = "center",
   className = "",
-}: ContactServicesSectionProps) {
+}: ContactHeroSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
 
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
   const themeVars = {
-    "--services-bg": lightTokens.surfaceBrand,
+    "--contact-black": brandColors.black.hex,
 
-    "--services-text": brandColors.black.hex,
+    "--contact-black-rgb": brandColors.black.rgb,
 
-    "--services-muted": lightTokens.textMuted,
+    "--contact-copper": brandColors.copper.hex,
 
-    "--services-border": lightTokens.border,
+    "--contact-mobile-position": mobileImagePosition,
 
-    "--services-copper": brandColors.copper.hex,
+    "--contact-desktop-position": desktopImagePosition,
   } as CSSProperties;
 
   return (
     <section
       ref={ref}
-      dir="rtl"
       style={themeVars}
+      dir={direction}
+      lang={htmlLang}
       className={`
+        relative
+        isolate
+
         min-h-[100svh]
-        md:min-h-[100svh]
 
         w-full
 
-        bg-[var(--services-bg)]
-        text-[var(--services-text)]
+        overflow-hidden
+
+        bg-[var(--contact-black)]
+
+        text-white
+
+        md:min-h-[100svh]
 
         ${className}
       `}
     >
+      {/* BACKGROUND */}
+
+      <Image
+        src={imageSrc}
+        alt={copy.imageAlt}
+        fill
+        priority
+        sizes="100vw"
+        draggable={false}
+        className="
+          -z-30
+
+          object-cover
+
+          object-[var(--contact-mobile-position)]
+
+          md:object-[var(--contact-desktop-position)]
+        "
+      />
+
+      {/* OVERLAYS */}
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+
+          absolute
+          inset-0
+
+          -z-20
+
+          bg-[linear-gradient(180deg,rgb(var(--contact-black-rgb)/0.14)_0%,rgb(var(--contact-black-rgb)/0.28)_45%,rgb(var(--contact-black-rgb)/0.92)_100%)]
+
+          md:bg-[linear-gradient(90deg,rgb(var(--contact-black-rgb)/0.58)_0%,rgb(var(--contact-black-rgb)/0.32)_50%,rgb(var(--contact-black-rgb)/0.58)_100%)]
+        "
+      />
+
+      <div
+        aria-hidden="true"
+        className="
+          pointer-events-none
+
+          absolute
+          inset-0
+
+          -z-10
+
+          bg-[radial-gradient(circle_at_center,transparent_28%,rgb(var(--contact-black-rgb)/0.38)_120%)]
+        "
+      />
+
+      {/* HOUSE MARK */}
+
+      <div
+        className={`
+          absolute
+
+          left-1/2
+          top-[16vh]
+
+          z-10
+
+          hidden
+
+          -translate-x-1/2
+
+          text-center
+
+          transition-[opacity,transform]
+          duration-700
+
+          md:block
+
+          ${revealed ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"}
+        `}
+      >
+        <p
+          className="
+            text-[12px]
+            font-medium
+
+            tracking-[0.16em]
+
+            text-white/70
+          "
+        >
+          {copy.houseMark}
+        </p>
+      </div>
+
+      {/* CONTENT */}
+
       <div
         className="
-          mx-auto
+          relative
+          z-10
 
-          grid
+          flex
 
           min-h-[100svh]
-          md:min-h-[100svh]
 
-          w-full
-          max-w-[1700px]
-
-          gap-12
+          items-end
+          justify-center
 
           px-6
 
-          py-16
+          pb-14
+          pt-32
 
-          sm:px-8
-          sm:py-20
+          sm:px-10
+          sm:pb-16
 
-          lg:grid-cols-[minmax(420px,0.88fr)_minmax(0,1.12fr)]
-
-          lg:items-center
-          lg:gap-14
-
-          lg:px-12
-          lg:py-24
-
-          xl:gap-20
-          xl:px-16
+          md:items-center
+          md:px-[7vw]
+          md:pb-0
+          md:pt-20
         "
       >
-        {/* =====================================================
-            IMAGE
-        ====================================================== */}
-
         <div
           className={`
-            relative
+            mx-auto
 
-            min-h-[500px]
+            w-full
+            max-w-[680px]
 
-            overflow-hidden
+            text-center
 
             transition-[opacity,transform]
+
             duration-[900ms]
 
             ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            sm:min-h-[620px]
-
-            lg:h-[72svh]
-            lg:max-h-[800px]
 
             ${
               revealed
@@ -244,448 +220,188 @@ export function ContactServicesSection({
             }
           `}
         >
-          <Image
-            src={imageSrc}
-            alt={imageAlt}
-            fill
-            sizes="
-              (max-width: 1023px) 100vw,
-              44vw
-            "
-            loading="lazy"
-            draggable={false}
-            style={{
-              objectPosition: imagePosition,
-            }}
-            className="
-              object-cover
-            "
-          />
-
-          <div
-            aria-hidden="true"
-            className="
-              pointer-events-none
-
-              absolute
-              inset-0
-
-              bg-gradient-to-t
-
-              from-black/22
-              via-transparent
-              to-black/[0.04]
-            "
-          />
+          {/* EYEBROW */}
 
           <div
             className="
-              absolute
+              mb-6
 
-              bottom-5
-              left-5
+              flex
+              items-center
+              justify-center
+              gap-3
 
               text-[7px]
               font-semibold
 
-              uppercase
-              tracking-[0.2em]
+              tracking-[0.12em]
 
-              text-white/55
+              text-[var(--contact-copper)]
+
+              sm:text-[8px]
             "
           >
-            خدمات اختصاصی نجیب‌زاده
-          </div>
-        </div>
-
-        {/* =====================================================
-            METHODS
-        ====================================================== */}
-
-        <div
-          className={`
-            transition-[opacity,transform]
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? "translate-y-0 opacity-100 delay-150"
-                : "translate-y-10 opacity-0"
-            }
-          `}
-        >
-          {/* =================================================
-              SMALL INTRO
-          ================================================= */}
-
-          <div
-            className="
-              mb-8
-
-              lg:hidden
-            "
-          >
-            <div
+            <span
+              aria-hidden="true"
               className="
-                mb-4
+                h-px
+                w-7
 
-                flex
-                items-center
-                gap-3
+                bg-[var(--contact-copper)]
+              "
+            />
 
-                text-[7px]
-                font-semibold
+            <span>{copy.eyebrow}</span>
 
-                uppercase
-                tracking-[0.22em]
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
 
-                text-[var(--services-copper)]
+                bg-[var(--contact-copper)]
+              "
+            />
+          </div>
+
+          {/* TITLE */}
+
+          <h1
+            className="
+              flex
+              flex-col
+
+              items-center
+
+              text-center
+
+              text-[clamp(3.1rem,12vw,5rem)]
+
+              font-normal
+
+              leading-[1.02]
+
+              tracking-[-0.045em]
+
+              text-white
+
+              md:text-[clamp(4.5rem,5.8vw,6.8rem)]
+            "
+          >
+            <span>{copy.title}</span>
+
+            <span
+              className="
+                mt-[0.12em]
+
+                max-w-[620px]
+
+                text-white/78
               "
             >
-              <span>ارتباط با ما</span>
-              <span
-                className="
-                  h-px
-                  w-6
+              {copy.italicTitle}
+            </span>
+          </h1>
 
-                  bg-[var(--services-copper)]
-                "
-              />
-            </div>
-
-            <h2
-              className="
-                 
-
-                text-[clamp(2.7rem,10vw,4rem)]
-
-                leading-[0.98]
-                tracking-[-0.05em]
-              "
-            >
-              هر زمان که نیاز داشته باشید، در کنار شما هستیم.{" "}
-            </h2>
-          </div>
-
-          {/* =================================================
-              GRID
-          ================================================= */}
-
-          <div
+          <span
+            aria-hidden="true"
             className="
-              grid
+              mx-auto
+              mt-8
 
-              grid-cols-1
+              block
 
-              border-l
-              border-t
-              border-black/10
+              h-px
+              w-10
 
-              sm:grid-cols-2
+              bg-[var(--contact-copper)]
             "
-          >
-            {methods.slice(0, 4).map((method) => (
-              <ContactMethodCard key={method.id} method={method} />
-            ))}
-          </div>
+          />
 
-          {/* =================================================
-              PRIVACY
-          ================================================= */}
+          {/* DESCRIPTION */}
 
           <p
             className="
+              mx-auto
               mt-7
 
-              text-[8px]
+              max-w-[460px]
 
-              leading-[1.7]
+              text-center
 
-              text-[var(--services-muted)]
+              text-[10px]
+
+              font-normal
+
+              leading-[2]
+
+              text-white/58
+
+              sm:text-[11px]
             "
           >
-            {footerNote}
+            {copy.description}
           </p>
         </div>
+      </div>
+
+      {/* BOTTOM DETAIL */}
+
+      <div
+        aria-hidden="true"
+        className="
+          absolute
+
+          inset-x-[7vw]
+          bottom-6
+
+          hidden
+
+          items-center
+          justify-center
+          gap-4
+
+          md:flex
+        "
+      >
+        <span
+          className="
+            text-[6px]
+
+            font-medium
+
+            tracking-[0.1em]
+
+            text-white/30
+          "
+        >
+          {copy.bottomServiceLabel}
+        </span>
+
+        <span
+          className="
+            h-px
+            flex-1
+
+            bg-white/12
+          "
+        />
+
+        <span
+          className="
+            text-[6px]
+
+            tracking-[0.1em]
+
+            text-white/30
+          "
+        >
+          {copy.bottomBrandLabel}
+        </span>
       </div>
     </section>
   );
 }
-
-/* ==========================================================================
-   METHOD
-============================================================================ */
-
-function ContactMethodCard({ method }: { method: ContactMethod }) {
-  return (
-    <article
-      id={method.id}
-    className="
-  flex
-  min-h-[280px]
-  flex-col
-  items-center
-
-  border-b
-  border-l
-  border-black/10
-
-  p-6
-  text-center
-
-  sm:min-h-[310px]
-  sm:p-7
-
-  lg:min-h-[320px]
-  lg:p-8
-"
-    >
-      {/* ICON */}
-
-      <span
-        className="
-          grid
-          size-9
-
-          place-items-center
-
-          text-black/55
-        "
-      >
-        <MethodIcon type={method.icon} />
-      </span>
-
-      {/* TITLE */}
-
-      <h3
-        className="
-          mt-6
-
-          text-[9px]
-          font-semibold
-
-          uppercase
-          tracking-[0.17em]
-
-          text-black
-        "
-      >
-        {method.title}
-      </h3>
-
-      {/* DESCRIPTION */}
-
-      <div
-       className="
-  mx-auto
-  mt-4
-  max-w-[270px]
-  text-center
-  text-[10px]
-  leading-[1.8]
-  text-black/58
-"
-      >
-        {method.description}
-      </div>
-
-      {/* ACTION */}
-
-      {method.action && (
-        <div className="mt-auto pt-6">
-          {method.action.external ? (
-            <a
-              href={method.action.href}
-              className="
-                group
-
-                inline-flex
-
-                items-center
-                gap-3
-
-                border-b
-                border-black/30
-
-                pb-1
-
-                text-[7px]
-                font-semibold
-
-                uppercase
-                tracking-[0.17em]
-
-                text-black
-
-                transition-[border-color,opacity]
-                duration-200
-
-                hover:border-black
-
-                hover:opacity-60
-              "
-            >
-              {method.action.label}
-
-              <ArrowSmallIcon />
-            </a>
-          ) : (
-            <Link
-              href={method.action.href}
-              className="
-                group
-
-                inline-flex
-
-                items-center
-                gap-3
-
-                border-b
-                border-black/30
-
-                pb-1
-
-                text-[7px]
-                font-semibold
-
-                uppercase
-                tracking-[0.17em]
-
-                text-black
-
-                transition-[border-color,opacity]
-                duration-200
-
-                hover:border-black
-
-                hover:opacity-60
-              "
-            >
-              {method.action.label}
-
-              <ArrowSmallIcon />
-            </Link>
-          )}
-        </div>
-      )}
-    </article>
-  );
-}
-
-/* ==========================================================================
-   ICONS
-============================================================================ */
-
-function MethodIcon({ type }: { type: ContactMethod["icon"] }) {
-  if (type === "appointment") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="size-6"
-        aria-hidden="true"
-      >
-        <path
-          d="M9 3H15L17 8V15L15 18H9L7 15V8L9 3Z"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-
-        <path d="M12 18V22M8 22H16" stroke="currentColor" strokeWidth="1" />
-      </svg>
-    );
-  }
-
-  if (type === "service") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="size-6"
-        aria-hidden="true"
-      >
-        <path
-          d="M7 13L5 10C4 8 5 6 7 7L10 10"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-
-        <path
-          d="M10 10L12 5M12 10L15 4M14 11L18 6M16 13L20 10"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-
-        <path
-          d="M7 13L10 18C12 21 17 20 19 16L20 10"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-      </svg>
-    );
-  }
-
-  if (type === "location") {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        className="size-6"
-        aria-hidden="true"
-      >
-        <path
-          d="M12 21C12 21 18 15.5 18 10C18 6.7 15.3 4 12 4C8.7 4 6 6.7 6 10C6 15.5 12 21 12 21Z"
-          stroke="currentColor"
-          strokeWidth="1"
-        />
-
-        <circle cx="12" cy="10" r="2" stroke="currentColor" strokeWidth="1" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-6" aria-hidden="true">
-      <path d="M4 6H20V17H4V6Z" stroke="currentColor" strokeWidth="1" />
-
-      <path d="M4 7L12 13L20 7" stroke="currentColor" strokeWidth="1" />
-
-      <path d="M17 18L19 20L22 16" stroke="currentColor" strokeWidth="1" />
-    </svg>
-  );
-}
-
-function ArrowSmallIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="
-        size-3
-
-        transition-transform
-        duration-200
-
-        group-hover:translate-x-0.5
-      "
-    >
-      <path
-        d="M2.5 8H13M9.5 4.5L13 8L9.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-    </svg>
-  );
-}
-
-/* ==========================================================================
-   REVEAL
-============================================================================ */
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
@@ -699,19 +415,24 @@ function useRevealOnce<T extends HTMLElement>() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const frame = requestAnimationFrame(() => setRevealed(true));
+
       return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!entry?.isIntersecting) {
+          return;
+        }
 
-        requestAnimationFrame(() => setRevealed(true));
+        requestAnimationFrame(() => {
+          setRevealed(true);
+        });
 
         observer.disconnect();
       },
       {
-        threshold: 0.08,
+        threshold: 0.1,
       },
     );
 

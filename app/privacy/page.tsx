@@ -1,34 +1,59 @@
+import type { Metadata } from "next";
+
 import { PolicyPage } from "@/components/static/Legal/PolicyPage";
 
-export const metadata = {
-  title: "حریم خصوصی | نجیب‌زاده",
-  description: "نحوه استفاده و نگهداری نجیب‌زاده از اطلاعات شما.",
+import { privacyCopy } from "@/lib/i18n/privacy-copy";
+
+import { defaultLocale, locales, type Locale } from "@/lib/i18n/config";
+
+/* ==========================================================================
+   TYPES
+============================================================================ */
+
+type PrivacyPageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
 };
 
-export default function PrivacyPage() {
-  return (
-    <PolicyPage
-      eyebrow="اطلاعات و اعتماد"
-      title="حریم خصوصی شما برای ما جدی است."
-      intro="این صفحه توضیح می‌دهد چه اطلاعاتی هنگام استفاده از فروشگاه نجیب‌زاده دریافت می‌شود، چرا به آن نیاز داریم و چگونه از آن محافظت می‌کنیم."
-      sections={[
-        {
-          title: "اطلاعاتی که دریافت می‌کنیم",
-          body: "اطلاعاتی مانند نام، راه ارتباطی، نشانی تحویل و جزئیات سفارش فقط زمانی دریافت می‌شود که برای ایجاد حساب، تکمیل خرید یا پاسخ‌گویی به درخواست شما لازم باشد.",
-        },
-        {
-          title: "نحوه استفاده",
-          body: "از اطلاعات برای ارائه خدمات فروشگاه، پیگیری سفارش، پشتیبانی مشتریان، جلوگیری از سوءاستفاده و بهبود تجربه نجیب‌زاده استفاده می‌کنیم.",
-        },
-        {
-          title: "اشتراک‌گذاری و امنیت",
-          body: "اطلاعات شما فروخته نمی‌شود. تنها در حد لازم با ارائه‌دهندگان مورد اعتماد پرداخت، تحویل و زیرساخت فنی به اشتراک گذاشته می‌شود و دسترسی‌ها محدود و کنترل‌شده هستند.",
-        },
-        {
-          title: "درخواست‌های شما",
-          body: "برای مشاهده، اصلاح یا حذف اطلاعات حساب خود می‌توانید از صفحه پروفایل استفاده کنید یا از طریق صفحه تماس با ما درخواستتان را ارسال کنید.",
-        },
-      ]}
-    />
-  );
+/* ==========================================================================
+   LOCALE
+============================================================================ */
+
+function resolveLocale(value: string): Locale {
+  return locales.includes(value as Locale) ? (value as Locale) : defaultLocale;
+}
+
+/* ==========================================================================
+   METADATA
+============================================================================ */
+
+export async function generateMetadata({
+  params,
+}: PrivacyPageProps): Promise<Metadata> {
+  const { locale: localeParam } = await params;
+
+  const locale = resolveLocale(localeParam);
+
+  const copy = privacyCopy[locale];
+
+  return {
+    title: copy.metadata.title,
+
+    description: copy.metadata.description,
+  };
+}
+
+/* ==========================================================================
+   PAGE
+============================================================================ */
+
+export default async function PrivacyPage({ params }: PrivacyPageProps) {
+  const { locale: localeParam } = await params;
+
+  const locale = resolveLocale(localeParam);
+
+  const copy = privacyCopy[locale];
+
+  return <PolicyPage locale={locale} copy={copy} />;
 }

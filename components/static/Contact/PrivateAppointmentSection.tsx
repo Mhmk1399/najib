@@ -10,22 +10,24 @@ import {
   useState,
 } from "react";
 
+import { ArrowLeftIcon, ArrowRightIcon, Button } from "@/components/ui/Button";
+
+import type { ContactCopy } from "@/lib/i18n/contact-copy";
+
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+
 import { brandColors } from "@/theme/theme-colors";
 
-import { ArrowRightIcon, Button } from "@/components/ui/Button";
-
 type PrivateAppointmentSectionProps = {
+  copy: ContactCopy["appointment"];
+
+  locale: Locale;
+
   imageSrc: string;
-
-  imageAlt?: string;
-
-  eyebrow?: string;
-
-  title?: string;
-
-  italicTitle?: string;
-
-  description?: string;
 
   mobileImagePosition?: string;
 
@@ -35,25 +37,22 @@ type PrivateAppointmentSectionProps = {
 };
 
 export function PrivateAppointmentSection({
+  copy,
+  locale,
   imageSrc,
-
-  imageAlt = "",
-
-  eyebrow = "اجازه دهید شخصاً همراه شما باشیم",
-
-  title = "رزرو قرار ملاقات خصوصی.",
-
-  italicTitle = "تجربه‌ای متناسب با شما.",
-
-  description = "چند جزئیات کوتاه با ما در میان بگذارید تا تیم نجیب‌زاده برای هماهنگی و تأیید قرار ملاقات با شما در ارتباط باشد.",
-
   mobileImagePosition = "68% center",
-
   desktopImagePosition = "center",
-
   className = "",
 }: PrivateAppointmentSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
+  const isRtl = direction === "rtl";
+
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
 
   const themeVars = {
     "--appointment-black": brandColors.black.hex,
@@ -71,39 +70,42 @@ export function PrivateAppointmentSection({
     event.preventDefault();
 
     /*
-     * بعداً API / Server Action
-     * اینجا وصل می‌شود.
+     * API / Server Action
+     * بعداً اینجا متصل می‌شود.
      */
   }
 
   return (
     <section
-      dir="rtl"
+      id="appointment"
       ref={ref}
+      dir={direction}
+      lang={htmlLang}
       style={themeVars}
       className={`
         relative
         isolate
 
         min-h-[100svh]
-        md:min-h-[100svh]
 
         w-full
+
         overflow-hidden
 
         bg-[var(--appointment-black)]
+
         text-white
+
+        md:min-h-[100svh]
 
         ${className}
       `}
     >
-      {/* =====================================================
-          BACKGROUND
-      ====================================================== */}
+      {/* BACKGROUND */}
 
       <Image
         src={imageSrc}
-        alt={imageAlt}
+        alt={copy.imageAlt}
         fill
         sizes="100vw"
         loading="lazy"
@@ -119,23 +121,26 @@ export function PrivateAppointmentSection({
         "
       />
 
-      {/* =====================================================
-          GRADIENT
-      ====================================================== */}
+      {/* GRADIENT */}
 
       <div
         aria-hidden="true"
-        className="
+        className={`
           pointer-events-none
 
           absolute
           inset-0
+
           -z-20
 
-          bg-[linear-gradient(90deg,rgb(var(--appointment-black-rgb)/0.97)_0%,rgb(var(--appointment-black-rgb)/0.91)_33%,rgb(var(--appointment-black-rgb)/0.48)_52%,rgb(var(--appointment-black-rgb)/0.08)_78%,rgb(var(--appointment-black-rgb)/0.22)_100%)]
-
           max-md:bg-[linear-gradient(180deg,rgb(var(--appointment-black-rgb)/0.10)_0%,rgb(var(--appointment-black-rgb)/0.22)_30%,rgb(var(--appointment-black-rgb)/0.96)_100%)]
-        "
+
+          ${
+            isRtl
+              ? "md:bg-[linear-gradient(90deg,rgb(var(--appointment-black-rgb)/0.08)_0%,rgb(var(--appointment-black-rgb)/0.48)_48%,rgb(var(--appointment-black-rgb)/0.91)_67%,rgb(var(--appointment-black-rgb)/0.97)_100%)]"
+              : "md:bg-[linear-gradient(90deg,rgb(var(--appointment-black-rgb)/0.97)_0%,rgb(var(--appointment-black-rgb)/0.91)_33%,rgb(var(--appointment-black-rgb)/0.48)_52%,rgb(var(--appointment-black-rgb)/0.08)_100%)]"
+          }
+        `}
       />
 
       <div
@@ -145,15 +150,14 @@ export function PrivateAppointmentSection({
 
           absolute
           inset-0
+
           -z-10
 
           bg-[radial-gradient(circle_at_center,transparent_34%,rgb(var(--appointment-black-rgb)/0.30)_120%)]
         "
       />
 
-      {/* =====================================================
-          CONTENT
-      ====================================================== */}
+      {/* CONTENT */}
 
       <div
         className="
@@ -163,7 +167,6 @@ export function PrivateAppointmentSection({
           flex
 
           min-h-[100svh]
-          md:min-h-[100svh]
 
           items-end
 
@@ -175,6 +178,8 @@ export function PrivateAppointmentSection({
           sm:px-10
           sm:pb-16
 
+          md:min-h-[100svh]
+
           md:items-center
 
           md:px-[7vw]
@@ -183,89 +188,130 @@ export function PrivateAppointmentSection({
       >
         <div
           className={`
-  mx-auto
-  w-full
-  max-w-[610px]
-  text-center
+            mx-auto
 
-  transition-[opacity,transform]
-  duration-[900ms]
-  ease-[cubic-bezier(0.22,1,0.36,1)]
+            w-full
+            max-w-[610px]
 
-  ${revealed ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}
-`}
+            text-center
+
+            transition-[opacity,transform]
+
+            duration-[900ms]
+
+            ease-[cubic-bezier(0.22,1,0.36,1)]
+
+            ${
+              revealed
+                ? "translate-y-0 opacity-100"
+                : "translate-y-10 opacity-0"
+            }
+          `}
         >
-          {/* =================================================
-              EYEBROW
-          ================================================= */}
+          {/* EYEBROW */}
 
           <div
             className="
-    mb-5
-    flex
-    items-center
-    justify-center
-    gap-3
-    text-[7px]
-    font-semibold
-    tracking-[0.12em]
-    text-[var(--appointment-copper)]
-    sm:text-[8px]
-  "
+              mb-5
+
+              flex
+              items-center
+              justify-center
+              gap-3
+
+              text-[7px]
+              font-semibold
+
+              tracking-[0.12em]
+
+              text-[var(--appointment-copper)]
+
+              sm:text-[8px]
+            "
           >
-            <span className="h-px w-7 bg-[var(--appointment-copper)]" />
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
 
-            <span>{eyebrow}</span>
+                bg-[var(--appointment-copper)]
+              "
+            />
 
-            <span className="h-px w-7 bg-[var(--appointment-copper)]" />
+            <span>{copy.eyebrow}</span>
+
+            <span
+              aria-hidden="true"
+              className="
+                h-px
+                w-7
+
+                bg-[var(--appointment-copper)]
+              "
+            />
           </div>
 
-          {/* =================================================
-              TITLE
-          ================================================= */}
+          {/* TITLE */}
 
           <h2
             className="
-    flex
-    flex-col
-    items-center
-    text-center
-     
-    text-[clamp(3rem,11vw,4.5rem)]
-    font-normal
-    leading-[1.04]
-    tracking-[-0.04em]
-    text-white
-    md:text-[clamp(4rem,5vw,5.7rem)]
-  "
-          >
-            <span>{title}</span>
+              flex
+              flex-col
 
-            <span className="mt-[0.1em] text-white/76">{italicTitle}</span>
+              items-center
+
+              text-center
+
+              text-[clamp(3rem,11vw,4.5rem)]
+
+              font-normal
+
+              leading-[1.04]
+
+              tracking-[-0.04em]
+
+              text-white
+
+              md:text-[clamp(4rem,5vw,5.7rem)]
+            "
+          >
+            <span>{copy.title}</span>
+
+            <span
+              className="
+                mt-[0.1em]
+
+                text-white/76
+              "
+            >
+              {copy.italicTitle}
+            </span>
           </h2>
 
-          {/* =================================================
-              DESCRIPTION
-          ================================================= */}
+          {/* DESCRIPTION */}
 
           <p
             className="
-    mx-auto
-    mt-6
-    max-w-[420px]
-    text-center
-    text-[9px]
-    leading-[2]
-    text-white/55
-    sm:text-[10px]
-  "
+              mx-auto
+              mt-6
+
+              max-w-[420px]
+
+              text-center
+              text-[9px]
+
+              leading-[2]
+
+              text-white/55
+
+              sm:text-[10px]
+            "
           >
-            {description}
+            {copy.description}
           </p>
 
-          {/* =================================================
-              FORM
-          ================================================= */}
+          {/* FORM */}
 
           <form
             onSubmit={handleSubmit}
@@ -286,39 +332,44 @@ export function PrivateAppointmentSection({
             <Field
               id="full-name"
               name="fullName"
-              label="نام و نام خانوادگی"
+              label={copy.form.fullName}
               autoComplete="name"
+              direction={direction}
             />
 
             <Field
               id="email"
               name="email"
-              label="آدرس ایمیل"
+              label={copy.form.email}
               type="email"
               autoComplete="email"
+              direction="ltr"
             />
 
             <Field
               id="phone"
               name="phone"
-              label="شماره تماس"
+              label={copy.form.phone}
               type="tel"
               autoComplete="tel"
+              direction="ltr"
               className="sm:col-span-2"
             />
 
             <Field
               id="date"
               name="preferredDate"
-              label="تاریخ مورد نظر"
+              label={copy.form.preferredDate}
               type="date"
+              direction="ltr"
             />
 
             <Field
               id="time"
               name="preferredTime"
-              label="ساعت مورد نظر"
+              label={copy.form.preferredTime}
               type="time"
+              direction="ltr"
             />
 
             {/* MESSAGE */}
@@ -333,6 +384,8 @@ export function PrivateAppointmentSection({
                 className="
                   block
 
+                  text-center
+
                   text-[7px]
                   font-semibold
 
@@ -342,13 +395,14 @@ export function PrivateAppointmentSection({
                   text-white/55
                 "
               >
-                پیام شما
+                {copy.form.message}
               </label>
 
               <textarea
                 id="message"
                 name="message"
                 rows={3}
+                dir={direction}
                 className="
                   mt-2
 
@@ -364,6 +418,7 @@ export function PrivateAppointmentSection({
 
                   py-2
 
+                  text-center
                   text-[11px]
 
                   text-white
@@ -371,6 +426,7 @@ export function PrivateAppointmentSection({
                   outline-none
 
                   transition-colors
+
                   duration-200
 
                   placeholder:text-white/25
@@ -389,6 +445,7 @@ export function PrivateAppointmentSection({
                 w-full
 
                 sm:col-span-2
+
                 sm:max-w-[250px]
               "
             >
@@ -396,10 +453,10 @@ export function PrivateAppointmentSection({
                 type="submit"
                 variant="copper"
                 size="lg"
-                icon={<ArrowRightIcon />}
+                icon={<ActionIcon />}
                 fullWidth
               >
-                ارسال درخواست
+                {copy.form.submit}
               </Button>
             </div>
           </form>
@@ -408,10 +465,6 @@ export function PrivateAppointmentSection({
     </section>
   );
 }
-
-/* ==========================================================================
-   FIELD
-============================================================================ */
 
 type FieldProps = {
   id: string;
@@ -424,20 +477,18 @@ type FieldProps = {
 
   autoComplete?: string;
 
+  direction: "ltr" | "rtl";
+
   className?: string;
 };
 
 function Field({
   id,
-
   name,
-
   label,
-
   type = "text",
-
   autoComplete,
-
+  direction,
   className = "",
 }: FieldProps) {
   return (
@@ -445,13 +496,17 @@ function Field({
       <label
         htmlFor={id}
         className="
-  block
-  text-center
-  text-[7px]
-  font-semibold
-  tracking-[0.1em]
-  text-white/55
-"
+          block
+
+          text-center
+
+          text-[7px]
+          font-semibold
+
+          tracking-[0.1em]
+
+          text-white/55
+        "
       >
         {label}
       </label>
@@ -461,38 +516,38 @@ function Field({
         name={name}
         type={type}
         autoComplete={autoComplete}
+        dir={direction}
         className="
-  mt-2
-  h-9
-  w-full
+          mt-2
 
-  border-0
-  border-b
-  border-white/25
+          h-9
+          w-full
 
-  bg-transparent
+          border-0
+          border-b
+          border-white/25
 
-  text-center
-  text-[11px]
-  text-white
+          bg-transparent
 
-  outline-none
+          text-center
+          text-[11px]
 
-  transition-colors
-  duration-200
+          text-white
 
-  focus:border-white
+          outline-none
 
-  [color-scheme:dark]
-"
+          transition-colors
+
+          duration-200
+
+          focus:border-white
+
+          [color-scheme:dark]
+        "
       />
     </div>
   );
 }
-
-/* ==========================================================================
-   REVEAL
-============================================================================ */
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
@@ -506,14 +561,19 @@ function useRevealOnce<T extends HTMLElement>() {
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       const frame = requestAnimationFrame(() => setRevealed(true));
+
       return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) return;
+        if (!entry?.isIntersecting) {
+          return;
+        }
 
-        requestAnimationFrame(() => setRevealed(true));
+        requestAnimationFrame(() => {
+          setRevealed(true);
+        });
 
         observer.disconnect();
       },

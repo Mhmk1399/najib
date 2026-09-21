@@ -1,32 +1,85 @@
+import type { Metadata } from "next";
+
 import { ContactHeroSection } from "@/components/static/Contact/ContactHeroSection";
-import { ContactServicesSection } from "@/components/static/Contact/ContactServicesSection";
+
 import { PrivateAppointmentSection } from "@/components/static/Contact/PrivateAppointmentSection";
 
-export default function ContactPage() {
+import { contactCopy } from "@/lib/i18n/contact-copy";
+
+import {
+  defaultLocale,
+  getHtmlLang,
+  getLocaleDirection,
+  locales,
+  type Locale,
+} from "@/lib/i18n/config";
+import { ContactSection } from "@/components/static/Contact/ContactServicesSection";
+
+type ContactPageProps = {
+  params: Promise<{
+    locale: string;
+  }>;
+};
+
+function resolveLocale(value: string): Locale {
+  return locales.includes(value as Locale) ? (value as Locale) : defaultLocale;
+}
+
+export async function generateMetadata({
+  params,
+}: ContactPageProps): Promise<Metadata> {
+  const { locale: localeParam } = await params;
+
+  const locale = resolveLocale(localeParam);
+
+  const copy = contactCopy[locale];
+
+  return {
+    title: copy.metadata.title,
+
+    description: copy.metadata.description,
+  };
+}
+
+export default async function ContactPage({ params }: ContactPageProps) {
+  const { locale: localeParam } = await params;
+
+  const locale = resolveLocale(localeParam);
+
+  const copy = contactCopy[locale];
+
+  const direction = getLocaleDirection(locale);
+
+  const htmlLang = getHtmlLang(locale);
+
   return (
-    <main dir="rtl">
+    <main
+      dir={direction}
+      lang={htmlLang}
+      className="
+        w-full
+        overflow-x-clip
+      "
+    >
       <ContactHeroSection
+        locale={locale}
+        copy={copy.hero}
         imageSrc="/assets/images/banner.webp"
-        imageAlt="آتلیه خصوصی نجیب‌زاده"
-        eyebrow="ارتباط با نجیب‌زاده"
-        title="آغاز یک گفت‌وگو."
-        italicTitle="برای همراهی شما در تمام جزئیات اینجاییم."
         mobileImagePosition="70% center"
         desktopImagePosition="center"
       />
 
-      <ContactServicesSection
+      <ContactSection
+        locale={locale}
+        copy={copy.services}
         imageSrc="/assets/images/banner.webp"
-        imageAlt="خدمات خصوصی و متریال نجیب‌زاده"
         imagePosition="center"
       />
 
       <PrivateAppointmentSection
+        locale={locale}
+        copy={copy.appointment}
         imageSrc="/assets/images/banner.webp"
-        imageAlt="قرار ملاقات خصوصی نجیب‌زاده"
-        eyebrow="اجازه دهید شخصاً همراه شما باشیم"
-        title="رزرو قرار ملاقات خصوصی."
-        italicTitle="تجربه‌ای متناسب با شما."
         mobileImagePosition="70% center"
         desktopImagePosition="center"
       />
