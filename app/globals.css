@@ -42,3 +42,34 @@ body {
     transform: translateX(0);
   }
 }
+
+
+
+@keyframes luxury-navbar-enter {
+  0% {
+    transform: translate3d(0, -115%, 0) scale(0.992);
+    opacity: 0;
+  }
+
+  72% {
+    transform: translate3d(0, 2px, 0) scale(0.998);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes luxury-navbar-exit {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+    opacity: 1;
+  }
+
+  100% {
+    transform: translate3d(0, -112%, 0) scale(0.992);
+    opacity: 0;
+  }
+}
