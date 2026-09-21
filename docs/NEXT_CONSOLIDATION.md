@@ -67,6 +67,7 @@ Optional:
 MONGODB_DB_NAME=najib
 AUTH_ACCESS_TOKEN_TTL_SECONDS=900
 AUTH_REFRESH_TOKEN_TTL_SECONDS=1209600
+CRON_SECRET=replace-with-a-long-random-secret
 ```
 
 Temporary local Payment/SMS providers (never selected implicitly in production):

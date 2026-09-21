@@ -152,6 +152,18 @@ filters appropriate to their resource. Order writes expose explicit actions
 instead of arbitrary status updates, preventing Admin clients from inventing a
 successful payment, inventory reservation, confirmation, or refund.
 
+Expired checkout cleanup is exposed as an idempotent internal job:
+
+- `POST /api/internal/jobs/expire-checkouts`
+- Header: `Authorization: Bearer $CRON_SECRET`
+
+Each run claims at most 50 due checkout sessions, expires and releases their
+inventory reservations transactionally, cancels unfinished payment intents,
+marks the cart abandoned, stores a localized abandoned-checkout snapshot, and
+writes a `CheckoutExpired` outbox event. Configure the deployment scheduler to
+call it once per minute. Repeated calls cannot release the same reservation
+twice.
+
 See `docs/API_IMPLEMENTATION_STATUS.md` for the current completion matrix and
 the delivery order for Inventory, Payment, Policy, AI, and integrations.
 

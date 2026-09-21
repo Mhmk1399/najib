@@ -114,7 +114,10 @@ cancel, mock payment outcomes, and order confirmation. The next batch is:
 1. Replace the temporary adapters when Payment and SMS provider credentials and
    callback contracts are available.
 2. Add capture, refund, and reconciliation APIs after the real gateway is chosen.
-3. Add automatic checkout expiry/release and abandoned-checkout recovery.
+3. Configure the scheduler to call `POST /api/internal/jobs/expire-checkouts`
+   with `Authorization: Bearer $CRON_SECRET`; the idempotent expiry worker,
+   inventory release, cart abandonment, payment cancellation, and abandoned
+   checkout snapshot are implemented.
 4. Add operational Admin pages for orders, carts, checkout sessions, abandoned
    checkouts, and audit history.
 
