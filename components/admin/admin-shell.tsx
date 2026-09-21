@@ -253,7 +253,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
           <aside
             id="admin-desktop-sidebar"
             aria-label="نوار کناری مدیریت"
-            className="relative z-[60] hidden h-dvh w-[78px] shrink-0 overflow-visible xl:block"
+            className="relative z-[6000] hidden h-dvh w-[78px] shrink-0 overflow-visible xl:block"
           >
             <div
               data-sidebar-state={desktopSidebarOpen ? "open" : "closed"}
