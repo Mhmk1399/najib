@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Clock3, MapPin, ShieldCheck, ShoppingBag, X } from "lucide-react";
+import { Check, Clock3, MapPin, RefreshCw, ShieldCheck, ShoppingBag, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
@@ -28,7 +28,10 @@ type Destinations = {
     cityId: string;
     name: LocalizedText;
     address?: LocalizedText | null;
+    available: boolean;
+    unavailableItemCount: number;
   }>;
+  availableStoreCount: number;
 };
 type ConfirmResult = {
   payment: Payment;
@@ -55,10 +58,23 @@ export function CheckoutPage() {
     retry: (count, error) =>
       !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
+  const cartAvailabilityKey = cartQuery.data?.items
+    .map((item) => `${item.variantId}:${item.quantity}`)
+    .sort()
+    .join("|") ?? "empty";
+  const availabilityNeeded = Boolean(cartQuery.data?.items.length && !cartQuery.data.checkout);
   const destinationsQuery = useQuery({
-    queryKey: ["storefront", "checkout-destinations"],
+    queryKey: ["account", "checkout-destinations", cartAvailabilityKey],
     queryFn: ({ signal }) =>
-      commerceFetch<Destinations>("/api/storefront/checkout-destinations", { signal }),
+      commerceFetch<Destinations>("/api/account/checkouts", { signal }),
+    enabled: availabilityNeeded,
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    retry: (count, error) =>
+      !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
 
   const checkoutId = createdCheckoutId ?? cartQuery.data?.checkout?.id ?? null;
@@ -125,7 +141,10 @@ export function CheckoutPage() {
         description: "این رزرو تا ۱۵ دقیقه برای تکمیل پرداخت معتبر است.",
       });
     },
-    onError: (error) => reportMutationError("رزرو موجودی انجام نشد", error),
+    onError: (error) => {
+      void queryClient.invalidateQueries({ queryKey: ["account", "checkout-destinations"] });
+      reportMutationError("رزرو موجودی انجام نشد", error);
+    },
   });
 
   const paymentMutation = useMutation({
@@ -188,6 +207,7 @@ export function CheckoutPage() {
       paymentKey.current = null;
       confirmKey.current = null;
       await queryClient.invalidateQueries({ queryKey: cartQueryKey });
+      await queryClient.invalidateQueries({ queryKey: ["account", "checkout-destinations"] });
       toast.info("رزرو لغو و موجودی آزاد شد");
     },
     onError: (error) => reportMutationError("لغو رزرو انجام نشد", error),
@@ -197,6 +217,18 @@ export function CheckoutPage() {
     () => destinationsQuery.data?.stores.filter((store) => store.cityId === cityId) ?? [],
     [cityId, destinationsQuery.data?.stores],
   );
+  const selectedStore = stores.find((store) => store.id === storeId);
+  const availableStoreCount = stores.filter((store) => store.available).length;
+
+  useEffect(() => {
+    if (storeId && (!selectedStore || !selectedStore.available)) {
+      const reset = window.setTimeout(() => {
+        setStoreId("");
+        checkoutKey.current = null;
+      }, 0);
+      return () => window.clearTimeout(reset);
+    }
+  }, [selectedStore, storeId]);
   const expiresAt = checkout ? new Date(checkout.expiresAt).getTime() : 0;
   const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
   const expired = Boolean(
@@ -211,11 +243,14 @@ export function CheckoutPage() {
     checkout && ["reserved", "payment_pending"].includes(checkout.status) && !expired,
   );
   const signedOut = cartQuery.error instanceof CommerceApiError && cartQuery.error.status === 401;
+  const availabilitySignedOut =
+    destinationsQuery.error instanceof CommerceApiError && destinationsQuery.error.status === 401;
   const checkoutSignedOut =
     checkoutQuery.error instanceof CommerceApiError && checkoutQuery.error.status === 401;
   const paymentSignedOut =
     paymentQuery.error instanceof CommerceApiError && paymentQuery.error.status === 401;
   const cart = cartQuery.data;
+  const availabilityReady = destinationsQuery.isSuccess && !destinationsQuery.isFetching;
 
   if (completedOrder || payment?.status === "succeeded") {
     return <Success order={completedOrder} />;
@@ -238,17 +273,17 @@ export function CheckoutPage() {
           </div>
         </header>
 
-        {(cartQuery.isPending || destinationsQuery.isPending) ? <CheckoutLoading /> : null}
+        {cartQuery.isPending ? <CheckoutLoading /> : null}
 
-        {signedOut ? (
+        {signedOut || availabilitySignedOut ? (
           <CheckoutState title="برای ادامه خرید وارد حساب شوید" description="پس از ورود، دوباره به همین صفحه برمی‌گردید.">
             <Button href={loginHref("/checkout")} variant="black" size="lg">ورود به حساب</Button>
           </CheckoutState>
         ) : null}
 
-        {(cartQuery.isError && !signedOut) || destinationsQuery.isError ? (
-          <CheckoutState title="اطلاعات تکمیل خرید دریافت نشد" description={messageFor(cartQuery.error || destinationsQuery.error)}>
-            <Button type="button" variant="outline" size="lg" onClick={() => { void cartQuery.refetch(); void destinationsQuery.refetch(); }}>تلاش دوباره</Button>
+        {cartQuery.isError && !signedOut ? (
+          <CheckoutState title="اطلاعات تکمیل خرید دریافت نشد" description={messageFor(cartQuery.error)}>
+            <Button type="button" variant="outline" size="lg" onClick={() => void cartQuery.refetch()}>تلاش دوباره</Button>
           </CheckoutState>
         ) : null}
 
@@ -258,7 +293,7 @@ export function CheckoutPage() {
           </CheckoutState>
         ) : null}
 
-        {cart?.items.length ? (
+        {cart?.items.length && !availabilitySignedOut ? (
           <div className="grid gap-10 pt-10 lg:grid-cols-[minmax(0,1fr)_390px] lg:gap-16">
             <section className="space-y-8">
               {checkoutId && checkoutQuery.isPending ? (
@@ -298,21 +333,50 @@ export function CheckoutPage() {
                   </div>
                   <div className="mt-8 grid gap-6 sm:grid-cols-2">
                     <Field label="شهر">
-                      <select value={cityId} onChange={(event) => { setCityId(event.target.value); setStoreId(""); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427]">
+                      <select value={cityId} disabled={!availabilityReady} onChange={(event) => { setCityId(event.target.value); setStoreId(""); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427] disabled:opacity-40">
                         <option value="">انتخاب شهر</option>
                         {destinationsQuery.data?.cities.map((city) => <option key={city.id} value={city.id}>{localized(city.name, city.code)}</option>)}
                       </select>
                     </Field>
                     <Field label="فروشگاه">
-                      <select value={storeId} disabled={!cityId} onChange={(event) => { setStoreId(event.target.value); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427] disabled:opacity-40">
+                      <select value={storeId} disabled={!cityId || !availabilityReady} onChange={(event) => { setStoreId(event.target.value); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427] disabled:opacity-40">
                         <option value="">انتخاب فروشگاه</option>
-                        {stores.map((store) => <option key={store.id} value={store.id}>{localized(store.name, store.code)}</option>)}
+                        {stores.map((store) => (
+                          <option key={store.id} value={store.id} disabled={!store.available}>
+                            {localized(store.name, store.code)}{store.available ? "" : " — موجودی ناکافی"}
+                          </option>
+                        ))}
                       </select>
                     </Field>
                   </div>
-                  {cityId && stores.length === 0 ? <p className="mt-4 text-xs text-[#A33A32]">برای این شهر فروشگاه دارای محل موجودی فعال پیدا نشد.</p> : null}
+                  <div className="mt-4 flex min-h-7 flex-wrap items-center justify-between gap-3">
+                    {destinationsQuery.isError ? (
+                      <p className="text-xs text-[#A33A32]" role="alert">بررسی موجودی شعبه‌ها انجام نشد. برای انتخاب شعبه دوباره تلاش کنید.</p>
+                    ) : destinationsQuery.isFetching ? (
+                      <p className="text-xs text-black/55" role="status">در حال بررسی موجودی دقیق رنگ، سایز و تعداد سبد شما…</p>
+                    ) : !cityId ? (
+                      <p className="text-xs text-black/55" role="status">موجودی دقیق سبد بررسی شد؛ برای دیدن شعبه‌های مناسب شهر را انتخاب کنید.</p>
+                    ) : stores.length === 0 ? (
+                      <p className="mt-4 text-xs text-[#A33A32]">برای این شهر فروشگاه دارای محل موجودی فعال پیدا نشد.</p>
+                    ) : availableStoreCount > 0 ? (
+                      <p className="mt-4 text-xs text-black/65" role="status">
+                        {new Intl.NumberFormat("fa-IR").format(availableStoreCount)} شعبه مناسب این سبد
+                      </p>
+                    ) : (
+                      <p className="mt-4 text-xs text-[#A33A32]" role="status">هیچ شعبه‌ای در این شهر موجودی کامل رنگ، سایز و تعداد انتخابی را ندارد.</p>
+                    )}
+                    <button
+                      type="button"
+                      disabled={destinationsQuery.isFetching}
+                      onClick={() => void destinationsQuery.refetch()}
+                      className="inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-[#C15427] underline decoration-[#C15427]/35 underline-offset-4 transition hover:decoration-[#C15427] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C15427] disabled:opacity-40"
+                    >
+                      <RefreshCw className={`size-3.5 ${destinationsQuery.isFetching ? "animate-spin" : ""}`} aria-hidden />
+                      بررسی دوباره موجودی
+                    </button>
+                  </div>
                   <div className="mt-8 flex justify-end">
-                    <Button type="button" variant="black" size="lg" disabled={!cityId || !storeId} loading={startMutation.isPending} onClick={() => startMutation.mutate()}>
+                    <Button type="button" variant="black" size="lg" disabled={!cityId || !storeId || !selectedStore?.available || !availabilityReady} loading={startMutation.isPending} onClick={() => startMutation.mutate()}>
                       بررسی و رزرو موجودی
                     </Button>
                   </div>

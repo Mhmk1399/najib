@@ -168,6 +168,9 @@ async function runAuthFlow() {
   let checkoutPoolId;
   let checkoutStoreId;
   let checkoutLocationId;
+  let mismatchedStoreId;
+  let mismatchedLocationId;
+  let mismatchedLocationCityId;
   let inventoryVariantId;
   const inventoryIds = [];
   const inventoryKeyPrefix = `inventory-test-${suffix}`;
@@ -226,6 +229,9 @@ async function runAuthFlow() {
     checkoutPoolId = new mongoose.Types.ObjectId();
     checkoutStoreId = new mongoose.Types.ObjectId();
     checkoutLocationId = new mongoose.Types.ObjectId();
+    mismatchedStoreId = new mongoose.Types.ObjectId();
+    mismatchedLocationId = new mongoose.Types.ObjectId();
+    mismatchedLocationCityId = new mongoose.Types.ObjectId();
     const orderBase = {
       orderNumber: `TEST-${suffix}`.toUpperCase(),
       idempotencyKey: `test-${suffix}`,
@@ -361,6 +367,15 @@ async function runAuthFlow() {
         createdAt: now,
         updatedAt: now,
       }),
+      db.collection("stores").insertOne({
+        _id: mismatchedStoreId,
+        code: `MISMATCHED-STORE-${suffix}`.toUpperCase(),
+        name: { fa: "فروشگاه با محل نامعتبر", en: "Mismatched location store", ar: "متجر بموقع غير متطابق" },
+        cityId: checkoutCityId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
       db.collection("inventorylocations").insertOne({
         _id: checkoutLocationId,
         code: `CHECKOUT-LOCATION-${suffix}`.toUpperCase(),
@@ -384,6 +399,29 @@ async function runAuthFlow() {
         createdAt: now,
         updatedAt: now,
       }),
+      db.collection("inventorylocations").insertOne({
+        _id: mismatchedLocationId,
+        code: `MISMATCHED-LOCATION-${suffix}`.toUpperCase(),
+        name: { fa: "محل شهر دیگر", en: "Other-city location", ar: "موقع مدينة أخرى" },
+        type: "store",
+        cityId: mismatchedLocationCityId,
+        poolId: checkoutPoolId,
+        storeId: mismatchedStoreId,
+        isActive: true,
+        createdAt: now,
+        updatedAt: now,
+      }),
+      db.collection("inventorybalances").insertOne({
+        _id: new mongoose.Types.ObjectId(),
+        variantId: cartVariantId,
+        locationId: mismatchedLocationId,
+        onHand: 99,
+        reserved: 0,
+        safetyStock: 0,
+        version: 0,
+        createdAt: now,
+        updatedAt: now,
+      }),
       db.collection("users").updateOne({ _id: userId }, { $set: { phone: "+989121234567", addresses: [{ _id: new mongoose.Types.ObjectId(), label: "خانه", firstName: "کاربر", lastName: "آزمایشی", phone: "+989121234567", line1: "نشانی آزمایشی", city: "تهران", postalCode: "1234567890", countryCode: "IR", isDefault: true }] } }),
     ]);
 
@@ -394,7 +432,7 @@ async function runAuthFlow() {
       String(customerMe.response.status),
     );
 
-    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
       const anonymousAccount = await apiRequest(path);
       failed += result(`anonymous is blocked from ${path}`, anonymousAccount.response.status === 401, String(anonymousAccount.response.status));
     }
@@ -444,6 +482,20 @@ async function runAuthFlow() {
       jar: customerCookies,
       body: { variantId: String(cartVariantId), quantity: 1, unitPriceMinor: 1 },
     });
+    const checkoutDestinations = await apiRequest("/api/account/checkouts", { jar: customerCookies });
+    const availableCheckoutStore = checkoutDestinations.body?.stores?.find(
+      (store) => store.id === String(checkoutStoreId),
+    );
+    const mismatchedCheckoutStore = checkoutDestinations.body?.stores?.find(
+      (store) => store.id === String(mismatchedStoreId),
+    );
+    failed += result(
+      "checkout destinations reflect exact cart availability",
+      checkoutDestinations.response.status === 200 && availableCheckoutStore?.available === true &&
+        availableCheckoutStore?.unavailableItemCount === 0 && mismatchedCheckoutStore?.available === false &&
+        mismatchedCheckoutStore?.unavailableItemCount === 1 && checkoutDestinations.body?.availableStoreCount >= 1,
+      `${checkoutDestinations.response.status}/${availableCheckoutStore?.available}/${mismatchedCheckoutStore?.available}`,
+    );
     const checkoutKey = `checkout-test-${suffix}`;
     const startCheckout = await apiRequest("/api/account/checkouts", {
       method: "POST",
@@ -842,7 +894,7 @@ async function runAuthFlow() {
       `${transfer.response.status}/${balances.body?.items?.length}/${movements.body?.pagination?.total}/${finalAvailability.body?.available}`,
     );
 
-    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
+    for (const path of ["/api/account/summary", "/api/account/orders", "/api/account/cart", "/api/account/profile", "/api/account/checkouts", "/api/account/checkouts/000000000000000000000000", "/api/account/payments/000000000000000000000000"]) {
       const staffAccount = await apiRequest(path, { jar: adminCookies });
       failed += result(`staff is isolated from ${path}`, staffAccount.response.status === 403, String(staffAccount.response.status));
     }
@@ -925,9 +977,9 @@ async function runAuthFlow() {
         db.collection("inventorymovements").deleteMany({ actorId: userId }),
         db.collection("inventoryreservations").deleteMany({ userId }),
         db.collection("inventorybalances").deleteMany({ variantId: cartVariantId }),
-        db.collection("inventorylocations").deleteMany({ _id: checkoutLocationId }),
+        db.collection("inventorylocations").deleteMany({ _id: { $in: [checkoutLocationId, mismatchedLocationId].filter(Boolean) } }),
         db.collection("inventorypools").deleteMany({ _id: checkoutPoolId }),
-        db.collection("stores").deleteMany({ _id: checkoutStoreId }),
+        db.collection("stores").deleteMany({ _id: { $in: [checkoutStoreId, mismatchedStoreId].filter(Boolean) } }),
         db.collection("cities").deleteMany({ _id: checkoutCityId }),
         db.collection("inventorymovements").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
         db.collection("inventoryreservations").deleteMany({ idempotencyKey: { $regex: `^${inventoryKeyPrefix}` } }),
