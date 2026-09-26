@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   Boxes,
   CalendarDays,
+  ClipboardClock,
   ChevronsUpDown,
   Crown,
   Grid2X2,
@@ -18,6 +19,8 @@ import {
   PanelRightOpen,
   Search,
   ShoppingBag,
+  ShoppingCart,
+  ScrollText,
   ShieldCheck,
   SlidersHorizontal,
   Sun,
@@ -49,12 +52,18 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   permission?: string;
+  permissionsAny?: string[];
 };
 
 type AdminShellProps = {
   children: ReactNode;
   staff?: AdminStaffProfile;
 };
+
+function canAccessNavItem(item: NavItem, permissions: string[] = []) {
+  return (!item.permission || permissions.includes(item.permission)) &&
+    (!item.permissionsAny || item.permissionsAny.some((permission) => permissions.includes(permission)));
+}
 
 const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
@@ -78,6 +87,10 @@ const PRIMARY_NAV: NavItem[] = [
     icon: ShoppingBag,
     permission: "orders.read",
   },
+  { label: "سبدهای خرید", href: "/admin/carts", icon: ShoppingCart, permission: "orders.read" },
+  { label: "نشست‌های پرداخت", href: "/admin/checkouts", icon: ClipboardClock, permission: "orders.read" },
+  { label: "خریدهای رهاشده", href: "/admin/abandoned-checkouts", icon: CalendarDays, permission: "orders.read" },
+  { label: "تاریخچه ممیزی", href: "/admin/audit", icon: ScrollText, permissionsAny: ["settings.manage", "staff.manage"] },
 ];
 
 const USERS_NAV: NavItem = {
@@ -174,10 +187,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   const logoutOpenerRef = useRef<HTMLElement | null>(null);
 
   const availableNavItems = useMemo(() => {
-    const primary = PRIMARY_NAV.filter(
-      (item) =>
-        !item.permission || staffProfile.permissions?.includes(item.permission),
-    );
+    const primary = PRIMARY_NAV.filter((item) => canAccessNavItem(item, staffProfile.permissions));
     return staffProfile.permissions?.includes("staff.manage")
       ? [...primary, USERS_NAV]
       : primary;
@@ -860,10 +870,7 @@ function Sidebar({
         </p>
 
         <div className="space-y-1">
-          {PRIMARY_NAV.filter(
-            (item) =>
-              !item.permission || staff.permissions?.includes(item.permission),
-          ).map((item) => (
+          {PRIMARY_NAV.filter((item) => canAccessNavItem(item, staff.permissions)).map((item) => (
             <SidebarLink
               key={item.href}
               item={item}

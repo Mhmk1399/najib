@@ -58,6 +58,9 @@ const storeSchema = z
     name: localizedNameSchema,
     cityId: objectIdSchema,
     address: localizedTextSchema(500, 0).optional(),
+    shippingFeeMinor: z.number().int().nonnegative().max(1_000_000_000).default(0),
+    shippingFeeIrrMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
+    shippingFeeUsdMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER).optional(),
     isActive: activeSchema,
   })
   .strict();
@@ -119,6 +122,19 @@ export const inventoryAdjustmentSchema = z
   .refine((value) => value.delta !== 0 || value.safetyStock !== undefined, {
     message: "Provide a non-zero delta or safetyStock.",
   });
+
+export const productStockBatchSchema = z.object({
+  idempotencyKey: idempotencyKeySchema,
+  productId: objectIdSchema,
+  locationId: objectIdSchema,
+  items: z.array(z.object({
+    variantId: objectIdSchema,
+    quantity: z.number().int().positive().max(1_000_000),
+  }).strict()).min(1).max(100),
+}).strict().refine(
+  (value) => new Set(value.items.map((item) => item.variantId)).size === value.items.length,
+  { path: ["items"], message: "هر تنوع فقط یک‌بار قابل ثبت است." },
+);
 
 const reservationItemSchema = z
   .object({

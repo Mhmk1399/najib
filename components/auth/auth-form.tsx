@@ -444,7 +444,7 @@ export function AuthForm({
 
         if (pendingCartItem) {
           try {
-            await commerceFetch("/api/account/cart/items", {
+            await commerceFetch(`/api/account/cart/items?locale=${locale}`, {
               method: "POST",
               body: JSON.stringify({
                 variantId: pendingCartItem.variantId,

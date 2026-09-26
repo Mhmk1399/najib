@@ -63,8 +63,10 @@ English or Arabic. Internal correlation, idempotency, payment, inventory, policy
 and audit fields are not exposed.
 
 Cart writes accept only an exact `variantId` and quantity. Product status, variant,
-color, size, currency, and price are resolved again on the server; clients cannot
-submit or override prices. Adding the same variant increases its quantity up to
+color, size, and price are resolved again on the server; clients cannot submit or
+override prices. The catalog has one canonical currency (`IRR`): legacy product
+currency labels never split or reject a cart, and all current cart/checkout prices
+are snapshotted as IRR without pretending to perform FX conversion. Adding the same variant increases its quantity up to
 99, quantity changes refresh the server price, and only the active cart owned by
 the authenticated customer can be changed. Adding to a cart does not reserve
 stock; exact stock is reserved by the checkout orchestration step.
@@ -72,11 +74,16 @@ Cart reads include the product's active primary image metadata and, while a cart
 is in `checkout_started`, safe resumable Checkout metadata (`id`, status, expiry,
 and payment ID). Checkout reads expose their payment ID for the same resume flow.
 
-`POST /api/account/checkouts` accepts an idempotency key plus an active `storeId`
-and matching `cityId`. In one MongoDB transaction it reprices every cart item,
-validates product/color/size sellability, allocates the exact variants across
-active store locations, creates a 15-minute inventory reservation, marks the cart
-as `checkout_started`, and writes an outbox event. Repeating the same request key
+Authenticated `GET /api/account/checkouts` computes a deterministic delivery plan
+for the current Cart. It may allocate exact quantities across multiple branches,
+prefers the fewest shipments, then the lowest configured shipping total, and
+returns only the branches and line allocations actually used. Each used branch
+contributes its configured shipping fee once.
+
+`POST /api/account/checkouts` accepts an idempotency key and the confirmed
+`fulfillmentPlanHash`. In one MongoDB transaction it reprices every cart item,
+recomputes the plan, rejects a stale hash, reserves every exact location allocation,
+marks the cart as `checkout_started`, and writes an outbox event. Repeating the same request key
 returns the original checkout without reserving stock twice. `PATCH` currently
 accepts `{ "action": "cancel" }`; it releases the reservation and reopens the cart.
 The temporary Payment provider supports successful and failed attempts without
@@ -113,6 +120,37 @@ Operational Admin routes are also available:
 - `GET /api/admin/checkouts/:id`
 - `GET /api/admin/abandoned-checkouts`
 - `GET|PATCH /api/admin/abandoned-checkouts/:id`
+- `POST /api/admin/abandoned-checkouts/:id/recovery-link`
+
+### Unified product creation
+
+`POST /api/admin/catalog/products/complete` requires both `catalog.write` and
+`inventory.write`. It accepts one strict request containing the localized product,
+enabled color-size variants, and optional initial stock rows. Product, variants,
+positive balances, immutable adjustment movements, audit evidence, and the
+idempotency result are created in one MongoDB transaction. The server assigns the
+canonical IRR currency; the Admin composer never asks an operator to choose a
+catalog currency. The same idempotency key and body replays the original result;
+reusing the key for a different body returns `409`.
+
+Recovery-link rotation requires `orders.write`, an authenticated-customer
+abandoned record, and an operational reason. It returns the raw seven-day link
+once for manual delivery; only its SHA-256 hash is stored. No SMS or email is
+sent by this operation.
+
+Customer recovery routes:
+
+- `GET /api/account/abandoned-checkouts/recovery?token=...`
+- `POST /api/account/abandoned-checkouts/recovery`
+- `/{locale}/recover-checkout?token=...`
+
+Both API methods require the exact owning customer session. Preview evaluates
+current product/variant/color/size activity, server price, currency, and
+sellable stock at the original store/city. Restore transactionally merges
+available quantities into the active cart without deleting existing lines and
+is idempotent for the same valid link. Source attribution continues onto the
+next checkout. The abandoned record changes to `recovered` only in the same
+transaction that a successful payment creates its order.
 - `GET /api/admin/audit`
 
 Inventory Admin routes require `inventory.read` or `inventory.write`:
@@ -147,6 +185,21 @@ warehouse data:
 The response is `{ variantId, available, inStock }` and uses `no-store` because
 availability changes during checkout.
 
+### Split-store checkout fulfillment
+
+`GET /api/account/checkouts` returns the current cart's computed delivery plan:
+`shipments[]`, `shipmentCount`, `shippingMinor`, `subtotalMinor`, `totalMinor`,
+and `fulfillmentPlanHash`. Every shipment contains only its source branch and
+the exact variant/location quantities assigned to it. The planner first minimizes
+shipment count, then configured delivery fees, with stable branch ordering.
+
+Create the reservation with `POST /api/account/checkouts` and send
+`{ idempotencyKey, fulfillmentPlanHash }`. The service recomputes inside the
+MongoDB transaction. A changed plan returns `409`; no partial checkout is saved.
+One inventory reservation contains all cross-branch allocations. Checkout and
+Order persist shipment snapshots, while payment amount is items plus the sum of
+the per-shipment fees.
+
 List routes support validated pagination, search, status, store, city, and user
 filters appropriate to their resource. Order writes expose explicit actions
 instead of arbitrary status updates, preventing Admin clients from inventing a
@@ -179,3 +232,11 @@ Run the application and backend checks with:
 npm run dev
 npm run test:api
 ```
+# Dual pricing and product stock batches
+
+- Products keep explicit `priceIrrMinor` (whole rials) and `priceUsdMinor` (cents). Variant overrides use `priceOverrideIrrMinor` and `priceOverrideUsdMinor`; a missing override falls back to its product price.
+- `PATCH /api/account/cart` with `{ "currency": "IRR" | "USD" }` reprices the same active cart. There is no exchange-rate conversion and currency never partitions the cart.
+- Checkout preview `GET /api/account/checkouts?currency=USD` and checkout start both use the selected currency. The fulfillment hash contains that currency, exact line prices, allocations and shipping fees.
+- Stores keep independent `shippingFeeIrrMinor` and `shippingFeeUsdMinor`. Each used store is one shipment and contributes its selected-currency fee once.
+- `GET /api/admin/inventory/product-stock?productId=...&locationId=...` returns active variants and their balances for the compact stock form.
+- `POST /api/admin/inventory/product-stock` atomically adds positive quantities for several variants of one product at one active location. Body: `{ idempotencyKey, productId, locationId, items: [{ variantId, quantity }] }`. It requires both catalog and inventory write permissions.

@@ -17,66 +17,69 @@ import {
   formatMinor,
   loginHref,
 } from "@/lib/commerce/client";
+import { getHtmlLang, getLocaleDirection, type Locale } from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
+import type { CartCopy } from "@/lib/i18n/cart-copy";
 
 const FALLBACK_IMAGE = "/assets/images/banner.webp";
 
-export function CartPage() {
+export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
   const router = useRouter();
   const toast = useToast();
   const queryClient = useQueryClient();
   const cartQuery = useQuery({
-    queryKey: cartQueryKey,
-    queryFn: ({ signal }) => fetchAccountCart(signal),
+    queryKey: [...cartQueryKey, locale],
+    queryFn: ({ signal }) => fetchAccountCart(signal, locale),
     retry: (count, error) =>
       !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
 
   const updateCart = (cart: AccountCart | null) => {
-    queryClient.setQueryData(cartQueryKey, cart);
+    queryClient.setQueryData([...cartQueryKey, locale], cart);
     void queryClient.invalidateQueries({ queryKey: ["account"] });
   };
 
   const reportMutationError = (title: string, error: unknown) => {
     if (error instanceof CommerceApiError && error.status === 401) {
-      toast.info("نشست شما پایان یافته است", {
-        description: "برای ادامه مدیریت سبد دوباره وارد حساب شوید.",
+      toast.info(copy.sessionEnded, {
+        description: copy.sessionEndedDescription,
       });
-      router.push(loginHref("/cart"));
+      router.push(localizedHref(loginHref(localizedHref("/cart", locale)), locale));
       return;
     }
-    toast.error(title, { description: messageFor(error) });
+    toast.error(title, { description: messageFor(error, copy, locale) });
   };
 
   const quantityMutation = useMutation({
     mutationFn: ({ id, quantity }: { id: string; quantity: number }) =>
-      commerceFetch<AccountCart>(`/api/account/cart/items/${id}`, {
+      commerceFetch<AccountCart>(`/api/account/cart/items/${id}?locale=${locale}`, {
         method: "PATCH",
         body: JSON.stringify({ quantity }),
       }),
     onSuccess: updateCart,
-    onError: (error) => reportMutationError("تغییر تعداد انجام نشد", error),
+    onError: (error) => reportMutationError(copy.quantityError, error),
   });
 
   const removeMutation = useMutation({
     mutationFn: (id: string) =>
-      commerceFetch<AccountCart>(`/api/account/cart/items/${id}`, {
+      commerceFetch<AccountCart>(`/api/account/cart/items/${id}?locale=${locale}`, {
         method: "DELETE",
       }),
     onSuccess: (cart) => {
       updateCart(cart);
-      toast.success("کالا از سبد حذف شد");
+      toast.success(copy.removedSuccess);
     },
-    onError: (error) => reportMutationError("حذف کالا انجام نشد", error),
+    onError: (error) => reportMutationError(copy.removeError, error),
   });
 
   const clearMutation = useMutation({
     mutationFn: () =>
-      commerceFetch<AccountCart>("/api/account/cart", { method: "DELETE" }),
+      commerceFetch<AccountCart>(`/api/account/cart?locale=${locale}`, { method: "DELETE" }),
     onSuccess: (cart) => {
       updateCart(cart);
-      toast.success("سبد خرید خالی شد");
+      toast.success(copy.clearedSuccess);
     },
-    onError: (error) => reportMutationError("خالی‌کردن سبد انجام نشد", error),
+    onError: (error) => reportMutationError(copy.clearError, error),
   });
 
   const signedOut =
@@ -85,36 +88,36 @@ export function CartPage() {
   const locked = cart?.status === "checkout_started";
 
   return (
-    <main dir="rtl" lang="fa" className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
+    <main dir={getLocaleDirection(locale)} lang={getHtmlLang(locale)} className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
       <div className="mx-auto w-full max-w-[1500px] px-5 sm:px-8 lg:px-12">
         <header className="border-b border-black/15 pb-8 md:flex md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.12em] text-[#C15427]">انتخاب‌های شما</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">سبد خرید</h1>
+            <p className="text-[10px] font-semibold tracking-[0.12em] text-[#C15427]">{copy.eyebrow}</p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">{copy.title}</h1>
           </div>
           {cart?.itemCount ? (
             <p className="mt-4 text-sm text-black/65 md:mt-0">
-              {new Intl.NumberFormat("fa-IR").format(cart.itemCount)} کالا
+              {formatCopy(copy.itemCount, { count: new Intl.NumberFormat(getHtmlLang(locale)).format(cart.itemCount) })}
             </p>
           ) : null}
         </header>
 
-        {cartQuery.isPending ? <CartLoading /> : null}
+        {cartQuery.isPending ? <CartLoading label={copy.loading} /> : null}
 
         {signedOut ? (
           <StatePanel
             icon={<ShoppingBag className="size-6" />}
-            title="برای دیدن سبد وارد حساب شوید"
-            description="سبد خرید و رزرو موجودی به حساب شما متصل است تا انتخاب‌هایتان محفوظ بماند."
+            title={copy.signedOutTitle}
+            description={copy.signedOutDescription}
           >
-            <Button href={loginHref("/cart")} variant="black" size="lg">ورود به حساب</Button>
+            <Button href={localizedHref(loginHref(localizedHref("/cart", locale)), locale)} variant="black" size="lg">{copy.login}</Button>
           </StatePanel>
         ) : null}
 
         {cartQuery.isError && !signedOut ? (
-          <StatePanel title="سبد خرید دریافت نشد" description={messageFor(cartQuery.error)}>
+          <StatePanel title={copy.fetchError} description={messageFor(cartQuery.error, copy, locale)}>
             <Button type="button" variant="outline" size="lg" onClick={() => void cartQuery.refetch()}>
-              تلاش دوباره
+              {copy.retry}
             </Button>
           </StatePanel>
         ) : null}
@@ -122,19 +125,19 @@ export function CartPage() {
         {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
           <StatePanel
             icon={<ShoppingBag className="size-6" />}
-            title="سبد شما هنوز خالی است"
-            description="از میان محصولات نجیب‌زاده، ترکیب دقیق رنگ و سایز خود را انتخاب کنید."
+            title={copy.emptyTitle}
+            description={copy.emptyDescription}
           >
-            <Button href="/shop" variant="black" size="lg">مشاهده فروشگاه</Button>
+            <Button href={localizedHref("/shop", locale)} variant="black" size="lg">{copy.shop}</Button>
           </StatePanel>
         ) : null}
 
         {cart?.items.length ? (
           <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
-            <section aria-label="کالاهای سبد خرید">
+            <section aria-label={copy.itemsLabel}>
               {locked ? (
-                <div className="mb-7 border-r-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7">
-                  موجودی این انتخاب‌ها در مرحله پرداخت رزرو شده است. برای تغییر سبد، ابتدا رزرو خرید را لغو کنید.
+                <div className="mb-7 border-s-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7">
+                  {copy.lockedNotice}
                 </div>
               ) : null}
 
@@ -145,7 +148,7 @@ export function CartPage() {
                     (removeMutation.isPending && removeMutation.variables === item.id);
                   return (
                     <article key={item.id} className="grid grid-cols-[108px_minmax(0,1fr)] gap-5 py-7 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:gap-7">
-                      <Link href={item.productSlug ? `/shop/${item.productSlug}` : "/shop"} className="relative aspect-[3/4] overflow-hidden bg-[#E9E3DA]">
+                      <Link href={localizedHref(item.productSlug ? `/shop/${item.productSlug}` : "/shop", locale)} className="relative aspect-[3/4] overflow-hidden bg-[#E9E3DA]">
                         <Image
                           src={item.imageUrl || FALLBACK_IMAGE}
                           alt={item.imageAlt || item.productName}
@@ -157,39 +160,39 @@ export function CartPage() {
                       </Link>
 
                       <div className="min-w-0 py-1">
-                        <p className="text-[11px] tracking-[0.08em] text-black/60">{item.sku}</p>
-                        <Link href={item.productSlug ? `/shop/${item.productSlug}` : "/shop"} className="mt-2 block text-lg font-semibold leading-8 transition-colors hover:text-[#C15427]">
+                        <p dir="ltr" className="break-all text-start text-[11px] tracking-[0.08em] text-black/60">{item.sku}</p>
+                        <Link href={localizedHref(item.productSlug ? `/shop/${item.productSlug}` : "/shop", locale)} className="mt-2 block text-lg font-semibold leading-8 transition-colors hover:text-[#C15427]">
                           {item.productName}
                         </Link>
                         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-black/65">
                           <div className="flex items-center gap-2">
-                            <dt>رنگ</dt>
+                            <dt>{copy.color}</dt>
                             <dd className="flex items-center gap-1.5 text-black/80">
                               {item.colorHex ? <span className="size-2.5 border border-black/15" style={{ backgroundColor: item.colorHex }} aria-hidden /> : null}
                               {item.colorName}
                             </dd>
                           </div>
-                          <div className="flex gap-2"><dt>سایز</dt><dd className="text-black/80">{item.sizeName}</dd></div>
+                          <div className="flex gap-2"><dt>{copy.size}</dt><dd className="text-black/80">{item.sizeName}</dd></div>
                         </dl>
 
                         <div className="mt-6 flex flex-wrap items-center gap-4">
                           <div className="flex h-11 items-center border border-black/20 bg-white">
-                            <button type="button" aria-label={`کم کردن تعداد ${item.productName}`} disabled={locked || changing || item.quantity <= 1} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity - 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                            <button type="button" aria-label={formatCopy(copy.decrease, { name: item.productName })} disabled={locked || changing || item.quantity <= 1} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity - 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
                               <Minus className="size-3.5" />
                             </button>
-                            <span className="min-w-10 text-center text-xs tabular-nums">{new Intl.NumberFormat("fa-IR").format(item.quantity)}</span>
-                            <button type="button" aria-label={`زیاد کردن تعداد ${item.productName}`} disabled={locked || changing || item.quantity >= 99} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity + 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                            <span className="min-w-10 text-center text-xs tabular-nums">{new Intl.NumberFormat(getHtmlLang(locale)).format(item.quantity)}</span>
+                            <button type="button" aria-label={formatCopy(copy.increase, { name: item.productName })} disabled={locked || changing || item.quantity >= 99} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity + 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
                               <Plus className="size-3.5" />
                             </button>
                           </div>
                           <button type="button" disabled={locked || changing} onClick={() => removeMutation.mutate(item.id)} className="inline-flex min-h-11 items-center gap-2 text-xs text-black/65 underline-offset-4 transition-colors hover:text-[#A33A32] hover:underline disabled:opacity-30">
-                            <Trash2 className="size-3.5" /> حذف
+                            <Trash2 className="size-3.5" /> {removeMutation.isPending && removeMutation.variables === item.id ? copy.removing : copy.remove}
                           </button>
                         </div>
                       </div>
 
-                      <p className="col-span-2 mt-1 text-left text-sm font-semibold tabular-nums sm:col-span-1 sm:mt-0 sm:py-1">
-                        {formatMinor(item.lineTotalMinor, cart.currency)}
+                      <p className="col-span-2 mt-1 text-end text-sm font-semibold tabular-nums sm:col-span-1 sm:mt-0 sm:py-1">
+                        {formatMinor(item.lineTotalMinor, cart.currency, locale)}
                       </p>
                     </article>
                   );
@@ -198,27 +201,27 @@ export function CartPage() {
 
               {!locked ? (
                 <button type="button" disabled={clearMutation.isPending} onClick={() => clearMutation.mutate()} className="mt-5 min-h-11 text-xs text-black/65 underline underline-offset-4 transition-colors hover:text-[#A33A32] disabled:opacity-40">
-                  {clearMutation.isPending ? "در حال خالی‌کردن…" : "خالی‌کردن سبد"}
+                  {clearMutation.isPending ? copy.clearing : copy.clear}
                 </button>
               ) : null}
             </section>
 
             <aside className="h-fit border-t-2 border-black bg-white p-6 lg:sticky lg:top-28 lg:p-8">
-              <p className="text-[10px] font-semibold tracking-[0.1em] text-[#C15427]">خلاصه سفارش</p>
+              <p className="text-[10px] font-semibold tracking-[0.1em] text-[#C15427]">{copy.summary}</p>
               <div className="mt-7 flex items-center justify-between border-b border-black/15 pb-5 text-sm">
-                <span>جمع کالاها</span><strong className="tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong>
+                <span>{copy.subtotal}</span><strong className="tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency, locale)}</strong>
               </div>
               <div className="space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/65">
-                <p className="flex justify-between gap-4"><span>هزینه ارسال</span><span>در مرحله تحویل مشخص می‌شود</span></p>
-                <p className="flex justify-between gap-4"><span>تخفیف و مالیات</span><span>فعلاً اعمال نمی‌شود</span></p>
+                <p className="flex justify-between gap-4"><span>{copy.shipping}</span><span className="text-end">{copy.shippingPending}</span></p>
+                <p className="flex justify-between gap-4"><span>{copy.discountTax}</span><span className="text-end">{copy.discountTaxNone}</span></p>
               </div>
               <div className="flex items-center justify-between py-6">
-                <span className="font-semibold">مبلغ کالاها</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong>
+                <span className="font-semibold">{copy.merchandiseTotal}</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency, locale)}</strong>
               </div>
-              <Button type="button" variant="black" size="xl" fullWidth onClick={() => router.push("/checkout")}>
-                {locked ? "ادامه پرداخت" : "ادامه فرایند خرید"}
+              <Button type="button" variant="black" size="xl" fullWidth onClick={() => router.push(localizedHref("/checkout", locale))}>
+                {locked ? copy.continuePayment : copy.continueCheckout}
               </Button>
-              <p className="mt-4 text-center text-xs leading-6 text-black/65">موجودی تنها پس از ورود به مرحله تکمیل خرید برای ۱۵ دقیقه رزرو می‌شود.</p>
+              <p className="mt-4 text-center text-xs leading-6 text-black/65">{copy.reservationNote}</p>
             </aside>
           </div>
         ) : null}
@@ -227,9 +230,9 @@ export function CartPage() {
   );
 }
 
-function CartLoading() {
+function CartLoading({ label }: { label: string }) {
   return (
-    <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px]" aria-label="در حال دریافت سبد">
+    <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px]" aria-label={label} aria-busy="true">
       <div className="space-y-px">
         {[1, 2].map((item) => (
           <div key={item} className="flex gap-6 border-y border-black/10 py-7">
@@ -254,6 +257,15 @@ function StatePanel({ icon, title, description, children }: { icon?: React.React
   );
 }
 
-function messageFor(error: unknown) {
-  return error instanceof Error ? error.message : "لطفاً دوباره تلاش کنید.";
+function messageFor(error: unknown, copy: CartCopy, locale: Locale) {
+  if (!(error instanceof CommerceApiError)) return copy.genericError;
+  if (locale === "fa" && error.message) return error.message;
+  if (error.status === 400) return copy.validationError;
+  if (error.status === 404) return copy.notFoundError;
+  if (error.status === 409) return copy.conflictError;
+  return error.status >= 500 ? copy.serverError : copy.genericError;
+}
+
+function formatCopy(template: string, values: Record<string, string>) {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }

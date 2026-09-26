@@ -380,6 +380,7 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   wishlist: "علاقه‌مندی‌ها",
   cart: "سبد خرید",
   checkout: "تکمیل خرید",
+  "recover-checkout": "بازیابی خرید",
   about: "درباره ما",
   contact: "تماس با ما",
   campaigns: "کمپین‌ها",
@@ -509,6 +510,8 @@ const BREADCRUMB_LABELS_BY_LOCALE: Record<Locale, Record<string, string>> = {
     profile: "Account",
     wishlist: "Wishlist",
     cart: "Shopping bag",
+    checkout: "Checkout",
+    "recover-checkout": "Recover checkout",
     "about-us": "About us",
     about: "About us",
     "contact-us": "Contact us",
@@ -538,6 +541,8 @@ const BREADCRUMB_LABELS_BY_LOCALE: Record<Locale, Record<string, string>> = {
     profile: "الحساب",
     wishlist: "المفضلة",
     cart: "سلة التسوق",
+    checkout: "إتمام الشراء",
+    "recover-checkout": "استعادة الشراء",
     "about-us": "من نحن",
     about: "من نحن",
     "contact-us": "اتصل بنا",
@@ -1061,7 +1066,7 @@ export default function Navbar({
     };
   }, [hideMenu, menuMounted]);
 
-  const commerceSurface = pathname === "/cart" || pathname === "/checkout";
+  const commerceSurface = ["/cart", "/checkout", "/recover-checkout"].includes(pathnameWithoutLocale);
   const commerceLightSurface = commerceSurface && !menuMounted;
   const readableNavbar = menuMounted || scrolled || commerceSurface;
 
@@ -1192,9 +1197,9 @@ export default function Navbar({
             </div>
 
             <Link
-              href="/"
+              href={localizedPath("/", locale)}
               onClick={hideMenu}
-              aria-label="صفحه اصلی نجیب‌زاده"
+              aria-label={copy.navbar.homeAria}
               className={cx(
                 "absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2",
                 "transform-gpu transition-[opacity,transform,filter] duration-300",
@@ -1256,7 +1261,6 @@ export default function Navbar({
                 currentLocale={locale}
                 label={languageCopy.openButton}
                 onClick={openLanguageModal}
-                onReadableSurface={readableNavbar}
                 open={languageModalOpen}
               />
 
@@ -2063,14 +2067,12 @@ type LanguageModalCopy = (typeof LANGUAGE_MODAL_COPY)[Locale];
 function LanguageToggle({
   buttonRef,
   currentLocale,
-  onReadableSurface,
   label,
   onClick,
   open,
 }: {
   buttonRef: RefObject<HTMLButtonElement | null>;
   currentLocale: Locale;
-  onReadableSurface: boolean;
   label: string;
   onClick: () => void;
   open: boolean;

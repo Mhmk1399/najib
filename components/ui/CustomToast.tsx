@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import { createPortal } from "react-dom";
+import { getHtmlLang, getLocaleDirection, type Locale } from "@/lib/i18n/config";
 
 /* ==========================================================================
    TYPES
@@ -131,6 +132,7 @@ type ToastProviderProps = {
   position?: ToastPosition;
 
   maxToasts?: number;
+  locale?: Locale;
 };
 
 export function ToastProvider({
@@ -139,6 +141,7 @@ export function ToastProvider({
   position = "top-right",
 
   maxToasts = 5,
+  locale = "fa",
 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
@@ -512,6 +515,7 @@ export function ToastProvider({
             toasts={toasts}
             position={position}
             dismiss={dismiss}
+            locale={locale}
           />,
 
           document.body,
@@ -544,15 +548,19 @@ function ToastViewport({
   position,
 
   dismiss,
+  locale,
 }: {
   toasts: ToastItem[];
 
   position: ToastPosition;
 
   dismiss: (id: string) => void;
+  locale: Locale;
 }) {
   return (
     <div
+      dir={getLocaleDirection(locale)}
+      lang={getHtmlLang(locale)}
       aria-live="polite"
       aria-relevant="additions"
       className={`
@@ -636,7 +644,7 @@ function ToastViewport({
       `}
     >
       {toasts.map((toast) => (
-        <ToastCard key={toast.id} toast={toast} dismiss={dismiss} />
+        <ToastCard key={toast.id} toast={toast} dismiss={dismiss} locale={locale} />
       ))}
     </div>
   );
@@ -650,12 +658,15 @@ function ToastCard({
   toast,
 
   dismiss,
+  locale,
 }: {
   toast: ToastItem;
 
   dismiss: (id: string) => void;
+  locale: Locale;
 }) {
   const meta = VARIANT_META[toast.variant];
+  const localizedMeta = TOAST_COPY[locale];
 
   return (
     <div
@@ -777,7 +788,7 @@ function ToastCard({
               ${meta.labelClass}
             `}
           >
-            {meta.label}
+            {localizedMeta.labels[toast.variant]}
           </span>
         </div>
 
@@ -852,7 +863,7 @@ function ToastCard({
         {toast.dismissible && (
           <button
             type="button"
-            aria-label="Dismiss notification"
+            aria-label={localizedMeta.dismiss}
             onClick={() => dismiss(toast.id)}
             className="
               grid
@@ -1119,6 +1130,21 @@ const VARIANT_META: Record<
     lineClass: `
       bg-[#231F20]
     `,
+  },
+};
+
+const TOAST_COPY: Record<Locale, { dismiss: string; labels: Record<ToastVariant, string> }> = {
+  fa: {
+    dismiss: "بستن اعلان",
+    labels: { success: "موفق", error: "خطا", warning: "توجه", info: "اطلاع", loading: "در حال انجام" },
+  },
+  en: {
+    dismiss: "Dismiss notification",
+    labels: { success: "Success", error: "Error", warning: "Notice", info: "Info", loading: "Loading" },
+  },
+  ar: {
+    dismiss: "إغلاق الإشعار",
+    labels: { success: "تم", error: "خطأ", warning: "تنبيه", info: "معلومة", loading: "جارٍ التنفيذ" },
   },
 };
 

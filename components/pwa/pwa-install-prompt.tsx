@@ -184,7 +184,9 @@ export function PwaInstallPrompt() {
   const isPrivateWorkspace =
     pathname.startsWith("/admin") ||
     pathname === "/auth" ||
-    pathname.startsWith("/customer-dashboard");
+    pathname.startsWith("/customer-dashboard") ||
+    /\/(?:fa|en|ar)\/cart(?:\/|$)/.test(pathname) ||
+    pathname === "/cart";
 
   const canInstall = Boolean(installPrompt) || isIos;
 

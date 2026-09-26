@@ -42,7 +42,6 @@ import {
   siteUrl,
 } from "@/lib/i18n/metadata";
 import { estedad } from "@/next-persian-fonts/estedad";
-import { Dana } from "@/next-persian-fonts/dana";
 import { Aria } from "@/next-persian-fonts/Aria Family";
  
 export const metadata: Metadata = {
@@ -132,9 +131,9 @@ export default async function RootLayout({
           <LenisProvider>
             <QueryProvider>
               <PwaInstallPrompt />
-              <SiteShell>
+              <SiteShell locale={locale}>
                 <div className="flex-1">
-                  <ToastProvider position="top-right" maxToasts={5}>
+                  <ToastProvider position="top-right" maxToasts={5} locale={locale}>
                     {children}
                   </ToastProvider>
                 </div>

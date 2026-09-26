@@ -42,6 +42,7 @@ const cartSchema = new Schema(
       default: "active",
       index: true,
     },
+    recoveryAbandonedCheckoutId: { type: String, trim: true, index: true },
     expiresAt: { type: Date, required: true, index: true },
   },
   { timestamps: true },
@@ -58,4 +59,3 @@ cartSchema.index({ userId: 1, status: 1 });
 
 export type CartDocument = InferSchemaType<typeof cartSchema>;
 export const Cart = models.Cart || model("Cart", cartSchema);
-

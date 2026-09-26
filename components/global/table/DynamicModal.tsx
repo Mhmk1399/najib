@@ -13,7 +13,7 @@ import {
 
 export type DynamicModalProps = {
   open: boolean;
-  onClose: () => void;
+  onClose?: () => void;
   title: string;
   description?: string;
   children: ReactNode;
@@ -45,7 +45,7 @@ const FOCUSABLE = [
 
 export function DynamicModal({
   open,
-  onClose,
+  onClose = () => {},
   title,
   description,
   children,

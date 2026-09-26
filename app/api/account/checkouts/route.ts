@@ -4,10 +4,11 @@ import { checkoutService } from "@/services/checkout/service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const account = await requireCustomerApiAccount();
-    return jsonResponse(await checkoutService.destinationsForCart(account.id), {
+    const currency = new URL(request.url).searchParams.get("currency");
+    return jsonResponse(await checkoutService.destinationsForCart(account.id, currency === "USD" ? "USD" : "IRR"), {
       cache: "no-store",
     });
   } catch (error) {

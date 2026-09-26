@@ -5,6 +5,7 @@ import { type CSSProperties } from "react";
 import { Layers, Search, Sparkles } from "lucide-react";
 
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import type { HomeCopy } from "@/lib/i18n/home-copy";
 
@@ -147,9 +148,9 @@ function formatMoney(
       style: "currency",
       currency: currency || "IRR",
       maximumFractionDigits: 0,
-    }).format(minor / 100);
+    }).format(amountForCurrencyDisplay(minor, currency || "IRR"));
   } catch {
-    return `${formatNumber(minor / 100, locale)} ${currency ?? ""}`.trim();
+    return `${formatNumber(amountForCurrencyDisplay(minor, currency || "IRR"), locale)} ${currency ?? ""}`.trim();
   }
 }
 

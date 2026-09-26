@@ -35,6 +35,8 @@ const productVariantSchema = new Schema(
       min: 0,
       validate: Number.isSafeInteger,
     },
+    priceOverrideIrrMinor: { type: Number, min: 0, validate: Number.isSafeInteger },
+    priceOverrideUsdMinor: { type: Number, min: 0, validate: Number.isSafeInteger },
     isActive: { type: Boolean, default: true, index: true },
   },
   { timestamps: true },
@@ -55,4 +57,3 @@ export type ProductVariantDocument = InferSchemaType<
 >;
 export const ProductVariant =
   models.ProductVariant || model("ProductVariant", productVariantSchema);
-

@@ -1,6 +1,7 @@
 import mongoose, { type Model } from "mongoose";
 import { type z } from "zod";
 import { connectToDatabase } from "@/lib/server/db";
+import { CATALOG_CURRENCY } from "@/lib/catalog/currency";
 import { badRequest, conflict, notFound } from "@/lib/server/errors";
 import { Category } from "@/models/catalog/category";
 import { Collection } from "@/models/catalog/collection";
@@ -139,7 +140,10 @@ export class CatalogService {
       if (resource === "images") {
         await this.assertImageReferences(input as Record<string, unknown>);
       }
-      return await models[resource].create(input);
+      const createInput = resource === "products"
+        ? { ...(input as Record<string, unknown>), currency: CATALOG_CURRENCY }
+        : input;
+      return await models[resource].create(createInput);
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -173,6 +177,14 @@ export class CatalogService {
         })
         .lean();
       if (!item) notFound(`${resource} record was not found`);
+      if (resource === "products") {
+        const value = input as { priceIrrMinor?: number; priceUsdMinor?: number };
+        await Product.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(value.priceIrrMinor === undefined ? {} : { priceIrrMinor: value.priceIrrMinor }), ...(value.priceUsdMinor === undefined ? {} : { priceUsdMinor: value.priceUsdMinor }) } });
+      }
+      if (resource === "variants") {
+        const value = input as { priceOverrideIrrMinor?: number; priceOverrideUsdMinor?: number };
+        await ProductVariant.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(value.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: value.priceOverrideIrrMinor }), ...(value.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: value.priceOverrideUsdMinor }) } });
+      }
       return item;
     } catch (error) {
       this.handleDatabaseError(error);

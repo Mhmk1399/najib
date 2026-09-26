@@ -8,7 +8,7 @@ import { connectToDatabase } from "@/lib/server/db";
 import { conflict, notFound } from "@/lib/server/errors";
 import { User } from "@/models/auth/user";
 import { Cart } from "@/models/catalog/cart";
-import { CheckoutSession } from "@/models/catalog/checkout";
+import { AbandonedCheckout, CheckoutSession } from "@/models/catalog/checkout";
 import { Color } from "@/models/catalog/color";
 import { Order } from "@/models/catalog/order";
 import { Outbox } from "@/models/catalog/outbox";
@@ -45,10 +45,13 @@ type CheckoutRecord = {
   cityId: string;
   currency: string;
   items: Array<{ variantId: string; quantity: number; unitPriceMinor: number }>;
+  shipments?: Array<{ storeId: string; cityId: string; storeCode: string; storeName: LocalizedText; address?: LocalizedText; shippingMinor: number; items: Array<{ variantId: string; locationId: string; quantity: number }> }>;
+  shippingMinor?: number;
   status: string;
   expiresAt: Date;
   correlationId: string;
   inventoryReservationId?: string;
+  recoveryAbandonedCheckoutId?: string;
 };
 
 type PaymentRecord = {
@@ -91,7 +94,7 @@ function amount(checkout: CheckoutRecord) {
   return checkout.items.reduce(
     (sum, item) => sum + item.quantity * item.unitPriceMinor,
     0,
-  );
+  ) + (checkout.shippingMinor ?? 0);
 }
 
 function serializePayment(value: PaymentRecord, idempotent = false) {
@@ -363,6 +366,11 @@ export const paymentService = {
       if (!currentCheckout || !currentCheckout.inventoryReservationId) {
         conflict("Checkout دیگر آماده تکمیل پرداخت نیست.");
       }
+      const checkoutAttribution = await CheckoutSession.collection.findOne(
+        { _id: currentCheckout._id },
+        { projection: { recoveryAbandonedCheckoutId: 1 }, session },
+      );
+      const recoveryAbandonedCheckoutId = checkoutAttribution?.recoveryAbandonedCheckoutId as string | undefined;
       const checkoutRecord = currentCheckout.toObject() as unknown as CheckoutRecord;
       if (amount(checkoutRecord) !== currentPayment.amountMinor) {
         conflict("مبلغ Checkout با مبلغ پرداخت هماهنگ نیست.");
@@ -373,6 +381,11 @@ export const paymentService = {
         .lean() as unknown as UserRecord | null;
       if (!user) notFound("حساب کاربری پیدا نشد.");
       const items = await orderItems(checkoutRecord, session);
+      const shippingMinor = checkoutRecord.shippingMinor ?? 0;
+      const subtotalMinor = checkoutRecord.items.reduce(
+        (sum, item) => sum + item.quantity * item.unitPriceMinor,
+        0,
+      );
       await transitionInventoryReservationInSession(
         currentCheckout.inventoryReservationId,
         { action: "commit", reason: "پرداخت تأییدشده" },
@@ -399,20 +412,44 @@ export const paymentService = {
         paymentIntentId: currentPayment.id,
         currency: currentCheckout.currency,
         items,
-        subtotalMinor: currentPayment.amountMinor,
+        shipments: checkoutRecord.shipments ?? [],
+        subtotalMinor,
         taxMinor: 0,
         discountMinor: 0,
-        shippingMinor: 0,
+        shippingMinor,
         totalMinor: currentPayment.amountMinor,
         status: "confirmed",
-        policyVersion: "checkout-v1",
+        policyVersion: "checkout-v2-split-fulfillment",
         confirmedAt: new Date(),
       }], { session });
+      await Order.collection.updateOne(
+        { _id: order._id },
+        { $set: { shipments: checkoutRecord.shipments ?? [], shippingMinor, subtotalMinor, totalMinor: currentPayment.amountMinor, policyVersion: "checkout-v2-split-fulfillment" } },
+        { session },
+      );
 
       currentPayment.status = "succeeded";
       currentPayment.orderId = order._id;
       currentPayment.lastErrorCode = undefined;
       currentCheckout.status = "completed";
+      if (recoveryAbandonedCheckoutId) {
+        const recovery = await AbandonedCheckout.collection.findOneAndUpdate(
+          {
+            _id: new mongoose.Types.ObjectId(recoveryAbandonedCheckoutId),
+            userId: accountId,
+            recoveryStatus: { $in: ["eligible", "contacted"] },
+          },
+          {
+            $set: {
+              recoveryStatus: "recovered",
+              recoveredOrderId: order.id,
+              recoveryCheckoutSessionId: currentCheckout.id,
+            },
+          },
+          { returnDocument: "after", session },
+        );
+        if (!recovery) conflict("پرونده بازیابی برای تکمیل سفارش معتبر نیست.");
+      }
       await Promise.all([
         currentPayment.save({ session }),
         currentCheckout.save({ session }),
@@ -434,7 +471,18 @@ export const paymentService = {
           correlationId: currentCheckout.correlationId,
           destination: "events",
           payload: { orderId: order.id, paymentIntentId: currentPayment.id, userId: accountId },
-        }, {
+        }, ...(recoveryAbandonedCheckoutId ? [{
+          eventId: randomUUID(),
+          eventType: "AbandonedCheckoutRecovered",
+          correlationId: currentCheckout.correlationId,
+          destination: "events" as const,
+          payload: {
+            abandonedCheckoutId: recoveryAbandonedCheckoutId,
+            checkoutSessionId: currentCheckout.id,
+            orderId: order.id,
+            userId: accountId,
+          },
+        }] : []), {
           eventId: randomUUID(),
           eventType: "OrderConfirmationSmsRequested",
           correlationId: currentCheckout.correlationId,

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 import {
   ArrowLeft,
   ArrowRight,
@@ -214,12 +215,11 @@ function money(
   value: number,
   currency: string,
   locale: Locale,
-  copy: CustomerDashboardCopy,
 ) {
-  const amount = currency === "IRR" ? Math.round(value / 10) : value / 100;
+  const amount = amountForCurrencyDisplay(value, currency);
 
   return `${formatNumber(amount, locale)} ${
-    currency === "IRR" ? copy.currency.toman : currency
+    currency === "IRR" ? (locale === "en" ? "rial" : locale === "ar" ? "ريال" : "ریال") : currency
   }`;
 }
 
@@ -747,7 +747,7 @@ function Overview({
               <p className="mt-2 text-sm text-white/65">
                 {copy.overview.cartSubtotalLabel}{" "}
                 <span dir="ltr" className="font-semibold text-white">
-                  {money(cart.subtotalMinor, cart.currency, locale, copy)}
+                  {money(cart.subtotalMinor, cart.currency, locale)}
                 </span>
               </p>
 
@@ -762,7 +762,7 @@ function Overview({
                     </span>
 
                     <span className="shrink-0" dir="ltr">
-                      {money(item.lineTotalMinor, cart.currency, locale, copy)}
+                      {money(item.lineTotalMinor, cart.currency, locale)}
                     </span>
                   </div>
                 ))}
@@ -836,7 +836,7 @@ function OrderRow({
       </div>
 
       <p className="hidden text-sm font-semibold sm:block" dir="ltr">
-        {money(order.totalMinor, order.currency, locale, copy)}
+        {money(order.totalMinor, order.currency, locale)}
       </p>
 
       <StatusBadge status={order.status} />
@@ -1125,7 +1125,7 @@ function OrderDrawer({
                 </div>
 
                 <p className="shrink-0 text-sm font-semibold" dir="ltr">
-                  {money(item.lineTotalMinor, order.currency, locale, copy)}
+                  {money(item.lineTotalMinor, order.currency, locale)}
                 </p>
               </div>
 
@@ -1148,7 +1148,7 @@ function OrderDrawer({
             <dt className="text-black/55">{copy.orderDetail.subtotalLabel}</dt>
 
             <dd dir="ltr">
-              {money(order.subtotalMinor, order.currency, locale, copy)}
+              {money(order.subtotalMinor, order.currency, locale)}
             </dd>
           </div>
 
@@ -1156,7 +1156,7 @@ function OrderDrawer({
             <dt className="text-black/55">{copy.orderDetail.shippingLabel}</dt>
 
             <dd dir="ltr">
-              {money(order.shippingMinor, order.currency, locale, copy)}
+              {money(order.shippingMinor, order.currency, locale)}
             </dd>
           </div>
 
@@ -1165,7 +1165,7 @@ function OrderDrawer({
               <dt>{copy.orderDetail.discountLabel}</dt>
 
               <dd dir="ltr">
-                − {money(order.discountMinor, order.currency, locale, copy)}
+                − {money(order.discountMinor, order.currency, locale)}
               </dd>
             </div>
           )}
@@ -1174,7 +1174,7 @@ function OrderDrawer({
             <dt>{copy.orderDetail.totalLabel}</dt>
 
             <dd dir="ltr">
-              {money(order.totalMinor, order.currency, locale, copy)}
+              {money(order.totalMinor, order.currency, locale)}
             </dd>
           </div>
         </dl>

@@ -2,6 +2,7 @@ import "server-only";
 import mongoose from "mongoose";
 import { z } from "zod";
 import { connectToDatabase } from "@/lib/server/db";
+import { CATALOG_CURRENCY } from "@/lib/catalog/currency";
 import { notFound } from "@/lib/server/errors";
 import { Category } from "@/models/catalog/category";
 import { Collection } from "@/models/catalog/collection";
@@ -78,7 +79,7 @@ export async function listPublicProducts(query: PublicProductQuery) {
   const lastItem = items.at(-1) as { _id?: mongoose.Types.ObjectId } | undefined;
 
   return {
-    items,
+    items: items.map((item) => ({ ...item, currency: CATALOG_CURRENCY })),
     nextCursor: !query.q && hasMore && lastItem?._id ? String(lastItem._id) : null,
   };
 }
@@ -87,7 +88,7 @@ export async function getPublicProduct(slug: string) {
   await connectToDatabase();
   const product = await Product.findOne({ slug: slugSchema.parse(slug), status: "active" }).lean();
   if (!product) notFound("Product was not found.");
-  return product;
+  return { ...product, currency: CATALOG_CURRENCY };
 }
 
 export async function listPublicCategories() {

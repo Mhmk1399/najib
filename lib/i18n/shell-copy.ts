@@ -455,10 +455,15 @@ export function formatShellNumber(
   const numeric = Number(value);
 
   if (Number.isFinite(numeric)) {
-    return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : locale, {
+    const ascii = new Intl.NumberFormat("en-US-u-nu-latn", {
       minimumIntegerDigits,
       useGrouping: false,
     }).format(numeric);
+
+    if (locale === "en") return ascii;
+
+    const digits = locale === "ar" ? "٠١٢٣٤٥٦٧٨٩" : "۰۱۲۳۴۵۶۷۸۹";
+    return ascii.replace(/\d/g, (digit) => digits[Number(digit)]);
   }
 
   return String(value);

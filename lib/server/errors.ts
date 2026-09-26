@@ -18,18 +18,18 @@ export function badRequest(message: string, details?: unknown): never {
   throw new ApiError(400, message, details);
 }
 
-export function unauthorized(message = "Unauthorized."): never {
-  throw new ApiError(401, message);
+export function unauthorized(message = "Unauthorized.", details?: unknown): never {
+  throw new ApiError(401, message, details);
 }
 
-export function forbidden(message = "Forbidden."): never {
-  throw new ApiError(403, message);
+export function forbidden(message = "Forbidden.", details?: unknown): never {
+  throw new ApiError(403, message, details);
 }
 
-export function notFound(message = "Not found."): never {
-  throw new ApiError(404, message);
+export function notFound(message = "Not found.", details?: unknown): never {
+  throw new ApiError(404, message, details);
 }
 
-export function conflict(message = "Conflict."): never {
-  throw new ApiError(409, message);
+export function conflict(message = "Conflict.", details?: unknown): never {
+  throw new ApiError(409, message, details);
 }

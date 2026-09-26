@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import {
   type CSSProperties,
@@ -17,6 +18,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -473,7 +475,7 @@ function mapStorefrontProduct({
     title,
     subtitle: subcategoryLabel,
     description: localizedText(product.description, locale, title),
-    price: Math.round(product.basePriceMinor / 100),
+    price: Math.round(amountForCurrencyDisplay(product.basePriceMinor, product.currency)),
     currency: product.currency,
     href: `/shop/${product.slug}`,
     image: fallbackImage.src,
@@ -556,6 +558,10 @@ function startLenis() {
   if (l && typeof l.start === "function") l.start();
 }
 
+const subscribeToHydration = () => () => undefined;
+const getHydratedClientSnapshot = () => true;
+const getHydratedServerSnapshot = () => false;
+
 /* ────────────────────────────────────────────────────────────
    SHOP PAGE
    ──────────────────────────────────────────────────────────── */
@@ -565,14 +571,15 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const catalogQuery = useStorefrontCatalog();
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot,
+  );
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [desktopFilterOpen, setDesktopFilterOpen] = useState(false);
   const [desktopFilterPinned, setDesktopFilterPinned] = useState(false);
-  useEffect(() => {
-    setHydrated(true);
-  }, []);
   const selectedSubcategorySlug = searchParams.get("subcategory") ?? "";
   const selectedCategorySlug = searchParams.get("category") ?? "";
   const searchQuery = (searchParams.get("search") ?? "")
@@ -2592,7 +2599,7 @@ function ProductCard({
     }
     setCartState("adding");
     try {
-      await commerceFetch("/api/account/cart/items", {
+      await commerceFetch(`/api/account/cart/items?locale=${locale}`, {
         method: "POST",
         body: JSON.stringify({ variantId: idOf(variant._id), quantity: 1 }),
       });
@@ -3928,7 +3935,6 @@ function EmptyProducts({ resetFilters }: { resetFilters: () => void }) {
 
 function InterstitialBanner({ banner }: { banner: ShopBanner }) {
   const { locale } = useShopI18n();
-  const isRtl = locale !== "en";
   const isDark = banner.theme === "dark";
   return (
     <section className="group relative col-span-full overflow-hidden">

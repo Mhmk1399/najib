@@ -2,9 +2,10 @@ import "server-only";
 
 import mongoose, { type ClientSession } from "mongoose";
 import { z } from "zod";
+import { CATALOG_CURRENCY, explicitPriceForCurrency, type CheckoutCurrency } from "@/lib/catalog/currency";
 
 import { connectToDatabase } from "@/lib/server/db";
-import { conflict, notFound } from "@/lib/server/errors";
+import { conflict, isApiError, notFound } from "@/lib/server/errors";
 import { User } from "@/models/auth/user";
 import { Cart } from "@/models/catalog/cart";
 import { CheckoutSession } from "@/models/catalog/checkout";
@@ -14,6 +15,11 @@ import { Order, ORDER_STATUSES } from "@/models/catalog/order";
 import { ProductVariant } from "@/models/catalog/product-variant";
 import { Product } from "@/models/catalog/product";
 import { Size } from "@/models/catalog/size";
+import { type Locale } from "@/lib/i18n/config";
+
+export const cartLocaleQuerySchema = z.object({
+  locale: z.enum(["fa", "en", "ar"]).default("fa"),
+}).strict();
 
 export const accountOrdersQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
@@ -40,6 +46,7 @@ export const addCartItemSchema = z.object({
 export const updateCartItemSchema = z.object({
   quantity: z.number().int().min(1).max(99),
 }).strict();
+export const updateCartCurrencySchema = z.object({ currency: z.enum(["IRR", "USD"]) }).strict();
 
 const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -123,11 +130,15 @@ type SellableVariantRecord = {
   colorId: unknown;
   sizeId: unknown;
   priceOverrideMinor?: number;
+  priceOverrideIrrMinor?: number;
+  priceOverrideUsdMinor?: number;
 };
 
 type SellableProductRecord = {
   basePriceMinor: number;
   currency: string;
+  priceIrrMinor?: number;
+  priceUsdMinor?: number;
 };
 
 type CartProductRecord = {
@@ -136,6 +147,7 @@ type CartProductRecord = {
   slug?: string;
   primaryImageId?: unknown;
   primaryImageObjectPosition?: string;
+  status?: string;
 };
 
 type CartCheckoutRecord = {
@@ -145,8 +157,13 @@ type CartCheckoutRecord = {
   paymentId?: unknown;
 };
 
-function localized(value: LocalizedText, fallback: string) {
-  return value?.fa || value?.en || value?.ar || fallback;
+function localized(value: LocalizedText, fallback: string, locale: Locale = "fa") {
+  const order: Locale[] = locale === "fa" ? ["fa", "en", "ar"] : locale === "en" ? ["en", "fa", "ar"] : ["ar", "fa", "en"];
+  for (const key of order) {
+    const text = value?.[key]?.trim();
+    if (text) return text;
+  }
+  return fallback;
 }
 
 function safeProfile(user: ProfileRecord) {
@@ -232,7 +249,7 @@ function cartExpiry() {
   return new Date(Date.now() + CART_TTL_MS);
 }
 
-async function loadSellableVariant(variantId: string, session: ClientSession) {
+async function loadSellableVariant(variantId: string, currency: CheckoutCurrency, session: ClientSession) {
   const variant = await ProductVariant.findOne({ _id: variantId, isActive: true })
     .session(session)
     .lean() as unknown as SellableVariantRecord | null;
@@ -240,7 +257,7 @@ async function loadSellableVariant(variantId: string, session: ClientSession) {
 
   const [product, color, size] = await Promise.all([
     Product.findOne({ _id: variant.productId, status: "active" })
-      .select("basePriceMinor currency")
+      .select("basePriceMinor currency priceIrrMinor priceUsdMinor")
       .session(session)
       .lean() as unknown as Promise<SellableProductRecord | null>,
     Color.exists({ _id: variant.colorId, isActive: true }).session(session),
@@ -249,13 +266,29 @@ async function loadSellableVariant(variantId: string, session: ClientSession) {
   if (!product || !color || !size) notFound("این تنوع در حال حاضر قابل فروش نیست.");
 
   return {
-    currency: product.currency.toUpperCase(),
-    unitPriceMinor: variant.priceOverrideMinor ?? product.basePriceMinor,
+    currency,
+    unitPriceMinor: explicitPriceForCurrency({ priceIrrMinor: variant.priceOverrideIrrMinor, priceUsdMinor: variant.priceOverrideUsdMinor, basePriceMinor: variant.priceOverrideMinor, currency: product.currency }, currency) ?? explicitPriceForCurrency(product, currency),
   };
 }
 
 async function loadMutableCart(accountId: string, session: ClientSession) {
   return Cart.findOne({ userId: accountId, status: "active" }).session(session);
+}
+
+async function repriceActiveCart(
+  cart: { currency: string; items: Array<{ variantId: unknown; unitPriceMinor: number }> },
+  session: ClientSession,
+) {
+  for (const item of cart.items) {
+    try {
+      const sellable = await loadSellableVariant(String(item.variantId), cart.currency as CheckoutCurrency, session);
+      if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: String(item.variantId), currency: cart.currency });
+      item.unitPriceMinor = sellable.unitPriceMinor;
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 404) throw error;
+      // Keep the last snapshot so the line remains readable and removable.
+    }
+  }
 }
 
 export const accountService = {
@@ -338,8 +371,17 @@ export const accountService = {
     return safeOrder(order as unknown as OrderRecord, true);
   },
 
-  async getCart(accountId: string) {
+  async getCart(accountId: string, locale: Locale = "fa") {
     await connectToDatabase();
+    const active = await Cart.findOne({ userId: accountId, status: "active" });
+    if (active) {
+      await mongoose.connection.transaction(async (session) => {
+        const cart = await Cart.findOne({ _id: active._id, userId: accountId, status: "active" }).session(session);
+        if (!cart) return;
+        await repriceActiveCart(cart, session);
+        await cart.save({ session });
+      });
+    }
     const cart = await Cart.findOne({ userId: accountId, status: "active" }).lean()
       ?? await Cart.findOne({ userId: accountId, status: "checkout_started" })
         .sort({ updatedAt: -1 })
@@ -352,13 +394,13 @@ export const accountService = {
     const variantMap = new Map(variants.map((variant) => [String(variant._id), variant]));
     const [products, colors, sizes, checkout] = await Promise.all([
       Product.find({ _id: { $in: variants.map((variant) => variant.productId) } })
-        .select("name slug primaryImageId primaryImageObjectPosition")
+        .select("name slug primaryImageId primaryImageObjectPosition status")
         .lean() as unknown as Promise<CartProductRecord[]>,
       Color.find({ _id: { $in: variants.map((variant) => variant.colorId) } })
-        .select("name hex")
+        .select("name hex isActive")
         .lean(),
       Size.find({ _id: { $in: variants.map((variant) => variant.sizeId) } })
-        .select("name code")
+        .select("name code isActive")
         .lean(),
       CheckoutSession.findOne({
         cartId: String(activeCart._id),
@@ -412,14 +454,19 @@ export const accountService = {
           quantity: item.quantity,
           unitPriceMinor: item.unitPriceMinor,
           lineTotalMinor: item.quantity * item.unitPriceMinor,
-          productName: localized(product?.name as LocalizedText, "کالای حذف‌شده"),
+          available: Boolean(variant?.isActive && product?.status === "active" && color?.isActive && size?.isActive),
+          productName: localized(product?.name as LocalizedText, locale === "en" ? "Unavailable item" : locale === "ar" ? "منتج غير متاح" : "کالای حذف‌شده", locale),
           productSlug: product?.slug ?? null,
           sku: variant?.sku ?? "—",
-          colorName: localized(color?.name as LocalizedText, "—"),
+          colorName: localized(color?.name as LocalizedText, "—", locale),
           colorHex: color?.hex ?? null,
-          sizeName: localized(size?.name as LocalizedText, size?.code ?? "—"),
+          sizeName: localized(size?.name as LocalizedText, size?.code ?? "—", locale),
           imageUrl: image?.url ?? null,
-          imageAlt: localized(image?.alt as LocalizedText, localized(product?.name, "محصول")),
+          imageAlt: localized(
+            image?.alt as LocalizedText,
+            localized(product?.name, locale === "en" ? "Product" : locale === "ar" ? "منتج" : "محصول", locale),
+            locale,
+          ),
           imagePosition:
             product?.primaryImageObjectPosition ?? image?.objectPosition ?? "center",
         };
@@ -427,27 +474,24 @@ export const accountService = {
     };
   },
 
-  async addCartItem(accountId: string, value: unknown) {
+  async addCartItem(accountId: string, value: unknown, locale: Locale = "fa") {
     const input = addCartItemSchema.parse(value);
     await connectToDatabase();
 
     await mongoose.connection.transaction(async (session) => {
-      const sellable = await loadSellableVariant(input.variantId, session);
       let cart = await loadMutableCart(accountId, session);
 
       if (!cart) {
         [cart] = await Cart.create([{
           userId: accountId,
-          currency: sellable.currency,
+          currency: CATALOG_CURRENCY,
           status: "active",
           expiresAt: cartExpiry(),
           items: [],
         }], { session });
       }
-      if (cart.currency !== sellable.currency) {
-        conflict("محصولات با ارز متفاوت نمی‌توانند در یک سبد قرار بگیرند.");
-      }
-
+      const sellable = await loadSellableVariant(input.variantId, cart.currency as CheckoutCurrency, session);
+      if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: input.variantId, currency: cart.currency });
       const existing = cart.items.find(
         (item: { variantId: unknown }) => String(item.variantId) === input.variantId,
       );
@@ -464,14 +508,15 @@ export const accountService = {
           addedAt: new Date(),
         });
       }
+      await repriceActiveCart(cart, session);
       cart.expiresAt = cartExpiry();
       await cart.save({ session });
     });
 
-    return this.getCart(accountId);
+    return this.getCart(accountId, locale);
   },
 
-  async updateCartItem(accountId: string, itemId: string, value: unknown) {
+  async updateCartItem(accountId: string, itemId: string, value: unknown, locale: Locale = "fa") {
     if (!mongoose.Types.ObjectId.isValid(itemId)) notFound("آیتم سبد پیدا نشد.");
     const input = updateCartItemSchema.parse(value);
     await connectToDatabase();
@@ -486,39 +531,47 @@ export const accountService = {
       const item = cart.items.id(itemId);
       if (!item) notFound("آیتم سبد پیدا نشد.");
 
-      const sellable = await loadSellableVariant(String(item.variantId), session);
-      if (sellable.currency !== cart.currency) conflict("ارز محصول با ارز سبد هماهنگ نیست.");
       item.quantity = input.quantity;
-      item.unitPriceMinor = sellable.unitPriceMinor;
+      await repriceActiveCart(cart, session);
       cart.expiresAt = cartExpiry();
       await cart.save({ session });
     });
 
-    return this.getCart(accountId);
+    return this.getCart(accountId, locale);
   },
 
-  async removeCartItem(accountId: string, itemId: string) {
+  async removeCartItem(accountId: string, itemId: string, locale: Locale = "fa") {
     if (!mongoose.Types.ObjectId.isValid(itemId)) notFound("آیتم سبد پیدا نشد.");
     await connectToDatabase();
-    const cart = await Cart.findOne({
-      userId: accountId,
-      status: "active",
-      "items._id": itemId,
+    await mongoose.connection.transaction(async (session) => {
+      const cart = await Cart.findOne({ userId: accountId, status: "active", "items._id": itemId }).session(session);
+      if (!cart) notFound("آیتم سبد پیدا نشد.");
+      cart.items.pull({ _id: itemId });
+      await repriceActiveCart(cart, session);
+      cart.expiresAt = cartExpiry();
+      await cart.save({ session });
     });
-    if (!cart) notFound("آیتم سبد پیدا نشد.");
-    cart.items.pull({ _id: itemId });
-    cart.expiresAt = cartExpiry();
-    await cart.save();
-    return this.getCart(accountId);
+    return this.getCart(accountId, locale);
   },
 
-  async clearCart(accountId: string) {
+  async clearCart(accountId: string, locale: Locale = "fa") {
     await connectToDatabase();
-    await Cart.updateOne(
-      { userId: accountId, status: "active" },
-      { $set: { items: [], expiresAt: cartExpiry() } },
-    );
-    return this.getCart(accountId);
+    await Cart.updateOne({ userId: accountId, status: "active" }, { $set: { items: [], currency: CATALOG_CURRENCY, expiresAt: cartExpiry() } });
+    return this.getCart(accountId, locale);
+  },
+
+  async updateCartCurrency(accountId: string, value: unknown, locale: Locale = "fa") {
+    const input = updateCartCurrencySchema.parse(value);
+    await connectToDatabase();
+    await mongoose.connection.transaction(async (session) => {
+      const cart = await Cart.findOne({ userId: accountId, status: "active" }).session(session);
+      if (!cart) notFound("سبد خرید فعال پیدا نشد.");
+      cart.currency = input.currency;
+      await repriceActiveCart(cart, session);
+      cart.expiresAt = cartExpiry();
+      await cart.save({ session });
+    });
+    return this.getCart(accountId, locale);
   },
 
   async getProfile(accountId: string) {

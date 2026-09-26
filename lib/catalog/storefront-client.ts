@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import type {
   CategoryPageData,
@@ -210,10 +211,10 @@ function formatMoney(minor: number, currency: string, locale: Locale) {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
-    }).format(minor / 100);
+    }).format(amountForCurrencyDisplay(minor, currency));
   } catch {
     return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : locale).format(
-      minor / 100,
+      amountForCurrencyDisplay(minor, currency),
     );
   }
 }

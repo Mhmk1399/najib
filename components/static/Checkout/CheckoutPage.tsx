@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Clock3, MapPin, RefreshCw, ShieldCheck, ShoppingBag, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
+import { StoreSelectionModal, type FulfillmentPlan } from "@/components/static/Checkout/StoreSelectionModal";
 import {
   type AccountCart,
   type Checkout,
@@ -15,58 +16,49 @@ import {
   commerceFetch,
   fetchAccountCart,
   formatMinor,
-  localized,
   loginHref,
 } from "@/lib/commerce/client";
+import { getCheckoutCopy } from "@/lib/i18n/checkout-copy";
+import { type Locale } from "@/lib/i18n/config";
+import { localizedHref } from "@/lib/i18n/routes";
 
-type LocalizedText = { fa?: string; en?: string; ar?: string };
-type Destinations = {
-  cities: Array<{ id: string; code: string; name: LocalizedText }>;
-  stores: Array<{
-    id: string;
-    code: string;
-    cityId: string;
-    name: LocalizedText;
-    address?: LocalizedText | null;
-    available: boolean;
-    unavailableItemCount: number;
-  }>;
-  availableStoreCount: number;
-};
 type ConfirmResult = {
   payment: Payment;
   order: { _id?: string; id?: string; orderNumber?: string } | null;
   sms: { status: string } | null;
 };
 
-export function CheckoutPage() {
+export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
   const toast = useToast();
+  const copy = getCheckoutCopy(locale);
   const queryClient = useQueryClient();
-  const [cityId, setCityId] = useState("");
-  const [storeId, setStoreId] = useState("");
   const [createdCheckoutId, setCreatedCheckoutId] = useState<string | null>(null);
   const [createdPaymentId, setCreatedPaymentId] = useState<string | null>(null);
   const [completedOrder, setCompletedOrder] = useState<ConfirmResult["order"]>(null);
+  const [storeModalOpen, setStoreModalOpen] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const storeTriggerRef = useRef<HTMLButtonElement>(null);
   const checkoutKey = useRef<string | null>(null);
   const paymentKey = useRef<string | null>(null);
   const confirmKey = useRef<string | null>(null);
+  const localizedCartQueryKey = [...cartQueryKey, locale] as const;
 
   const cartQuery = useQuery({
-    queryKey: cartQueryKey,
-    queryFn: ({ signal }) => fetchAccountCart(signal),
+    queryKey: localizedCartQueryKey,
+    queryFn: ({ signal }) => fetchAccountCart(signal, locale),
     retry: (count, error) =>
       !(error instanceof CommerceApiError && error.status === 401) && count < 1,
   });
+  const currency: "IRR" | "USD" = cartQuery.data?.currency === "USD" ? "USD" : "IRR";
   const cartAvailabilityKey = cartQuery.data?.items
     .map((item) => `${item.variantId}:${item.quantity}`)
     .sort()
     .join("|") ?? "empty";
   const availabilityNeeded = Boolean(cartQuery.data?.items.length && !cartQuery.data.checkout);
   const destinationsQuery = useQuery({
-    queryKey: ["account", "checkout-destinations", cartAvailabilityKey],
+    queryKey: ["account", "checkout-destinations", cartAvailabilityKey, currency],
     queryFn: ({ signal }) =>
-      commerceFetch<Destinations>("/api/account/checkouts", { signal }),
+      commerceFetch<FulfillmentPlan>(`/api/account/checkouts?currency=${currency}`, { signal }),
     enabled: availabilityNeeded,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
@@ -128,12 +120,13 @@ export function CheckoutPage() {
         method: "POST",
         body: JSON.stringify({
           idempotencyKey: checkoutKey.current,
-          cityId,
-          storeId,
+          currency,
+          fulfillmentPlanHash: destinationsQuery.data?.fulfillmentPlanHash,
         }),
       });
     },
     onSuccess: async (value) => {
+      setStoreModalOpen(false);
       setCreatedCheckoutId(value.id);
       queryClient.setQueryData(["account", "checkout", value.id], value);
       await queryClient.invalidateQueries({ queryKey: cartQueryKey });
@@ -141,10 +134,34 @@ export function CheckoutPage() {
         description: "این رزرو تا ۱۵ دقیقه برای تکمیل پرداخت معتبر است.",
       });
     },
-    onError: (error) => {
+    onError: async (error) => {
+      if (error instanceof CommerceApiError && error.status === 409) {
+        checkoutKey.current = null;
+        await queryClient.invalidateQueries({ queryKey: ["account", "checkout-destinations"] });
+        setStoreModalOpen(true);
+        toast.error(copy.stockChanged);
+        return;
+      }
+      // A checkout transaction may have committed even if its HTTP response was lost.
+      // Recover the server-owned checkout before allowing another attempt with the same key.
+      const recoveredCart = await cartQuery.refetch();
+      const recoveredCheckout = recoveredCart.data?.checkout;
+      if (recoveredCheckout) {
+        setCreatedCheckoutId(recoveredCheckout.id);
+        setStoreModalOpen(false);
+        await queryClient.invalidateQueries({ queryKey: ["account", "checkout", recoveredCheckout.id] });
+        toast.info(locale === "en" ? "Your reservation was recovered" : locale === "ar" ? "تمت استعادة حجزك" : "رزرو شما بازیابی شد");
+        return;
+      }
       void queryClient.invalidateQueries({ queryKey: ["account", "checkout-destinations"] });
       reportMutationError("رزرو موجودی انجام نشد", error);
     },
+  });
+
+  const currencyMutation = useMutation({
+    mutationFn: (next: "IRR" | "USD") => commerceFetch<AccountCart>(`/api/account/cart?locale=${locale}`, { method: "PATCH", body: JSON.stringify({ currency: next }) }),
+    onSuccess: async (value) => { checkoutKey.current = null; queryClient.setQueryData(localizedCartQueryKey, value); await queryClient.invalidateQueries({ queryKey: ["account", "checkout-destinations"] }); },
+    onError: (error) => reportMutationError(locale === "en" ? "Currency could not be changed" : locale === "ar" ? "تعذر تغيير العملة" : "تغییر ارز انجام نشد", error),
   });
 
   const paymentMutation = useMutation({
@@ -200,7 +217,7 @@ export function CheckoutPage() {
     onSuccess: async () => {
       setCreatedCheckoutId(null);
       setCreatedPaymentId(null);
-      queryClient.setQueryData<AccountCart | null>(cartQueryKey, (current) =>
+      queryClient.setQueryData<AccountCart | null>(localizedCartQueryKey, (current) =>
         current ? { ...current, status: "active", checkout: null } : current,
       );
       checkoutKey.current = null;
@@ -213,22 +230,10 @@ export function CheckoutPage() {
     onError: (error) => reportMutationError("لغو رزرو انجام نشد", error),
   });
 
-  const stores = useMemo(
-    () => destinationsQuery.data?.stores.filter((store) => store.cityId === cityId) ?? [],
-    [cityId, destinationsQuery.data?.stores],
-  );
-  const selectedStore = stores.find((store) => store.id === storeId);
-  const availableStoreCount = stores.filter((store) => store.available).length;
-
-  useEffect(() => {
-    if (storeId && (!selectedStore || !selectedStore.available)) {
-      const reset = window.setTimeout(() => {
-        setStoreId("");
-        checkoutKey.current = null;
-      }, 0);
-      return () => window.clearTimeout(reset);
-    }
-  }, [selectedStore, storeId]);
+  const closeStoreModal = useCallback(() => {
+    setStoreModalOpen(false);
+    window.setTimeout(() => storeTriggerRef.current?.focus(), 0);
+  }, []);
   const expiresAt = checkout ? new Date(checkout.expiresAt).getTime() : 0;
   const remaining = Math.max(0, Math.floor((expiresAt - now) / 1000));
   const expired = Boolean(
@@ -250,14 +255,23 @@ export function CheckoutPage() {
   const paymentSignedOut =
     paymentQuery.error instanceof CommerceApiError && paymentQuery.error.status === 401;
   const cart = cartQuery.data;
-  const availabilityReady = destinationsQuery.isSuccess && !destinationsQuery.isFetching;
+  const activePlan: FulfillmentPlan | undefined = checkout?.shipments?.length ? {
+    fulfillable: true,
+    fulfillmentPlanHash: checkout.fulfillmentPlanHash,
+    currency: checkout.currency,
+    subtotalMinor: checkout.subtotalMinor,
+    shippingMinor: checkout.shippingMinor,
+    totalMinor: checkout.totalMinor,
+    shipmentCount: checkout.shipments.length,
+    shipments: checkout.shipments,
+  } : destinationsQuery.data;
 
   if (completedOrder || payment?.status === "succeeded") {
-    return <Success order={completedOrder} />;
+    return <Success order={completedOrder} locale={locale} />;
   }
 
   return (
-    <main dir="rtl" lang="fa" className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
+    <main dir={locale === "en" ? "ltr" : "rtl"} lang={locale} className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
       <div className="mx-auto w-full max-w-[1450px] px-5 sm:px-8 lg:px-12">
         <header className="border-b border-black/15 pb-7">
           <p className="text-xs font-semibold tracking-[0.08em] text-[#C15427]">مسیر سفارش</p>
@@ -289,7 +303,7 @@ export function CheckoutPage() {
 
         {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
           <CheckoutState title="سبد خرید خالی است" description="برای شروع تکمیل خرید ابتدا محصولی را به سبد اضافه کنید.">
-            <Button href="/shop" variant="black" size="lg">بازگشت به فروشگاه</Button>
+            <Button href={localizedHref("/shop", locale)} variant="black" size="lg">بازگشت به فروشگاه</Button>
           </CheckoutState>
         ) : null}
 
@@ -321,67 +335,57 @@ export function CheckoutPage() {
                   <Button href="/cart" variant="black" size="lg">بازگشت به سبد خرید</Button>
                 </FlowState>
               ) : checkout ? (
-                <ReservationRail remaining={remaining} expired={expired} />
+                <><ReservationRail remaining={remaining} expired={expired} locale={locale} /><div className="flex justify-end bg-white px-6 pb-6"><button ref={storeTriggerRef} type="button" onClick={() => setStoreModalOpen(true)} className="min-h-11 border border-black px-5 text-xs font-semibold transition hover:bg-black hover:text-white">{copy.viewPlan}</button></div></>
               ) : (
-                <section className="border-t-2 border-black bg-white p-6 sm:p-8">
+                <><section className="border-t-2 border-black bg-white p-6 sm:p-8">
+                  <p className="text-[11px] font-semibold text-[#C15427]">{locale === "en" ? "PAYMENT CURRENCY" : locale === "ar" ? "عملة الدفع" : "ارز پرداخت"}</p>
+                  <h2 className="mt-2 text-xl font-semibold">{locale === "en" ? "How would you like to pay?" : locale === "ar" ? "كيف تريد الدفع؟" : "پرداخت با کدام ارز انجام شود؟"}</h2>
+                  <div className="mt-5 grid grid-cols-2 gap-2" role="radiogroup">{(["IRR", "USD"] as const).map((option) => <button key={option} type="button" role="radio" aria-checked={currency === option} disabled={currencyMutation.isPending} onClick={() => { if (currency !== option) currencyMutation.mutate(option); }} className={`min-h-16 border px-4 text-start transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C15427] ${currency === option ? "border-black bg-black text-white" : "border-black/20 bg-[#F6F2EB] hover:border-black"}`}><strong className="block text-sm">{option === "IRR" ? (locale === "en" ? "Pay in rials" : locale === "ar" ? "الدفع بالريال" : "پرداخت ریالی") : (locale === "en" ? "Pay in US dollars" : locale === "ar" ? "الدفع بالدولار" : "پرداخت دلاری")}</strong><small className={`mt-1 block ${currency === option ? "text-white/65" : "text-black/55"}`}>{option === "IRR" ? "IRR" : "USD"}</small></button>)}</div>
+                </section><section className="border-t-2 border-black bg-white p-6 sm:p-8">
                   <div className="flex items-start gap-4">
-                    <MapPin className="mt-1 size-5 text-[#C15427]" />
+                    <MapPin className="mt-1 size-5 text-[#C15427]" aria-hidden />
                     <div>
-                      <h2 className="text-xl font-semibold">محل تحویل و رزرو</h2>
-                      <p className="mt-2 text-xs leading-6 text-black/65">شهر و فروشگاهی را انتخاب کنید که موجودی فعال آن برای سفارش بررسی شود.</p>
+                      <h2 className="text-xl font-semibold">{copy.deliveryPlan}</h2>
+                      <p className="mt-2 text-xs leading-6 text-black/65">{copy.modalDescription}</p>
                     </div>
                   </div>
-                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
-                    <Field label="شهر">
-                      <select value={cityId} disabled={!availabilityReady} onChange={(event) => { setCityId(event.target.value); setStoreId(""); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427] disabled:opacity-40">
-                        <option value="">انتخاب شهر</option>
-                        {destinationsQuery.data?.cities.map((city) => <option key={city.id} value={city.id}>{localized(city.name, city.code)}</option>)}
-                      </select>
-                    </Field>
-                    <Field label="فروشگاه">
-                      <select value={storeId} disabled={!cityId || !availabilityReady} onChange={(event) => { setStoreId(event.target.value); checkoutKey.current = null; }} className="h-12 w-full border border-black/20 bg-[#F6F2EB] px-4 text-sm outline-none transition focus:border-[#C15427] disabled:opacity-40">
-                        <option value="">انتخاب فروشگاه</option>
-                        {stores.map((store) => (
-                          <option key={store.id} value={store.id} disabled={!store.available}>
-                            {localized(store.name, store.code)}{store.available ? "" : " — موجودی ناکافی"}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                  </div>
-                  <div className="mt-4 flex min-h-7 flex-wrap items-center justify-between gap-3">
+                  <div className="mt-7 border border-black/15 bg-[#F6F2EB] p-5">
                     {destinationsQuery.isError ? (
-                      <p className="text-xs text-[#A33A32]" role="alert">بررسی موجودی شعبه‌ها انجام نشد. برای انتخاب شعبه دوباره تلاش کنید.</p>
+                      <p className="text-xs text-[#A33A32]" role="alert">{copy.loadError}</p>
                     ) : destinationsQuery.isFetching ? (
-                      <p className="text-xs text-black/55" role="status">در حال بررسی موجودی دقیق رنگ، سایز و تعداد سبد شما…</p>
-                    ) : !cityId ? (
-                      <p className="text-xs text-black/55" role="status">موجودی دقیق سبد بررسی شد؛ برای دیدن شعبه‌های مناسب شهر را انتخاب کنید.</p>
-                    ) : stores.length === 0 ? (
-                      <p className="mt-4 text-xs text-[#A33A32]">برای این شهر فروشگاه دارای محل موجودی فعال پیدا نشد.</p>
-                    ) : availableStoreCount > 0 ? (
-                      <p className="mt-4 text-xs text-black/65" role="status">
-                        {new Intl.NumberFormat("fa-IR").format(availableStoreCount)} شعبه مناسب این سبد
-                      </p>
+                      <p className="text-xs text-black/55" role="status">{copy.loading}</p>
+                    ) : !destinationsQuery.data?.fulfillable || !destinationsQuery.data.shipments.length ? (
+                      <p className="text-xs leading-6 text-[#A33A32]" role="status">{copy.noStoreAnywhere}</p>
                     ) : (
-                      <p className="mt-4 text-xs text-[#A33A32]" role="status">هیچ شعبه‌ای در این شهر موجودی کامل رنگ، سایز و تعداد انتخابی را ندارد.</p>
+                      <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-semibold">{copy.ready}</p><p className="mt-1 text-xs text-black/60">{destinationsQuery.data.shipmentCount} {copy.shipments} · {formatMinor(destinationsQuery.data.shippingMinor, destinationsQuery.data.currency, locale)}</p></div><button ref={storeTriggerRef} type="button" onClick={() => setStoreModalOpen(true)} className="min-h-11 border border-black px-5 text-xs font-semibold transition hover:bg-black hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C15427]">{copy.viewPlan}</button></div>
                     )}
+                  </div>
+                  <div className="mt-4 flex justify-end">
                     <button
                       type="button"
                       disabled={destinationsQuery.isFetching}
-                      onClick={() => void destinationsQuery.refetch()}
+                      onClick={() => { checkoutKey.current = null; void destinationsQuery.refetch(); }}
                       className="inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-[#C15427] underline decoration-[#C15427]/35 underline-offset-4 transition hover:decoration-[#C15427] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#C15427] disabled:opacity-40"
                     >
                       <RefreshCw className={`size-3.5 ${destinationsQuery.isFetching ? "animate-spin" : ""}`} aria-hidden />
-                      بررسی دوباره موجودی
+                      {copy.refresh}
                     </button>
                   </div>
-                  <div className="mt-8 flex justify-end">
-                    <Button type="button" variant="black" size="lg" disabled={!cityId || !storeId || !selectedStore?.available || !availabilityReady} loading={startMutation.isPending} onClick={() => startMutation.mutate()}>
-                      بررسی و رزرو موجودی
-                    </Button>
-                  </div>
-                </section>
+                </section></>
               )}
+
+              <StoreSelectionModal
+                open={storeModalOpen}
+                locale={locale}
+                copy={copy}
+                plan={activePlan}
+                loading={destinationsQuery.isFetching}
+                error={destinationsQuery.isError}
+                confirming={startMutation.isPending}
+                onClose={closeStoreModal}
+                onConfirm={() => { if (checkout) closeStoreModal(); else startMutation.mutate(); }}
+                onRetry={() => void destinationsQuery.refetch()}
+              />
 
               {activeCheckout ? (
                 <section className="border-t-2 border-black bg-white p-6 sm:p-8">
@@ -439,7 +443,7 @@ export function CheckoutPage() {
               ) : null}
             </section>
 
-            <OrderSummary cart={cart} />
+            <OrderSummary cart={cart} shippingMinor={checkout?.shippingMinor ?? destinationsQuery.data?.shippingMinor ?? 0} locale={locale} />
           </div>
         ) : null}
       </div>
@@ -447,17 +451,17 @@ export function CheckoutPage() {
   );
 }
 
-function ReservationRail({ remaining, expired }: { remaining: number; expired: boolean }) {
+function ReservationRail({ remaining, expired, locale }: { remaining: number; expired: boolean; locale: Locale }) {
   const minutes = Math.floor(remaining / 60);
   const seconds = remaining % 60;
   const progress = Math.max(0, Math.min(100, (remaining / (15 * 60)) * 100));
-  const timer = `${formatPersianInteger(minutes, 2)}:${formatPersianInteger(seconds, 2)}`;
-  const announcement = reservationAnnouncement(remaining, expired);
+  const timer = `${formatLocaleInteger(minutes, locale, 2)}:${formatLocaleInteger(seconds, locale, 2)}`;
+  const announcement = reservationAnnouncement(remaining, expired, locale);
   return (
     <section className="border-t-2 border-[#C15427] bg-[#111] p-6 text-white sm:p-8">
       <div className="flex items-center justify-between gap-6">
         <div className="flex items-center gap-3"><Clock3 className="size-5 text-[#C15427]" /><div><p className="text-sm font-semibold">رزرو اختصاصی موجودی</p><p className="mt-1 text-xs leading-5 text-white/75">رنگ و سایز انتخابی برای شما نگه داشته شده است.</p></div></div>
-        <strong className="text-2xl tabular-nums" dir="ltr" role="timer" aria-label={`${formatPersianInteger(minutes)} دقیقه و ${formatPersianInteger(seconds)} ثانیه باقی مانده`}>{expired ? "۰۰:۰۰" : timer}</strong>
+        <strong className="text-2xl tabular-nums" dir="ltr" role="timer">{expired ? `${formatLocaleInteger(0, locale, 2)}:${formatLocaleInteger(0, locale, 2)}` : timer}</strong>
       </div>
       <div className="mt-6 h-px bg-white/15"><div className="h-px bg-[#C15427] transition-[width] duration-1000" style={{ width: `${progress}%` }} /></div>
       <span className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</span>
@@ -465,30 +469,28 @@ function ReservationRail({ remaining, expired }: { remaining: number; expired: b
   );
 }
 
-function OrderSummary({ cart }: { cart: NonNullable<Awaited<ReturnType<typeof fetchAccountCart>>> }) {
+function OrderSummary({ cart, shippingMinor, locale }: { cart: NonNullable<Awaited<ReturnType<typeof fetchAccountCart>>>; shippingMinor: number; locale: Locale }) {
+  const copy = getCheckoutCopy(locale);
   return (
     <aside className="h-fit border-t-2 border-black bg-white p-6 lg:sticky lg:top-28 lg:p-8">
-      <div className="flex items-center justify-between"><h2 className="font-semibold">مرور سفارش</h2><ShoppingBag className="size-4 text-black/45" /></div>
+      <div className="flex items-center justify-between"><h2 className="font-semibold">{copy.orderSummary}</h2><ShoppingBag className="size-4 text-black/45" /></div>
       <div className="mt-6 divide-y divide-black/10 border-y border-black/10">
         {cart.items.map((item) => (
           <div key={item.id} className="flex justify-between gap-5 py-4 text-xs leading-6">
-            <div><p className="font-semibold">{item.productName}</p><p className="text-black/65">{item.colorName} · {item.sizeName} · تعداد {new Intl.NumberFormat("fa-IR").format(item.quantity)}</p></div>
-            <span className="shrink-0 tabular-nums">{formatMinor(item.lineTotalMinor, cart.currency)}</span>
+            <div><p className="font-semibold">{item.productName}</p><p className="text-black/65">{item.colorName} · {item.sizeName} · {copy.quantityLabel} {formatLocaleInteger(item.quantity, locale)}</p></div>
+            <span className="shrink-0 tabular-nums">{formatMinor(item.lineTotalMinor, cart.currency, locale)}</span>
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between pt-6"><span className="font-semibold">مبلغ کالاها</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong></div>
-      <p className="mt-4 text-xs leading-6 text-black/65">هزینه ارسال در این نسخه محاسبه نمی‌شود و تخفیف یا مالیات ساختگی اعمال نشده است.</p>
+      <div className="flex items-center justify-between pt-6"><span className="font-semibold">{copy.itemsAmount}</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency, locale)}</strong></div>
+      <div className="mt-3 flex items-center justify-between text-xs"><span>{getCheckoutCopy(locale).shippingTotal}</span><strong>{formatMinor(shippingMinor, cart.currency, locale)}</strong></div>
+      <div className="mt-4 flex items-center justify-between border-t border-black/15 pt-4"><span className="font-semibold">{getCheckoutCopy(locale).grandTotal}</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor + shippingMinor, cart.currency, locale)}</strong></div>
     </aside>
   );
 }
 
 function Step({ active, done, number, label }: { active: boolean; done: boolean; number: string; label: string }) {
   return <li aria-current={active ? "step" : undefined} className={`flex items-center gap-1.5 ${active || done ? "text-black" : ""}`}><span className={`grid size-6 shrink-0 place-items-center border ${active || done ? "border-[#C15427]" : "border-black/20"}`}>{done ? <Check className="size-3 text-[#C15427]" aria-hidden /> : number}</span><span className="text-[10px] sm:text-[11px]">{label}</span></li>;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <label className="block"><span className="mb-2 block text-xs font-semibold">{label}</span>{children}</label>;
 }
 
 function CheckoutLoading() {
@@ -507,16 +509,16 @@ function CheckoutState({ title, description, children }: { title: string; descri
   return <section className="mx-auto max-w-xl py-24 text-center"><h2 className="text-2xl font-semibold">{title}</h2><p className="mt-4 text-sm leading-7 text-black/65">{description}</p><div className="mt-8">{children}</div></section>;
 }
 
-function Success({ order }: { order: ConfirmResult["order"] }) {
+function Success({ order, locale }: { order: ConfirmResult["order"]; locale: Locale }) {
   return (
-    <main dir="rtl" lang="fa" className="grid min-h-dvh place-items-center bg-[#F6F2EB] px-5 py-28 text-[#0B0B0B]">
+    <main dir={locale === "en" ? "ltr" : "rtl"} lang={locale} className="grid min-h-dvh place-items-center bg-[#F6F2EB] px-5 py-28 text-[#0B0B0B]">
       <section className="w-full max-w-2xl border-t-2 border-[#C15427] bg-white p-8 text-center sm:p-14">
         <div className="mx-auto grid size-14 place-items-center border border-[#C15427] text-[#C15427]"><Check className="size-6" /></div>
         <p className="mt-7 text-xs font-semibold tracking-[0.08em] text-[#C15427]">سفارش ثبت شد</p>
         <h1 className="mt-3 text-3xl font-semibold">از انتخاب شما سپاسگزاریم</h1>
         <p className="mt-5 text-sm leading-7 text-black/65">پرداخت آزمایشی موفق بود و موجودی سفارش قطعی شد.</p>
         {order?.orderNumber ? <p className="mt-5 border-y border-black/10 py-4 text-sm">شماره سفارش: <strong dir="ltr">{order.orderNumber}</strong></p> : null}
-        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button href="/customer-dashboard" variant="black" size="lg">مشاهده سفارش‌ها</Button><Button href="/shop" variant="outline" size="lg">ادامه خرید</Button></div>
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button href={localizedHref("/customer-dashboard", locale)} variant="black" size="lg">مشاهده سفارش‌ها</Button><Button href={localizedHref("/shop", locale)} variant="outline" size="lg">ادامه خرید</Button></div>
       </section>
     </main>
   );
@@ -526,17 +528,15 @@ function messageFor(error: unknown) {
   return error instanceof Error ? error.message : "لطفاً دوباره تلاش کنید.";
 }
 
-function formatPersianInteger(value: number, minimumIntegerDigits = 1) {
-  return new Intl.NumberFormat("fa-IR", {
+function formatLocaleInteger(value: number, locale: Locale, minimumIntegerDigits = 1) {
+  return new Intl.NumberFormat(locale === "fa" ? "fa-IR" : locale === "ar" ? "ar" : "en", {
     minimumIntegerDigits,
     useGrouping: false,
   }).format(value);
 }
 
-function reservationAnnouncement(remaining: number, expired: boolean) {
-  if (expired) return "زمان رزرو موجودی پایان یافته است.";
-  if (remaining === 600) return "ده دقیقه از زمان رزرو باقی مانده است.";
-  if (remaining === 300) return "پنج دقیقه از زمان رزرو باقی مانده است.";
-  if (remaining === 60) return "یک دقیقه از زمان رزرو باقی مانده است.";
+function reservationAnnouncement(remaining: number, expired: boolean, locale: Locale) {
+  if (expired) return locale === "en" ? "The reservation has expired." : locale === "ar" ? "انتهت مدة الحجز." : "زمان رزرو موجودی پایان یافته است.";
+  if ([600, 300, 60].includes(remaining)) return locale === "en" ? `${Math.floor(remaining / 60)} minutes remain.` : locale === "ar" ? `تبقى ${Math.floor(remaining / 60)} دقيقة.` : `${Math.floor(remaining / 60)} دقیقه از زمان رزرو باقی مانده است.`;
   return "";
 }

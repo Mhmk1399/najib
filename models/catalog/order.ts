@@ -57,6 +57,32 @@ const contactSchema = new Schema(
   { _id: false },
 );
 
+const orderShipmentItemSchema = new Schema(
+  {
+    variantId: { type: String, required: true, trim: true },
+    locationId: { type: String, required: true, trim: true },
+    quantity: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+    productName: { type: createLocalizedTextSchema(160), required: true },
+    colorName: { type: createLocalizedTextSchema(160), required: true },
+    sizeName: { type: createLocalizedTextSchema(160), required: true },
+    sku: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
+const orderShipmentSchema = new Schema(
+  {
+    storeId: { type: String, required: true, trim: true },
+    cityId: { type: String, required: true, trim: true },
+    storeCode: { type: String, required: true, trim: true },
+    storeName: { type: createLocalizedTextSchema(160), required: true },
+    address: { type: createLocalizedTextSchema(500, false), default: undefined },
+    shippingMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
+    items: { type: [orderShipmentItemSchema], required: true },
+  },
+  { _id: false },
+);
+
 const orderSchema = new Schema(
   {
     orderNumber: { type: String, required: true, trim: true, uppercase: true },
@@ -84,6 +110,7 @@ const orderSchema = new Schema(
       required: true,
       validate: [(items: unknown[]) => items.length > 0, "Order requires at least one item"],
     },
+    shipments: { type: [orderShipmentSchema], default: [] },
     subtotalMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     taxMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     discountMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },

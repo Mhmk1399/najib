@@ -334,7 +334,7 @@ export function ProductDetailPage({
 
     setAddingToBag(true);
     try {
-      await commerceFetch("/api/account/cart/items", {
+      await commerceFetch(`/api/account/cart/items?locale=${locale}`, {
         method: "POST",
         body: JSON.stringify({ variantId: variant.id, quantity: 1 }),
       });
@@ -352,7 +352,7 @@ export function ProductDetailPage({
         toast.info(copy.loginTitle, {
           description: copy.loginDescription,
         });
-        window.location.assign(loginHref(localizedHref("/cart", locale)));
+        window.location.assign(localizedHref(loginHref(localizedHref("/cart", locale)), locale));
         return;
       }
       toast.error(copy.addErrorTitle, {

@@ -1,3 +1,5 @@
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
+
 export const cartQueryKey = ["account", "cart"] as const;
 
 const PENDING_CART_ITEM_KEY = "najib:pending-cart-item";
@@ -53,6 +55,18 @@ export type Checkout = {
   paymentId: string | null;
   itemCount: number;
   subtotalMinor: number;
+  shippingMinor: number;
+  totalMinor: number;
+  fulfillmentPlanHash: string | null;
+  shipments: Array<{
+    storeId: string;
+    cityId: string;
+    storeCode: string;
+    storeName: { fa?: string; en?: string; ar?: string };
+    address?: { fa?: string; en?: string; ar?: string };
+    shippingMinor: number;
+    items: Array<{ variantId: string; locationId: string; quantity: number; productName: { fa?: string; en?: string; ar?: string }; colorName: { fa?: string; en?: string; ar?: string }; sizeName: { fa?: string; en?: string; ar?: string }; sku: string }>;
+  }>;
   items: Array<{ variantId: string; quantity: number; unitPriceMinor: number }>;
 };
 
@@ -107,8 +121,8 @@ export async function commerceFetch<T>(
   return body as T;
 }
 
-export function fetchAccountCart(signal?: AbortSignal) {
-  return commerceFetch<AccountCart | null>("/api/account/cart", { signal });
+export function fetchAccountCart(signal?: AbortSignal, locale = "fa") {
+  return commerceFetch<AccountCart | null>(`/api/account/cart?locale=${encodeURIComponent(locale)}`, { signal });
 }
 
 export function loginHref(next: string) {
@@ -162,15 +176,16 @@ export function currentPath() {
   return `${window.location.pathname}${window.location.search}`;
 }
 
-export function formatMinor(value: number, currency: string) {
+export function formatMinor(value: number, currency: string, locale = "fa") {
+  const intlLocale = locale === "en" ? "en-US" : locale === "ar" ? "ar" : "fa-IR";
   try {
-    return new Intl.NumberFormat("fa-IR", {
+    return new Intl.NumberFormat(intlLocale, {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
-    }).format(value / 100);
+    }).format(amountForCurrencyDisplay(value, currency));
   } catch {
-    return `${new Intl.NumberFormat("fa-IR").format(value / 100)} ${currency}`;
+    return `${new Intl.NumberFormat(intlLocale).format(amountForCurrencyDisplay(value, currency))} ${currency}`;
   }
 }
 

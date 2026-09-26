@@ -1,4 +1,5 @@
 import type { Locale } from "@/lib/i18n/config";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 export type ImageStoryText = {
   fa?: string;
@@ -222,8 +223,8 @@ export function formatStoryMoney(
       style: "currency",
       currency: currency || "IRR",
       maximumFractionDigits: 0,
-    }).format(minor / 100);
+    }).format(amountForCurrencyDisplay(minor, currency || "IRR"));
   } catch {
-    return `${formatStoryNumber(minor / 100, locale)} ${currency ?? ""}`.trim();
+    return `${formatStoryNumber(amountForCurrencyDisplay(minor, currency || "IRR"), locale)} ${currency ?? ""}`.trim();
   }
 }

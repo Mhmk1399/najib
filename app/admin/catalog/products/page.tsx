@@ -17,6 +17,7 @@ export default async function ProductsPage() {
       <ProductManager
         canRead={staff.permissions.includes("catalog.read")}
         canWrite={staff.permissions.includes("catalog.write")}
+        canManageInventory={staff.permissions.includes("inventory.write")}
       />
     </AdminShell>
   );

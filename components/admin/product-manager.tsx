@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, ImageIcon, PackageOpen } from "lucide-react";
+import { Copy, ImageIcon, PackageOpen, PackagePlus } from "lucide-react";
 import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
+import { ProductComposer } from "@/components/admin/product-composer";
+import { ProductStockModal } from "@/components/admin/product-stock-modal";
+import { DataButton } from "@/components/global/table/primitives";
 import { DynamicDataTable } from "@/components/global/table/DynamicTable";
 import type {
   DataSelectOption,
@@ -38,6 +41,8 @@ type Product = {
   colorIds: string[];
   sizeIds: string[];
   basePriceMinor: number;
+  priceIrrMinor?: number;
+  priceUsdMinor?: number;
   currency: string;
   status: ProductStatus;
   material: LocalizedTextList;
@@ -75,6 +80,14 @@ type ImageReference = {
   isActive: boolean;
 };
 
+type InventoryLocationReference = {
+  _id: string;
+  code: string;
+  name: LocalizedText;
+  type?: string;
+  storeId?: string | { _id: string; code?: string; name?: LocalizedText } | null;
+};
+
 type Pagination = {
   page: number;
   limit: number;
@@ -102,8 +115,8 @@ type ProductFormValues = {
   collectionIds: string[];
   colorIds: string[];
   sizeIds: string[];
-  price: number | null;
-  currency: string;
+  priceIrr: number | null;
+  priceUsd: number | null;
   status: ProductStatus;
   material: LocalizedText;
   fit: LocalizedText;
@@ -177,36 +190,6 @@ function joinedReferenceLabels(ids: string[] | undefined, names: Map<string, str
     : "—";
 }
 
-function emptyForm(): ProductFormValues {
-  return {
-    name: emptyLocalizedText(),
-    slug: "",
-    description: emptyLocalizedText(),
-    categoryId: "",
-    subcategoryId: "",
-    collectionIds: [],
-    colorIds: [],
-    sizeIds: [],
-    price: null,
-    currency: "USD",
-    status: "draft",
-    material: emptyLocalizedText(),
-    fit: emptyLocalizedText(),
-    silhouette: emptyLocalizedText(),
-    pattern: emptyLocalizedText(),
-    seasons: emptyLocalizedText(),
-    occasions: emptyLocalizedText(),
-    styleTags: emptyLocalizedText(),
-    primaryImageId: "",
-    primaryImageObjectFit: "cover",
-    primaryImageObjectPosition: "center",
-    imageIds: [],
-    galleryUploadOne: "",
-    galleryUploadTwo: "",
-    galleryUploadThree: "",
-  };
-}
-
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -251,7 +234,7 @@ function formatDigits(value: string | number | null | undefined) {
 }
 
 function formatPrice(minor: number, currency: string) {
-  const amount = minor / 100;
+  const amount = currency === "IRR" ? minor : minor / 100;
   try {
     return new Intl.NumberFormat("fa-IR", {
       style: "currency",
@@ -312,8 +295,8 @@ function productToForm(product: Product): ProductFormValues {
     collectionIds: product.collectionIds ?? [],
     colorIds: product.colorIds ?? [],
     sizeIds: product.sizeIds ?? [],
-    price: product.basePriceMinor / 100,
-    currency: product.currency,
+    priceIrr: product.priceIrrMinor ?? (product.currency === "IRR" ? product.basePriceMinor : null),
+    priceUsd: product.priceUsdMinor === undefined ? (product.currency === "USD" ? product.basePriceMinor / 100 : null) : product.priceUsdMinor / 100,
     status: product.status,
     material: listToText(product.material),
     fit: product.fit ?? emptyLocalizedText(),
@@ -347,8 +330,10 @@ function formPayload(values: ProductFormValues) {
     collectionIds: values.collectionIds,
     colorIds: values.colorIds,
     sizeIds: values.sizeIds,
-    basePriceMinor: Math.round(Number(values.price ?? 0) * 100),
-    currency: values.currency.trim().toUpperCase(),
+    basePriceMinor: Math.round(Number(values.priceIrr ?? 0)),
+    priceIrrMinor: Math.round(Number(values.priceIrr ?? 0)),
+    priceUsdMinor: Math.round(Number(values.priceUsd ?? 0) * 100),
+    currency: "IRR",
     status: values.status,
     material: textToList(values.material),
     fit: cleanLocalized(values.fit),
@@ -457,16 +442,11 @@ function validateProduct(values: ProductFormValues) {
   if (!values.colorIds.length) errors.colorIds = "حداقل یک رنگ انتخاب کنید.";
   if (!values.sizeIds.length) errors.sizeIds = "حداقل یک سایز انتخاب کنید.";
   if (
-    values.price === null ||
-    !Number.isFinite(Number(values.price)) ||
-    Number(values.price) < 0
+    values.priceIrr === null || !Number.isFinite(Number(values.priceIrr)) || Number(values.priceIrr) < 0
   ) {
-    errors.price = "قیمت معتبر وارد کنید.";
+    errors.priceIrr = "قیمت ریالی معتبر وارد کنید.";
   }
-  if (!/^[A-Za-z]{3}$/.test(values.currency.trim())) {
-    errors.currency = "کد ارز باید سه حرف انگلیسی باشد.";
-  }
-
+  if (values.priceUsd === null || !Number.isFinite(Number(values.priceUsd)) || Number(values.priceUsd) < 0) errors.priceUsd = "قیمت دلاری معتبر وارد کنید.";
   return errors;
 }
 
@@ -604,23 +584,24 @@ function buildSchema({
       {
         kind: "input",
         inputType: "number",
-        name: "price",
-        label: "قیمت",
+        name: "priceIrr",
+        label: "قیمت ریالی",
+        required: true,
+        min: 0,
+        step: 1,
+        inputMode: "numeric",
+        suffixText: "ریال",
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "priceUsd",
+        label: "قیمت دلاری",
         required: true,
         min: 0,
         step: 0.01,
         inputMode: "decimal",
-        suffixText: "واحد اصلی ارز",
-      },
-      {
-        kind: "input",
-        name: "currency",
-        label: "کد ارز",
-        required: true,
-        dir: "ltr",
-        maxLength: 3,
-        placeholder: "USD",
-        parse: (value) => value.toUpperCase(),
+        suffixText: "USD",
       },
       {
         kind: "select",
@@ -688,8 +669,8 @@ function buildSchema({
           "collectionIds",
           "colorIds",
           "sizeIds",
-          "price",
-          "currency",
+          "priceIrr",
+          "priceUsd",
           "status",
         ],
       },
@@ -781,12 +762,16 @@ function ImagePreview({ image }: { image?: ImageReference }) {
 export function ProductManager({
   canRead,
   canWrite,
+  canManageInventory,
 }: {
   canRead: boolean;
   canWrite: boolean;
+  canManageInventory: boolean;
 }) {
   const toast = useToast();
   const queryClient = useQueryClient();
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [stockProduct, setStockProduct] = useState<Product | null>(null);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog", "categories", "options"],
@@ -842,12 +827,22 @@ export function ProductManager({
     enabled: canRead,
   });
 
+  const locationsQuery = useQuery({
+    queryKey: ["inventory", "product-composer", "locations"],
+    queryFn: () =>
+      fetchJson<ListResponse<InventoryLocationReference>>(
+        "/api/admin/inventory/locations?limit=100&isActive=true&include=references",
+      ),
+    enabled: canRead && canManageInventory,
+  });
+
   const categories = categoriesQuery.data?.items ?? emptyReferenceItems;
   const subcategories = subcategoriesQuery.data?.items ?? emptyReferenceItems;
   const collections = collectionsQuery.data?.items ?? emptyReferenceItems;
   const colors = colorsQuery.data?.items ?? emptyReferenceItems;
   const sizes = sizesQuery.data?.items ?? emptyReferenceItems;
   const images = imagesQuery.data?.items ?? emptyImageReferences;
+  const locations = locationsQuery.data?.items ?? [];
 
   const categoryNames = useMemo(
     () => new Map(categories.map((item) => [item._id, fa(item.name)])),
@@ -1003,10 +998,9 @@ export function ProductManager({
       },
       {
         id: "price",
-        label: "قیمت",
-        minWidth: 130,
-        cell: ({ record }) =>
-          formatPrice(record.basePriceMinor, record.currency),
+        label: "قیمت ریال / دلار",
+        minWidth: 190,
+        cell: ({ record }) => <span className="space-y-1"><strong className="block">{formatPrice(record.priceIrrMinor ?? record.basePriceMinor, "IRR")}</strong><small className="block text-[var(--adt-muted)]">{record.priceUsdMinor === undefined ? "دلار: تعیین نشده" : formatPrice(record.priceUsdMinor, "USD")}</small></span>,
         mobile: { priority: 4 },
       },
       {
@@ -1116,6 +1110,35 @@ export function ProductManager({
     <div className="min-w-0 space-y-3 p-3 sm:p-4 lg:p-5">
       <CatalogSectionNav />
 
+      <section className="relative overflow-hidden border border-[var(--adt-border)] bg-[var(--adt-surface)] px-4 py-5 sm:px-5">
+        <div aria-hidden className="absolute inset-y-0 right-0 w-1 bg-[var(--adt-accent)]" />
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-[8px] font-bold tracking-[.17em] text-[var(--adt-accent-strong)]">PRODUCT COMPOSER</p>
+            <h1 className="mt-2 text-[20px] font-extrabold sm:text-[24px]">محصول را کامل و یک‌جا بسازید</h1>
+            <p className="mt-2 max-w-2xl text-[11px] leading-7 text-[var(--adt-muted)]">رنگ‌ها، سایزها، قیمت مستقل ریالی و دلاری و موجودی هر شعبه را در یک جریان کوتاه ثبت کنید.</p>
+          </div>
+          {canWrite && canManageInventory ? <DataButton size="lg" tone="primary" icon={<PackagePlus size={17} />} onClick={() => setComposerOpen(true)}>محصول جدید</DataButton> : null}
+        </div>
+        {canWrite && !canManageInventory ? <p role="alert" className="mt-4 border-r-2 border-[var(--adt-warning)] bg-[var(--adt-warning)]/[0.07] px-3 py-2 text-[10px] text-[var(--adt-warning)]">برای ساخت محصول همراه موجودی، دسترسی inventory.write نیز لازم است.</p> : null}
+      </section>
+
+      <ProductComposer
+        open={composerOpen}
+        onClose={() => setComposerOpen(false)}
+        categories={categories}
+        subcategories={subcategories}
+        colors={colors}
+        sizes={sizes}
+        locations={locations}
+        images={images}
+        loading={[categoriesQuery, subcategoriesQuery, colorsQuery, sizesQuery, imagesQuery, locationsQuery].some((query) => query.isLoading)}
+        error={[categoriesQuery, subcategoriesQuery, colorsQuery, sizesQuery, imagesQuery, locationsQuery].some((query) => query.isError)}
+        onRetry={() => { reloadReferences(); void queryClient.invalidateQueries({ queryKey: ["inventory", "product-composer"] }); }}
+        onSuccess={() => { reloadReferences(); void queryClient.invalidateQueries({ queryKey: ["catalog", "products"] }); void queryClient.invalidateQueries({ queryKey: ["inventory"] }); }}
+      />
+      <ProductStockModal key={stockProduct?._id ?? "closed"} product={stockProduct} locations={locations} open={Boolean(stockProduct)} onClose={() => setStockProduct(null)} />
+
       <DynamicDataTable<
         Product,
         ProductFormValues,
@@ -1186,30 +1209,6 @@ export function ProductManager({
           maxFields: 4,
         }}
         crud={{
-          create: {
-            enabled: canWrite,
-            label: "محصول جدید",
-            title: "ساخت محصول",
-            description:
-              "فیلدهای ضروری محصول را کامل کنید؛ تصاویر آپلودی مستقیم به کتابخانه محصول اضافه می‌شوند.",
-            schema,
-            initialValues: emptyForm,
-            mutationFn: async ({ values }) =>
-              fetchJson<Product>("/api/catalog/products", {
-                method: "POST",
-                body: JSON.stringify(formPayload(values)),
-              }),
-            mapError: mapFormError,
-            onSuccess: (record) => {
-              reloadReferences();
-              toast.success("محصول ساخته شد", {
-                description:
-                  record && "_id" in record
-                    ? `${fa(record.name)} به کاتالوگ اضافه شد.`
-                    : undefined,
-              });
-            },
-          },
           edit: {
             enabled: canWrite,
             title: (record) => `ویرایش ${fa(record.name)}`,
@@ -1255,9 +1254,8 @@ export function ProductManager({
               },
               {
                 id: "price",
-                label: "قیمت",
-                render: ({ record }) =>
-                  formatPrice(record.basePriceMinor, record.currency),
+                label: "قیمت ریال / دلار",
+                render: ({ record }) => `${formatPrice(record.priceIrrMinor ?? record.basePriceMinor, "IRR")} · ${record.priceUsdMinor === undefined ? "دلار تعیین نشده" : formatPrice(record.priceUsdMinor, "USD")}`,
               },
               {
                 id: "colors",
@@ -1367,6 +1365,7 @@ export function ProductManager({
             },
           },
           extraRowActions: [
+            ...(canManageInventory ? [{ id: "add-stock", label: "افزودن موجودی", icon: <PackagePlus key="stock" size={14} />, tone: "success" as const, onClick: (record: Product) => setStockProduct(record) }] : []),
             {
               id: "copy-slug",
               label: "کپی شناسه URL",

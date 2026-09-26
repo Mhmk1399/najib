@@ -186,6 +186,8 @@ const productSchema = z
     colorIds: z.array(objectIdSchema).default([]),
     sizeIds: z.array(objectIdSchema).default([]),
     basePriceMinor: z.number().int().nonnegative(),
+    priceIrrMinor: z.number().int().nonnegative(),
+    priceUsdMinor: z.number().int().nonnegative(),
     currency: z.string().trim().length(3),
     status: z.enum(["draft", "active", "archived"]).default("draft"),
     material: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
@@ -210,6 +212,8 @@ const variantSchema = z
     sku: z.string().trim().min(1).max(80),
     barcode: z.string().trim().max(120).optional(),
     priceOverrideMinor: z.number().int().nonnegative().optional(),
+    priceOverrideIrrMinor: z.number().int().nonnegative().optional(),
+    priceOverrideUsdMinor: z.number().int().nonnegative().optional(),
     isActive: active,
   })
   .strict();

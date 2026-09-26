@@ -110,6 +110,10 @@ export const lightTokens = {
   accentForeground: "#FFFFFF",
 
   destructive: "#A33A32",
+
+  success: "#347155",
+
+  warning: "#9B5B22",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -146,6 +150,10 @@ export const darkTokens = {
   accentForeground: "#FFFFFF",
 
   destructive: "#D95C54",
+
+  success: "#76BC98",
+
+  warning: "#E1A66C",
 } as const;
 
 // -----------------------------------------------------------------------------

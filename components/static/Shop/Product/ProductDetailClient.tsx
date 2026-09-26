@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import {
   ProductDetailPage,
@@ -165,8 +166,8 @@ function idOf(value: unknown) {
   return "";
 }
 
-function moneyMinor(value: number) {
-  return Math.round(value / 100);
+function moneyMinor(value: number, currency: string) {
+  return Math.round(amountForCurrencyDisplay(value, currency));
 }
 
 function imageMapFrom(images: CatalogImageAsset[]) {
@@ -357,7 +358,7 @@ function relatedProducts(
       slug: product.slug,
       name,
       subtitle: localized(product.description, locale),
-      price: moneyMinor(product.basePriceMinor),
+      price: moneyMinor(product.basePriceMinor, product.currency),
       currency: product.currency,
       image: image?.url ?? FALLBACK_IMAGE,
       imageAlt: localized(image?.alt, locale, name),
@@ -384,7 +385,7 @@ function mapProduct(
     ),
     name: localized(payload.product.name, locale, payload.product.slug),
     shortDescription: localized(payload.product.description, locale),
-    price: moneyMinor(payload.product.basePriceMinor),
+    price: moneyMinor(payload.product.basePriceMinor, payload.product.currency),
     currency: payload.product.currency,
     colors: buildColors(payload, images, locale),
     sizes: buildSizes(payload, locale),

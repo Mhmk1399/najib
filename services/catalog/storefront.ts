@@ -1,5 +1,6 @@
 import "server-only";
 
+import { CATALOG_CURRENCY } from "@/lib/catalog/currency";
 import { connectToDatabase } from "@/lib/server/db";
 import { notFound } from "@/lib/server/errors";
 import { Category } from "@/models/catalog/category";
@@ -589,7 +590,7 @@ export async function getStorefrontImageStories() {
             description: product.description,
             href: `/shop/${product.slug}`,
             priceMinor: product.basePriceMinor,
-            currency: product.currency,
+            currency: CATALOG_CURRENCY,
             label: link.label,
             hotspotX: link.hotspotX,
             hotspotY: link.hotspotY,

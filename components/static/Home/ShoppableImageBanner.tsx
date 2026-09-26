@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type CSSProperties } from "react";
 
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import type { HomeCopy } from "@/lib/i18n/home-copy";
 
@@ -125,10 +126,10 @@ function formatMoney(
       style: "currency",
       currency: currency || "IRR",
       maximumFractionDigits: 0,
-    }).format(minor / 100);
+    }).format(amountForCurrencyDisplay(minor, currency || "IRR"));
   } catch {
     const formattedNumber = new Intl.NumberFormat(intlLocale).format(
-      minor / 100,
+      amountForCurrencyDisplay(minor, currency || "IRR"),
     );
 
     return `${formattedNumber} ${currency ?? ""}`.trim();

@@ -1,6 +1,7 @@
 import "server-only";
 
 import mongoose, { type ClientSession, type Model } from "mongoose";
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { connectToDatabase } from "@/lib/server/db";
@@ -9,6 +10,7 @@ import { StaffAudit } from "@/models/auth/staff-audit";
 import { ProductVariant } from "@/models/catalog/product-variant";
 import { City } from "@/models/inventory/city";
 import { InventoryBalance } from "@/models/inventory/inventory-balance";
+import { InventoryBatchRequest } from "@/models/inventory/inventory-batch-request";
 import { InventoryLocation } from "@/models/inventory/inventory-location";
 import { InventoryMovement } from "@/models/inventory/inventory-movement";
 import { InventoryPool } from "@/models/inventory/inventory-pool";
@@ -18,6 +20,7 @@ import { Store } from "@/models/inventory/store";
 import {
   createInventoryReservationSchema,
   inventoryAdjustmentSchema,
+  productStockBatchSchema,
   inventoryAvailabilityQuerySchema,
   inventoryListQuerySchema,
   inventoryMasterCreateSchemas,
@@ -184,6 +187,41 @@ async function createMovement(
   );
 }
 
+export async function adjustInventoryInSession(
+  input: z.infer<typeof inventoryAdjustmentSchema>,
+  actorId: string,
+  session: ClientSession,
+  writeStaffAudit = true,
+) {
+  await Promise.all([activeVariant(input.variantId, session), activeLocation(input.locationId, session)]);
+  const existing = await InventoryBalance.findOne({ variantId: input.variantId, locationId: input.locationId }).session(session);
+  const current = existing ?? new InventoryBalance({ variantId: input.variantId, locationId: input.locationId });
+  const nextOnHand = current.onHand + input.delta;
+  const nextSafetyStock = input.safetyStock ?? current.safetyStock;
+  if (nextOnHand < current.reserved) conflict("موجودی فیزیکی نمی‌تواند از مقدار رزروشده کمتر شود.");
+  if (nextOnHand < 0) conflict("موجودی فیزیکی نمی‌تواند منفی شود.");
+  current.onHand = nextOnHand;
+  current.safetyStock = nextSafetyStock;
+  current.version += 1;
+  await current.save({ session });
+  await createMovement({
+    idempotencyKey: input.idempotencyKey,
+    type: "adjustment",
+    variantId: input.variantId,
+    locationId: input.locationId,
+    onHandDelta: input.delta,
+    reservedDelta: 0,
+    balance: current,
+    safetyStockAfter: current.safetyStock,
+    referenceType: "adjustment",
+    referenceId: input.idempotencyKey,
+    reason: input.reason,
+    actorId,
+  }, session);
+  if (writeStaffAudit) await audit(actorId, "inventory.adjustment", current.id, input.reason, session);
+  return current;
+}
+
 type ReservationInput = z.infer<typeof createInventoryReservationSchema>;
 type ReservationAction = z.infer<typeof inventoryReservationActionSchema>;
 
@@ -306,6 +344,17 @@ export async function transitionInventoryReservationInSession(
 export const inventoryService = {
   parseId,
 
+  async productStock(productId: string, locationId: string) {
+    parseId(productId); parseId(locationId);
+    await connectToDatabase();
+    const location = await InventoryLocation.findOne({ _id: locationId, isActive: true }).select("code name type storeId isActive").lean();
+    if (!location) notFound("شعبه یا انبار فعال پیدا نشد.");
+    const variants = await ProductVariant.find({ productId, isActive: true }).select("sku colorId sizeId isActive").populate("colorId", "name hex code").populate("sizeId", "name code").sort({ sku: 1 }).lean();
+    const balances = await InventoryBalance.find({ variantId: { $in: variants.map((item) => item._id) }, locationId }).lean();
+    const balanceMap = new Map(balances.map((item) => [String(item.variantId), serializeBalance(item as unknown as Record<string, unknown>)]));
+    return { location, variants: variants.map((variant) => ({ ...variant, balance: balanceMap.get(String(variant._id)) ?? { onHand: 0, reserved: 0, safetyStock: 0, available: 0 } })) };
+  },
+
   async list(resource: InventoryResource, query: ListQuery) {
     await connectToDatabase();
     const filter = listFilter(resource, query);
@@ -340,6 +389,10 @@ export const inventoryService = {
           [{ ...input, code: String(input.code).toUpperCase() }],
           { session },
         );
+        if (resource === "stores") {
+          const fees = input as { shippingFeeIrrMinor?: number; shippingFeeUsdMinor?: number };
+          await Store.collection.updateOne({ _id: item._id as mongoose.Types.ObjectId }, { $set: { ...(fees.shippingFeeIrrMinor === undefined ? {} : { shippingFeeIrrMinor: fees.shippingFeeIrrMinor }), ...(fees.shippingFeeUsdMinor === undefined ? {} : { shippingFeeUsdMinor: fees.shippingFeeUsdMinor }) } }, { session });
+        }
         await audit(actorId, `inventory.${resource}.create`, item.id, "ایجاد رکورد پایه موجودی", session);
         return item.toObject();
       });
@@ -371,6 +424,10 @@ export const inventoryService = {
           .session(session)
           .lean();
         if (!item) notFound("رکورد موجودی پیدا نشد.");
+        if (resource === "stores") {
+          const fees = input as { shippingFeeIrrMinor?: number; shippingFeeUsdMinor?: number };
+          await Store.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(fees.shippingFeeIrrMinor === undefined ? {} : { shippingFeeIrrMinor: fees.shippingFeeIrrMinor }), ...(fees.shippingFeeUsdMinor === undefined ? {} : { shippingFeeUsdMinor: fees.shippingFeeUsdMinor }) } }, { session });
+        }
         await audit(actorId, `inventory.${resource}.update`, id, "ویرایش رکورد پایه موجودی", session);
         return item;
       });
@@ -402,34 +459,49 @@ export const inventoryService = {
     }
 
     return mongoose.connection.transaction(async (session) => {
-      await Promise.all([activeVariant(input.variantId, session), activeLocation(input.locationId, session)]);
-      const existing = await InventoryBalance.findOne({ variantId: input.variantId, locationId: input.locationId }).session(session);
-      const current = existing ?? new InventoryBalance({ variantId: input.variantId, locationId: input.locationId });
-      const nextOnHand = current.onHand + input.delta;
-      const nextSafetyStock = input.safetyStock ?? current.safetyStock;
-      if (nextOnHand < current.reserved) conflict("موجودی فیزیکی نمی‌تواند از مقدار رزروشده کمتر شود.");
-      if (nextOnHand < 0) conflict("موجودی فیزیکی نمی‌تواند منفی شود.");
-      current.onHand = nextOnHand;
-      current.safetyStock = nextSafetyStock;
-      current.version += 1;
-      await current.save({ session });
-      await createMovement({
-        idempotencyKey: input.idempotencyKey,
-        type: "adjustment",
-        variantId: input.variantId,
-        locationId: input.locationId,
-        onHandDelta: input.delta,
-        reservedDelta: 0,
-        balance: current,
-        safetyStockAfter: current.safetyStock,
-        referenceType: "adjustment",
-        referenceId: input.idempotencyKey,
-        reason: input.reason,
-        actorId,
-      }, session);
-      await audit(actorId, "inventory.adjustment", current.id, input.reason, session);
+      const current = await adjustInventoryInSession(input, actorId, session);
       return { idempotent: false, balance: serializeBalance(current.toObject()) };
     });
+  },
+
+  async addProductStock(value: unknown, actorId: string) {
+    const input = productStockBatchSchema.parse(value);
+    const canonical = JSON.stringify({ ...input, items: [...input.items].sort((a, b) => a.variantId.localeCompare(b.variantId)) });
+    const requestHash = createHash("sha256").update(canonical).digest("hex");
+    await connectToDatabase();
+    type BatchRecord = { requestHash: string; result: Record<string, unknown> };
+    const previous = await InventoryBatchRequest.findOne({ key: input.idempotencyKey }).lean() as BatchRecord | null;
+    if (previous) {
+      if (String(previous.requestHash) !== requestHash) conflict("این کلید ثبت قبلاً برای درخواست دیگری استفاده شده است.");
+      return { ...(previous.result as Record<string, unknown>), idempotent: true };
+    }
+    try {
+      return await mongoose.connection.transaction(async (session) => {
+        const replay = await InventoryBatchRequest.findOne({ key: input.idempotencyKey }).session(session).lean() as BatchRecord | null;
+        if (replay) {
+          if (String(replay.requestHash) !== requestHash) conflict("این کلید ثبت قبلاً برای درخواست دیگری استفاده شده است.");
+          return { ...(replay.result as Record<string, unknown>), idempotent: true };
+        }
+        await activeLocation(input.locationId, session);
+        const variants = await ProductVariant.find({ _id: { $in: input.items.map((item) => item.variantId) }, productId: input.productId, isActive: true }).session(session).lean();
+        if (variants.length !== input.items.length) badRequest("یک یا چند تنوع فعال به این محصول تعلق ندارد.");
+        const balances = [];
+        for (const [index, item] of input.items.entries()) {
+          const balance = await adjustInventoryInSession({ idempotencyKey: `${input.idempotencyKey}:${index}`, variantId: item.variantId, locationId: input.locationId, delta: item.quantity, reason: "افزایش گروهی موجودی از جدول محصولات" }, actorId, session, false);
+          balances.push(serializeBalance(balance.toObject()));
+        }
+        const result = { productId: input.productId, locationId: input.locationId, totalUnits: input.items.reduce((sum, item) => sum + item.quantity, 0), balances };
+        await InventoryBatchRequest.create([{ key: input.idempotencyKey, requestHash, productId: input.productId, locationId: input.locationId, result }], { session });
+        await audit(actorId, "inventory.product.batch-add", input.productId, `افزایش گروهی ${result.totalUnits} عدد`, session);
+        return { ...result, idempotent: false };
+      });
+    } catch (error) {
+      if (duplicateKey(error)) {
+        const replay = await InventoryBatchRequest.findOne({ key: input.idempotencyKey }).lean() as BatchRecord | null;
+        if (replay && String(replay.requestHash) === requestHash) return { ...(replay.result as Record<string, unknown>), idempotent: true };
+      }
+      throw error;
+    }
   },
 
   async reserve(value: unknown, actorId: string) {

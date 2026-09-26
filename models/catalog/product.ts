@@ -46,6 +46,8 @@ const productSchema = new Schema(
       min: 0,
       validate: Number.isSafeInteger,
     },
+    priceIrrMinor: { type: Number, min: 0, validate: Number.isSafeInteger },
+    priceUsdMinor: { type: Number, min: 0, validate: Number.isSafeInteger },
     currency: {
       type: String,
       required: true,

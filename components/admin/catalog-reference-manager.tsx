@@ -44,6 +44,8 @@ type ReferenceRecord = {
   sku?: string;
   barcode?: string;
   priceOverrideMinor?: number;
+  priceOverrideIrrMinor?: number;
+  priceOverrideUsdMinor?: number;
   isActive: boolean;
   sortOrder?: number;
   startsAt?: string;
@@ -65,6 +67,8 @@ type FormValues = Record<string, unknown> & {
   sku: string;
   barcode: string;
   priceOverride: number | null;
+  priceOverrideIrr: number | null;
+  priceOverrideUsd: number | null;
   isActive: boolean;
   sortOrder: number;
   startsAt: string;
@@ -129,6 +133,8 @@ function emptyForm(): FormValues {
     sku: "",
     barcode: "",
     priceOverride: null,
+    priceOverrideIrr: null,
+    priceOverrideUsd: null,
     isActive: true,
     sortOrder: 0,
     startsAt: "",
@@ -158,7 +164,9 @@ function normalize(record: ReferenceRecord): FormValues {
     priceOverride:
       record.priceOverrideMinor === undefined
         ? null
-        : record.priceOverrideMinor / 100,
+        : record.priceOverrideMinor,
+    priceOverrideIrr: record.priceOverrideIrrMinor ?? (record.priceOverrideMinor === undefined ? null : record.priceOverrideMinor),
+    priceOverrideUsd: record.priceOverrideUsdMinor === undefined ? null : record.priceOverrideUsdMinor / 100,
     startsAt: record.startsAt?.slice(0, 10) ?? "",
     endsAt: record.endsAt?.slice(0, 10) ?? "",
   };
@@ -343,8 +351,16 @@ function schemaFor(
       {
         kind: "input",
         inputType: "number",
-        name: "priceOverride",
-        label: "قیمت جایگزین",
+        name: "priceOverrideIrr",
+        label: "قیمت ریالی جایگزین",
+        min: 0,
+        step: 1,
+      },
+      {
+        kind: "input",
+        inputType: "number",
+        name: "priceOverrideUsd",
+        label: "قیمت دلاری جایگزین",
         min: 0,
         step: 0.01,
       },
@@ -429,10 +445,9 @@ function payload(resource: Resource, value: FormValues) {
     sizeId: value.sizeId,
     sku: value.sku.trim().toUpperCase(),
     barcode: value.barcode.trim() || undefined,
-    priceOverrideMinor:
-      value.priceOverride === null
-        ? undefined
-        : Math.round(Number(value.priceOverride) * 100),
+    priceOverrideMinor: value.priceOverrideIrr === null ? undefined : Math.round(Number(value.priceOverrideIrr)),
+    priceOverrideIrrMinor: value.priceOverrideIrr === null ? undefined : Math.round(Number(value.priceOverrideIrr)),
+    priceOverrideUsdMinor: value.priceOverrideUsd === null ? undefined : Math.round(Number(value.priceOverrideUsd) * 100),
     isActive: value.isActive,
   };
 }

@@ -9,6 +9,7 @@ import {
   useEffect,
   useMemo,
   useRef,
+  useSyncExternalStore,
 } from "react";
 
 import { Button } from "@/components/ui/Button";
@@ -116,6 +117,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+const subscribeToHydration = () => () => undefined;
+const getHydratedClientSnapshot = () => true;
+const getHydratedServerSnapshot = () => false;
+
 function formatIndex(index: number, locale: Locale) {
   return formatShellNumber(index, locale, 2);
 }
@@ -140,21 +145,28 @@ function shouldHideFooter(pathname: string | null) {
    Keeps the category query completely out of auth/admin routes.
 ============================================================================= */
 
-export default function Footer() {
+export default function Footer({ initialLocale }: { initialLocale: Locale }) {
   const pathname = usePathname();
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedClientSnapshot,
+    getHydratedServerSnapshot,
+  );
+  const locale = hydrated
+    ? getLocaleFromPathname(pathname)
+    : initialLocale;
 
   if (shouldHideFooter(pathname)) return null;
 
-  return <StorefrontFooter pathname={pathname} />;
+  return <StorefrontFooter locale={locale} />;
 }
 
 /* =============================================================================
    STOREFRONT FOOTER
 ============================================================================= */
 
-function StorefrontFooter({ pathname }: { pathname: string | null }) {
+function StorefrontFooter({ locale }: { locale: Locale }) {
   const year = new Date().getFullYear();
-  const locale = getLocaleFromPathname(pathname);
   const direction = getLocaleDirection(locale);
   const htmlLang = getHtmlLang(locale);
   const copy = shellCopy[locale];
@@ -462,7 +474,7 @@ function WordmarkStage({
   return (
     <section
       ref={stageRef}
-      aria-label="نمایش هویت بصری نجیب‌زاده"
+      aria-label={ariaLabel}
       className="relative h-[180svh] bg-[#050505] motion-reduce:h-[100svh]"
     >
       <div

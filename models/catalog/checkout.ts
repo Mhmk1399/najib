@@ -7,12 +7,43 @@ const checkoutItemSchema = new Schema(
   {
     variantId: { type: String, required: true, trim: true },
     quantity: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+    // Optional for legacy checkout rows; every newly created v2 snapshot supplies these fields.
+    productName: { type: createLocalizedTextSchema(160), default: undefined },
+    colorName: { type: createLocalizedTextSchema(160), default: undefined },
+    sizeName: { type: createLocalizedTextSchema(160), default: undefined },
+    sku: { type: String, trim: true },
     unitPriceMinor: {
       type: Number,
       required: true,
       min: 0,
       validate: Number.isSafeInteger,
     },
+  },
+  { _id: false },
+);
+
+const checkoutShipmentItemSchema = new Schema(
+  {
+    variantId: { type: String, required: true, trim: true },
+    locationId: { type: String, required: true, trim: true },
+    quantity: { type: Number, required: true, min: 1, validate: Number.isSafeInteger },
+    productName: { type: createLocalizedTextSchema(160), required: true },
+    colorName: { type: createLocalizedTextSchema(160), required: true },
+    sizeName: { type: createLocalizedTextSchema(160), required: true },
+    sku: { type: String, required: true, trim: true },
+  },
+  { _id: false },
+);
+
+const checkoutShipmentSchema = new Schema(
+  {
+    storeId: { type: String, required: true, trim: true },
+    cityId: { type: String, required: true, trim: true },
+    storeCode: { type: String, required: true, trim: true },
+    storeName: { type: createLocalizedTextSchema(160), required: true },
+    address: { type: createLocalizedTextSchema(500, false), default: undefined },
+    shippingMinor: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
+    items: { type: [checkoutShipmentItemSchema], required: true },
   },
   { _id: false },
 );
@@ -27,6 +58,9 @@ const checkoutSessionSchema = new Schema(
     cityId: { type: String, required: true, trim: true },
     currency: { type: String, required: true, trim: true, uppercase: true },
     items: { type: [checkoutItemSchema], required: true },
+    shipments: { type: [checkoutShipmentSchema], default: [] },
+    shippingMinor: { type: Number, default: 0, min: 0, validate: Number.isSafeInteger },
+    fulfillmentPlanHash: { type: String, trim: true },
     status: {
       type: String,
       enum: ["started", "reserved", "payment_pending", "completed", "failed", "cancelled", "expired"],
@@ -37,6 +71,7 @@ const checkoutSessionSchema = new Schema(
     correlationId: { type: String, required: true, trim: true },
     inventoryReservationId: { type: String, trim: true },
     paymentId: { type: String, trim: true },
+    recoveryAbandonedCheckoutId: { type: String, trim: true, index: true },
   },
   { timestamps: true },
 );
@@ -84,11 +119,17 @@ const abandonedCheckoutSchema = new Schema(
       index: true,
     },
     recoveryTokenHash: { type: String, select: false },
+    recoveryTokenCreatedAt: Date,
+    recoveryTokenExpiresAt: Date,
+    recoveryTokenUsedAt: Date,
+    recoveryCartId: { type: String, trim: true },
     recoveredOrderId: { type: String, trim: true },
+    recoveryCheckoutSessionId: { type: String, trim: true },
   },
   { timestamps: true },
 );
 abandonedCheckoutSchema.index({ checkoutSessionId: 1 }, { unique: true });
+abandonedCheckoutSchema.index({ recoveryTokenHash: 1 }, { unique: true, sparse: true });
 
 export type CheckoutSessionDocument = InferSchemaType<typeof checkoutSessionSchema>;
 export type AbandonedCheckoutDocument = InferSchemaType<typeof abandonedCheckoutSchema>;
