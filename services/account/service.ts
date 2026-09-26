@@ -41,6 +41,14 @@ export const updateCartItemSchema = z.object({
   quantity: z.number().int().min(1).max(99),
 }).strict();
 
+export const wishlistProductSchema = z.object({
+  productId: objectIdSchema,
+}).strict();
+
+export const wishlistQuerySchema = z.object({
+  locale: z.enum(["fa", "en", "ar"]).default("fa"),
+}).strict();
+
 const CART_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 type LocalizedText = { fa?: string; en?: string; ar?: string } | null | undefined;
@@ -145,7 +153,22 @@ type CartCheckoutRecord = {
   paymentId?: unknown;
 };
 
-function localized(value: LocalizedText, fallback: string) {
+type WishlistProductRecord = {
+  _id: unknown;
+  slug: string;
+  name?: LocalizedText;
+  basePriceMinor: number;
+  currency: string;
+  primaryImageId?: unknown;
+  primaryImageObjectPosition?: string;
+};
+
+function localized(
+  value: LocalizedText,
+  fallback: string,
+  locale?: "fa" | "en" | "ar",
+) {
+  if (locale && value?.[locale]?.trim()) return value[locale]!.trim();
   return value?.fa || value?.en || value?.ar || fallback;
 }
 
@@ -538,5 +561,100 @@ export const accountService = {
       .lean();
     if (!user) notFound("حساب کاربری پیدا نشد.");
     return safeProfile(user as unknown as ProfileRecord);
+  },
+
+  async listWishlist(accountId: string, locale: "fa" | "en" | "ar" = "fa") {
+    await connectToDatabase();
+
+    const user = (await User.findOne({
+      _id: accountId,
+      roles: "customer",
+      status: "active",
+    })
+      .select("wishlistProductIds")
+      .lean()) as unknown as { wishlistProductIds?: unknown[] } | null;
+
+    if (!user) notFound("حساب کاربری پیدا نشد.");
+
+    const ids = (user.wishlistProductIds ?? []).map(String);
+    if (!ids.length) return { items: [] };
+
+    const products = (await Product.find({
+      _id: { $in: ids },
+      status: "active",
+    })
+      .select("slug name basePriceMinor currency primaryImageId primaryImageObjectPosition")
+      .lean()) as unknown as WishlistProductRecord[];
+
+    const imageIds = products.map((product) => product.primaryImageId).filter(Boolean);
+    const images = imageIds.length
+      ? await ImageAsset.find({ _id: { $in: imageIds }, isActive: true })
+          .select("url alt objectPosition")
+          .lean()
+      : [];
+    const imageMap = new Map(images.map((image) => [String(image._id), image]));
+    const productMap = new Map(products.map((product) => [String(product._id), product]));
+
+    return {
+      items: ids
+        .map((id) => productMap.get(id))
+        .filter((product): product is WishlistProductRecord => Boolean(product))
+        .map((product) => {
+          const image = product.primaryImageId
+            ? imageMap.get(String(product.primaryImageId))
+            : undefined;
+          return {
+            id: String(product._id),
+            slug: product.slug,
+            name: product.name ?? {},
+            displayName: localized(product.name, product.slug, locale),
+            priceMinor: product.basePriceMinor,
+            currency: product.currency,
+            image: image
+              ? {
+                  url: image.url,
+                  alt: localized(image.alt, product.slug, locale),
+                  objectPosition:
+                    product.primaryImageObjectPosition ?? image.objectPosition ?? "center",
+                }
+              : null,
+          };
+        }),
+    };
+  },
+
+  async addWishlist(accountId: string, input: unknown) {
+    const { productId } = wishlistProductSchema.parse(input);
+    await connectToDatabase();
+
+    const product = await Product.exists({ _id: productId, status: "active" });
+    if (!product) notFound("محصول فعال پیدا نشد.");
+
+    const user = await User.findOneAndUpdate(
+      { _id: accountId, roles: "customer", status: "active" },
+      { $addToSet: { wishlistProductIds: productId } },
+      { new: true, runValidators: true },
+    )
+      .select("wishlistProductIds")
+      .lean();
+    if (!user) notFound("حساب کاربری پیدا نشد.");
+
+    return { productId, isFavorite: true };
+  },
+
+  async removeWishlist(accountId: string, productId: string) {
+    const parsedProductId = objectIdSchema.parse(productId);
+    await connectToDatabase();
+
+    const user = await User.findOneAndUpdate(
+      { _id: accountId, roles: "customer", status: "active" },
+      { $pull: { wishlistProductIds: parsedProductId } },
+      { new: true, runValidators: true },
+    )
+      .select("wishlistProductIds")
+      .lean();
+    if (!user) notFound("حساب کاربری پیدا نشد.");
+
+    return { productId: parsedProductId, isFavorite: false };
   },
 };

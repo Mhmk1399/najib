@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { CustomSelect, type SelectOption } from "@/components/ui/CustomSelect";
 
 import { useToast } from "@/components/ui/CustomToast";
+import { useWishlist } from "@/components/account/use-wishlist";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { ShoppingBag } from "lucide-react";
@@ -171,7 +172,8 @@ export function ProductDetailPage({
 
   const [addingToBag, setAddingToBag] = useState(false);
 
-  const [favorite, setFavorite] = useState(false);
+  const wishlist = useWishlist(product.id, locale);
+  const favorite = wishlist.isFavorite;
 
   const [zoomIndex, setZoomIndex] = useState<number | null>(null);
 
@@ -371,12 +373,14 @@ export function ProductDetailPage({
      FAVORITE
   ------------------------------------------------------------------------- */
 
-  function toggleFavorite() {
-    const next = !favorite;
-
-    setFavorite(next);
-
-    toast.info(next ? copy.favoriteAdded : copy.favoriteRemoved);
+  async function toggleFavorite() {
+    try {
+      const next = await wishlist.toggle();
+      toast.info(next ? copy.favoriteAdded : copy.favoriteRemoved);
+    } catch (error) {
+      if (error instanceof CommerceApiError && error.status === 401) return;
+      toast.error(copy.tryAgain);
+    }
   }
 
   /* ------------------------------------------------------------------------

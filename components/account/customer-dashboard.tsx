@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -9,6 +10,7 @@ import {
   ChevronRight,
   CircleUserRound,
   Clock3,
+  Heart,
   MapPin,
   Package,
   RefreshCw,
@@ -29,6 +31,7 @@ import {
 } from "react";
 
 import { AccountLogoutButton } from "@/components/account/account-logout-button";
+import type { WishlistItem } from "@/components/account/use-wishlist";
 
 import type { CustomerDashboardCopy } from "@/lib/i18n/customer-dashboard-copy";
 import {
@@ -38,7 +41,7 @@ import {
 } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
 
-type Tab = "overview" | "orders" | "profile";
+type Tab = "overview" | "orders" | "wishlist" | "profile";
 
 type Profile = {
   id?: string;
@@ -302,6 +305,9 @@ export function CustomerDashboard({
   const [cart, setCart] = useState<Cart>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [overviewError, setOverviewError] = useState("");
+  const [wishlist, setWishlist] = useState<WishlistItem[]>([]);
+  const [removingWishlistId, setRemovingWishlistId] = useState<string | null>(null);
+  const [wishlistError, setWishlistError] = useState("");
 
   const direction = getLocaleDirection(locale);
   const htmlLang = getHtmlLang(locale);
@@ -312,17 +318,23 @@ export function CustomerDashboard({
       setOverviewError("");
 
       try {
-        const [summaryResult, cartResult] = await Promise.all([
+        const [summaryResult, cartResult, wishlistResult] = await Promise.all([
           api<Summary>(
             "/api/account/summary",
             { signal },
             copy.common.fetchError,
           ),
           api<Cart>("/api/account/cart", { signal }, copy.common.fetchError),
+          api<{ items: WishlistItem[] }>(
+            `/api/account/wishlist?locale=${locale}`,
+            { signal },
+            copy.common.fetchError,
+          ),
         ]);
 
         setSummary(summaryResult);
         setCart(cartResult);
+        setWishlist(wishlistResult.items);
       } catch (error) {
         if ((error as Error).name !== "AbortError")
           setOverviewError((error as Error).message);
@@ -330,7 +342,7 @@ export function CustomerDashboard({
         if (!signal?.aborted) setOverviewLoading(false);
       }
     },
-    [copy.common.fetchError],
+    [copy.common.fetchError, locale],
   );
 
   useEffect(() => {
@@ -348,6 +360,7 @@ export function CustomerDashboard({
   const tabs = [
     ["overview", copy.tabs.overview, CircleUserRound],
     ["orders", copy.tabs.orders, ShoppingBag],
+    ["wishlist", copy.tabs.wishlist, Heart],
     ["profile", copy.tabs.profile, UserRound],
   ] as const;
 
@@ -483,6 +496,39 @@ export function CustomerDashboard({
               tabIndex={0}
             >
               <Orders />
+            </div>
+          )}
+
+          {tab === "wishlist" && (
+            <div
+              id="account-panel-wishlist"
+              role="tabpanel"
+              aria-labelledby="account-tab-wishlist"
+              tabIndex={0}
+            >
+              <WishlistPanel
+                items={wishlist}
+                error={wishlistError}
+                removingId={removingWishlistId}
+                onRemove={async (productId) => {
+                  setRemovingWishlistId(productId);
+                  setWishlistError("");
+                  try {
+                    await api(
+                      `/api/account/wishlist/${productId}`,
+                      { method: "DELETE" },
+                      copy.common.fetchError,
+                    );
+                    setWishlist((current) =>
+                      current.filter((item) => item.id !== productId),
+                    );
+                  } catch (reason) {
+                    setWishlistError((reason as Error).message);
+                  } finally {
+                    setRemovingWishlistId(null);
+                  }
+                }}
+              />
             </div>
           )}
 
@@ -841,6 +887,118 @@ function OrderRow({
 
       <StatusBadge status={order.status} />
     </button>
+  );
+}
+
+function WishlistPanel({
+  items,
+  error,
+  removingId,
+  onRemove,
+}: {
+  items: WishlistItem[];
+  error: string;
+  removingId: string | null;
+  onRemove: (productId: string) => Promise<void>;
+}) {
+  const { copy, locale } = useCustomerDashboardI18n();
+  const ForwardArrow = getLocaleDirection(locale) === "rtl" ? ArrowLeft : ArrowRight;
+
+  return (
+    <section aria-labelledby="wishlist-title">
+      <header className="border-b border-black/10 pb-7">
+        <p className="text-xs font-semibold text-[#9b7552]">
+          {copy.wishlist.eyebrow}
+        </p>
+        <h1 id="wishlist-title" className="mt-2 text-3xl font-semibold">
+          {copy.wishlist.title}
+        </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-7 text-black/60">
+          {copy.wishlist.description}
+        </p>
+      </header>
+
+      {error ? (
+        <div className="mt-7 border border-red-900/20 bg-red-50 p-4 text-sm text-red-900" role="alert">
+          {error}
+        </div>
+      ) : null}
+
+      {items.length ? (
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((item) => (
+            <article key={item.id} className="group border border-black/10 bg-white/35">
+              <Link
+                href={localizedHref(`/shop/${item.slug}`, locale)}
+                className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9b7552]"
+              >
+                <div className="relative aspect-[4/5] overflow-hidden bg-[#e7dfd2]">
+                  {item.image?.url ? (
+                    <Image
+                      src={item.image.url}
+                      alt={item.image.alt || item.displayName}
+                      fill
+                      sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 92vw"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+                      style={{ objectPosition: item.image.objectPosition }}
+                    />
+                  ) : null}
+                </div>
+              </Link>
+
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <Link
+                      href={localizedHref(`/shop/${item.slug}`, locale)}
+                      className="line-clamp-2 font-semibold hover:text-[#8d6746]"
+                    >
+                      {item.displayName}
+                    </Link>
+                    <p className="mt-2 text-sm text-black/60" dir="ltr">
+                      {item.priceMinor > 0
+                        ? money(item.priceMinor, item.currency, locale, copy)
+                        : copy.wishlist.priceUnavailable}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => void onRemove(item.id)}
+                    disabled={removingId === item.id}
+                    aria-label={copy.wishlist.remove}
+                    className="grid size-10 shrink-0 place-items-center border border-black/15 text-[#9b7552] transition hover:border-red-700/35 hover:text-red-700 disabled:cursor-wait disabled:opacity-50"
+                  >
+                    <Heart size={17} fill="currentColor" aria-hidden="true" />
+                  </button>
+                </div>
+
+                {removingId === item.id ? (
+                  <p className="mt-3 text-[11px] text-black/50" role="status">
+                    {copy.wishlist.removing}…
+                  </p>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-7 border border-dashed border-black/20 py-16 text-center">
+          <Heart className="mx-auto text-[#9b7552]" size={30} aria-hidden="true" />
+          <h2 className="mt-4 font-semibold">{copy.wishlist.emptyTitle}</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm text-black/50">
+            {copy.wishlist.emptyDescription}
+          </p>
+          <Link
+            href={localizedHref("/shop", locale)}
+            className="mt-6 inline-flex min-h-11 items-center gap-2 border-b border-black text-sm font-semibold"
+          >
+            {copy.wishlist.browseProducts}
+            <ForwardArrow size={15} aria-hidden="true" />
+          </Link>
+        </div>
+      )}
+    </section>
   );
 }
 

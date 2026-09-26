@@ -95,6 +95,10 @@ const userSchema = new Schema(
     preferredCityId: { type: String, trim: true },
     preferredStoreId: { type: String, trim: true },
     addresses: { type: [addressSchema], default: [] },
+    wishlistProductIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      default: [],
+    },
     consents: { type: [consentSchema], default: [] },
     lastLoginAt: Date,
     failedLoginAttempts: { type: Number, min: 0, default: 0, select: false },
@@ -105,6 +109,7 @@ const userSchema = new Schema(
 );
 
 userSchema.index({ email: 1 }, { unique: true });
+userSchema.index({ wishlistProductIds: 1 });
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
 export const User = models.User || model("User", userSchema);
