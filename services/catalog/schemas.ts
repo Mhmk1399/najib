@@ -135,6 +135,7 @@ const collectionSchema = z
     name,
     slug,
     description: localizedTextSchema(4000, 0).optional(),
+    productIds: z.array(objectIdSchema).max(100).default([]),
     heroImageId: optionalObjectId,
     heroObjectFit: objectFitSchema,
     heroObjectPosition: objectPositionSchema,

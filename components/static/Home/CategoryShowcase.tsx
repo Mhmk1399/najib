@@ -200,7 +200,7 @@ export function CategoryShowcase({
 
           <h2
             id="category-showcase-title"
-            className="mt-5 max-w-[760px] text-balance text-[clamp(2.45rem,8vw,4.9rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--cat-text)] sm:mt-6 lg:text-[clamp(3.7rem,4.8vw,5.3rem)]"
+            className="mt-5 max-w-[760px] text-balance text-[clamp(2.45rem,8vw,4.9rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-[var(--cat-text)] sm:mt-6 lg:text-[clamp(3.7rem,4.8vw,5rem)]"
           >
             {copy.title}
           </h2>
@@ -299,7 +299,7 @@ function CategoryCard({
       />
 
       <div className="absolute inset-x-5 bottom-6 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:bottom-8">
-        <h3 className="mt-2 text-balance text-[clamp(2.15rem,10vw,3.9rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-[clamp(2.3rem,6vw,4rem)] md:text-[clamp(2.3rem,3.5vw,4rem)]">
+        <h3 className="mt-2 text-balance text-[clamp(2.15rem,10vw,3.9rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-[clamp(2.3rem,6vw,4rem)] md:text-[clamp(2.3rem,3.5vw,2rem)]">
           {category.name}
         </h3>
 
@@ -308,10 +308,7 @@ function CategoryCard({
           className="mt-4 h-px w-8 bg-white/45 transition-[width,background-color] duration-500 group-hover:w-12 group-hover:bg-[var(--cat-accent)] motion-reduce:transition-none"
         />
 
-        <span className="mt-4 inline-flex items-center gap-2 text-[10px] font-medium text-white/68 transition-colors duration-300 group-hover:text-white sm:text-[11px]">
-          {copy.categoryActionLabel}
-          <DirectionalArrow direction={direction} />
-        </span>
+       
       </div>
     </Link>
   );

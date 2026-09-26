@@ -83,7 +83,8 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
   });
 
   const signedOut =
-    cartQuery.error instanceof CommerceApiError && cartQuery.error.status === 401;
+    cartQuery.error instanceof CommerceApiError &&
+    cartQuery.error.status === 401;
   const cart = cartQuery.data;
   const locked = cart?.status === "checkout_started";
 
@@ -122,7 +123,9 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
           </StatePanel>
         ) : null}
 
-        {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
+        {!cartQuery.isPending &&
+        !cartQuery.isError &&
+        (!cart || !cart.items.length) ? (
           <StatePanel
             icon={<ShoppingBag className="size-6" />}
             title={copy.emptyTitle}
@@ -144,8 +147,10 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
               <div className="divide-y divide-black/15 border-y border-black/15">
                 {cart.items.map((item) => {
                   const changing =
-                    (quantityMutation.isPending && quantityMutation.variables?.id === item.id) ||
-                    (removeMutation.isPending && removeMutation.variables === item.id);
+                    (quantityMutation.isPending &&
+                      quantityMutation.variables?.id === item.id) ||
+                    (removeMutation.isPending &&
+                      removeMutation.variables === item.id);
                   return (
                     <article key={item.id} className="grid grid-cols-[108px_minmax(0,1fr)] gap-5 py-7 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:gap-7">
                       <Link href={localizedHref(item.productSlug ? `/shop/${item.productSlug}` : "/shop", locale)} className="relative aspect-[3/4] overflow-hidden bg-[#E9E3DA]">
@@ -154,7 +159,9 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
                           alt={item.imageAlt || item.productName}
                           fill
                           sizes="150px"
-                          style={{ objectPosition: item.imagePosition || "center" }}
+                          style={{
+                            objectPosition: item.imagePosition || "center",
+                          }}
                           className="object-cover transition-transform duration-700 hover:scale-[1.03]"
                         />
                       </Link>
@@ -168,7 +175,13 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
                           <div className="flex items-center gap-2">
                             <dt>{copy.color}</dt>
                             <dd className="flex items-center gap-1.5 text-black/80">
-                              {item.colorHex ? <span className="size-2.5 border border-black/15" style={{ backgroundColor: item.colorHex }} aria-hidden /> : null}
+                              {item.colorHex ? (
+                                <span
+                                  className="size-2.5 border border-black/15"
+                                  style={{ backgroundColor: item.colorHex }}
+                                  aria-hidden
+                                />
+                              ) : null}
                               {item.colorName}
                             </dd>
                           </div>
@@ -237,7 +250,11 @@ function CartLoading({ label }: { label: string }) {
         {[1, 2].map((item) => (
           <div key={item} className="flex gap-6 border-y border-black/10 py-7">
             <div className="aspect-[3/4] w-28 animate-pulse bg-black/10" />
-            <div className="flex-1 space-y-4 pt-2"><div className="h-3 w-24 animate-pulse bg-black/10" /><div className="h-6 w-48 animate-pulse bg-black/10" /><div className="h-4 w-36 animate-pulse bg-black/10" /></div>
+            <div className="flex-1 space-y-4 pt-2">
+              <div className="h-3 w-24 animate-pulse bg-black/10" />
+              <div className="h-6 w-48 animate-pulse bg-black/10" />
+              <div className="h-4 w-36 animate-pulse bg-black/10" />
+            </div>
           </div>
         ))}
       </div>
@@ -246,12 +263,28 @@ function CartLoading({ label }: { label: string }) {
   );
 }
 
-function StatePanel({ icon, title, description, children }: { icon?: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
+function StatePanel({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mx-auto flex max-w-xl flex-col items-center py-24 text-center">
-      {icon ? <div className="mb-6 grid size-14 place-items-center border border-black/15">{icon}</div> : null}
-      <h2 className="text-2xl font-semibold">{title}</h2>
-      <p className="mt-4 max-w-md text-sm leading-7 text-black/65">{description}</p>
+      {icon ? (
+        <div className="mb-6 grid size-14 place-items-center border border-black/15">
+          {icon}
+        </div>
+      ) : null}
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="mt-4 max-w-md text-xs leading-7 text-black/65">
+        {description}
+      </p>
       <div className="mt-8">{children}</div>
     </section>
   );

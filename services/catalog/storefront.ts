@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/server/db";
 import { notFound } from "@/lib/server/errors";
 import { Category } from "@/models/catalog/category";
 import { Color } from "@/models/catalog/color";
+import { Collection } from "@/models/catalog/collection";
 import { ImageAsset } from "@/models/catalog/image-asset";
 import { Product } from "@/models/catalog/product";
 import { ProductVariant } from "@/models/catalog/product-variant";
@@ -304,6 +305,166 @@ export async function getStorefrontProducts(input: ProductListInput = {}) {
       pages: enrichedProducts.length > 0 ? 1 : 0,
     },
   });
+}
+
+export async function getStorefrontCollections(locale?: Locale) {
+  await connectToDatabase();
+
+  const now = new Date();
+  const collections = (await Collection.find({
+    isActive: true,
+    $and: [
+      {
+        $or: [
+          { startsAt: { $exists: false } },
+          { startsAt: null },
+          { startsAt: { $lte: now } },
+        ],
+      },
+      {
+        $or: [
+          { endsAt: { $exists: false } },
+          { endsAt: null },
+          { endsAt: { $gte: now } },
+        ],
+      },
+    ],
+  })
+    .sort({ sortOrder: 1, createdAt: -1 })
+    .limit(8)
+    .lean()) as PlainCatalogRecord[];
+
+  if (collections.length === 0) return { items: [] };
+
+  const productIds = uniqueIds(
+    collections.flatMap((collection) => recordIds(collection.productIds)),
+  );
+  const collectionIds = collections.map((collection) => String(collection._id));
+  const products = productIds.length
+    ? ((await Product.find({
+        $or: [
+          { _id: { $in: productIds } },
+          { collectionIds: { $in: collectionIds } },
+        ],
+        status: "active",
+      })
+        .select({
+          name: 1,
+          slug: 1,
+          basePriceMinor: 1,
+          currency: 1,
+          primaryImageId: 1,
+          primaryImageObjectPosition: 1,
+          collectionIds: 1,
+        })
+        .lean()) as PlainCatalogRecord[])
+    : ((await Product.find({
+        status: "active",
+        collectionIds: { $in: collectionIds },
+      })
+        .select({
+          name: 1,
+          slug: 1,
+          basePriceMinor: 1,
+          currency: 1,
+          primaryImageId: 1,
+          primaryImageObjectPosition: 1,
+          collectionIds: 1,
+        })
+        .lean()) as PlainCatalogRecord[]);
+  const imageIds = uniqueIds([
+    ...collections.map((collection) => collection.heroImageId),
+    ...products.map((product) => product.primaryImageId),
+  ]);
+  const images = imageIds.length
+    ? ((await ImageAsset.find({ _id: { $in: imageIds }, isActive: true })
+        .select({ url: 1, alt: 1, objectFit: 1, objectPosition: 1 })
+        .lean()) as PlainCatalogRecord[])
+    : [];
+  const productMap = new Map(products.map((product) => [String(product._id), product]));
+  const imageMap = new Map(images.map((image) => [String(image._id), image]));
+  const legacyProductsByCollection = new Map<string, string[]>();
+  for (const product of products) {
+    for (const collectionId of recordIds(product.collectionIds)) {
+      const current = legacyProductsByCollection.get(collectionId) ?? [];
+      current.push(String(product._id));
+      legacyProductsByCollection.set(collectionId, current);
+    }
+  }
+
+  const items = collections.map((collection) => ({
+    id: String(collection._id),
+    slug: String(collection.slug),
+    name: collection.name,
+    description: collection.description ?? null,
+    heroObjectFit: collection.heroObjectFit,
+    heroObjectPosition: collection.heroObjectPosition,
+    heroImage: collection.heroImageId
+      ? storyImagePayload(imageMap.get(String(collection.heroImageId)))
+      : null,
+    products: uniqueIds([
+      ...recordIds(collection.productIds),
+      ...(legacyProductsByCollection.get(String(collection._id)) ?? []),
+    ])
+      .map((productId) => productMap.get(productId))
+      .filter((product): product is PlainCatalogRecord => Boolean(product))
+      .map((product) => ({
+        id: String(product._id),
+        slug: String(product.slug),
+        name: product.name,
+        href: `/shop/${product.slug}`,
+        priceMinor: product.basePriceMinor,
+        currency: product.currency,
+        image: product.primaryImageId
+          ? storyImagePayload(imageMap.get(String(product.primaryImageId)))
+          : null,
+        imagePosition: product.primaryImageObjectPosition,
+      })),
+  }));
+
+  const payload = toPlainJson({ items });
+  if (!locale) return payload;
+
+  return {
+    items: payload.items.map((collection) => {
+      const collectionName = String(
+        localizedField(collection.name, locale, collection.slug) ??
+          collection.slug,
+      );
+
+      return {
+        ...collection,
+        name: collectionName,
+        description: localizedField(collection.description, locale),
+        heroImage: collection.heroImage
+          ? {
+              ...collection.heroImage,
+              alt: localizedField(
+                collection.heroImage.alt,
+                locale,
+                collectionName,
+              ),
+            }
+          : null,
+        products: collection.products.map((product) => {
+          const productName = String(
+            localizedField(product.name, locale, product.slug) ?? product.slug,
+          );
+
+          return {
+            ...product,
+            name: productName,
+            image: product.image
+              ? {
+                  ...product.image,
+                  alt: localizedField(product.image.alt, locale, productName),
+                }
+              : null,
+          };
+        }),
+      };
+    }),
+  };
 }
 
 export async function getStorefrontImageStories() {

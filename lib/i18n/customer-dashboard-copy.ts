@@ -17,6 +17,19 @@ export type CustomerDashboardCopy = {
         overview: string;
         orders: string;
         profile: string;
+        wishlist: string;
+    };
+
+    wishlist: {
+        eyebrow: string;
+        title: string;
+        description: string;
+        emptyTitle: string;
+        emptyDescription: string;
+        browseProducts: string;
+        remove: string;
+        removing: string;
+        priceUnavailable: string;
     };
 
     common: {
@@ -166,6 +179,19 @@ export const customerDashboardCopy: Record<Locale, CustomerDashboardCopy> = {
             overview: "خلاصه حساب",
             orders: "سفارش‌ها",
             profile: "مشخصات من",
+            wishlist: "علاقه‌مندی‌ها",
+        },
+
+        wishlist: {
+            eyebrow: "انتخاب‌های ذخیره‌شده",
+            title: "علاقه‌مندی‌های من",
+            description: "محصولاتی که برای خرید بعدی نگه داشته‌اید اینجا هستند.",
+            emptyTitle: "هنوز محصولی ذخیره نکرده‌اید",
+            emptyDescription: "با زدن قلب کنار هر محصول، انتخاب‌های محبوبتان را اینجا نگه دارید.",
+            browseProducts: "مشاهده محصولات",
+            remove: "حذف از علاقه‌مندی‌ها",
+            removing: "در حال حذف",
+            priceUnavailable: "قیمت در دسترس نیست",
         },
 
         common: {
@@ -324,6 +350,19 @@ export const customerDashboardCopy: Record<Locale, CustomerDashboardCopy> = {
             overview: "Account Overview",
             orders: "Orders",
             profile: "My Profile",
+            wishlist: "Wishlist",
+        },
+
+        wishlist: {
+            eyebrow: "Saved selections",
+            title: "My Wishlist",
+            description: "Products you want to keep close for your next purchase.",
+            emptyTitle: "Your wishlist is empty",
+            emptyDescription: "Use the heart on any product to save it here.",
+            browseProducts: "Browse Products",
+            remove: "Remove from wishlist",
+            removing: "Removing",
+            priceUnavailable: "Price unavailable",
         },
 
         common: {
@@ -481,6 +520,19 @@ export const customerDashboardCopy: Record<Locale, CustomerDashboardCopy> = {
             overview: "ملخص الحساب",
             orders: "الطلبات",
             profile: "ملفي الشخصي",
+            wishlist: "المفضلة",
+        },
+
+        wishlist: {
+            eyebrow: "اختيارات محفوظة",
+            title: "قائمتي المفضلة",
+            description: "المنتجات التي تريد الاحتفاظ بها لشرائك القادم.",
+            emptyTitle: "قائمتك المفضلة فارغة",
+            emptyDescription: "استخدم رمز القلب لحفظ أي منتج هنا.",
+            browseProducts: "تصفح المنتجات",
+            remove: "إزالة من المفضلة",
+            removing: "جارٍ الحذف",
+            priceUnavailable: "السعر غير متاح",
         },
 
         common: {

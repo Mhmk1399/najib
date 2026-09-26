@@ -26,6 +26,10 @@ import {
   trimLocalized,
   type LocalizedText,
 } from "@/lib/admin/localization";
+import type {
+  ImageObjectFit,
+  ImageObjectPosition,
+} from "@/lib/catalog/image-presentation";
 
 type Resource = "collections" | "colors" | "size-groups" | "sizes" | "variants";
 type ReferenceRecord = {
@@ -33,6 +37,12 @@ type ReferenceRecord = {
   name?: LocalizedText;
   slug?: string;
   description?: LocalizedText;
+  productIds?: string[];
+  heroImageId?: string | null;
+  heroObjectFit?: ImageObjectFit;
+  heroObjectPosition?: ImageObjectPosition;
+  url?: string;
+  kind?: string;
   family?: LocalizedText;
   hex?: string;
   swatchImageUrl?: string;
@@ -56,6 +66,10 @@ type FormValues = Record<string, unknown> & {
   name: LocalizedText;
   slug: string;
   description: LocalizedText;
+  productIds: string[];
+  heroImageId: string;
+  heroObjectFit: ImageObjectFit;
+  heroObjectPosition: ImageObjectPosition;
   family: LocalizedText;
   code: string;
   hex: string;
@@ -117,11 +131,35 @@ const statusOptions: DataSelectOption[] = [
   { value: "false", label: "غیرفعال" },
 ];
 
+const objectFitOptions: DataSelectOption[] = [
+  { value: "cover", label: "پوشش کامل" },
+  { value: "contain", label: "نمایش کامل تصویر" },
+  { value: "fill", label: "کشیده داخل قاب" },
+  { value: "none", label: "اندازه اصلی" },
+  { value: "scale-down", label: "کوچک‌سازی در صورت نیاز" },
+];
+
+const objectPositionOptions: DataSelectOption[] = [
+  { value: "center", label: "وسط" },
+  { value: "top", label: "بالا" },
+  { value: "bottom", label: "پایین" },
+  { value: "left", label: "چپ" },
+  { value: "right", label: "راست" },
+  { value: "left top", label: "چپ بالا" },
+  { value: "right top", label: "راست بالا" },
+  { value: "left bottom", label: "چپ پایین" },
+  { value: "right bottom", label: "راست پایین" },
+];
+
 function emptyForm(): FormValues {
   return {
     name: emptyLocalizedText(),
     slug: "",
     description: emptyLocalizedText(),
+    productIds: [],
+    heroImageId: "",
+    heroObjectFit: "cover",
+    heroObjectPosition: "center",
     family: emptyLocalizedText(),
     code: "",
     hex: "",
@@ -154,12 +192,32 @@ function recordLabel(record: ReferenceRecord) {
     ? fa(record.name)
     : record.sku || record.code || "رکورد کاتالوگ";
 }
+function formatDate(value?: string) {
+  if (!value) return "—";
+  return new Intl.DateTimeFormat("fa-IR", { dateStyle: "medium" }).format(
+    new Date(value),
+  );
+}
+
+function formatCollectionDates(record: ReferenceRecord) {
+  if (!record.startsAt && !record.endsAt) return "بدون بازه زمانی";
+  return `${formatDate(record.startsAt)} تا ${formatDate(record.endsAt)}`;
+}
+
+function formatCount(value: number) {
+  return new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(value);
+}
+
 function normalize(record: ReferenceRecord): FormValues {
   return {
     ...emptyForm(),
     ...record,
     name: record.name ?? emptyLocalizedText(),
     description: record.description ?? emptyLocalizedText(),
+    productIds: record.productIds ?? [],
+    heroImageId: record.heroImageId ?? "",
+    heroObjectFit: record.heroObjectFit ?? "cover",
+    heroObjectPosition: record.heroObjectPosition ?? "center",
     family: record.family ?? emptyLocalizedText(),
     priceOverride:
       record.priceOverrideMinor === undefined
@@ -223,6 +281,42 @@ function options(records: ReferenceRecord[]) {
   }));
 }
 
+function uploadedImageId(response: unknown) {
+  const payload = response as {
+    imageId?: string;
+    image?: { _id?: string; id?: string };
+  };
+  return payload.imageId ?? payload.image?._id ?? payload.image?.id ?? "";
+}
+
+function coerceImageId(value: unknown) {
+  if (typeof value === "string") return value.trim();
+  if (value && typeof value === "object") {
+    const payload = value as { id?: string; _id?: string; imageId?: string };
+    return payload.imageId ?? payload.id ?? payload._id ?? "";
+  }
+  return "";
+}
+
+function collectionImageField(imageMap: Map<string, string>) {
+  return {
+    kind: "file" as const,
+    name: "heroImageId",
+    label: "تصویر اصلی کالکشن",
+    uploadUrl: "/api/admin/uploads/catalog-image?kind=collection_banner",
+    uploadFieldName: "file",
+    accept: "image/jpeg,image/png,image/webp",
+    maxSizeBytes: 5 * 1024 * 1024,
+    preview: "image" as const,
+    buttonLabel: "انتخاب و آپلود تصویر",
+    removeLabel: "حذف تصویر",
+    cancelLabel: "لغو آپلود",
+    helperText: "این تصویر به‌عنوان تصویر اصلی کالکشن در صفحه اصلی نمایش داده می‌شود.",
+    parseUploadResponse: uploadedImageId,
+    format: (value: unknown) => imageMap.get(coerceImageId(value)) ?? "",
+  };
+}
+
 function schemaFor(
   resource: Resource,
   refs: {
@@ -230,6 +324,7 @@ function schemaFor(
     products: DataSelectOption[];
     colors: DataSelectOption[];
     sizes: DataSelectOption[];
+    images: Map<string, string>;
   },
 ): DynamicFormSchema<FormValues> {
   const fields: DynamicFormSchema<FormValues>["fields"] = [];
@@ -252,6 +347,30 @@ function schemaFor(
   if (resource === "collections") {
     fields.push(
       ...localizedFields("description", "توضیحات", "textarea"),
+      collectionImageField(refs.images),
+      {
+        kind: "select",
+        name: "heroObjectFit",
+        label: "پوشش تصویر کالکشن",
+        options: objectFitOptions,
+        required: true,
+      },
+      {
+        kind: "select",
+        name: "heroObjectPosition",
+        label: "جایگاه تصویر کالکشن",
+        options: objectPositionOptions,
+        required: true,
+      },
+      {
+        kind: "multi-select",
+        name: "productIds",
+        label: "محصولات مجموعه",
+        description: "محصولاتی را انتخاب کنید که در این مجموعه نمایش داده می‌شوند.",
+        options: refs.products,
+        searchable: true,
+        clearable: true,
+      },
       { kind: "date", name: "startsAt", label: "تاریخ شروع", clearable: true },
       { kind: "date", name: "endsAt", label: "تاریخ پایان", clearable: true },
     );
@@ -410,6 +529,10 @@ function payload(resource: Resource, value: FormValues) {
       name: trimLocalized(value.name),
       slug: slugify(value.slug),
       description: trimLocalized(value.description),
+      productIds: [...new Set(value.productIds)],
+      heroImageId: coerceImageId(value.heroImageId) || null,
+      heroObjectFit: value.heroObjectFit,
+      heroObjectPosition: value.heroObjectPosition,
       isActive: value.isActive,
       startsAt: value.startsAt || undefined,
       endsAt: value.endsAt || undefined,
@@ -464,7 +587,12 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
   const products = useQuery({
     queryKey: ["catalog", "all-products"],
     queryFn: () => all("products"),
-    enabled: resource === "variants",
+    enabled: resource === "variants" || resource === "collections",
+  });
+  const images = useQuery({
+    queryKey: ["catalog", "all-collection-images"],
+    queryFn: () => all("images"),
+    enabled: resource === "collections",
   });
   const colors = useQuery({
     queryKey: ["catalog", "all-colors"],
@@ -482,8 +610,13 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
       products: options(products.data ?? []),
       colors: options(colors.data ?? []),
       sizes: options(sizes.data ?? []),
+      images: new Map(
+        (images.data ?? [])
+          .filter((record) => Boolean(record.url))
+          .map((record) => [record._id, record.url as string]),
+      ),
     }),
-    [groups.data, products.data, colors.data, sizes.data],
+    [groups.data, products.data, colors.data, sizes.data, images.data],
   );
   const schema = useMemo(() => schemaFor(resource, refs), [resource, refs]);
   const current =
@@ -565,6 +698,29 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
           id: "size",
           label: "سایز",
           cell: ({ record }) => refMaps.sizes.get(record.sizeId ?? "") ?? "—",
+        },
+      );
+    if (resource === "collections")
+      result.push(
+        {
+          id: "dateRange",
+          label: "بازه زمانی",
+          cell: ({ record }) => (
+            <span className="text-[10px] leading-5 text-[var(--adt-muted)]">
+              {formatCollectionDates(record)}
+            </span>
+          ),
+          mobile: { priority: 3 },
+        },
+        {
+          id: "products",
+          label: "تعداد محصولات",
+          cell: ({ record }) => (
+            <span className="font-semibold tabular-nums text-[var(--adt-text)]">
+              {formatCount(record.productIds?.length ?? 0)}
+            </span>
+          ),
+          mobile: { priority: 2 },
         },
       );
     result.push({
@@ -734,6 +890,30 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
               },
             ],
           },
+          delete:
+            resource === "collections" && canWrite
+              ? {
+                  enabled: true,
+                  title: (record) => `حذف ${recordLabel(record)}`,
+                  description: (record) =>
+                    `کالکشن «${recordLabel(record)}» حذف می‌شود و اتصال آن از محصولات نیز پاک خواهد شد. این عملیات قابل بازگشت نیست.`,
+                  confirmLabel: "حذف کالکشن",
+                  cancelLabel: "انصراف",
+                  dangerLevel: "hard",
+                  mutationFn: ({ id }) =>
+                    api(`/api/catalog/collections/${id}`, {
+                      method: "DELETE",
+                    }),
+                  onSuccess: () => {
+                    invalidate();
+                    toast.success("کالکشن حذف شد");
+                  },
+                  mapError: (error) =>
+                    error instanceof Error
+                      ? error.message
+                      : "حذف کالکشن انجام نشد.",
+                }
+              : undefined,
           extraRowActions: canWrite
             ? [
                 {

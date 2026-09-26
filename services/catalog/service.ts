@@ -110,8 +110,12 @@ export class CatalogService {
       model.countDocuments(filter),
     ]);
 
+    const outputItems = resource === "collections"
+      ? await this.withCollectionProductIds(items)
+      : items;
+
     return {
-      items,
+      items: outputItems,
       pagination: {
         page: query.page,
         limit: query.limit,
@@ -119,6 +123,34 @@ export class CatalogService {
         pages: Math.ceil(total / query.limit),
       },
     };
+  }
+
+  private async withCollectionProductIds(items: Array<Record<string, unknown>>) {
+    if (items.length === 0) return items;
+
+    const collectionIds = items.map((item) => String(item._id));
+    const legacyProducts = await Product.find({
+      collectionIds: { $in: collectionIds },
+    })
+      .select({ collectionIds: 1 })
+      .lean();
+    const productsByCollection = new Map<string, string[]>();
+
+    for (const product of legacyProducts) {
+      for (const collectionId of this.idList(product.collectionIds)) {
+        const current = productsByCollection.get(collectionId) ?? [];
+        current.push(String(product._id));
+        productsByCollection.set(collectionId, current);
+      }
+    }
+
+    return items.map((item) => ({
+      ...item,
+      productIds: this.idList([
+        ...this.idList(item.productIds),
+        ...(productsByCollection.get(String(item._id)) ?? []),
+      ]),
+    }));
   }
 
   async findById(resource: CatalogResource, id: string) {
@@ -134,6 +166,9 @@ export class CatalogService {
       if (resource === "products") {
         await this.assertProductReferences(input as Record<string, unknown>);
       }
+      if (resource === "collections") {
+        await this.assertCollectionReferences(input as Record<string, unknown>);
+      }
       if (resource === "categories" || resource === "subcategories") {
         await this.assertTaxonomyReferences(resource, input as Record<string, unknown>);
       }
@@ -143,7 +178,20 @@ export class CatalogService {
       const createInput = resource === "products"
         ? { ...(input as Record<string, unknown>), currency: CATALOG_CURRENCY }
         : input;
-      return await models[resource].create(createInput);
+      const item = await models[resource].create(createInput);
+      if (resource === "products") {
+        await this.syncProductCollections(
+          String(item._id),
+          this.idList(item.collectionIds),
+        );
+      }
+      if (resource === "collections") {
+        await this.syncCollectionProducts(
+          String(item._id),
+          this.idList(item.productIds),
+        );
+      }
+      return item;
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -152,6 +200,7 @@ export class CatalogService {
   async update(resource: CatalogResource, id: string, input: unknown) {
     await connectToDatabase();
     try {
+      let mergedCollection: Record<string, unknown> | null = null;
       if (resource === "products") {
         const existing = await Product.findById(id).lean();
         if (!existing) notFound("products record was not found");
@@ -159,6 +208,12 @@ export class CatalogService {
           ...existing,
           ...(input as Record<string, unknown>),
         });
+      }
+      if (resource === "collections") {
+        const existing = await Collection.findById(id).lean();
+        if (!existing) notFound("collections record was not found");
+        mergedCollection = { ...existing, ...(input as Record<string, unknown>) };
+        await this.assertCollectionReferences(mergedCollection);
       }
       if (resource === "categories" || resource === "subcategories" || resource === "images") {
         const existing = await models[resource].findById(id).lean();
@@ -180,12 +235,42 @@ export class CatalogService {
       if (resource === "products") {
         const value = input as { priceIrrMinor?: number; priceUsdMinor?: number };
         await Product.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(value.priceIrrMinor === undefined ? {} : { priceIrrMinor: value.priceIrrMinor }), ...(value.priceUsdMinor === undefined ? {} : { priceUsdMinor: value.priceUsdMinor }) } });
+        await this.syncProductCollections(String(item._id), this.idList(item.collectionIds));
+      }
+      if (resource === "collections") {
+        await this.syncCollectionProducts(
+          String(item._id),
+          this.idList(item.productIds ?? mergedCollection?.productIds),
+        );
       }
       if (resource === "variants") {
         const value = input as { priceOverrideIrrMinor?: number; priceOverrideUsdMinor?: number };
         await ProductVariant.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(value.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: value.priceOverrideIrrMinor }), ...(value.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: value.priceOverrideUsdMinor }) } });
       }
       return item;
+    } catch (error) {
+      this.handleDatabaseError(error);
+    }
+  }
+
+  async remove(resource: CatalogResource, id: string) {
+    await connectToDatabase();
+    if (resource !== "collections") {
+      badRequest("Only collection records can be deleted from this endpoint");
+    }
+
+    try {
+      const existing = await Collection.findById(id).lean();
+      if (!existing) notFound("collections record was not found");
+
+      await Product.updateMany(
+        { collectionIds: id },
+        { $pull: { collectionIds: id } },
+      );
+      const deleted = await Collection.findByIdAndDelete(id).lean();
+      if (!deleted) notFound("collections record was not found");
+
+      return { id, deleted: true };
     } catch (error) {
       this.handleDatabaseError(error);
     }
@@ -261,6 +346,76 @@ export class CatalogService {
         badRequest("One or more product images do not exist");
       }
     }
+  }
+
+  private async assertCollectionReferences(
+    input: Record<string, unknown>,
+  ): Promise<void> {
+    const rawProductIds = Array.isArray(input.productIds)
+      ? input.productIds.filter(Boolean).map(String)
+      : [];
+    const productIds = [...new Set(rawProductIds)];
+    if (rawProductIds.length !== productIds.length) {
+      badRequest("Collection products must be unique");
+    }
+
+    if (productIds.length > 0) {
+      const productCount = await Product.countDocuments({
+        _id: { $in: productIds },
+      });
+      if (productCount !== productIds.length) {
+        badRequest("One or more collection products do not exist");
+      }
+    }
+
+    if (input.heroImageId) {
+      const imageExists = await ImageAsset.exists({ _id: input.heroImageId });
+      if (!imageExists) badRequest("Collection hero image does not exist");
+    }
+
+    const startsAt = input.startsAt ? new Date(String(input.startsAt)) : null;
+    const endsAt = input.endsAt ? new Date(String(input.endsAt)) : null;
+    if (startsAt && endsAt && startsAt > endsAt) {
+      badRequest("Collection start date must be before its end date");
+    }
+  }
+
+  private async syncCollectionProducts(
+    collectionId: string,
+    productIds: string[],
+  ): Promise<void> {
+    await Product.updateMany(
+      { collectionIds: collectionId },
+      { $pull: { collectionIds: collectionId } },
+    );
+    if (productIds.length === 0) return;
+
+    await Product.updateMany(
+      { _id: { $in: productIds } },
+      { $addToSet: { collectionIds: collectionId } },
+    );
+  }
+
+  private async syncProductCollections(
+    productId: string,
+    collectionIds: string[],
+  ): Promise<void> {
+    await Collection.updateMany(
+      { productIds: productId },
+      { $pull: { productIds: productId } },
+    );
+    if (collectionIds.length === 0) return;
+
+    await Collection.updateMany(
+      { _id: { $in: collectionIds } },
+      { $addToSet: { productIds: productId } },
+    );
+  }
+
+  private idList(value: unknown): string[] {
+    return Array.isArray(value)
+      ? [...new Set(value.filter(Boolean).map(String))]
+      : [];
   }
 
   private async assertTaxonomyReferences(

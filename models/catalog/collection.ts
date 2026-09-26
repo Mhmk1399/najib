@@ -15,6 +15,10 @@ const collectionSchema = new Schema(
     name: requiredLocalizedNameField,
     slug: requiredSlugField,
     description: { type: createLocalizedTextSchema(4000, false) },
+    productIds: {
+      type: [{ type: Schema.Types.ObjectId, ref: "Product" }],
+      default: [],
+    },
     heroImageId: { type: Schema.Types.ObjectId, ref: "ImageAsset" },
     heroObjectFit: {
       type: String,
@@ -36,6 +40,7 @@ const collectionSchema = new Schema(
 
 collectionSchema.index({ slug: 1 }, { unique: true });
 collectionSchema.index({ isActive: 1, sortOrder: 1, _id: 1 });
+collectionSchema.index({ isActive: 1, productIds: 1, sortOrder: 1 });
 
 export type CollectionDocument = InferSchemaType<typeof collectionSchema>;
 export const Collection =

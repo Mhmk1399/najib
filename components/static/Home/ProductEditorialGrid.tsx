@@ -388,13 +388,13 @@ function ProductCard({
         />
 
         <div className="absolute inset-x-5 bottom-6 z-10 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:inset-x-7 lg:bottom-8">
-          {product.eyebrow ? (
+          {/* {product.eyebrow ? (
             <p className="text-[6.5px] font-semibold uppercase tracking-[0.17em] text-white/56 sm:text-[7px]">
               {product.eyebrow}
             </p>
-          ) : null}
+          ) : null} */}
 
-          <h3 className="mt-2 max-w-[92%] text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-[clamp(2.2rem,3vw,3.55rem)]">
+          <h3 className="mt-2 max-w-[92%] text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-3xl">
             {product.title}
           </h3>
 

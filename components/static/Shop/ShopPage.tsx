@@ -25,6 +25,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/CustomToast";
+import { useWishlist } from "@/components/account/use-wishlist";
 import { BrandSketchLoader } from "@/components/ui/SketchLoader";
 import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
 import {
@@ -2280,7 +2281,8 @@ function ProductCard({
   const [selSizeId, setSelSizeId] = useState("");
   const [hoverOpen, setHoverOpen] = useState(false);
   const [lockedOpen, setLockedOpen] = useState(false);
-  const [favorite, setFavorite] = useState(false);
+  const wishlist = useWishlist(product.id, locale);
+  const favorite = wishlist.isFavorite;
   const [cartState, setCartState] = useState<CartActionState>("idle");
   const [panelHovered, setPanelHovered] = useState(false);
 
@@ -2569,12 +2571,18 @@ function ProductCard({
     }
     if (productImages[ci]) setActiveImgIdx(ci);
   }
-  function toggleFav() {
-    const n = !favorite;
-    setFavorite(n);
-    toast.info(n ? copy.wishlist.added : copy.wishlist.removed, {
-      description: product.title,
-    });
+  async function toggleFav() {
+    try {
+      const next = await wishlist.toggle();
+      toast.info(next ? copy.wishlist.added : copy.wishlist.removed, {
+        description: product.title,
+      });
+    } catch (error) {
+      if (error instanceof CommerceApiError && error.status === 401) return;
+      toast.error(copy.cart.errorTitle, {
+        description: error instanceof Error ? error.message : copy.cart.errorFallback,
+      });
+    }
   }
   async function addToBag() {
     if (sizeOptions.length && !selSizeId) {

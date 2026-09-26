@@ -1,8 +1,11 @@
 "use client";
 
 import Image from "next/image";
+
 import Link from "next/link";
+
 import { usePathname, useRouter } from "next/navigation";
+
 import {
   Boxes,
   CalendarDays,
@@ -10,6 +13,8 @@ import {
   ChevronsUpDown,
   Crown,
   Grid2X2,
+  House,
+  ExternalLink,
   Images,
   LogOut,
   Menu,
@@ -29,6 +34,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+
 import {
   type CSSProperties,
   type ReactNode,
@@ -43,20 +49,25 @@ import {
   AdminAuthProvider,
   type AdminStaffProfile,
 } from "@/components/admin/admin-auth-context";
+
 import { Button } from "@/components/ui/Button";
 
 type ThemeMode = "dark" | "light";
 
 type NavItem = {
   label: string;
+
   href: string;
+
   icon: LucideIcon;
+
   permission?: string;
   permissionsAny?: string[];
 };
 
 type AdminShellProps = {
   children: ReactNode;
+
   staff?: AdminStaffProfile;
 };
 
@@ -67,24 +78,38 @@ function canAccessNavItem(item: NavItem, permissions: string[] = []) {
 
 const PRIMARY_NAV: NavItem[] = [
   { label: "داشبورد", href: "/admin", icon: Grid2X2 },
+
   { label: "محصولات", href: "/admin/catalog/products", icon: Package },
+
   { label: "دسته‌بندی‌ها", href: "/admin/categories", icon: Boxes },
+
   { label: "تصاویر و استایل‌ها", href: "/admin/catalog/images", icon: Images },
+
   {
     label: "اطلاعات پایه کاتالوگ",
+
     href: "/admin/catalog/references",
+
     icon: SlidersHorizontal,
   },
+
   {
     label: "مدیریت موجودی",
+
     href: "/admin/inventory",
+
     icon: Warehouse,
+
     permission: "inventory.read",
   },
+
   {
     label: "سفارش‌ها",
+
     href: "/admin/orders",
+
     icon: ShoppingBag,
+
     permission: "orders.read",
   },
   { label: "سبدهای خرید", href: "/admin/carts", icon: ShoppingCart, permission: "orders.read" },
@@ -95,46 +120,54 @@ const PRIMARY_NAV: NavItem[] = [
 
 const USERS_NAV: NavItem = {
   label: "کاربران",
+
   href: "/admin/users",
+
   icon: Users,
 };
 
 const DARK_THEME_VARS = {
-  "--admin-shell-canvas": "#090806",
-  "--admin-shell-panel": "#100E0C",
-  "--admin-shell-raised": "#17130F",
-  "--admin-shell-control": "#15120F",
-  "--admin-shell-control-hover": "#1D1813",
-  "--admin-shell-text": "#F4EEE7",
-  "--admin-shell-muted": "#A69B91",
-  "--admin-shell-subtle": "#756B62",
-  "--admin-shell-accent": "#C58C5B",
-  "--admin-shell-accent-soft": "#E2B687",
+  "--admin-shell-canvas": "#080807",
+  "--admin-shell-panel": "#100F0D",
+  "--admin-shell-raised": "#181613",
+  "--admin-shell-control": "rgba(255,255,255,0.050)",
+  "--admin-shell-control-hover": "rgba(255,255,255,0.085)",
+  "--admin-shell-text": "#F7F2EC",
+  "--admin-shell-muted": "#B4AAA0",
+  "--admin-shell-subtle": "#7D746B",
+  "--admin-shell-accent": "#C28758",
+  "--admin-shell-accent-soft": "#E5B98F",
   "--admin-shell-border": "rgba(255,255,255,0.075)",
   "--admin-shell-border-strong": "rgba(255,255,255,0.14)",
-  "--admin-shell-active-border": "rgba(197,140,91,0.46)",
-  "--admin-shell-active": "rgba(197,140,91,0.12)",
+  "--admin-shell-active-border": "rgba(194,135,88,0.44)",
+  "--admin-shell-active": "rgba(194,135,88,0.13)",
+  "--admin-shell-glass": "rgba(16,15,13,0.78)",
+  "--admin-shell-glass-strong": "rgba(19,17,15,0.90)",
+  "--admin-shell-highlight": "rgba(255,255,255,0.11)",
   "--admin-shell-brand-wash":
-    "linear-gradient(180deg, rgba(9,8,6,0.34), rgba(9,8,6,0.92))",
+    "linear-gradient(180deg, rgba(8,8,7,0.18), rgba(8,8,7,0.94))",
 } as CSSProperties;
 
 const LIGHT_THEME_VARS = {
-  "--admin-shell-canvas": "#ECE6DC",
-  "--admin-shell-panel": "#F7F2EA",
-  "--admin-shell-raised": "#FFFBF5",
-  "--admin-shell-control": "#F1EAE0",
-  "--admin-shell-control-hover": "#E9DFD2",
-  "--admin-shell-text": "#211B16",
-  "--admin-shell-muted": "#675D54",
-  "--admin-shell-subtle": "#8C8177",
-  "--admin-shell-accent": "#9D673E",
-  "--admin-shell-accent-soft": "#7E4E2E",
-  "--admin-shell-border": "rgba(42,30,20,0.10)",
-  "--admin-shell-border-strong": "rgba(42,30,20,0.17)",
-  "--admin-shell-active-border": "rgba(157,103,62,0.40)",
-  "--admin-shell-active": "rgba(157,103,62,0.10)",
+  "--admin-shell-canvas": "#EEE9E1",
+  "--admin-shell-panel": "#F6F2EC",
+  "--admin-shell-raised": "#FFFDF9",
+  "--admin-shell-control": "rgba(91,66,47,0.055)",
+  "--admin-shell-control-hover": "rgba(91,66,47,0.09)",
+  "--admin-shell-text": "#201A15",
+  "--admin-shell-muted": "#6C6259",
+  "--admin-shell-subtle": "#94887C",
+  "--admin-shell-accent": "#9E673D",
+  "--admin-shell-accent-soft": "#7F4F2C",
+  "--admin-shell-border": "rgba(57,42,30,0.09)",
+  "--admin-shell-border-strong": "rgba(57,42,30,0.16)",
+  "--admin-shell-active-border": "rgba(158,103,61,0.37)",
+  "--admin-shell-active": "rgba(158,103,61,0.10)",
+  "--admin-shell-glass": "rgba(250,247,242,0.80)",
+  "--admin-shell-glass-strong": "rgba(255,253,249,0.92)",
+  "--admin-shell-highlight": "rgba(255,255,255,0.75)",
   "--admin-shell-brand-wash":
-    "linear-gradient(180deg, rgba(247,242,234,0.44), rgba(247,242,234,0.96))",
+    "linear-gradient(180deg, rgba(246,242,236,0.20), rgba(246,242,236,0.96))",
 } as CSSProperties;
 
 function useTehranClock() {
@@ -142,8 +175,11 @@ function useTehranClock() {
 
   useEffect(() => {
     const tick = () => setNow(new Date());
+
     tick();
+
     const id = window.setInterval(tick, 30_000);
+
     return () => window.clearInterval(id);
   }, []);
 
@@ -154,16 +190,23 @@ function useTehranClock() {
 
     const date = new Intl.DateTimeFormat("fa-IR-u-ca-persian", {
       timeZone: "Asia/Tehran",
+
       weekday: "long",
+
       day: "numeric",
+
       month: "long",
+
       year: "numeric",
     }).format(now);
 
     const time = new Intl.DateTimeFormat("fa-IR", {
       timeZone: "Asia/Tehran",
+
       hour: "2-digit",
+
       minute: "2-digit",
+
       hour12: false,
     }).format(now);
 
@@ -173,17 +216,25 @@ function useTehranClock() {
 
 export function AdminShell({ children, staff }: AdminShellProps) {
   const pathname = usePathname();
+
   const clock = useTehranClock();
+
   const staffProfile = staff ?? FALLBACK_STAFF;
 
   const [theme, setTheme] = useState<ThemeMode>("dark");
+
   const [themePreferenceReady, setThemePreferenceReady] = useState(false);
+
   const [mobileOpen, setMobileOpen] = useState(false);
+
   const [logoutOpen, setLogoutOpen] = useState(false);
+
   const [desktopSidebarHovered, setDesktopSidebarHovered] = useState(false);
+
   const [desktopSidebarFocused, setDesktopSidebarFocused] = useState(false);
 
   const menuButtonRef = useRef<HTMLButtonElement | null>(null);
+
   const logoutOpenerRef = useRef<HTMLElement | null>(null);
 
   const availableNavItems = useMemo(() => {
@@ -197,13 +248,16 @@ export function AdminShell({ children, staff }: AdminShellProps) {
     () =>
       availableNavItems.find((item) => isNavActive(pathname, item.href))
         ?.label ?? "پنل مدیریت",
+
     [availableNavItems, pathname],
   );
 
   useEffect(() => {
     let preferred: ThemeMode = "dark";
+
     try {
       const saved = localStorage.getItem("najib-admin-theme");
+
       if (saved === "light" || saved === "dark") {
         preferred = saved;
       } else if (!window.matchMedia("(prefers-color-scheme: dark)").matches) {
@@ -213,25 +267,32 @@ export function AdminShell({ children, staff }: AdminShellProps) {
 
     const frame = requestAnimationFrame(() => {
       setTheme(preferred);
+
       setThemePreferenceReady(true);
     });
+
     return () => cancelAnimationFrame(frame);
   }, []);
 
   const requestLogout = () => {
     logoutOpenerRef.current = document.activeElement as HTMLElement | null;
+
     setLogoutOpen(true);
   };
 
   const closeLogout = () => {
     setLogoutOpen(false);
+
     requestAnimationFrame(() => logoutOpenerRef.current?.focus());
   };
 
   useEffect(() => {
     if (!themePreferenceReady) return;
+
     document.documentElement.dataset.theme = theme;
+
     document.documentElement.style.colorScheme = theme;
+
     try {
       localStorage.setItem("najib-admin-theme", theme);
     } catch {}
@@ -240,21 +301,27 @@ export function AdminShell({ children, staff }: AdminShellProps) {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
+
       if (logoutOpen) {
         setLogoutOpen(false);
+
         return;
       }
+
       if (mobileOpen) {
         setMobileOpen(false);
+
         requestAnimationFrame(() => menuButtonRef.current?.focus());
       }
     };
 
     window.addEventListener("keydown", onKeyDown);
+
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [logoutOpen, mobileOpen]);
 
   const themeVars = theme === "dark" ? DARK_THEME_VARS : LIGHT_THEME_VARS;
+
   const desktopSidebarOpen = desktopSidebarHovered || desktopSidebarFocused;
 
   return (
@@ -264,13 +331,18 @@ export function AdminShell({ children, staff }: AdminShellProps) {
         lang="fa"
         data-theme={theme}
         style={themeVars}
-        className="admin-workspace-shell group/admin h-dvh overflow-hidden bg-[var(--admin-shell-canvas)] text-[var(--admin-shell-text)] antialiased selection:bg-[var(--admin-shell-accent)]/30"
+        className="admin-workspace-shell group/admin relative h-dvh overflow-hidden bg-[var(--admin-shell-canvas)] text-[var(--admin-shell-text)] antialiased selection:bg-[var(--admin-shell-accent)]/30"
       >
-        <div className="flex h-full min-w-0 flex-row">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_-8%,rgba(194,135,88,0.10),transparent_28%),radial-gradient(circle_at_8%_110%,rgba(194,135,88,0.06),transparent_32%)]"
+        />
+
+        <div className="relative z-10 flex h-full min-w-0 flex-row">
           <aside
             id="admin-desktop-sidebar"
             aria-label="نوار کناری مدیریت"
-            className="relative z-[6000] hidden h-dvh w-[78px] shrink-0 overflow-visible xl:block"
+            className="relative z-[6000] hidden h-dvh w-[88px] shrink-0 overflow-visible xl:block"
           >
             <div
               data-sidebar-state={desktopSidebarOpen ? "open" : "closed"}
@@ -287,6 +359,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
               onFocusCapture={() => setDesktopSidebarFocused(true)}
               onBlurCapture={(event) => {
                 const nextTarget = event.relatedTarget;
+
                 if (
                   nextTarget instanceof Node &&
                   event.currentTarget.contains(nextTarget)
@@ -296,10 +369,10 @@ export function AdminShell({ children, staff }: AdminShellProps) {
 
                 setDesktopSidebarFocused(false);
               }}
-              className={`absolute inset-y-0 right-0 overflow-hidden border-l border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] transition-[width,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+              className={`absolute bottom-3 right-3 top-3 overflow-hidden rounded-[24px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass)] shadow-[0_22px_70px_-34px_rgba(0,0,0,0.78),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%] transition-[width,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
                 desktopSidebarOpen
-                  ? "w-[252px] border-[var(--admin-shell-border-strong)] shadow-[-26px_0_80px_-42px_rgba(0,0,0,0.82)]"
-                  : "w-[78px]"
+                  ? "w-[264px] border-[var(--admin-shell-active-border)] shadow-[-30px_0_90px_-36px_rgba(0,0,0,0.82),inset_0_1px_0_var(--admin-shell-highlight)]"
+                  : "w-[70px]"
               }`}
             >
               <Sidebar
@@ -333,7 +406,7 @@ export function AdminShell({ children, staff }: AdminShellProps) {
               data-lenis-prevent
               data-lenis-prevent-wheel
               data-lenis-prevent-touch
-              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[var(--admin-shell-canvas)] [scrollbar-gutter:stable]"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-transparent [scrollbar-gutter:stable]"
             >
               {children}
             </main>
@@ -345,10 +418,12 @@ export function AdminShell({ children, staff }: AdminShellProps) {
           pathname={pathname}
           onClose={() => {
             setMobileOpen(false);
+
             requestAnimationFrame(() => menuButtonRef.current?.focus());
           }}
           onLogout={() => {
             setMobileOpen(false);
+
             requestLogout();
           }}
           staff={staffProfile}
@@ -435,28 +510,51 @@ function Topbar({
   };
 
   return (
-    <header className="relative z-[70] h-[72px] shrink-0 border-b border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]/96 shadow-[0_14px_44px_-34px_rgba(0,0,0,0.88)] backdrop-blur-2xl">
-      <div className="mx-auto flex h-full min-w-0 items-center gap-2.5 px-3 sm:px-4 lg:px-5 xl:px-6">
+    <header className="relative z-[70] h-[82px] shrink-0 px-2 pt-2 sm:px-3 sm:pt-3 lg:px-4 xl:px-5">
+      <div className="relative mx-auto flex h-[66px] min-w-0 items-center gap-2 overflow-visible rounded-[21px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass)] px-2.5 shadow-[0_18px_56px_-34px_rgba(0,0,0,0.86),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%] sm:px-3.5 lg:gap-3 lg:px-4">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.24),rgba(194,135,88,0.42),rgba(255,255,255,0.18),transparent)]"
+        />
+
         <button
           ref={menuButtonRef}
           type="button"
           onClick={onOpenMenu}
           aria-label="باز کردن منوی مدیریت"
-          className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-[border-color,background-color,color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 xl:hidden"
+          className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-[13px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-[transform,border-color,background-color,color] duration-200 hover:-translate-y-0.5 hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 xl:hidden"
         >
           <Menu size={18} strokeWidth={1.55} aria-hidden="true" />
         </button>
 
-        <div className="hidden min-w-[150px] items-center gap-3 sm:flex">
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="باز کردن صفحه اصلی سایت در تب جدید"
+          title="بازگشت به خانه"
+          className="group/home inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[13px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] px-2.5 text-[var(--admin-shell-muted)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-[transform,border-color,background-color,color] duration-200 hover:-translate-y-0.5 hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 sm:px-3"
+        >
+          <House size={16} strokeWidth={1.55} aria-hidden="true" />
+          <span className="hidden whitespace-nowrap text-[9px] font-semibold lg:inline">
+            صفحه اصلی
+          </span>
+          <ExternalLink
+            className="hidden size-3 text-[var(--admin-shell-subtle)] transition-colors group-hover/home:text-[var(--admin-shell-accent-soft)] lg:block"
+            aria-hidden="true"
+          />
+        </Link>
+
+        <div className="hidden min-w-[150px] items-center gap-3 sm:flex xl:min-w-[165px]">
           <span
             aria-hidden="true"
-            className="h-8 w-0.5 shrink-0 rounded-full bg-[var(--admin-shell-accent)]"
+            className="h-8 w-px shrink-0 bg-[linear-gradient(180deg,transparent,var(--admin-shell-accent),transparent)]"
           />
           <div className="min-w-0 text-right">
-            <span className="block text-[7px] font-semibold text-[var(--admin-shell-accent-soft)]">
+            <span className="block text-[7px] font-semibold tracking-[0.02em] text-[var(--admin-shell-accent-soft)]">
               فضای مدیریت
             </span>
-            <strong className="mt-1 block max-w-[190px] truncate text-[11px] font-bold text-[var(--admin-shell-text)]">
+            <strong className="mt-1 block max-w-[180px] truncate text-[11px] font-bold text-[var(--admin-shell-text)]">
               {currentSection}
             </strong>
           </div>
@@ -464,21 +562,25 @@ function Topbar({
 
         <div
           ref={searchRef}
-          className="relative mx-auto min-w-0 flex-1 sm:max-w-[560px]"
+          className="relative mx-auto min-w-0 flex-1 sm:max-w-[620px]"
         >
           <label htmlFor="admin-sidebar-search" className="sr-only">
             جستجو در منوی مدیریت
           </label>
           <div
-            className={`flex h-11 items-center gap-2.5 rounded-[13px] border bg-[var(--admin-shell-control)] px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] transition-[border-color,background-color,box-shadow] ${
+            className={`relative flex h-11 items-center gap-2.5 overflow-hidden rounded-[15px] border px-3.5 transition-[border-color,background-color,box-shadow] duration-200 ${
               searchOpen
-                ? "border-[var(--admin-shell-accent)]/55 bg-[var(--admin-shell-raised)] shadow-[0_0_0_3px_rgba(197,140,91,0.08)]"
-                : "border-[var(--admin-shell-border-strong)] hover:border-[var(--admin-shell-accent)]/28"
+                ? "border-[var(--admin-shell-accent)]/50 bg-[var(--admin-shell-glass-strong)] shadow-[0_0_0_3px_rgba(194,135,88,0.08),inset_0_1px_0_var(--admin-shell-highlight)]"
+                : "border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] hover:border-[var(--admin-shell-accent)]/28"
             }`}
           >
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-4 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.14),transparent)]"
+            />
             <Search
               size={16}
-              strokeWidth={1.6}
+              strokeWidth={1.55}
               className="shrink-0 text-[var(--admin-shell-subtle)]"
               aria-hidden="true"
             />
@@ -505,7 +607,6 @@ function Topbar({
               }}
               onKeyDown={(event) => {
                 if (event.nativeEvent.isComposing) return;
-
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
                   setSearchOpen(true);
@@ -516,7 +617,6 @@ function Topbar({
                   );
                   return;
                 }
-
                 if (event.key === "ArrowUp") {
                   event.preventDefault();
                   setSearchOpen(true);
@@ -528,13 +628,11 @@ function Topbar({
                   );
                   return;
                 }
-
                 if (event.key === "Enter" && searchResults[activeSearchIndex]) {
                   event.preventDefault();
                   navigateToResult(searchResults[activeSearchIndex]);
                   return;
                 }
-
                 if (event.key === "Escape") {
                   event.preventDefault();
                   setSearchOpen(false);
@@ -557,7 +655,7 @@ function Topbar({
                 <X size={13} aria-hidden="true" />
               </button>
             ) : (
-              <kbd className="hidden rounded-[6px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)] px-1.5 py-1 text-[7px] font-medium text-[var(--admin-shell-subtle)] lg:inline-flex">
+              <kbd className="hidden rounded-[7px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-panel)]/70 px-1.5 py-1 text-[7px] font-medium text-[var(--admin-shell-subtle)] lg:inline-flex">
                 منو
               </kbd>
             )}
@@ -568,8 +666,12 @@ function Topbar({
               id="admin-sidebar-search-results"
               role="listbox"
               aria-label="نتایج جستجوی منوی مدیریت"
-              className="absolute inset-x-0 top-[calc(100%+8px)] z-[100] overflow-hidden rounded-[15px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-1.5 shadow-[0_26px_80px_-28px_rgba(0,0,0,0.84)] backdrop-blur-2xl"
+              className="absolute inset-x-0 top-[calc(100%+10px)] z-[100] overflow-hidden rounded-[18px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass-strong)] p-1.5 shadow-[0_28px_80px_-28px_rgba(0,0,0,0.88),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%]"
             >
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.22),rgba(194,135,88,0.28),transparent)]"
+              />
               {searchResults.length ? (
                 searchResults.map((item, index) => {
                   const Icon = item.icon;
@@ -583,13 +685,13 @@ function Topbar({
                       aria-selected={active}
                       onPointerEnter={() => setActiveSearchIndex(index)}
                       onClick={() => navigateToResult(item)}
-                      className={`flex min-h-11 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 text-right text-[10px] outline-none transition-[background-color,color] ${
+                      className={`flex min-h-12 w-full cursor-pointer items-center gap-3 rounded-[13px] px-3 text-right text-[10px] outline-none transition-[background-color,color,transform] duration-150 ${
                         active
                           ? "bg-[var(--admin-shell-active)] text-[var(--admin-shell-text)]"
                           : "text-[var(--admin-shell-muted)] hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)]"
                       }`}
                     >
-                      <span className="grid size-8 shrink-0 place-items-center rounded-[9px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-accent-soft)]">
+                      <span className="grid size-8 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-accent-soft)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)]">
                         <Icon size={15} strokeWidth={1.5} aria-hidden="true" />
                       </span>
                       <span className="min-w-0 flex-1 truncate">
@@ -612,7 +714,7 @@ function Topbar({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <div className="hidden h-10 items-center gap-3 border-l border-[var(--admin-shell-border)] px-3 2xl:flex">
             <CalendarDays
               size={15}
@@ -640,7 +742,7 @@ function Topbar({
               theme === "dark" ? "فعال کردن تم روشن" : "فعال کردن تم تیره"
             }
             onClick={onToggleTheme}
-            className="!size-10 !rounded-[11px] !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] hover:!border-[var(--admin-shell-accent)]/45 hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)]"
+            className="!size-10 !rounded-[13px] !border-[var(--admin-shell-border-strong)] !bg-[var(--admin-shell-control)] !text-[var(--admin-shell-muted)] !shadow-[inset_0_1px_0_var(--admin-shell-highlight)] hover:!-translate-y-0.5 hover:!border-[var(--admin-shell-accent)]/45 hover:!bg-[var(--admin-shell-control-hover)] hover:!text-[var(--admin-shell-text)] active:!translate-y-0"
           />
 
           <ProfileDropdown
@@ -687,9 +789,13 @@ function ProfileDropdown({
         aria-controls="admin-profile-menu"
         aria-label={open ? "بستن منوی کاربر" : "باز کردن منوی کاربر"}
         onClick={onToggle}
-        className="group/profile flex h-11 cursor-pointer items-center gap-2 rounded-[12px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] p-1 text-[var(--admin-shell-text)] outline-none transition-[background-color,border-color] hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+        className={`group/profile flex h-11 cursor-pointer items-center gap-2 rounded-[14px] border p-1 text-[var(--admin-shell-text)] outline-none transition-[transform,background-color,border-color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
+          open
+            ? "border-[var(--admin-shell-active-border)] bg-[var(--admin-shell-active)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)]"
+            : "border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] hover:-translate-y-0.5 hover:border-[var(--admin-shell-accent)]/45 hover:bg-[var(--admin-shell-control-hover)]"
+        }`}
       >
-        <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[9px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[10px] font-extrabold text-[var(--admin-shell-panel)]">
+        <span className="relative grid size-9 shrink-0 place-items-center overflow-hidden rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[linear-gradient(145deg,var(--admin-shell-text),rgba(255,255,255,0.72))] text-[10px] font-extrabold text-[var(--admin-shell-panel)] shadow-[0_6px_18px_-10px_rgba(0,0,0,0.5)]">
           {initials}
           <span
             aria-hidden="true"
@@ -715,13 +821,17 @@ function ProfileDropdown({
         <div
           id="admin-profile-menu"
           role="menu"
-          className="absolute left-0 top-[calc(100%+9px)] z-[110] w-[286px] overflow-hidden rounded-[16px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] p-2.5 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.84)]"
+          className="absolute left-0 top-[calc(100%+10px)] z-[110] w-[296px] overflow-hidden rounded-[20px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass-strong)] p-2.5 shadow-[0_32px_90px_-28px_rgba(0,0,0,0.88),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%]"
         >
-          <div className="flex items-center gap-3 border-b border-[var(--admin-shell-border)] p-2 pb-3">
-            <span className="grid size-11 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[12px] font-extrabold text-[var(--admin-shell-panel)]">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-8 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.24),rgba(194,135,88,0.32),transparent)]"
+          />
+
+          <div className="flex items-center gap-3 rounded-[15px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] p-3 shadow-[inset_0_1px_0_var(--admin-shell-highlight)]">
+            <span className="grid size-11 shrink-0 place-items-center rounded-[12px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-text)] text-[12px] font-extrabold text-[var(--admin-shell-panel)]">
               {initials}
             </span>
-
             <div className="min-w-0 flex-1 text-right">
               <span className="mb-1 block text-[7px] font-semibold text-[var(--admin-shell-accent-soft)]">
                 حساب مدیریت
@@ -735,13 +845,10 @@ function ProfileDropdown({
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5 border-b border-[var(--admin-shell-border)] px-2 py-3 text-[8px] text-[var(--admin-shell-muted)]">
-            <ShieldCheck
-              size={15}
-              strokeWidth={1.5}
-              className="text-[#58A67B]"
-              aria-hidden="true"
-            />
+          <div className="mt-2.5 flex items-center gap-2.5 rounded-[13px] border border-[var(--admin-shell-border)] px-3 py-2.5 text-[8px] text-[var(--admin-shell-muted)]">
+            <span className="grid size-7 place-items-center rounded-[9px] bg-[#58A67B]/10 text-[#65B78A]">
+              <ShieldCheck size={14} strokeWidth={1.5} aria-hidden="true" />
+            </span>
             <span>نشست امن و فعال</span>
           </div>
 
@@ -749,7 +856,7 @@ function ProfileDropdown({
             type="button"
             role="menuitem"
             onClick={onLogout}
-            className="mt-2 flex h-10 w-full cursor-pointer items-center justify-between rounded-[10px] border border-transparent px-3 text-[9px] font-semibold text-[#D8766D] outline-none transition-colors hover:border-[#A7554C]/35 hover:bg-[#A7554C]/10 hover:text-[#EFA39B] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35"
+            className="mt-2.5 flex h-11 w-full cursor-pointer items-center justify-between rounded-[13px] border border-transparent px-3 text-[9px] font-semibold text-[#D8766D] outline-none transition-[background-color,border-color,color] hover:border-[#A7554C]/35 hover:bg-[#A7554C]/10 hover:text-[#EFA39B] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35"
           >
             <span>خروج از حساب</span>
             <LogOut size={15} strokeWidth={1.5} aria-hidden="true" />
@@ -781,32 +888,36 @@ function Sidebar({
     <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden">
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[235px] overflow-hidden opacity-[0.17]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[250px] overflow-hidden opacity-[0.19]"
       >
         <Image
           src="/assets/images/suit.webp"
           alt=""
           fill
           priority={imagePriority}
-          sizes="252px"
+          sizes="264px"
           className="object-cover object-[42%_18%] grayscale"
         />
         <div className="absolute inset-0 bg-[var(--admin-shell-brand-wash)]" />
       </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-5 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.22),rgba(194,135,88,0.30),transparent)]"
+      />
 
       <div
-        className={`relative z-10 flex h-[72px] shrink-0 items-center border-b border-[var(--admin-shell-border)] ${
-          collapsed ? "justify-center px-2" : "justify-between gap-2 px-3"
-        }`}
+        className={`relative z-10 flex h-[76px] shrink-0 items-center border-b border-[var(--admin-shell-border)] ${collapsed ? "justify-center px-2" : "justify-between gap-2 px-3.5"}`}
       >
         <Link
           href="/admin"
           aria-label="پنل مدیریت نجیب‌زاده"
-          className={`flex min-w-0 items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
-            collapsed ? "justify-center" : "gap-3"
-          }`}
+          className={`flex min-w-0 items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${collapsed ? "justify-center" : "gap-3"}`}
         >
-          <span className="grid size-10 shrink-0 place-items-center rounded-[10px] border border-[var(--admin-shell-accent)]/30 bg-[var(--admin-shell-control)] text-[18px] font-medium text-[var(--admin-shell-accent-soft)] shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]">
+          <span className="relative grid size-10 shrink-0 place-items-center overflow-hidden rounded-[13px] border border-[var(--admin-shell-accent)]/35 bg-[linear-gradient(145deg,rgba(194,135,88,0.18),var(--admin-shell-control))] text-[18px] font-medium text-[var(--admin-shell-accent-soft)] shadow-[inset_0_1px_0_var(--admin-shell-highlight),0_8px_22px_-16px_rgba(0,0,0,0.72)]">
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-2 top-0 h-px bg-white/20"
+            />
             N
           </span>
           {!collapsed ? (
@@ -829,7 +940,7 @@ function Sidebar({
             aria-expanded="true"
             aria-label="جمع کردن نوار کناری"
             title="جمع کردن نوار کناری"
-            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-[9px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-subtle)] transition-colors hover:border-[var(--admin-shell-accent)]/42 hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-[11px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-subtle)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-[border-color,background-color,color] hover:border-[var(--admin-shell-accent)]/42 hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
           >
             <PanelRightClose size={16} strokeWidth={1.5} aria-hidden="true" />
           </button>
@@ -843,7 +954,7 @@ function Sidebar({
             aria-expanded="false"
             aria-label="باز کردن نوار کناری"
             title="باز کردن نوار کناری"
-            className="absolute -left-px top-[82px] z-30 grid size-8 translate-x-1/2 cursor-pointer place-items-center rounded-full border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] text-[var(--admin-shell-accent-soft)] shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-colors hover:border-[var(--admin-shell-accent)]/60 hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+            className="absolute -left-px top-[82px] z-30 grid size-8 translate-x-1/2 cursor-pointer place-items-center rounded-full border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass-strong)] text-[var(--admin-shell-accent-soft)] shadow-[0_8px_24px_rgba(0,0,0,0.28),inset_0_1px_0_var(--admin-shell-highlight)] transition-colors hover:border-[var(--admin-shell-accent)]/60 hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
           >
             <PanelRightOpen size={14} strokeWidth={1.6} aria-hidden="true" />
           </button>
@@ -855,15 +966,13 @@ function Sidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className={`relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 ${
-          collapsed ? "px-2" : "px-3"
-        }`}
+        className={`relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain py-4 ${collapsed ? "px-2" : "px-3"}`}
       >
         <p
           className={
             collapsed
               ? "sr-only"
-              : "mb-2 px-2 text-[7px] font-semibold text-[var(--admin-shell-subtle)]"
+              : "mb-2 px-2 text-[7px] font-semibold tracking-[0.03em] text-[var(--admin-shell-subtle)]"
           }
         >
           ناوبری اصلی
@@ -882,7 +991,7 @@ function Sidebar({
         </div>
 
         <div
-          className={`my-4 h-px bg-[var(--admin-shell-border)] ${collapsed ? "mx-2" : ""}`}
+          className={`my-4 h-px bg-[linear-gradient(90deg,transparent,var(--admin-shell-border-strong),transparent)] ${collapsed ? "mx-2" : ""}`}
         />
 
         {staff.permissions?.includes("staff.manage") ? (
@@ -894,13 +1003,36 @@ function Sidebar({
           />
         ) : null}
 
+        <Link
+          href="/"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={onNavigate}
+          title={collapsed ? "باز کردن صفحه اصلی" : undefined}
+          className={`group/home-nav mt-1 flex h-11 w-full items-center rounded-[12px] border border-transparent text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-[background-color,border-color,color] hover:border-[var(--admin-shell-accent)]/25 hover:bg-[var(--admin-shell-active)] hover:text-[var(--admin-shell-text)] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
+        >
+          <span className="grid size-7 shrink-0 place-items-center text-[var(--admin-shell-accent-soft)]">
+            <House size={16} strokeWidth={1.5} aria-hidden="true" />
+          </span>
+          {!collapsed ? (
+            <>
+              <span className="min-w-0 flex-1 whitespace-nowrap">
+                صفحه اصلی سایت
+              </span>
+              <ExternalLink
+                size={12}
+                className="shrink-0 text-[var(--admin-shell-subtle)] transition-colors group-hover/home-nav:text-[var(--admin-shell-accent-soft)]"
+                aria-hidden="true"
+              />
+            </>
+          ) : null}
+        </Link>
+
         <button
           type="button"
           onClick={onLogout}
           title={collapsed ? "خروج از حساب" : undefined}
-          className={`mt-1 flex h-11 w-full cursor-pointer items-center rounded-[10px] border border-transparent text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-colors hover:border-[#A7554C]/30 hover:bg-[#A7554C]/10 hover:text-[#DF8178] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35 ${
-            collapsed ? "justify-center px-0" : "gap-3 px-3"
-          }`}
+          className={`mt-1 flex h-11 w-full cursor-pointer items-center rounded-[12px] border border-transparent text-[9px] font-semibold text-[var(--admin-shell-muted)] outline-none transition-[background-color,border-color,color] hover:border-[#A7554C]/30 hover:bg-[#A7554C]/10 hover:text-[#DF8178] focus-visible:ring-2 focus-visible:ring-[#A7554C]/35 ${collapsed ? "justify-center px-0" : "gap-3 px-3"}`}
         >
           <span className="grid size-7 shrink-0 place-items-center">
             <LogOut size={16} strokeWidth={1.5} aria-hidden="true" />
@@ -912,16 +1044,11 @@ function Sidebar({
       </nav>
 
       <div
-        className={`relative z-10 flex h-[72px] shrink-0 items-center border-t border-[var(--admin-shell-border)] ${
-          collapsed ? "justify-center px-2" : "gap-3 px-5"
-        }`}
+        className={`relative z-10 flex h-[76px] shrink-0 items-center border-t border-[var(--admin-shell-border)] ${collapsed ? "justify-center px-2" : "gap-3 px-5"}`}
       >
-        <Crown
-          size={16}
-          strokeWidth={1.4}
-          className="shrink-0 text-[var(--admin-shell-accent-soft)]"
-          aria-hidden="true"
-        />
+        <span className="grid size-8 shrink-0 place-items-center rounded-[10px] bg-[var(--admin-shell-active)] text-[var(--admin-shell-accent-soft)]">
+          <Crown size={15} strokeWidth={1.4} aria-hidden="true" />
+        </span>
         {!collapsed ? (
           <span className="min-w-0 text-right">
             <strong className="block whitespace-nowrap text-[8px] font-semibold text-[var(--admin-shell-muted)]">
@@ -956,36 +1083,26 @@ function SidebarLink({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       title={collapsed ? item.label : undefined}
-      className={`group/nav relative flex h-11 items-center rounded-[10px] border text-[9px] font-semibold outline-none transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
+      className={`group/nav relative flex h-11 items-center overflow-hidden rounded-[12px] border text-[9px] font-semibold outline-none transition-[background-color,border-color,color,transform,box-shadow] duration-200 focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40 ${
         collapsed ? "justify-center px-0" : "gap-3 px-3"
       } ${
         active
-          ? "border-[var(--admin-shell-active-border)] bg-[var(--admin-shell-active)] text-[var(--admin-shell-text)]"
+          ? "border-[var(--admin-shell-active-border)] bg-[linear-gradient(90deg,var(--admin-shell-active),rgba(194,135,88,0.055))] text-[var(--admin-shell-text)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)]"
           : "border-transparent text-[var(--admin-shell-muted)] hover:border-[var(--admin-shell-border)] hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)]"
       }`}
     >
       {active ? (
         <span
           aria-hidden="true"
-          className={`absolute bg-[var(--admin-shell-accent)] ${
-            collapsed
-              ? "bottom-1.5 right-1/2 h-0.5 w-4 translate-x-1/2 rounded-full"
-              : "inset-y-2 right-0 w-0.5 rounded-full"
-          }`}
+          className={`absolute bg-[var(--admin-shell-accent)] shadow-[0_0_14px_rgba(194,135,88,0.36)] ${collapsed ? "bottom-1.5 right-1/2 h-0.5 w-4 translate-x-1/2 rounded-full" : "inset-y-2 right-0 w-0.5 rounded-full"}`}
         />
       ) : null}
 
-      <span className="grid size-7 shrink-0 place-items-center">
-        <Icon
-          size={16}
-          strokeWidth={1.5}
-          className={
-            active ? "text-[var(--admin-shell-accent-soft)]" : "text-current"
-          }
-          aria-hidden="true"
-        />
+      <span
+        className={`grid size-7 shrink-0 place-items-center rounded-[9px] transition-colors ${active ? "bg-[var(--admin-shell-active)] text-[var(--admin-shell-accent-soft)]" : "text-current group-hover/nav:text-[var(--admin-shell-accent-soft)]"}`}
+      >
+        <Icon size={16} strokeWidth={1.5} aria-hidden="true" />
       </span>
-
       {!collapsed ? (
         <span className="whitespace-nowrap">{item.label}</span>
       ) : null}
@@ -995,23 +1112,33 @@ function SidebarLink({
 
 const FALLBACK_STAFF: AdminStaffProfile = {
   firstName: "کاربر",
+
   lastName: "مدیریت",
+
   displayRole: "همکار مدیریت",
+
   roles: [],
+
   permissions: [],
 };
 
 function isNavActive(pathname: string, href: string) {
   if (href === "/admin") return pathname === href;
+
   return pathname.startsWith(href);
 }
 
 function normalizePersianSearch(value: string) {
   return value
+
     .trim()
+
     .toLocaleLowerCase("fa")
+
     .replace(/ي/g, "ی")
+
     .replace(/ك/g, "ک")
+
     .replace(/\s+/g, " ");
 }
 
@@ -1039,18 +1166,14 @@ function MobileSidebar({
   return (
     <div
       aria-hidden={!open}
-      className={`fixed inset-0 z-[1200] xl:hidden ${
-        open ? "pointer-events-auto" : "pointer-events-none"
-      }`}
+      className={`fixed inset-0 z-[1200] xl:hidden ${open ? "pointer-events-auto" : "pointer-events-none"}`}
     >
       <button
         type="button"
         tabIndex={open ? 0 : -1}
         aria-label="بستن منو"
         onClick={onClose}
-        className={`absolute inset-0 cursor-pointer bg-black/68 backdrop-blur-[5px] transition-opacity duration-300 motion-reduce:transition-none ${
-          open ? "opacity-100" : "opacity-0"
-        }`}
+        className={`absolute inset-0 cursor-pointer bg-black/62 supports-[backdrop-filter]:backdrop-blur-[4px] transition-opacity duration-300 motion-reduce:transition-none ${open ? "opacity-100" : "opacity-0"}`}
       />
 
       <aside
@@ -1060,17 +1183,19 @@ function MobileSidebar({
         data-lenis-prevent
         data-lenis-prevent-wheel
         data-lenis-prevent-touch
-        className={`absolute inset-y-0 right-0 flex w-[min(88vw,330px)] flex-col overflow-hidden border-l border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-panel)] shadow-[-28px_0_90px_-36px_rgba(0,0,0,0.78)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
+        className={`absolute bottom-3 right-3 top-3 flex w-[min(90vw,344px)] flex-col overflow-hidden rounded-[24px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass-strong)] shadow-[-28px_0_90px_-30px_rgba(0,0,0,0.82),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%] transition-[transform,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${open ? "translate-x-0 opacity-100" : "translate-x-[calc(100%+20px)] opacity-0"}`}
       >
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-8 top-0 z-40 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.22),rgba(194,135,88,0.30),transparent)]"
+        />
         <div className="absolute left-3 top-4 z-30">
           <button
             ref={closeButtonRef}
             type="button"
             onClick={onClose}
             aria-label="بستن منو"
-            className="grid size-9 cursor-pointer place-items-center rounded-[10px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+            className="grid size-9 cursor-pointer place-items-center rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
           >
             <X size={16} aria-hidden="true" />
           </button>
@@ -1134,20 +1259,25 @@ function LogoutModal({
       data-lenis-prevent
       data-lenis-prevent-wheel
       data-lenis-prevent-touch
-      className="fixed inset-0 z-[2000] grid place-items-center bg-black/72 px-4 backdrop-blur-[7px]"
+      className="fixed inset-0 z-[2000] grid place-items-center bg-black/68 px-4 supports-[backdrop-filter]:backdrop-blur-[5px]"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
     >
-      <section className="w-full max-w-[420px] overflow-hidden rounded-[18px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-raised)] shadow-[0_38px_100px_-28px_rgba(0,0,0,0.95)]">
+      <section className="relative w-full max-w-[430px] overflow-hidden rounded-[24px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-glass-strong)] shadow-[0_42px_120px_-30px_rgba(0,0,0,0.96),inset_0_1px_0_var(--admin-shell-highlight)] supports-[backdrop-filter]:backdrop-blur-[18px] supports-[backdrop-filter]:backdrop-saturate-[135%]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-12 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.25),rgba(194,135,88,0.34),transparent)]"
+        />
+
         <header className="flex items-start justify-between gap-5 border-b border-[var(--admin-shell-border)] px-6 py-5">
           <div className="text-right">
-            <p className="text-[8px] font-semibold text-[var(--admin-shell-accent-soft)]">
+            <p className="text-[8px] font-semibold tracking-[0.02em] text-[var(--admin-shell-accent-soft)]">
               نشست کاربری
             </p>
             <h2
               id="admin-logout-title"
-              className="mt-2 text-[20px] font-bold text-[var(--admin-shell-text)]"
+              className="mt-2 text-[20px] font-bold tracking-[-0.02em] text-[var(--admin-shell-text)]"
             >
               خروج از حساب؟
             </h2>
@@ -1156,7 +1286,7 @@ function LogoutModal({
             type="button"
             onClick={onClose}
             aria-label="بستن"
-            className="grid size-9 cursor-pointer place-items-center rounded-[10px] border border-[var(--admin-shell-border)] text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
+            className="grid size-9 cursor-pointer place-items-center rounded-[11px] border border-[var(--admin-shell-border)] bg-[var(--admin-shell-control)] text-[var(--admin-shell-muted)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/40"
           >
             <X size={16} aria-hidden="true" />
           </button>
@@ -1171,7 +1301,10 @@ function LogoutModal({
             پایان می‌یابد و برای ورود دوباره باید رمز عبور را وارد کنید.
           </p>
           {error ? (
-            <p role="alert" className="mt-3 text-[11px] text-[#DF8178]">
+            <p
+              role="alert"
+              className="mt-4 rounded-[12px] border border-[#A7554C]/25 bg-[#A7554C]/8 px-3 py-2.5 text-[10px] leading-6 text-[#DF8178]"
+            >
               {error}
             </p>
           ) : null}
@@ -1183,7 +1316,7 @@ function LogoutModal({
             type="button"
             onClick={onClose}
             disabled={pending}
-            className="h-11 cursor-pointer rounded-[11px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[10px] font-semibold text-[var(--admin-shell-muted)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 disabled:cursor-not-allowed disabled:opacity-50"
+            className="h-11 cursor-pointer rounded-[13px] border border-[var(--admin-shell-border-strong)] bg-[var(--admin-shell-control)] text-[10px] font-semibold text-[var(--admin-shell-muted)] shadow-[inset_0_1px_0_var(--admin-shell-highlight)] transition-colors hover:bg-[var(--admin-shell-control-hover)] hover:text-[var(--admin-shell-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--admin-shell-accent)]/35 disabled:cursor-not-allowed disabled:opacity-50"
           >
             انصراف
           </button>
@@ -1196,7 +1329,7 @@ function LogoutModal({
             onClick={() => void logout()}
             loading={pending}
             disabled={pending}
-            className="!h-11 !justify-center !rounded-[11px] !border-[#A5574F]/35 !bg-[#A5574F]/12 !tracking-normal !text-[#DF8178] hover:!border-[#A5574F]/50 hover:!bg-[#A5574F]/18 hover:!text-[#EF9B93]"
+            className="!h-11 !justify-center !rounded-[13px] !border-[#A5574F]/35 !bg-[#A5574F]/12 !tracking-normal !text-[#DF8178] hover:!border-[#A5574F]/50 hover:!bg-[#A5574F]/18 hover:!text-[#EF9B93]"
           >
             {pending ? "در حال خروج…" : "خروج از حساب"}
           </Button>

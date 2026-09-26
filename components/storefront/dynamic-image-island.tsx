@@ -36,7 +36,11 @@ import {
   getLocaleDirection,
   type Locale,
 } from "@/lib/i18n/config";
-import { getLocaleFromPathname, localizedHref } from "@/lib/i18n/routes";
+import {
+  getLocaleFromPathname,
+  localizedHref,
+  splitLocalePathname,
+} from "@/lib/i18n/routes";
 
 type LocalizedText = {
   fa?: string;
@@ -99,6 +103,34 @@ type ObservedStoryTarget = {
 
 const storyTargetSelector = "[data-image-story-id], [data-image-story-url]";
 const finePointerMediaQuery = "(hover: hover) and (pointer: fine)";
+
+function isDynamicIslandExcludedRoute(pathname: string | null) {
+  if (!pathname) return false;
+
+  const { pathnameWithoutLocale } = splitLocalePathname(pathname);
+  const normalizedPath = pathnameWithoutLocale.replace(/\/+$/, "") || "/";
+
+  if (
+    normalizedPath === "/shop" ||
+    normalizedPath.startsWith("/shop/") ||
+    normalizedPath === "/cart" ||
+    normalizedPath === "/checkout"
+  ) {
+    return true;
+  }
+
+  return [
+    "/admin",
+    "/customer-dashboard",
+    "/auth",
+    "/login",
+    "/signup",
+    "/sign-up",
+  ].some(
+    (prefix) =>
+      normalizedPath === prefix || normalizedPath.startsWith(`${prefix}/`),
+  );
+}
 
 const queryOptions = {
   staleTime: 12 * 60 * 60_000,
@@ -298,7 +330,9 @@ export function DynamicImageIsland() {
   const [interactionPath, setInteractionPath] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  const enabled = !pathname?.startsWith("/admin");
+  // The island is intentionally absent from shopping, checkout, account, and
+  // admin surfaces. It remains available on editorial and category surfaces.
+  const enabled = !isDynamicIslandExcludedRoute(pathname);
   const storiesQuery = useQuery({
     queryKey: ["storefront", "image-stories"],
     queryFn: ({ signal }) =>
@@ -515,6 +549,20 @@ export function DynamicImageIsland() {
     : copy.searchDescription;
   const storiesAreLoading = storiesLoading || storiesFetching;
 
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      setActiveTarget(null);
+      setQuery("");
+      missingStoryRef.current = null;
+      setHoverOpen(false);
+      setFocusOpen(false);
+      setTouchOpen(false);
+      setInteractionPath(null);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname]);
+
   const closeIsland = () => {
     setHoverOpen(false);
     setFocusOpen(false);
@@ -639,7 +687,7 @@ export function DynamicImageIsland() {
       dir={direction}
       lang={htmlLang}
       aria-label={copy.aria}
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+10px)] z-[80] flex justify-center px-2.5 sm:bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+16px)] sm:px-5"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+10px)] z-[2147483500] flex justify-center px-2.5 sm:bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+16px)] sm:px-5"
       style={
         {
           "--image-island-keyboard-inset": `${keyboardInset}px`,
@@ -667,7 +715,7 @@ export function DynamicImageIsland() {
             return;
           setFocusOpen(false);
         }}
-        className={`pointer-events-auto relative isolate origin-bottom overflow-hidden border text-white [text-rendering:geometricPrecision] ${glassSurface} transform-gpu shadow-[0_26px_84px_rgba(0,0,0,0.40),0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.035)] transition-[width,max-width,transform,border-color] duration-[460ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+        className={`pointer-events-auto relative isolate origin-bottom max-h-[min(78dvh,620px)] overflow-hidden border text-white [text-rendering:geometricPrecision] ${glassSurface} transform-gpu shadow-[0_26px_84px_rgba(0,0,0,0.40),0_8px_26px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.20),inset_0_-1px_0_rgba(255,255,255,0.035)] transition-[width,max-width,transform,border-color] duration-[460ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
           panelOpen
             ? "w-[calc(100vw-16px)] max-w-[560px] rounded-[32px] border-white/[0.24] sm:w-[560px]"
             : "w-[min(92vw,392px)] max-w-[392px] rounded-[30px] border-white/[0.20] hover:border-white/[0.30] sm:rounded-[32px]"

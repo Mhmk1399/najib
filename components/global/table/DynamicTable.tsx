@@ -34,6 +34,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 
 import { DataButton, DataInput, DataSelect, FloatingPanel } from "./primitives";
 import type {
@@ -112,6 +113,11 @@ type Announcement = {
   message: string;
 };
 
+type ImagePreviewState = {
+  src: string;
+  alt: string;
+};
+
 export function DynamicDataTable<
   TRecord,
   TCreateValues extends DynamicFormValues = DynamicFormValues,
@@ -164,6 +170,9 @@ export function DynamicDataTable<
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [exportBusy, setExportBusy] = useState<"excel" | "image" | null>(
+    null,
+  );
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(
     null,
   );
 
@@ -490,6 +499,54 @@ export function DynamicDataTable<
     if (merged.length) setVisibleColumnIds(merged);
   }
 
+  function handleImagePreviewClick(event: MouseEvent<HTMLElement>) {
+    const nativeEvent = event.nativeEvent;
+    const target = event.target instanceof Element ? event.target : null;
+
+    const disabledByAncestor = nativeEvent
+      .composedPath()
+      .some(
+        (node) =>
+          node instanceof Element &&
+          node.hasAttribute("data-adt-no-image-preview"),
+      );
+    if (disabledByAncestor) return;
+
+    const pathElements = nativeEvent
+      .composedPath()
+      .filter((node): node is Element => node instanceof Element);
+    const pointElements = document.elementsFromPoint(
+      nativeEvent.clientX,
+      nativeEvent.clientY,
+    );
+    const candidates = [
+      ...(target instanceof Element ? [target] : []),
+      ...pathElements,
+      ...pointElements,
+    ];
+    const previewElement = candidates.find((element) =>
+      resolvePreviewImageSource(element),
+    );
+    if (!previewElement || !tableRootRef.current?.contains(previewElement))
+      return;
+
+    const src = resolvePreviewImageSource(previewElement);
+    if (!src) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    setImagePreview({
+      src,
+      alt:
+        (previewElement instanceof HTMLImageElement
+          ? previewElement.alt
+          : previewElement.getAttribute("aria-label") ??
+            previewElement.getAttribute("data-adt-image-preview-alt"))?.trim() ||
+        "پیش‌نمایش تصویر",
+    });
+  }
+
   const rangeStart = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const rangeEnd = Math.min(total, page * pageSize);
 
@@ -499,30 +556,35 @@ export function DynamicDataTable<
       dir={direction}
       style={themeVars}
       className={cx(
-        "min-w-0 w-full overflow-hidden border border-[var(--adt-border)] bg-[var(--adt-surface)] text-right text-[var(--adt-text)]",
+        "relative isolate min-w-0 w-full overflow-hidden rounded-[24px] border border-[var(--adt-border)] bg-[var(--adt-surface)] text-right text-[var(--adt-text)] shadow-[0_30px_90px_-64px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.025)] [&_img]:cursor-zoom-in",
         className,
       )}
+      onClickCapture={handleImagePreviewClick}
     >
-      <header className="border-b border-[var(--adt-border)] bg-[var(--adt-surface)]">
-        <div className="flex flex-col gap-4 px-4 py-4 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+      <header className="relative border-b border-[var(--adt-border)] bg-[var(--adt-surface)]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[8%] top-0 h-px bg-[linear-gradient(90deg,transparent,var(--adt-accent),rgba(255,255,255,0.12),transparent)] opacity-55"
+        />
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-5 lg:flex-row lg:items-center lg:justify-between lg:px-6">
           <div className="min-w-0">
             {eyebrow ? (
-              <div className="mb-1.5 text-[8px] font-semibold text-[var(--adt-accent-strong)]">
+              <div className="mb-2 inline-flex min-h-6 items-center rounded-full border border-[var(--adt-accent)]/18 bg-[var(--adt-accent)]/[0.06] px-2.5 text-[7.5px] font-semibold text-[var(--adt-accent-strong)]">
                 {eyebrow}
               </div>
             ) : null}
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h1 className="text-[18px] font-extrabold tracking-[-0.03em] sm:text-[20px]">
+              <h1 className="text-[19px] font-extrabold tracking-[-0.035em] sm:text-[22px]">
                 {title}
               </h1>
               {tableQuery.data ? (
-                <span className="text-[9px] tabular-nums text-[var(--adt-muted)]">
+                <span className="inline-flex min-h-6 items-center rounded-full border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2.5 text-[8px] tabular-nums text-[var(--adt-muted)]">
                   {new Intl.NumberFormat(locale).format(total)} مورد
                 </span>
               ) : null}
             </div>
             {description ? (
-              <p className="mt-1.5 max-w-[760px] text-[10px] leading-5 text-[var(--adt-muted)]">
+              <p className="mt-2 max-w-[760px] text-[10px] leading-6 text-[var(--adt-muted)] sm:text-[10.5px]">
                 {description}
               </p>
             ) : null}
@@ -553,7 +615,7 @@ export function DynamicDataTable<
           </div>
         </div>
 
-        <div className="grid min-w-0 gap-3 border-t border-[var(--adt-border)] px-4 py-3 sm:px-5 lg:grid-cols-[minmax(240px,560px)_auto] lg:items-center lg:justify-between">
+        <div className="grid min-w-0 gap-3 border-t border-[var(--adt-border)] bg-[var(--adt-surface-muted)]/[0.34] px-4 py-3.5 sm:px-5 lg:grid-cols-[minmax(240px,560px)_auto] lg:items-center lg:justify-between lg:px-6">
           {search?.enabled === false ? (
             <span />
           ) : (
@@ -593,7 +655,7 @@ export function DynamicDataTable<
               <div
                 role="status"
                 aria-live="polite"
-                className="inline-flex min-h-9 items-center gap-2 border border-[var(--adt-accent)]/30 bg-[var(--adt-accent)]/[0.08] px-2.5 text-[10px] font-semibold text-[var(--adt-text)]"
+                className="inline-flex min-h-9 items-center gap-2 rounded-[11px] border border-[var(--adt-accent)]/28 bg-[var(--adt-accent)]/[0.08] px-2.5 text-[9.5px] font-semibold text-[var(--adt-text)] shadow-[inset_0_1px_0_rgba(255,255,255,0.025)]"
               >
                 <ListChecks
                   size={14}
@@ -737,12 +799,14 @@ export function DynamicDataTable<
       </header>
 
       {renderMeta && tableQuery.data?.meta !== undefined ? (
-        <div className="border-b border-[var(--adt-border)] px-4 py-3 sm:px-5">
+        <div className="border-b border-[var(--adt-border)] bg-[var(--adt-surface)] px-4 py-3.5 sm:px-5 lg:px-6">
           {renderMeta(tableQuery.data.meta)}
         </div>
       ) : null}
 
-      <div className="hidden md:block">
+      <div
+        className="hidden md:block [&_img]:transition-[transform,opacity] [&_img]:duration-300 [&_img:hover]:opacity-90"
+      >
         <DesktopTable
           columns={visibleColumns}
           records={records}
@@ -772,7 +836,9 @@ export function DynamicDataTable<
         />
       </div>
 
-      <div className="md:hidden">
+      <div
+        className="md:hidden [&_img]:transition-[transform,opacity] [&_img]:duration-300 [&_img:active]:scale-[0.98]"
+      >
         <MobileCards
           records={records}
           columns={mobileColumns}
@@ -809,7 +875,7 @@ export function DynamicDataTable<
         />
       ) : null}
 
-      <footer className="border-t border-[var(--adt-border)] bg-[var(--adt-surface)] px-3 py-3 sm:px-5">
+      <footer className="border-t border-[var(--adt-border)] bg-[var(--adt-surface-muted)]/[0.26] px-3 py-3.5 sm:px-5 lg:px-6">
         <Pagination
           page={page}
           pageSize={pageSize}
@@ -861,6 +927,11 @@ export function DynamicDataTable<
         }}
         announce={announce}
       />
+
+      <ImagePreviewModal
+        preview={imagePreview}
+        onClose={() => setImagePreview(null)}
+      />
     </section>
   );
 }
@@ -893,7 +964,7 @@ function SelectionCheckbox({
       aria-label={label}
       aria-checked={indeterminate ? "mixed" : checked}
       onChange={onChange}
-      className="size-4 shrink-0 cursor-pointer accent-[var(--adt-accent-strong)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/40 disabled:cursor-not-allowed disabled:opacity-40"
+      className="size-4 shrink-0 cursor-pointer rounded-[4px] accent-[var(--adt-accent-strong)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/40 disabled:cursor-not-allowed disabled:opacity-40"
     />
   );
 }
@@ -958,24 +1029,140 @@ function DesktopTable<
   labels: Required<DynamicTableLabels>;
   announce: (message: string, tone?: Announcement["tone"]) => void;
 }) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const tableRef = useRef<HTMLTableElement | null>(null);
+  const [edgeFade, setEdgeFade] = useState({
+    left: false,
+    right: false,
+    overflow: false,
+    leftInset: 0,
+    rightInset: 0,
+  });
+
+  useEffect(() => {
+    const scroller = scrollRef.current;
+    const table = tableRef.current;
+    if (!scroller || !table) return;
+
+    let frame = 0;
+
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const overflow = scroller.scrollWidth > scroller.clientWidth + 2;
+
+        if (!overflow) {
+          setEdgeFade((current) =>
+            current.overflow ||
+            current.left ||
+            current.right ||
+            current.leftInset ||
+            current.rightInset
+              ? {
+                  left: false,
+                  right: false,
+                  overflow: false,
+                  leftInset: 0,
+                  rightInset: 0,
+                }
+              : current,
+          );
+          return;
+        }
+
+        const scrollerRect = scroller.getBoundingClientRect();
+        const tableRect = table.getBoundingClientRect();
+        const epsilon = 2;
+        const left = tableRect.left < scrollerRect.left - epsilon;
+        const right = tableRect.right > scrollerRect.right + epsilon;
+
+        const stickyStartHeaders = Array.from(
+          scroller.querySelectorAll<HTMLElement>(
+            'thead [data-adt-sticky-start="true"]',
+          ),
+        );
+        const stickyEndHeaders = Array.from(
+          scroller.querySelectorAll<HTMLElement>(
+            'thead [data-adt-sticky-end="true"]',
+          ),
+        );
+
+        const rightInset = stickyStartHeaders.length
+          ? Math.max(
+              0,
+              Math.round(
+                scrollerRect.right -
+                  Math.min(
+                    ...stickyStartHeaders.map(
+                      (element) => element.getBoundingClientRect().left,
+                    ),
+                  ),
+              ),
+            )
+          : 0;
+
+        const leftInset = stickyEndHeaders.length
+          ? Math.max(
+              0,
+              Math.round(
+                Math.max(
+                  ...stickyEndHeaders.map(
+                    (element) => element.getBoundingClientRect().right,
+                  ),
+                ) - scrollerRect.left,
+              ),
+            )
+          : 0;
+
+        setEdgeFade((current) =>
+          current.left === left &&
+          current.right === right &&
+          current.overflow === overflow &&
+          current.leftInset === leftInset &&
+          current.rightInset === rightInset
+            ? current
+            : { left, right, overflow, leftInset, rightInset },
+        );
+      });
+    };
+
+    update();
+    scroller.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    resizeObserver?.observe(scroller);
+    resizeObserver?.observe(table);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      scroller.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+      resizeObserver?.disconnect();
+    };
+  }, [columns.length, hasRowActions, loading, records.length, selectionEnabled]);
+
   if (error && !records.length)
     return <ErrorState onRetry={onRetry} labels={labels} />;
 
   return (
-    <div className="relative min-w-0">
+    <div className="relative min-w-0 bg-[var(--adt-surface)]">
       <div
+        ref={scrollRef}
         data-lenis-prevent
         data-lenis-prevent-wheel
-        className="min-w-0 overflow-x-auto overscroll-x-contain [scrollbar-gutter:stable] [scrollbar-width:thin]"
+        className="min-w-0 overflow-x-auto overscroll-x-contain scroll-smooth [scrollbar-gutter:stable] [scrollbar-width:thin] motion-reduce:scroll-auto"
       >
-        <table className="w-full min-w-[860px] border-collapse">
+        <table ref={tableRef} className="w-full min-w-[860px] border-collapse">
           <caption className="sr-only">جدول اطلاعات مدیریت</caption>
-          <thead className="bg-[var(--adt-surface-muted)] text-[var(--adt-muted)] text-base  text-right">
-            <tr className="bg-[var(--adt-surface-muted)] ">
+          <thead className="bg-[var(--adt-surface-muted)] text-right text-[var(--adt-muted)]">
+            <tr className="bg-[var(--adt-surface-muted)]">
               {selectionEnabled ? (
                 <th
                   scope="col"
-                  className="sticky right-0 z-20 h-12 w-[48px] border-b border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-center"
+                  data-adt-sticky-start="true"
+                  className="sticky right-0 z-40 h-[52px] w-[48px] border-b border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-center shadow-[-8px_0_18px_-18px_rgba(0,0,0,0.8)]"
                 >
                   {selectionMode === "multiple" ? (
                     <SelectionCheckbox
@@ -999,6 +1186,12 @@ function DesktopTable<
                   <th
                     key={column.id}
                     scope="col"
+                    data-adt-sticky-start={
+                      column.sticky === "start" ? "true" : undefined
+                    }
+                    data-adt-sticky-end={
+                      column.sticky === "end" ? "true" : undefined
+                    }
                     aria-sort={
                       activeSort
                         ? activeSort.direction === "asc"
@@ -1008,7 +1201,7 @@ function DesktopTable<
                     }
                     style={columnStyle(column)}
                     className={cx(
-                      "h-12 border-b text-right border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-3 text-[14px]! text-right! font-bold text-[var(--adt-muted)] last:border-l-0",
+                      "h-[52px] border-b border-l border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-3.5 text-right! text-[11px]! font-bold tracking-[-0.01em] text-[var(--adt-muted)] last:border-l-0",
                       alignClass(column.align),
                       stickyColumnClass(
                         column.sticky,
@@ -1022,7 +1215,7 @@ function DesktopTable<
                       <button
                         type="button"
                         onClick={(event) => onSort(column, event)}
-                        className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 outline-none hover:text-[var(--adt-text)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25"
+                        className="inline-flex min-h-8 cursor-pointer items-center gap-1.5 rounded-[8px] outline-none transition-colors hover:text-[var(--adt-text)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25"
                       >
                         <span>{column.header ?? column.label}</span>
                         {activeSort ? (
@@ -1049,7 +1242,8 @@ function DesktopTable<
               {hasRowActions ? (
                 <th
                   scope="col"
-                  className="sticky left-0 z-20 h-12 w-[72px] border-b border-r border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-right text-[14px]! font-bold text-[var(--adt-muted)]"
+                  data-adt-sticky-end="true"
+                  className="sticky left-0 z-40 h-[52px] w-[72px] border-b border-r border-[var(--adt-border)] bg-[var(--adt-surface-muted)] px-2 text-center text-[11px]! font-bold text-[var(--adt-muted)] shadow-[8px_0_18px_-18px_rgba(0,0,0,0.8)]"
                 >
                   {labels.actions}
                 </th>
@@ -1076,12 +1270,20 @@ function DesktopTable<
                     data-export-row-id={rowId}
                     data-selected={selected || undefined}
                     className={cx(
-                      "group border-b border-[var(--adt-border)] last:border-b-0 hover:bg-[var(--adt-surface-muted)]/65",
+                      "group border-b border-[var(--adt-border)] transition-[background-color,box-shadow] duration-200 last:border-b-0 hover:bg-[var(--adt-surface-muted)]/62 hover:shadow-[inset_3px_0_0_var(--adt-accent)]",
                       selected && "bg-[var(--adt-accent)]/[0.07]",
                     )}
                   >
                     {selectionEnabled ? (
-                      <td className="sticky right-0 z-10 h-[58px] border-l border-[var(--adt-border)] bg-inherit px-2 text-center group-hover:bg-[var(--adt-surface-muted)]">
+                      <td
+                        data-adt-sticky-start="true"
+                        className={cx(
+                          "sticky right-0 z-30 h-[64px] border-l border-[var(--adt-border)] px-2 text-center shadow-[-8px_0_18px_-18px_rgba(0,0,0,0.7)] group-hover:bg-[var(--adt-surface-muted)]",
+                          selected
+                            ? "bg-[var(--adt-surface-raised)]"
+                            : "bg-[var(--adt-surface)]",
+                        )}
+                      >
                         <SelectionCheckbox
                           checked={selected}
                           disabled={!selectable}
@@ -1096,9 +1298,20 @@ function DesktopTable<
                       <td
                         key={column.id}
                         data-export-column-id={column.id}
+                        data-adt-sticky-start={
+                          column.sticky === "start" ? "true" : undefined
+                        }
+                        data-adt-sticky-end={
+                          column.sticky === "end" ? "true" : undefined
+                        }
                         style={columnStyle(column)}
                         className={cx(
-                          "h-[58px] border-l border-[var(--adt-border)] bg-inherit px-3 text-[10px]! text-right! leading-5 text-[var(--adt-text)] group-hover:bg-[var(--adt-surface-muted)]/65 last:border-l-0",
+                          "h-[64px] border-l border-[var(--adt-border)] px-3.5 text-[10px]! text-right! leading-5 text-[var(--adt-text)] transition-colors last:border-l-0",
+                          column.sticky
+                            ? selected
+                              ? "bg-[var(--adt-surface-raised)] group-hover:bg-[var(--adt-surface-muted)]"
+                              : "bg-[var(--adt-surface)] group-hover:bg-[var(--adt-surface-muted)]"
+                            : "bg-inherit group-hover:bg-[var(--adt-surface-muted)]/62",
                           alignClass(column.align),
                           stickyColumnClass(
                             column.sticky,
@@ -1115,7 +1328,10 @@ function DesktopTable<
                     );
                   })}
                   {hasRowActions ? (
-                    <td className="sticky left-0 z-10 h-[58px] border-r border-[var(--adt-border)] bg-[var(--adt-surface)] px-2 group-hover:bg-[var(--adt-surface-muted)]">
+                    <td
+                      data-adt-sticky-end="true"
+                      className="sticky left-0 z-30 h-[64px] border-r border-[var(--adt-border)] bg-[var(--adt-surface)] px-2 shadow-[8px_0_18px_-18px_rgba(0,0,0,0.7)] group-hover:bg-[var(--adt-surface-muted)]"
+                    >
                       <RowActionMenu
                         record={record}
                         crud={crud}
@@ -1133,9 +1349,38 @@ function DesktopTable<
         </table>
       </div>
 
+      {edgeFade.overflow ? (
+        <>
+          <div
+            aria-hidden="true"
+            className={cx(
+              "pointer-events-none absolute inset-y-0 z-20 w-12 transition-opacity duration-200",
+              edgeFade.left ? "opacity-100" : "opacity-0",
+            )}
+            style={{
+              left: edgeFade.leftInset,
+              background:
+                "linear-gradient(90deg, var(--adt-surface) 0%, transparent 100%)",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className={cx(
+              "pointer-events-none absolute inset-y-0 z-20 w-12 transition-opacity duration-200",
+              edgeFade.right ? "opacity-100" : "opacity-0",
+            )}
+            style={{
+              right: edgeFade.rightInset,
+              background:
+                "linear-gradient(270deg, var(--adt-surface) 0%, transparent 100%)",
+            }}
+          />
+        </>
+      ) : null}
+
       {fetching && !loading ? (
         <div className="pointer-events-none absolute left-3 top-3 z-30">
-          <span className="inline-flex items-center gap-2 border border-[var(--adt-border)] bg-[var(--adt-surface-raised)] px-3 py-2 text-[8px] text-[var(--adt-muted)] shadow-lg">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[var(--adt-border-strong)] bg-[var(--adt-surface-raised)]/95 px-3 py-2 text-[8px] font-medium text-[var(--adt-muted)] shadow-[0_12px_36px_-18px_rgba(0,0,0,0.75)] backdrop-blur-[10px]">
             <LoaderCircle size={12} className="animate-spin" />
             بروزرسانی اطلاعات
           </span>
@@ -1194,7 +1439,7 @@ function MobileCards<
         {Array.from({ length: 6 }).map((_, index) => (
           <div
             key={index}
-            className="min-h-[168px] animate-pulse border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] motion-reduce:animate-none"
+            className="min-h-[180px] animate-pulse rounded-[18px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] motion-reduce:animate-none"
           />
         ))}
       </div>
@@ -1202,7 +1447,7 @@ function MobileCards<
   }
 
   return (
-    <div className="grid min-w-0 gap-2 p-3 sm:grid-cols-2">
+    <div className="grid min-w-0 gap-2.5 p-3 sm:grid-cols-2">
       {records.map((record) => {
         const rowId = getRowId(record);
         const selected = selectedRowIds.has(rowId);
@@ -1216,13 +1461,13 @@ function MobileCards<
             key={rowId}
             data-selected={selected || undefined}
             className={cx(
-              "min-w-0 border border-[var(--adt-border)] bg-[var(--adt-surface)]",
+              "min-w-0 overflow-hidden rounded-[18px] border border-[var(--adt-border)] bg-[var(--adt-surface)] shadow-[0_18px_46px_-38px_rgba(0,0,0,0.82)] transition-[border-color,background-color,transform,box-shadow] duration-300 active:scale-[0.995]",
               selected &&
-                "border-[var(--adt-accent)]/55 bg-[var(--adt-accent)]/[0.06]",
+                "border-[var(--adt-accent)]/55 bg-[var(--adt-accent)]/[0.06] shadow-[0_18px_48px_-34px_rgba(0,0,0,0.88),inset_3px_0_0_var(--adt-accent)]",
               mobile?.cardClassName,
             )}
           >
-            <div className="flex min-w-0 items-start gap-3 border-b border-[var(--adt-border)] p-3.5">
+            <div className="flex min-w-0 items-start gap-3 border-b border-[var(--adt-border)] bg-[var(--adt-surface-muted)]/[0.26] p-3.5">
               {selectionEnabled ? (
                 <div className="mt-0.5 shrink-0">
                   <SelectionCheckbox
@@ -1263,16 +1508,16 @@ function MobileCards<
                   <div
                     key={column.id}
                     className={cx(
-                      "min-w-0 border-b border-l border-[var(--adt-border)] px-3 py-3 last:border-l-0",
+                      "min-w-0 border-b border-l border-[var(--adt-border)] px-3.5 py-3.5 last:border-l-0",
                       full && "col-span-2",
                     )}
                   >
                     {column.mobile?.showLabel !== false ? (
-                      <dt className="text-[7px] font-semibold text-[var(--adt-muted)]">
+                      <dt className="text-[7px] font-semibold tracking-[0.01em] text-[var(--adt-muted)]">
                         {column.mobile?.label ?? column.label}
                       </dt>
                     ) : null}
-                    <dd className="mt-1.5 min-w-0 break-words text-[10px] leading-5 text-[var(--adt-text)]">
+                    <dd className="mt-1.5 min-w-0 break-words text-[10px] font-medium leading-5 text-[var(--adt-text)]">
                       {column.cell
                         ? column.cell({ value, record, rowIndex: 0 })
                         : formatUnknown(value, locale)}
@@ -1286,7 +1531,7 @@ function MobileCards<
             crud?.edit ||
             crud?.delete ||
             crud?.extraRowActions?.length ? (
-              <div className="flex justify-end border-t border-[var(--adt-border)] p-2">
+              <div className="flex justify-end border-t border-[var(--adt-border)] bg-[var(--adt-surface-muted)]/[0.22] p-2">
                 <RowActionMenu
                   record={record}
                   crud={crud}
@@ -1445,7 +1690,7 @@ function MenuAction({
       disabled={disabled}
       onClick={onClick}
       className={cx(
-        "flex min-h-10 w-full cursor-pointer items-center gap-3 px-3 text-right text-[10px] font-semibold outline-none hover:bg-[var(--adt-surface-muted)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25 disabled:cursor-not-allowed disabled:opacity-40",
+        "flex min-h-10 w-full cursor-pointer items-center gap-3 rounded-[10px] px-3 text-right text-[10px] font-semibold outline-none transition-colors hover:bg-[var(--adt-surface-muted)] focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/25 disabled:cursor-not-allowed disabled:opacity-40",
         tone === "danger" && "text-[var(--adt-danger)]",
         tone === "warning" && "text-[var(--adt-warning)]",
         tone === "success" && "text-[var(--adt-success)]",
@@ -1543,9 +1788,9 @@ function Pagination({
                   aria-current={item === page ? "page" : undefined}
                   onClick={() => onPageChange(item)}
                   className={cx(
-                    "grid size-9 cursor-pointer place-items-center border text-[9px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/30",
+                    "grid size-9 cursor-pointer place-items-center rounded-[10px] border text-[9px] font-semibold outline-none transition-[border-color,background-color,color,transform] hover:-translate-y-px focus-visible:ring-2 focus-visible:ring-[var(--adt-accent)]/30 active:translate-y-0",
                     item === page
-                      ? "border-[var(--adt-text)] text-[var(--adt-surface)]"
+                      ? "border-[var(--adt-accent)] bg-[var(--adt-accent)] text-[#15100C] shadow-[0_8px_22px_-12px_var(--adt-accent)]"
                       : "border-[var(--adt-border)] bg-[var(--adt-surface)] text-[var(--adt-muted)] hover:border-[var(--adt-border-strong)] hover:text-[var(--adt-text)]",
                   )}
                 >
@@ -1877,6 +2122,128 @@ function CrudDialogs<
   );
 }
 
+function resolvePreviewImageSource(element: Element) {
+  const candidate =
+    element instanceof HTMLImageElement
+      ? element.currentSrc || element.src
+      : element.getAttribute("data-adt-image-preview-src") ||
+        extractBackgroundImageUrl(element);
+  if (!candidate) return "";
+
+  try {
+    const url = new URL(candidate, window.location.href);
+
+    if (url.pathname.endsWith("/_next/image")) {
+      const original = url.searchParams.get("url");
+      if (original) {
+        return new URL(original, window.location.origin).href;
+      }
+    }
+
+    return url.href;
+  } catch {
+    return candidate;
+  }
+}
+
+function extractBackgroundImageUrl(element: Element) {
+  if (!(element instanceof HTMLElement)) return "";
+
+  const backgroundImage = window.getComputedStyle(element).backgroundImage;
+  const match = backgroundImage.match(/url\((?:"|')?(.*?)(?:"|')?\)/);
+  return match?.[1] ?? "";
+}
+
+function ImagePreviewModal({
+  preview,
+  onClose,
+}: {
+  preview: ImagePreviewState | null;
+  onClose: () => void;
+}) {
+  const closeButtonRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    if (!preview) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const frame = requestAnimationFrame(() => closeButtonRef.current?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      onClose();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose, preview]);
+
+  if (!preview || typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={preview.alt || "پیش‌نمایش تصویر"}
+      className="fixed inset-0 z-[100000] grid place-items-center bg-black/[0.78] p-3 sm:p-6"
+      onMouseDown={(event) => {
+        if (event.currentTarget === event.target) onClose();
+      }}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,0.08),transparent_32%),linear-gradient(180deg,rgba(0,0,0,0.12),rgba(0,0,0,0.36))]"
+      />
+
+      <section className="relative isolate flex max-h-[calc(100dvh-24px)] w-full max-w-[min(94vw,1320px)] flex-col overflow-hidden rounded-[24px] border border-white/14 bg-[#0B0B0B]/96 shadow-[0_42px_130px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.09)] sm:max-h-[calc(100dvh-48px)] sm:rounded-[28px]">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[8%] top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.52),rgba(197,140,91,0.78),rgba(255,255,255,0.3),transparent)]"
+        />
+
+        <header className="relative z-10 flex min-h-[58px] items-center justify-between gap-4 border-b border-white/10 px-3.5 sm:px-5">
+          <div className="min-w-0 text-right">
+            <span className="block text-[7px] font-semibold text-[#DDB188]">
+              پیش‌نمایش تصویر
+            </span>
+            <strong className="mt-1 block max-w-[70vw] truncate text-[10px] font-semibold text-white/88 sm:max-w-[720px]">
+              {preview.alt || "تصویر"}
+            </strong>
+          </div>
+
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            aria-label="بستن پیش‌نمایش تصویر"
+            title="بستن"
+            className="grid size-10 shrink-0 cursor-pointer place-items-center rounded-full border border-white/12 bg-white/[0.055] text-white/70 outline-none transition-[transform,background-color,border-color,color] duration-200 hover:scale-[1.03] hover:border-white/24 hover:bg-white/[0.1] hover:text-white focus-visible:ring-2 focus-visible:ring-white/60 active:scale-[0.96] motion-reduce:transition-none"
+          >
+            <X size={17} strokeWidth={1.6} aria-hidden="true" />
+          </button>
+        </header>
+
+        <div className="relative grid min-h-0 flex-1 place-items-center overflow-auto bg-[radial-gradient(circle_at_50%_40%,rgba(255,255,255,0.045),transparent_36%)] p-3 sm:p-5">
+          <img
+            src={preview.src}
+            alt={preview.alt}
+            draggable={false}
+            className="block max-h-[calc(100dvh-120px)] max-w-full select-none object-contain sm:max-h-[calc(100dvh-154px)]"
+          />
+        </div>
+      </section>
+    </div>,
+    document.body,
+  );
+}
+
 function DetailGate({
   query,
   labels,
@@ -1924,7 +2291,7 @@ function ErrorState({
   return (
     <div
       className={cx(
-        "grid place-items-center px-5 text-center",
+        "grid place-items-center bg-[var(--adt-surface)] px-5 text-center",
         compact ? "min-h-[220px]" : "min-h-[300px]",
       )}
     >
@@ -1963,8 +2330,8 @@ function EmptyTableState({
   onClear: () => void;
 }) {
   return (
-    <div className="grid min-h-[280px] place-items-center border-t border-[var(--adt-border)] px-5 text-center">
-      <div className="max-w-[420px]">
+    <div className="grid min-h-[300px] place-items-center border-t border-[var(--adt-border)] bg-[radial-gradient(circle_at_50%_0%,rgba(197,140,91,0.07),transparent_42%)] px-5 text-center">
+      <div className="max-w-[420px] rounded-[20px] border border-dashed border-[var(--adt-border-strong)] bg-[var(--adt-surface-muted)]/[0.24] px-7 py-8">
         <p className="text-[12px] font-bold text-[var(--adt-text)]">
           {filtered
             ? (emptyState?.filteredTitle ?? "نتیجه‌ای پیدا نشد")
@@ -2006,9 +2373,9 @@ function DesktopSkeleton({ columns }: { columns: number }) {
           {Array.from({ length: columns }).map((__, column) => (
             <td
               key={column}
-              className="h-[58px] border-l border-[var(--adt-border)] px-3 last:border-l-0"
+              className="h-[64px] border-l border-[var(--adt-border)] px-3.5 last:border-l-0"
             >
-              <span className="block h-2.5 w-3/5 animate-pulse bg-[var(--adt-border-strong)] motion-reduce:animate-none" />
+              <span className="block h-2.5 w-3/5 animate-pulse rounded-full bg-[var(--adt-border-strong)] motion-reduce:animate-none" />
             </td>
           ))}
         </tr>
@@ -2120,14 +2487,14 @@ function stickyColumnClass(
     return cx(
       "sticky",
       hasSelectionColumn ? "right-12" : "right-0",
-      header ? "z-20" : "z-10",
+      header ? "z-40" : "z-30",
       "shadow-[-1px_0_0_var(--adt-border)]",
     );
   }
   if (sticky === "end") {
     return cx(
       "sticky left-0",
-      header ? "z-20" : "z-10",
+      header ? "z-40" : "z-30",
       "shadow-[1px_0_0_var(--adt-border)]",
     );
   }
