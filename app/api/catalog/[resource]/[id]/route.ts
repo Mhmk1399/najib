@@ -36,3 +36,17 @@ export async function PATCH(request: Request, context: RouteContext) {
     return jsonError(error);
   }
 }
+
+export async function DELETE(_request: Request, context: RouteContext) {
+  try {
+    await assertCatalogAccess(true);
+    const { resource: rawResource, id: rawId } = await context.params;
+    const resource = catalogService.parseResource(rawResource);
+    const id = catalogService.parseId(rawId);
+    return jsonResponse(await catalogService.remove(resource, id), {
+      cache: "no-store",
+    });
+  } catch (error) {
+    return jsonError(error);
+  }
+}

@@ -30,7 +30,11 @@ import {
   loginHref,
   savePendingCartItem,
 } from "@/lib/commerce/client";
-import { getHtmlLang, getLocaleDirection, type Locale } from "@/lib/i18n/config";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
 import {
   formatProductMoney,
@@ -356,8 +360,7 @@ export function ProductDetailPage({
         return;
       }
       toast.error(copy.addErrorTitle, {
-        description:
-          error instanceof Error ? error.message : copy.tryAgain,
+        description: error instanceof Error ? error.message : copy.tryAgain,
       });
     } finally {
       setAddingToBag(false);
@@ -534,7 +537,11 @@ export function ProductDetailPage({
           PRODUCT DETAILS
       ================================================================ */}
 
-      <ProductDetailsSections copy={copy} locale={locale} sections={product.sections} />
+      <ProductDetailsSections
+        copy={copy}
+        locale={locale}
+        sections={product.sections}
+      />
 
       {/* ===============================================================
           RELATED PRODUCTS
@@ -860,8 +867,6 @@ function ProductPurchasePanel({
         max-w-[720px]
       "
     >
-     
-
       {/* =====================================================
           SKU + ACTIONS
       ====================================================== */}
@@ -924,7 +929,7 @@ function ProductPurchasePanel({
            
 
           text-2xl
-          font-normal
+          font-bold
 
           leading-[0.94]
           tracking-[-0.055em]
@@ -1168,6 +1173,7 @@ function ProductPurchasePanel({
             options={sizeOptions}
             placeholder={copy.sizePlaceholder}
             size="lg"
+            placement="auto"
             clearable
             error={sizeError}
             onChange={(value) => {
@@ -1221,9 +1227,7 @@ function ProductPurchasePanel({
       >
         <BoxIcon />
 
-        <span>
-          {product.shippingNote ?? copy.shippingNote}
-        </span>
+        <span>{product.shippingNote ?? copy.shippingNote}</span>
       </div>
 
       {/* =====================================================
@@ -1555,11 +1559,7 @@ function MobileProductSheet({
 
       <button
         type="button"
-        aria-label={
-          expanded
-            ? copy.mobileClose
-            : copy.mobileOpen
-        }
+        aria-label={expanded ? copy.mobileClose : copy.mobileOpen}
         aria-expanded={expanded}
         aria-controls="mobile-product-sheet-options"
         onClick={handleToggleClick}
@@ -1836,6 +1836,7 @@ function MobileProductSheet({
                   value={selectedSize}
                   options={sizeOptions}
                   size="md"
+                  placement="auto"
                   placeholder={copy.sizePlaceholder}
                   error={sizeError}
                   onChange={(value) =>
@@ -1917,10 +1918,8 @@ function MobileProductSheet({
             loading={addingToBag}
             disabled={addingToBag}
             onClick={onAddToBag}
-            icon={
-              <ShoppingBag />
-            }
-           >
+            icon={<ShoppingBag />}
+          >
             {copy.addToBag}
           </Button>
         </div>
@@ -2688,20 +2687,38 @@ function UtilityButton({
 
         place-items-center
 
-        transition-[background-color,color]
+        cursor-pointer
+         
+        border
+        border-transparent
+
+        transition-[background-color,border-color,box-shadow,color,transform]
+        duration-200
+
+        hover:-translate-y-0.5
+        focus-visible:outline-none
+        focus-visible:ring-2
+        focus-visible:ring-[#C15427]/45
+        active:translate-y-0
+        active:scale-95
 
         ${
           active
             ? `
-              bg-black/50
+              bg-transparent
+              text-[#C62828]
 
-              text-red-800
+              hover:bg-transparent
+              hover:text-[#A91F1F]
             `
             : `
-              text-red-800
+              text-[#5B5B5B]
 
-               hover:text-white
-            ` 
+              hover:border-black/10
+              hover:bg-black/[0.045]
+              hover:text-[#C15427]
+              hover:shadow-[0_8px_20px_rgba(25,25,25,0.10)]
+            `
         }
       `}
     >

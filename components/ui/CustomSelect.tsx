@@ -48,7 +48,8 @@ export type CustomSelectTone =
 
 export type CustomSelectPlacement =
   | "bottom"
-  | "top";
+  | "top"
+  | "auto";
 
 export type CustomSelectValue =
   | string
@@ -358,6 +359,18 @@ export function CustomSelect({
   ] = useState(false);
 
   const [
+    autoPlacement,
+    setAutoPlacement,
+  ] = useState<Exclude<CustomSelectPlacement, "auto">>(
+    "bottom",
+  );
+
+  const [
+    autoMenuHeight,
+    setAutoMenuHeight,
+  ] = useState(maxMenuHeight);
+
+  const [
     search,
     setSearch,
   ] = useState("");
@@ -514,6 +527,80 @@ export function CustomSelect({
       search,
       searchable,
     ]);
+
+  /* ------------------------------------------------------------------------
+     AUTO PLACEMENT
+
+     Product detail selectors can sit close to the bottom edge of the
+     viewport. Measure the available space after opening and use the side
+     with enough room, while keeping the menu scrollable in tight layouts.
+  ------------------------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!open || placement !== "auto") return;
+
+    const updateAutoPlacement = () => {
+      const trigger = wrapperRef.current?.querySelector<HTMLElement>(
+        '[role="combobox"]',
+      );
+
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const viewportPadding = 12;
+      const menuGap = 6;
+      const spaceAbove = Math.max(
+        0,
+        rect.top - viewportPadding - menuGap,
+      );
+      const spaceBelow = Math.max(
+        0,
+        window.innerHeight - rect.bottom - viewportPadding - menuGap,
+      );
+      const estimatedHeight = Math.min(
+        maxMenuHeight,
+        Math.max(
+          96,
+          filteredOptions.length * 52 + (searchable ? 60 : 0),
+        ),
+      );
+
+      const nextPlacement =
+        spaceBelow >= estimatedHeight
+          ? "bottom"
+          : spaceAbove >= estimatedHeight
+            ? "top"
+            : spaceAbove > spaceBelow
+              ? "top"
+              : "bottom";
+      const availableSpace =
+        nextPlacement === "top" ? spaceAbove : spaceBelow;
+
+      setAutoPlacement(nextPlacement);
+      setAutoMenuHeight(
+        Math.max(
+          80,
+          Math.min(maxMenuHeight, Math.floor(availableSpace)),
+        ),
+      );
+    };
+
+    const frame = window.requestAnimationFrame(updateAutoPlacement);
+    window.addEventListener("resize", updateAutoPlacement);
+    window.addEventListener("scroll", updateAutoPlacement, true);
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", updateAutoPlacement);
+      window.removeEventListener("scroll", updateAutoPlacement, true);
+    };
+  }, [
+    filteredOptions.length,
+    maxMenuHeight,
+    open,
+    placement,
+    searchable,
+  ]);
 
   /* ------------------------------------------------------------------------
      SELECTED OPTIONS
@@ -1695,8 +1782,9 @@ export function CustomSelect({
                 shadow-[0_18px_50px_rgba(0,0,0,0.10)]
               `,
 
-              placement ===
-                "top"
+              (placement === "auto"
+                ? autoPlacement
+                : placement) === "top"
                 ? `
                   bottom-[calc(100%+6px)]
                 `
@@ -1872,9 +1960,14 @@ export function CustomSelect({
             =========================================================== */}
 
             <div
+              data-lenis-prevent=""
+              data-lenis-prevent-wheel=""
+              data-lenis-prevent-touch=""
               style={{
                 maxHeight:
-                  maxMenuHeight,
+                  placement === "auto"
+                    ? autoMenuHeight
+                    : maxMenuHeight,
               }}
               className="
                 overflow-y-auto

@@ -1071,8 +1071,18 @@ export default function Navbar({
   const navbarShown = navbarVisible || navbarLockedOpen;
 
   const navbarFloating = scrolled && !menuMounted;
+  const lightBreadcrumbSurface =
+    commerceSurface ||
+    pathnameWithoutLocale === "/shop" ||
+    pathnameWithoutLocale.startsWith("/shop/");
+  const lightBreadcrumbClass =
+    "text-[#231F20] [text-shadow:none]";
   const overlayBreadcrumbClass =
-    overlayTone === "dark" ? "text-white" : "text-white";
+    lightBreadcrumbSurface
+      ? lightBreadcrumbClass
+      : overlayTone === "dark"
+        ? "text-white"
+        : "text-white";
   if (
     pathnameWithoutLocale === "/login" ||
     pathnameWithoutLocale === "/signup" ||
@@ -1309,7 +1319,7 @@ export default function Navbar({
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
             commerceSurface
-              ? "text-white [text-shadow:0_1px_18px_rgba(0,0,0,0.72)]"
+              ? lightBreadcrumbClass
               : scrolled
                 ? themeClasses.textAccent
                 : overlayBreadcrumbClass,

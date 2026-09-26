@@ -4,6 +4,7 @@ import {
   CategoryShowcase,
   getHomeCategoryShowcaseItems,
 } from "@/components/static/Home/CategoryShowcase";
+import { CollectionShowcase } from "@/components/static/Home/CollectionShowcase";
 import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
 import { DynamicIslandExperienceSections } from "@/components/static/Home/DynamicIslandExperienceSections";
 import { HeroSection } from "@/components/static/Home/HeroSection";
@@ -107,11 +108,12 @@ export default async function Page() {
         desktopImagePosition="center"
       />
       <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
-      <DynamicIslandExperienceSections
+      {/* <DynamicIslandExperienceSections
         copy={copy.dynamicIsland}
         locale={locale}
-      />
+      /> */}
       <ProductEditorialGrid copy={copy.productEditorial} locale={locale} />
+      <CollectionShowcase locale={locale} />
       <FAQ
         locale={locale}
         eyebrow={copy.faq.eyebrow}
