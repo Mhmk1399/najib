@@ -146,7 +146,7 @@ function CategoryHero({
       }
       className="
         relative
-        isolate
+        isolate 
 
         min-h-[100svh]
 
@@ -227,9 +227,9 @@ function CategoryHero({
           flex
 
           min-h-[100svh]
-
-          items-end
-
+ 
+          items-end -mt-20 lg:mt-0
+ 
           px-6
 
           pb-28
@@ -322,15 +322,15 @@ function CategoryHero({
 
                
 
-              text-[clamp(3.6rem,14vw,5.5rem)]
-              font-normal
+              text-2xl
+              font-bold
 
               leading-[0.9]
               tracking-[-0.06em]
 
               text-white
 
-              md:text-[clamp(5rem,6vw,7.5rem)]
+              md:text-6xl
             "
           >
             {hero.title}
@@ -342,7 +342,7 @@ function CategoryHero({
 
           <p
             className="
-              mt-7
+              mt-3 lg:mt-7
 
               max-w-[460px]
 
@@ -376,7 +376,7 @@ function CategoryHero({
           >
             <Button
               href={localizedHref(hero.action.href, locale)}
-              variant="black"
+              variant="cream"
               size="lg"
               icon={<DirectionalArrowIcon locale={locale} />}
               fullWidth
@@ -394,10 +394,10 @@ function CategoryHero({
       <div
         className="
           absolute
-
+ 
           inset-x-4
 
-          bottom-[max(18px,env(safe-area-inset-bottom))]
+          bottom-[max(88px,env(safe-area-inset-bottom))]
 
           z-20
 
@@ -406,10 +406,12 @@ function CategoryHero({
       >
         <Button
           href={localizedHref(hero.action.href, locale)}
-          variant="black"
-          size="lg"
+          variant="cream"
+          size="md"
           icon={<DirectionalArrowIcon locale={locale} />}
-          fullWidth
+           
+          target="_blank"
+          aria-label={hero.action.label}
         >
           {hero.action.label}
         </Button>

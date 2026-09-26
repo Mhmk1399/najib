@@ -80,20 +80,42 @@ export function CartPage() {
   });
 
   const signedOut =
-    cartQuery.error instanceof CommerceApiError && cartQuery.error.status === 401;
+    cartQuery.error instanceof CommerceApiError &&
+    cartQuery.error.status === 401;
   const cart = cartQuery.data;
   const locked = cart?.status === "checkout_started";
 
   return (
-    <main dir="rtl" lang="fa" className="min-h-dvh bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32">
-      <div className="mx-auto w-full max-w-[1500px] px-5 sm:px-8 lg:px-12">
-        <header className="border-b border-black/15 pb-8 md:flex md:items-end md:justify-between">
+    <main
+      dir="rtl"
+      lang="fa"
+      className="relative isolate min-h-dvh overflow-hidden bg-[#F6F2EB] pb-24 pt-28 text-[#0B0B0B] md:pt-32"
+    >
+      <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-[370px] overflow-hidden md:h-[410px]">
+        <Image
+          src="/assets/images/hero2.webp"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-[center_42%]"
+        />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(5,6,7,0.72)_0%,rgba(5,6,7,0.58)_58%,rgba(5,6,7,0.82)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.08),transparent_48%)]" />
+      </div>
+
+      <div className="relative z-10 mx-auto w-full max-w-[1500px] px-5 sm:px-8 lg:px-12">
+        <header className="flex min-h-[270px] flex-col justify-end border-b border-white/25 pb-8 text-white md:min-h-[300px] md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.12em] text-[#C15427]">انتخاب‌های شما</p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">سبد خرید</h1>
+            <p className="text-[10px] font-semibold tracking-[0.12em] text-[#E7B28F]">
+              انتخاب‌های شما
+            </p>
+            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
+              سبد خرید
+            </h1>
           </div>
           {cart?.itemCount ? (
-            <p className="mt-4 text-sm text-black/65 md:mt-0">
+            <p className="mt-4 text-sm text-white/75 md:mt-0">
               {new Intl.NumberFormat("fa-IR").format(cart.itemCount)} کالا
             </p>
           ) : null}
@@ -107,25 +129,39 @@ export function CartPage() {
             title="برای دیدن سبد وارد حساب شوید"
             description="سبد خرید و رزرو موجودی به حساب شما متصل است تا انتخاب‌هایتان محفوظ بماند."
           >
-            <Button href={loginHref("/cart")} variant="black" size="lg">ورود به حساب</Button>
+            <Button href={loginHref("/cart")} variant="black" size="lg">
+              ورود به حساب
+            </Button>
           </StatePanel>
         ) : null}
 
         {cartQuery.isError && !signedOut ? (
-          <StatePanel title="سبد خرید دریافت نشد" description={messageFor(cartQuery.error)}>
-            <Button type="button" variant="outline" size="lg" onClick={() => void cartQuery.refetch()}>
+          <StatePanel
+            title="سبد خرید دریافت نشد"
+            description={messageFor(cartQuery.error)}
+          >
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              onClick={() => void cartQuery.refetch()}
+            >
               تلاش دوباره
             </Button>
           </StatePanel>
         ) : null}
 
-        {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
+        {!cartQuery.isPending &&
+        !cartQuery.isError &&
+        (!cart || !cart.items.length) ? (
           <StatePanel
             icon={<ShoppingBag className="size-6" />}
             title="سبد شما هنوز خالی است"
             description="از میان محصولات نجیب‌زاده، ترکیب دقیق رنگ و سایز خود را انتخاب کنید."
           >
-            <Button href="/shop" variant="black" size="lg">مشاهده فروشگاه</Button>
+            <Button href="/shop" variant="black" size="lg">
+              مشاهده فروشگاه
+            </Button>
           </StatePanel>
         ) : null}
 
@@ -134,55 +170,123 @@ export function CartPage() {
             <section aria-label="کالاهای سبد خرید">
               {locked ? (
                 <div className="mb-7 border-r-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7">
-                  موجودی این انتخاب‌ها در مرحله پرداخت رزرو شده است. برای تغییر سبد، ابتدا رزرو خرید را لغو کنید.
+                  موجودی این انتخاب‌ها در مرحله پرداخت رزرو شده است. برای تغییر
+                  سبد، ابتدا رزرو خرید را لغو کنید.
                 </div>
               ) : null}
 
               <div className="divide-y divide-black/15 border-y border-black/15">
                 {cart.items.map((item) => {
                   const changing =
-                    (quantityMutation.isPending && quantityMutation.variables?.id === item.id) ||
-                    (removeMutation.isPending && removeMutation.variables === item.id);
+                    (quantityMutation.isPending &&
+                      quantityMutation.variables?.id === item.id) ||
+                    (removeMutation.isPending &&
+                      removeMutation.variables === item.id);
                   return (
-                    <article key={item.id} className="grid grid-cols-[108px_minmax(0,1fr)] gap-5 py-7 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:gap-7">
-                      <Link href={item.productSlug ? `/shop/${item.productSlug}` : "/shop"} className="relative aspect-[3/4] overflow-hidden bg-[#E9E3DA]">
+                    <article
+                      key={item.id}
+                      className="grid grid-cols-[108px_minmax(0,1fr)] gap-5 py-7 sm:grid-cols-[150px_minmax(0,1fr)_auto] sm:gap-7"
+                    >
+                      <Link
+                        href={
+                          item.productSlug
+                            ? `/shop/${item.productSlug}`
+                            : "/shop"
+                        }
+                        className="relative aspect-[3/4] overflow-hidden bg-[#E9E3DA]"
+                      >
                         <Image
                           src={item.imageUrl || FALLBACK_IMAGE}
                           alt={item.imageAlt || item.productName}
                           fill
                           sizes="150px"
-                          style={{ objectPosition: item.imagePosition || "center" }}
+                          style={{
+                            objectPosition: item.imagePosition || "center",
+                          }}
                           className="object-cover transition-transform duration-700 hover:scale-[1.03]"
                         />
                       </Link>
 
                       <div className="min-w-0 py-1">
-                        <p className="text-[11px] tracking-[0.08em] text-black/60">{item.sku}</p>
-                        <Link href={item.productSlug ? `/shop/${item.productSlug}` : "/shop"} className="mt-2 block text-lg font-semibold leading-8 transition-colors hover:text-[#C15427]">
+                        <p className="text-[11px] tracking-[0.08em] text-black/60">
+                          {item.sku}
+                        </p>
+                        <Link
+                          href={
+                            item.productSlug
+                              ? `/shop/${item.productSlug}`
+                              : "/shop"
+                          }
+                          className="mt-2 block text-lg font-semibold leading-8 transition-colors hover:text-[#C15427]"
+                        >
                           {item.productName}
                         </Link>
                         <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-black/65">
                           <div className="flex items-center gap-2">
                             <dt>رنگ</dt>
                             <dd className="flex items-center gap-1.5 text-black/80">
-                              {item.colorHex ? <span className="size-2.5 border border-black/15" style={{ backgroundColor: item.colorHex }} aria-hidden /> : null}
+                              {item.colorHex ? (
+                                <span
+                                  className="size-2.5 border border-black/15"
+                                  style={{ backgroundColor: item.colorHex }}
+                                  aria-hidden
+                                />
+                              ) : null}
                               {item.colorName}
                             </dd>
                           </div>
-                          <div className="flex gap-2"><dt>سایز</dt><dd className="text-black/80">{item.sizeName}</dd></div>
+                          <div className="flex gap-2">
+                            <dt>سایز</dt>
+                            <dd className="text-black/80">{item.sizeName}</dd>
+                          </div>
                         </dl>
 
                         <div className="mt-6 flex flex-wrap items-center gap-4">
                           <div className="flex h-11 items-center border border-black/20 bg-white">
-                            <button type="button" aria-label={`کم کردن تعداد ${item.productName}`} disabled={locked || changing || item.quantity <= 1} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity - 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                            <button
+                              type="button"
+                              aria-label={`کم کردن تعداد ${item.productName}`}
+                              disabled={
+                                locked || changing || item.quantity <= 1
+                              }
+                              onClick={() =>
+                                quantityMutation.mutate({
+                                  id: item.id,
+                                  quantity: item.quantity - 1,
+                                })
+                              }
+                              className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                            >
                               <Minus className="size-3.5" />
                             </button>
-                            <span className="min-w-10 text-center text-xs tabular-nums">{new Intl.NumberFormat("fa-IR").format(item.quantity)}</span>
-                            <button type="button" aria-label={`زیاد کردن تعداد ${item.productName}`} disabled={locked || changing || item.quantity >= 99} onClick={() => quantityMutation.mutate({ id: item.id, quantity: item.quantity + 1 })} className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30">
+                            <span className="min-w-10 text-center text-xs tabular-nums">
+                              {new Intl.NumberFormat("fa-IR").format(
+                                item.quantity,
+                              )}
+                            </span>
+                            <button
+                              type="button"
+                              aria-label={`زیاد کردن تعداد ${item.productName}`}
+                              disabled={
+                                locked || changing || item.quantity >= 99
+                              }
+                              onClick={() =>
+                                quantityMutation.mutate({
+                                  id: item.id,
+                                  quantity: item.quantity + 1,
+                                })
+                              }
+                              className="grid size-10 place-items-center transition-colors hover:bg-black hover:text-white disabled:cursor-not-allowed disabled:opacity-30"
+                            >
                               <Plus className="size-3.5" />
                             </button>
                           </div>
-                          <button type="button" disabled={locked || changing} onClick={() => removeMutation.mutate(item.id)} className="inline-flex min-h-11 items-center gap-2 text-xs text-black/65 underline-offset-4 transition-colors hover:text-[#A33A32] hover:underline disabled:opacity-30">
+                          <button
+                            type="button"
+                            disabled={locked || changing}
+                            onClick={() => removeMutation.mutate(item.id)}
+                            className="inline-flex min-h-11 items-center gap-2 text-xs text-black/65 underline-offset-4 transition-colors hover:text-[#A33A32] hover:underline disabled:opacity-30"
+                          >
                             <Trash2 className="size-3.5" /> حذف
                           </button>
                         </div>
@@ -197,28 +301,58 @@ export function CartPage() {
               </div>
 
               {!locked ? (
-                <button type="button" disabled={clearMutation.isPending} onClick={() => clearMutation.mutate()} className="mt-5 min-h-11 text-xs text-black/65 underline underline-offset-4 transition-colors hover:text-[#A33A32] disabled:opacity-40">
-                  {clearMutation.isPending ? "در حال خالی‌کردن…" : "خالی‌کردن سبد"}
+                <button
+                  type="button"
+                  disabled={clearMutation.isPending}
+                  onClick={() => clearMutation.mutate()}
+                  className="mt-5 min-h-11 text-xs text-black/65 underline underline-offset-4 transition-colors hover:text-[#A33A32] disabled:opacity-40"
+                >
+                  {clearMutation.isPending
+                    ? "در حال خالی‌کردن…"
+                    : "خالی‌کردن سبد"}
                 </button>
               ) : null}
             </section>
 
             <aside className="h-fit border-t-2 border-black bg-white p-6 lg:sticky lg:top-28 lg:p-8">
-              <p className="text-[10px] font-semibold tracking-[0.1em] text-[#C15427]">خلاصه سفارش</p>
+              <p className="text-[10px] font-semibold tracking-[0.1em] text-[#C15427]">
+                خلاصه سفارش
+              </p>
               <div className="mt-7 flex items-center justify-between border-b border-black/15 pb-5 text-sm">
-                <span>جمع کالاها</span><strong className="tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong>
+                <span>جمع کالاها</span>
+                <strong className="tabular-nums">
+                  {formatMinor(cart.subtotalMinor, cart.currency)}
+                </strong>
               </div>
               <div className="space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/65">
-                <p className="flex justify-between gap-4"><span>هزینه ارسال</span><span>در مرحله تحویل مشخص می‌شود</span></p>
-                <p className="flex justify-between gap-4"><span>تخفیف و مالیات</span><span>فعلاً اعمال نمی‌شود</span></p>
+                <p className="flex justify-between gap-4">
+                  <span>هزینه ارسال</span>
+                  <span>در مرحله تحویل مشخص می‌شود</span>
+                </p>
+                <p className="flex justify-between gap-4">
+                  <span>تخفیف و مالیات</span>
+                  <span>فعلاً اعمال نمی‌شود</span>
+                </p>
               </div>
               <div className="flex items-center justify-between py-6">
-                <span className="font-semibold">مبلغ کالاها</span><strong className="text-lg tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency)}</strong>
+                <span className="font-semibold">مبلغ کالاها</span>
+                <strong className="text-lg tabular-nums">
+                  {formatMinor(cart.subtotalMinor, cart.currency)}
+                </strong>
               </div>
-              <Button type="button" variant="black" size="xl" fullWidth onClick={() => router.push("/checkout")}>
+              <Button
+                type="button"
+                variant="black"
+                size="xl"
+                fullWidth
+                onClick={() => router.push("/checkout")}
+              >
                 {locked ? "ادامه پرداخت" : "ادامه فرایند خرید"}
               </Button>
-              <p className="mt-4 text-center text-xs leading-6 text-black/65">موجودی تنها پس از ورود به مرحله تکمیل خرید برای ۱۵ دقیقه رزرو می‌شود.</p>
+              <p className="mt-4 text-center text-xs leading-6 text-black/65">
+                موجودی تنها پس از ورود به مرحله تکمیل خرید برای ۱۵ دقیقه رزرو
+                می‌شود.
+              </p>
             </aside>
           </div>
         ) : null}
@@ -229,12 +363,19 @@ export function CartPage() {
 
 function CartLoading() {
   return (
-    <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px]" aria-label="در حال دریافت سبد">
+    <div
+      className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px]"
+      aria-label="در حال دریافت سبد"
+    >
       <div className="space-y-px">
         {[1, 2].map((item) => (
           <div key={item} className="flex gap-6 border-y border-black/10 py-7">
             <div className="aspect-[3/4] w-28 animate-pulse bg-black/10" />
-            <div className="flex-1 space-y-4 pt-2"><div className="h-3 w-24 animate-pulse bg-black/10" /><div className="h-6 w-48 animate-pulse bg-black/10" /><div className="h-4 w-36 animate-pulse bg-black/10" /></div>
+            <div className="flex-1 space-y-4 pt-2">
+              <div className="h-3 w-24 animate-pulse bg-black/10" />
+              <div className="h-6 w-48 animate-pulse bg-black/10" />
+              <div className="h-4 w-36 animate-pulse bg-black/10" />
+            </div>
           </div>
         ))}
       </div>
@@ -243,12 +384,28 @@ function CartLoading() {
   );
 }
 
-function StatePanel({ icon, title, description, children }: { icon?: React.ReactNode; title: string; description: string; children: React.ReactNode }) {
+function StatePanel({
+  icon,
+  title,
+  description,
+  children,
+}: {
+  icon?: React.ReactNode;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="mx-auto flex max-w-xl flex-col items-center py-24 text-center">
-      {icon ? <div className="mb-6 grid size-14 place-items-center border border-black/15">{icon}</div> : null}
-      <h2 className="text-2xl font-semibold">{title}</h2>
-      <p className="mt-4 max-w-md text-sm leading-7 text-black/65">{description}</p>
+      {icon ? (
+        <div className="mb-6 grid size-14 place-items-center border border-black/15">
+          {icon}
+        </div>
+      ) : null}
+      <h2 className="text-xl font-semibold">{title}</h2>
+      <p className="mt-4 max-w-md text-xs leading-7 text-black/65">
+        {description}
+      </p>
       <div className="mt-8">{children}</div>
     </section>
   );

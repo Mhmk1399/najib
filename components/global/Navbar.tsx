@@ -1061,7 +1061,8 @@ export default function Navbar({
     };
   }, [hideMenu, menuMounted]);
 
-  const commerceSurface = pathname === "/cart" || pathname === "/checkout";
+  const commerceSurface =
+    pathnameWithoutLocale === "/cart" || pathnameWithoutLocale === "/checkout";
   const commerceLightSurface = commerceSurface && !menuMounted;
   const readableNavbar = menuMounted || scrolled || commerceSurface;
 
@@ -1308,7 +1309,7 @@ export default function Navbar({
           className={cx(
             "absolute inset-x-0 top-[70px] z-[80] md:top-[78px]",
             commerceSurface
-              ? "text-[#231F20] dark:!text-[#231F20]"
+              ? "text-white [text-shadow:0_1px_18px_rgba(0,0,0,0.72)]"
               : scrolled
                 ? themeClasses.textAccent
                 : overlayBreadcrumbClass,
