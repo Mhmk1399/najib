@@ -57,6 +57,7 @@ export type DynamicFormProps<TValues extends DynamicFormValues> = {
   mapError?: DynamicFormErrorMapper;
   disabled?: boolean;
   className?: string;
+  onBusyChange?: (busy: boolean) => void;
 };
 
 export function DynamicForm<TValues extends DynamicFormValues>({
@@ -69,6 +70,7 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   mapError,
   disabled = false,
   className,
+  onBusyChange,
 }: DynamicFormProps<TValues>) {
   const [values, setValues] = useState<TValues>(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,6 +81,12 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   );
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement | null>(null);
+  const formBusy = submitting || pendingUploads.size > 0;
+
+  useEffect(() => {
+    onBusyChange?.(formBusy);
+    return () => onBusyChange?.(false);
+  }, [formBusy, onBusyChange]);
 
   const fieldsByName = useMemo(
     () => new Map(schema.fields.map((field) => [field.name, field])),
@@ -334,7 +342,7 @@ export function DynamicForm<TValues extends DynamicFormValues>({
               tone="secondary"
               size="md"
               fullWidth
-              disabled={submitting}
+              disabled={formBusy}
               onClick={onCancel}
             >
               {cancelLabel}
@@ -344,8 +352,8 @@ export function DynamicForm<TValues extends DynamicFormValues>({
               tone="secondary"
               size="md"
               fullWidth
-              loading={submitting}
-              disabled={submitting || disabled}
+              loading={formBusy}
+              disabled={formBusy || disabled}
               icon={<Check size={15} />}
             >
               {submitLabel}
@@ -552,6 +560,7 @@ function DynamicField<TValues extends DynamicFormValues>({
 
     return (
       <FileUploadField
+        key={`${field.name}:${formatted ?? "empty"}`}
         field={field}
         values={values}
         value={formatted}
@@ -573,7 +582,7 @@ function DynamicField<TValues extends DynamicFormValues>({
             <span className="text-[var(--adt-danger)]">*</span>
           ) : null}
         </div>
-        {field.render({ value, values, setValue, error, disabled, readOnly })}
+        {field.render({ value, values, setValue, error, disabled, readOnly, setUploadPending, setUploadError })}
         {(field.description ?? field.helperText) ? (
           <p className="mt-1.5 text-[9px] leading-4 text-[var(--adt-muted)]">
             {field.description ?? field.helperText}
@@ -614,6 +623,8 @@ function FileUploadField<TValues extends DynamicFormValues>({
   const [progress, setProgress] = useState(0);
   const [localPreview, setLocalPreview] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const [previewRetry, setPreviewRetry] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -738,6 +749,7 @@ function FileUploadField<TValues extends DynamicFormValues>({
         }
         setLocalError(null);
         setUploadError(null);
+        field.onUploadSuccess?.(response, values);
         setValue(nextValue);
         setProgress(100);
         window.setTimeout(() => setProgress(0), 700);
@@ -791,17 +803,10 @@ function FileUploadField<TValues extends DynamicFormValues>({
           <div
             aria-label="پیش‌نمایش فایل"
             className="grid aspect-square place-items-center overflow-hidden rounded-[6px] border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] text-[var(--adt-muted)]"
-            style={
-              previewUrl && isImagePreview
-                ? {
-                    backgroundImage: `url("${previewUrl}")`,
-                    backgroundPosition: "center",
-                    backgroundSize: "cover",
-                  }
-                : undefined
-            }
           >
-            {!previewUrl || !isImagePreview ? <ImageIcon size={22} /> : null}
+            {previewUrl && isImagePreview && !previewFailed ? <img key={previewRetry} src={previewRetry ? `${previewUrl}${previewUrl.includes("?") ? "&" : "?"}preview=${previewRetry}` : previewUrl} alt="پیش‌نمایش تصویر محصول" className="size-full object-cover" onError={() => setPreviewFailed(true)} /> : null}
+            {previewFailed ? <div role="alert" className="grid h-full place-items-center gap-1 p-2 text-center text-[9px] leading-4"><span>آدرس عمومی تصویر قابل نمایش نیست.</span><button type="button" className="min-h-9 border border-[var(--adt-border-strong)] px-2 font-bold" onClick={() => { setPreviewFailed(false); setPreviewRetry((current) => current + 1); }}>بررسی دوباره</button></div> : null}
+            {(!previewUrl || !isImagePreview) && !previewFailed ? <ImageIcon size={22} /> : null}
           </div>
 
           <div className="min-w-0">

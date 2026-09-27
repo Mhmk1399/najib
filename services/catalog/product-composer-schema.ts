@@ -14,6 +14,7 @@ const product = z.object({
   priceUsdMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   status: z.enum(["draft", "active"]).default("draft"),
   primaryImageId: objectIdSchema.nullable().optional(),
+  imageIds: z.array(objectIdSchema).max(12).default([]),
   primaryImageObjectFit: z.enum(imageObjectFits).default("cover"),
   primaryImageObjectPosition: z.enum(imageObjectPositions).default("center"),
 }).strict();

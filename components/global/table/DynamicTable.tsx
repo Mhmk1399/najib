@@ -147,6 +147,7 @@ export function DynamicDataTable<
   emptyState,
   labels: labelOverrides,
   renderMeta,
+  editRequest,
   onStateChange,
   className,
 }: DynamicDataTableProps<TRecord, TCreateValues, TEditValues, TFilters>) {
@@ -176,6 +177,15 @@ export function DynamicDataTable<
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(
     null,
   );
+
+  useEffect(() => {
+    if (!editRequest || !crud?.edit) return;
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (!cancelled) setDialog({ type: "edit", record: editRequest.record });
+    });
+    return () => { cancelled = true; };
+  }, [editRequest, crud?.edit]);
 
   const columnSignature = columns
     .map(
@@ -1999,6 +2009,7 @@ function CrudDialogs<
       return crud.delete.mutationFn({ id: getRowId(record), record });
     },
   });
+  const [formBusy, setFormBusy] = useState(false);
 
   if (!crud) return null;
 
@@ -2016,7 +2027,7 @@ function CrudDialogs<
           title={crud.create.title ?? crud.create.label ?? labels.create}
           description={crud.create.description}
           size="lg"
-          busy={createMutation.isPending}
+          busy={createMutation.isPending || formBusy}
         >
           {state.type === "create" ? (
             <DynamicForm
@@ -2029,6 +2040,7 @@ function CrudDialogs<
               submitLabel={labels.createSave}
               cancelLabel={labels.cancel}
               mapError={crud.create.mapError}
+              onBusyChange={setFormBusy}
               onCancel={close}
               onSubmit={async (values) => {
                 const result = await createMutation.mutateAsync(values);
@@ -2083,7 +2095,7 @@ function CrudDialogs<
           description={crud.edit.description}
           size="lg"
           closeOnBackdrop={false}
-          busy={editMutation.isPending}
+          busy={editMutation.isPending || formBusy}
         >
           {state.type === "edit" ? (
             <DetailGate query={detailQuery} labels={labels}>
@@ -2095,6 +2107,7 @@ function CrudDialogs<
                   submitLabel={labels.editSave}
                   cancelLabel={labels.cancel}
                   mapError={crud.edit.mapError}
+                  onBusyChange={setFormBusy}
                   onCancel={close}
                   onSubmit={async (values) => {
                     const result = await editMutation.mutateAsync({

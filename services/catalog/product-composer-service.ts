@@ -38,16 +38,18 @@ async function validateReferences(input: CompleteProductInput, session: ClientSe
   const colorCount = await Color.countDocuments({ _id: { $in: colorIds }, isActive: true }).session(session);
   const sizeCount = await Size.countDocuments({ _id: { $in: sizeIds }, isActive: true }).session(session);
   const locationCount = await InventoryLocation.countDocuments({ _id: { $in: locationIds }, isActive: true }).session(session);
-  const imageCount = input.product.primaryImageId
-    ? await ImageAsset.countDocuments({ _id: input.product.primaryImageId, isActive: true }).session(session)
-    : 1;
+  const normalizedImageIds = [...new Set(input.product.imageIds)].filter((id) => id !== input.product.primaryImageId);
+  const referencedImageIds = [...new Set([...(input.product.primaryImageId ? [input.product.primaryImageId] : []), ...normalizedImageIds])];
+  const imageCount = referencedImageIds.length
+    ? await ImageAsset.countDocuments({ _id: { $in: referencedImageIds }, isActive: true }).session(session)
+    : 0;
   if (!category) badRequest("دسته‌بندی فعال پیدا نشد.");
   if (!subcategory) badRequest("زیردسته فعال نیست یا به دسته انتخاب‌شده تعلق ندارد.");
   if (colorCount !== colorIds.length) badRequest("یک یا چند رنگ فعال پیدا نشد.");
   if (sizeCount !== sizeIds.length) badRequest("یک یا چند سایز فعال پیدا نشد.");
   if (locationCount !== locationIds.length) badRequest("یک یا چند شعبه یا انبار فعال پیدا نشد.");
-  if (!imageCount) badRequest("تصویر اصلی فعال پیدا نشد.");
-  return { colorIds, sizeIds };
+  if (imageCount !== referencedImageIds.length) badRequest("یک یا چند تصویر فعال محصول پیدا نشد.");
+  return { colorIds, sizeIds, normalizedImageIds };
 }
 
 function duplicate(error: unknown) {
@@ -78,8 +80,8 @@ export const productComposerService = {
           if (replay.requestHash !== hash) conflict("این کلید ثبت قبلاً برای محصول دیگری استفاده شده است.");
           return { ...(replay.result as Record<string, unknown>), idempotent: true };
         }
-        const { colorIds, sizeIds } = await validateReferences(value, session);
-        const [product] = await Product.create([{ ...value.product, basePriceMinor: value.product.priceIrrMinor, currency: CATALOG_CURRENCY, colorIds, sizeIds, collectionIds: [], imageIds: [], material: { fa: [], en: [], ar: [] }, seasons: { fa: [], en: [], ar: [] }, occasions: { fa: [], en: [], ar: [] }, styleTags: { fa: [], en: [], ar: [] } }], { session });
+        const { colorIds, sizeIds, normalizedImageIds } = await validateReferences(value, session);
+        const [product] = await Product.create([{ ...value.product, basePriceMinor: value.product.priceIrrMinor, currency: CATALOG_CURRENCY, colorIds, sizeIds, collectionIds: [], imageIds: normalizedImageIds, material: { fa: [], en: [], ar: [] }, seasons: { fa: [], en: [], ar: [] }, occasions: { fa: [], en: [], ar: [] }, styleTags: { fa: [], en: [], ar: [] } }], { session });
         const variants = await ProductVariant.create(
           value.variants.map((item) => ({ ...item, productId: product._id, sku: item.sku.toUpperCase(), isActive: true })),
           { session, ordered: true },
