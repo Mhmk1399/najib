@@ -6,7 +6,6 @@ import {
 } from "@/components/static/Home/CategoryShowcase";
 import { CollectionShowcase } from "@/components/static/Home/CollectionShowcase";
 import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
-import { DynamicIslandExperienceSections } from "@/components/static/Home/DynamicIslandExperienceSections";
 import { HeroSection } from "@/components/static/Home/HeroSection";
 import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSection";
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
@@ -107,7 +106,7 @@ export default async function Page() {
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />
-      <ShoppableImageBanner copy={copy.shoppableImage}  locale={locale} />
+      <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
       {/* <DynamicIslandExperienceSections
         copy={copy.dynamicIsland}
         locale={locale}
