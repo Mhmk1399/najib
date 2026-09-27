@@ -43,7 +43,7 @@ const imageAssetSchema = new Schema(
     storyTitle: { type: createLocalizedTextSchema(160, false) },
     storyDescription: { type: createLocalizedTextSchema(360, false) },
     storyCtaLabel: { type: createLocalizedTextSchema(80, false) },
-    storyProductLimit: { type: Number, min: 1, max: 6, default: 3 },
+    storyProductLimit: { type: Number, min: 1, max: 6, default: 6 },
     storyRevealEnabled: { type: Boolean, default: true },
     kind: {
       type: String,

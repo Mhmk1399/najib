@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Copy,
+  ExternalLink,
   ImageIcon,
   PackageOpen,
   PackagePlus,
@@ -33,6 +34,8 @@ import type {
   ImageObjectFit,
   ImageObjectPosition,
 } from "@/lib/catalog/image-presentation";
+import { defaultLocale } from "@/lib/i18n/config";
+import { localizedPath } from "@/lib/i18n/routes";
 
 type ProductStatus = "draft" | "active" | "archived";
 
@@ -91,8 +94,11 @@ type InventoryLocationReference = {
   code: string;
   name: LocalizedText;
   type?: string;
+  storeId?:
+    | string
+    | { _id: string; code?: string; name?: LocalizedText }
+    | null;
   cityId?: string | { _id: string; isActive?: boolean } | null;
-  storeId?: string | { _id: string; code?: string; name?: LocalizedText; isActive?: boolean } | null;
 };
 
 type Pagination = {
@@ -188,10 +194,11 @@ function referenceLabel(item: ReferenceItem) {
   return label === "—" ? (item.code ?? item.slug ?? item._id) : label;
 }
 
-function joinedReferenceLabels(ids: string[] | undefined, names: Map<string, string>) {
-  return ids?.length
-    ? ids.map((id) => names.get(id) ?? id).join("، ")
-    : "—";
+function joinedReferenceLabels(
+  ids: string[] | undefined,
+  names: Map<string, string>,
+) {
+  return ids?.length ? ids.map((id) => names.get(id) ?? id).join("، ") : "—";
 }
 
 function slugify(value: string) {
@@ -233,7 +240,9 @@ function statusLabel(value: ProductStatus) {
 function formatDigits(value: string | number | null | undefined) {
   if (value === null || value === undefined || value === "") return "—";
   return String(value).replace(/\d/g, (digit) =>
-    new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(Number(digit)),
+    new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(
+      Number(digit),
+    ),
   );
 }
 
@@ -248,8 +257,18 @@ function formatPrice(minor: number, currency: string) {
     return `${numberFormatter.format(amount)} ${currency}`;
   }
 }
-function irrPrice(product: Product) { return product.priceIrrMinor ?? (product.currency === "IRR" ? product.basePriceMinor : undefined); }
-function usdPrice(product: Product) { return product.priceUsdMinor ?? (product.currency === "USD" ? product.basePriceMinor : undefined); }
+function irrPrice(product: Product) {
+  return (
+    product.priceIrrMinor ??
+    (product.currency === "IRR" ? product.basePriceMinor : undefined)
+  );
+}
+function usdPrice(product: Product) {
+  return (
+    product.priceUsdMinor ??
+    (product.currency === "USD" ? product.basePriceMinor : undefined)
+  );
+}
 
 function formatDate(value?: string) {
   if (!value) return "—";
@@ -292,8 +311,15 @@ function productToForm(product: Product): ProductFormValues {
     collectionIds: product.collectionIds ?? [],
     colorIds: product.colorIds ?? [],
     sizeIds: product.sizeIds ?? [],
-    priceIrr: product.priceIrrMinor ?? (product.currency === "IRR" ? product.basePriceMinor : null),
-    priceUsd: product.priceUsdMinor === undefined ? (product.currency === "USD" ? product.basePriceMinor / 100 : null) : product.priceUsdMinor / 100,
+    priceIrr:
+      product.priceIrrMinor ??
+      (product.currency === "IRR" ? product.basePriceMinor : null),
+    priceUsd:
+      product.priceUsdMinor === undefined
+        ? product.currency === "USD"
+          ? product.basePriceMinor / 100
+          : null
+        : product.priceUsdMinor / 100,
     status: product.status,
     material: listToText(product.material),
     fit: product.fit ?? emptyLocalizedText(),
@@ -304,8 +330,7 @@ function productToForm(product: Product): ProductFormValues {
     styleTags: listToText(product.styleTags),
     primaryImageId: product.primaryImageId ?? "",
     primaryImageObjectFit: product.primaryImageObjectFit ?? "cover",
-    primaryImageObjectPosition:
-      product.primaryImageObjectPosition ?? "center",
+    primaryImageObjectPosition: product.primaryImageObjectPosition ?? "center",
     imageIds: product.imageIds ?? [],
   };
 }
@@ -447,11 +472,18 @@ function validateProduct(values: ProductFormValues) {
   if (!values.colorIds.length) errors.colorIds = "حداقل یک رنگ انتخاب کنید.";
   if (!values.sizeIds.length) errors.sizeIds = "حداقل یک سایز انتخاب کنید.";
   if (
-    values.priceIrr === null || !Number.isFinite(Number(values.priceIrr)) || Number(values.priceIrr) < 0
+    values.priceIrr === null ||
+    !Number.isFinite(Number(values.priceIrr)) ||
+    Number(values.priceIrr) < 0
   ) {
     errors.priceIrr = "قیمت ریالی معتبر وارد کنید.";
   }
-  if (values.priceUsd === null || !Number.isFinite(Number(values.priceUsd)) || Number(values.priceUsd) < 0) errors.priceUsd = "قیمت دلاری معتبر وارد کنید.";
+  if (
+    values.priceUsd === null ||
+    !Number.isFinite(Number(values.priceUsd)) ||
+    Number(values.priceUsd) < 0
+  )
+    errors.priceUsd = "قیمت دلاری معتبر وارد کنید.";
   return errors;
 }
 
@@ -581,7 +613,8 @@ function buildSchema({
         searchable: true,
         allowSelectAll: true,
         required: true,
-        helperText: "همه رنگ‌هایی که این محصول با آن‌ها قابل سفارش است انتخاب کنید.",
+        helperText:
+          "همه رنگ‌هایی که این محصول با آن‌ها قابل سفارش است انتخاب کنید.",
       },
       {
         kind: "multi-select",
@@ -854,9 +887,19 @@ export function ProductManager({
   }, [imagesQuery.data?.items, uploadedImageReferences]);
   const onAssetUploaded = useCallback((image: ImageReference) => {
     setUploadedImageReferences((current) => [image, ...current.filter((item) => item._id !== image._id)]);
-    queryClient.setQueryData<ListResponse<ImageReference>>(["catalog", "product-images", "options"], (current) => current ? { ...current, items: [image, ...current.items.filter((item) => item._id !== image._id)] } : current);
+    queryClient.setQueryData<ListResponse<ImageReference>>(["catalog", "product-images", "options"], (current) =>
+      current ? { ...current, items: [image, ...current.items.filter((item) => item._id !== image._id)] } : current,
+    );
   }, [queryClient]);
-  const locations = (locationsQuery.data?.items ?? []).filter((location) => location.type === "store" && Boolean(location.storeId) && (typeof location.cityId !== "object" || location.cityId?.isActive !== false) && (typeof location.storeId !== "object" || location.storeId?.isActive !== false));
+  const locations = (locationsQuery.data?.items ?? []).filter(
+    (location) =>
+      location.type === "store" &&
+      Boolean(location.storeId) &&
+      (typeof location.cityId !== "object" ||
+        location.cityId?.isActive !== false) &&
+      (typeof location.storeId !== "object" ||
+        location.storeId?.isActive !== false),
+  );
 
   const categoryNames = useMemo(
     () => new Map(categories.map((item) => [item._id, fa(item.name)])),
@@ -938,7 +981,9 @@ export function ProductManager({
     void queryClient.invalidateQueries({
       queryKey: ["catalog", "subcategories"],
     });
-    void queryClient.invalidateQueries({ queryKey: ["catalog", "collections"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["catalog", "collections"],
+    });
     void queryClient.invalidateQueries({ queryKey: ["catalog", "colors"] });
     void queryClient.invalidateQueries({ queryKey: ["catalog", "sizes"] });
   }, [queryClient]);
@@ -1016,7 +1061,35 @@ export function ProductManager({
         id: "price",
         label: "قیمت ریال / دلار",
         minWidth: 190,
-        cell: ({ record }) => <span className="space-y-1"><strong className="block">{irrPrice(record) === undefined ? "ریال: تعیین نشده" : formatPrice(irrPrice(record)!, "IRR")}</strong><small className="block text-[var(--adt-muted)]">{usdPrice(record) === undefined ? "دلار: تعیین نشده" : formatPrice(usdPrice(record)!, "USD")}</small></span>,
+        cell: ({ record }) => (
+          <span className="space-y-1">
+            <strong className="block">
+              {formatPrice(
+                record.priceIrrMinor ?? record.basePriceMinor,
+                "IRR",
+              )}
+            </strong>
+            <small className="block text-[var(--adt-muted)]">
+              {record.priceUsdMinor === undefined
+                ? "دلار: تعیین نشده"
+                : formatPrice(record.priceUsdMinor, "USD")}
+            </small>
+          </span>
+        ),
+        cell: ({ record }) => (
+          <span className="space-y-1">
+            <strong className="block">
+              {irrPrice(record) === undefined
+                ? "ریال: تعیین نشده"
+                : formatPrice(irrPrice(record)!, "IRR")}
+            </strong>
+            <small className="block text-[var(--adt-muted)]">
+              {usdPrice(record) === undefined
+                ? "دلار: تعیین نشده"
+                : formatPrice(usdPrice(record)!, "USD")}
+            </small>
+          </span>
+        ),
         mobile: { priority: 4 },
       },
       {
@@ -1040,7 +1113,8 @@ export function ProductManager({
         id: "colors",
         label: "رنگ‌ها",
         minWidth: 180,
-        cell: ({ record }) => joinedReferenceLabels(record.colorIds, colorNames),
+        cell: ({ record }) =>
+          joinedReferenceLabels(record.colorIds, colorNames),
         mobile: { hidden: true },
       },
       {
@@ -1091,7 +1165,7 @@ export function ProductManager({
         defaultValue: null,
         searchable: true,
         badge: (value) =>
-          typeof value === "string" ? categoryNames.get(value) ?? null : null,
+          typeof value === "string" ? (categoryNames.get(value) ?? null) : null,
       },
       {
         id: "subcategoryId",
@@ -1101,7 +1175,9 @@ export function ProductManager({
         defaultValue: null,
         searchable: true,
         badge: (value) =>
-          typeof value === "string" ? subcategoryNames.get(value) ?? null : null,
+          typeof value === "string"
+            ? (subcategoryNames.get(value) ?? null)
+            : null,
       },
     ],
     [categoryNames, categoryOptions, subcategoryNames, subcategoryOptions],
@@ -1127,16 +1203,42 @@ export function ProductManager({
       <CatalogSectionNav />
 
       <section className="relative overflow-hidden border border-[var(--adt-border)] bg-[var(--adt-surface)] px-4 py-5 sm:px-5">
-        <div aria-hidden className="absolute inset-y-0 right-0 w-1 bg-[var(--adt-accent)]" />
+        <div
+          aria-hidden
+          className="absolute inset-y-0 right-0 w-1 bg-[var(--adt-accent)]"
+        />
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-[8px] font-bold tracking-[.17em] text-[var(--adt-accent-strong)]">PRODUCT COMPOSER</p>
-            <h1 className="mt-2 text-[20px] font-extrabold sm:text-[24px]">محصول را کامل و یک‌جا بسازید</h1>
-            <p className="mt-2 max-w-2xl text-[11px] leading-7 text-[var(--adt-muted)]">رنگ‌ها، سایزها، قیمت مستقل ریالی و دلاری و موجودی هر شعبه را در یک جریان کوتاه ثبت کنید.</p>
+            <p className="text-[8px] font-bold tracking-[.17em] text-[var(--adt-accent-strong)]">
+              PRODUCT COMPOSER
+            </p>
+            <h1 className="mt-2 text-[20px] font-extrabold sm:text-[24px]">
+              محصول را کامل و یک‌جا بسازید
+            </h1>
+            <p className="mt-2 max-w-2xl text-[11px] leading-7 text-[var(--adt-muted)]">
+              رنگ‌ها، سایزها، قیمت مستقل ریالی و دلاری و موجودی هر شعبه را در یک
+              جریان کوتاه ثبت کنید.
+            </p>
           </div>
-          {canWrite && canManageInventory ? <DataButton size="lg" tone="primary" icon={<PackagePlus size={17} />} onClick={() => setComposerOpen(true)}>محصول جدید</DataButton> : null}
+          {canWrite && canManageInventory ? (
+            <DataButton
+              size="lg"
+              tone="primary"
+              icon={<PackagePlus size={17} />}
+              onClick={() => setComposerOpen(true)}
+            >
+              محصول جدید
+            </DataButton>
+          ) : null}
         </div>
-        {canWrite && !canManageInventory ? <p role="alert" className="mt-4 border-r-2 border-[var(--adt-warning)] bg-[var(--adt-warning)]/[0.07] px-3 py-2 text-[10px] text-[var(--adt-warning)]">برای ساخت محصول همراه موجودی، دسترسی inventory.write نیز لازم است.</p> : null}
+        {canWrite && !canManageInventory ? (
+          <p
+            role="alert"
+            className="mt-4 border-r-2 border-[var(--adt-warning)] bg-[var(--adt-warning)]/[0.07] px-3 py-2 text-[10px] text-[var(--adt-warning)]"
+          >
+            برای ساخت محصول همراه موجودی، دسترسی inventory.write نیز لازم است.
+          </p>
+        ) : null}
       </section>
 
       <ProductComposer
@@ -1148,12 +1250,43 @@ export function ProductManager({
         sizes={sizes}
         locations={locations}
         images={images}
-        loading={[categoriesQuery, subcategoriesQuery, colorsQuery, sizesQuery, imagesQuery, locationsQuery].some((query) => query.isLoading)}
-        error={[categoriesQuery, subcategoriesQuery, colorsQuery, sizesQuery, imagesQuery, locationsQuery].some((query) => query.isError)}
-        onRetry={() => { reloadReferences(); void queryClient.invalidateQueries({ queryKey: ["inventory", "product-composer"] }); }}
-        onSuccess={() => { reloadReferences(); void queryClient.invalidateQueries({ queryKey: ["catalog", "products"] }); void queryClient.invalidateQueries({ queryKey: ["inventory"] }); }}
+        loading={[
+          categoriesQuery,
+          subcategoriesQuery,
+          colorsQuery,
+          sizesQuery,
+          imagesQuery,
+          locationsQuery,
+        ].some((query) => query.isLoading)}
+        error={[
+          categoriesQuery,
+          subcategoriesQuery,
+          colorsQuery,
+          sizesQuery,
+          imagesQuery,
+          locationsQuery,
+        ].some((query) => query.isError)}
+        onRetry={() => {
+          reloadReferences();
+          void queryClient.invalidateQueries({
+            queryKey: ["inventory", "product-composer"],
+          });
+        }}
+        onSuccess={() => {
+          reloadReferences();
+          void queryClient.invalidateQueries({
+            queryKey: ["catalog", "products"],
+          });
+          void queryClient.invalidateQueries({ queryKey: ["inventory"] });
+        }}
       />
-      <ProductStockModal key={stockProduct?._id ?? "closed"} product={stockProduct} locations={locations} open={Boolean(stockProduct)} onClose={() => setStockProduct(null)} />
+      <ProductStockModal
+        key={stockProduct?._id ?? "closed"}
+        product={stockProduct}
+        locations={locations}
+        open={Boolean(stockProduct)}
+        onClose={() => setStockProduct(null)}
+      />
 
       <DynamicDataTable<
         Product,
@@ -1260,7 +1393,8 @@ export function ProductManager({
               {
                 id: "category",
                 label: "دسته",
-                render: ({ record }) => categoryNames.get(record.categoryId) ?? "—",
+                render: ({ record }) =>
+                  categoryNames.get(record.categoryId) ?? "—",
               },
               {
                 id: "subcategory",
@@ -1271,7 +1405,8 @@ export function ProductManager({
               {
                 id: "price",
                 label: "قیمت ریال / دلار",
-                render: ({ record }) => `${irrPrice(record) === undefined ? "ریال تعیین نشده" : formatPrice(irrPrice(record)!, "IRR")} · ${usdPrice(record) === undefined ? "دلار تعیین نشده" : formatPrice(usdPrice(record)!, "USD")}`,
+                render: ({ record }) =>
+                  `${irrPrice(record) === undefined ? "ریال تعیین نشده" : formatPrice(irrPrice(record)!, "IRR")} · ${usdPrice(record) === undefined ? "دلار تعیین نشده" : formatPrice(usdPrice(record)!, "USD")}`,
               },
               {
                 id: "colors",
@@ -1304,8 +1439,8 @@ export function ProductManager({
                     />
                     <span>
                       {record.primaryImageId
-                        ? imageMap.get(record.primaryImageId)?.url ??
-                          record.primaryImageId
+                        ? (imageMap.get(record.primaryImageId)?.url ??
+                          record.primaryImageId)
                         : "—"}
                     </span>
                   </span>
@@ -1320,7 +1455,8 @@ export function ProductManager({
               {
                 id: "gallery",
                 label: "تعداد تصاویر گالری",
-                render: ({ record }) => formatDigits(record.imageIds?.length ?? 0),
+                render: ({ record }) =>
+                  formatDigits(record.imageIds?.length ?? 0),
               },
               {
                 id: "updatedAt",
@@ -1369,7 +1505,9 @@ export function ProductManager({
                 ? error.message
                 : "تغییر وضعیت محصول انجام نشد.",
             onSuccess: (record, value) => {
-              void queryClient.invalidateQueries({ queryKey: ["catalog", "products"] });
+              void queryClient.invalidateQueries({
+                queryKey: ["catalog", "products"],
+              });
               void queryClient.invalidateQueries({ queryKey: ["inventory"] });
               toast.success("وضعیت محصول تغییر کرد", {
                 description: `${fa(record.name)}: ${statusLabel(value as ProductStatus)}`,
@@ -1381,8 +1519,8 @@ export function ProductManager({
             title: (record) => `حذف دائمی ${fa(record.name)}`,
             description: (record) => (
               <>
-                محصول <strong>{fa(record.name)}</strong> به‌همراه واریانت‌های
-                آن به‌صورت دائمی حذف می‌شود. این عملیات قابل بازگشت نیست.
+                محصول <strong>{fa(record.name)}</strong> به‌همراه واریانت‌های آن
+                به‌صورت دائمی حذف می‌شود. این عملیات قابل بازگشت نیست.
               </>
             ),
             dangerLevel: "hard",
@@ -1405,7 +1543,29 @@ export function ProductManager({
             },
           },
           extraRowActions: [
-            ...(canManageInventory ? [{ id: "add-stock", label: "افزودن موجودی", icon: <PackagePlus key="stock" size={14} />, tone: "success" as const, onClick: (record: Product) => setStockProduct(record) }] : []),
+            {
+              id: "open-public-page",
+              label: "مشاهده در سایت",
+              icon: <ExternalLink size={14} />,
+              onClick: (record) => {
+                window.open(
+                  localizedPath(`/shop/${record.slug}`, defaultLocale),
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              },
+            },
+            ...(canManageInventory
+              ? [
+                  {
+                    id: "add-stock",
+                    label: "افزودن موجودی",
+                    icon: <PackagePlus key="stock" size={14} />,
+                    tone: "success" as const,
+                    onClick: (record: Product) => setStockProduct(record),
+                  },
+                ]
+              : []),
             {
               id: "copy-slug",
               label: "کپی شناسه URL",

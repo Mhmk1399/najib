@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { AdminQueryProvider } from "@/components/global/table/AdminQueryProvider";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 export const metadata: Metadata = {
   title: "پنل مدیریت نجیب‌زاده",
@@ -14,7 +15,7 @@ export default function AdminLayout({
   children: ReactNode;
 }>) {
   return (
-    <div lang="fa" dir="rtl">
+    <div lang="fa" dir="rtl" className={estedad.className}>
       <AdminQueryProvider>
         {children}
       </AdminQueryProvider>

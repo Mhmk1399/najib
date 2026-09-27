@@ -4,6 +4,7 @@ import Link from "next/link";
 import { type CSSProperties } from "react";
 
 import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
 import type { HomeCopy } from "@/lib/i18n/home-copy";
@@ -78,6 +79,8 @@ const preferredKinds = new Set([
   "category_banner",
   "subcategory_banner",
 ]);
+
+const MAX_SHOPPABLE_PRODUCTS = 6;
 
 /* ==========================================================================
    HELPERS
@@ -179,7 +182,7 @@ export async function ShoppableImageBanner({
 
   if (!story) return null;
 
-  const products = story.linkedProducts.slice(0, 3);
+  const products = story.linkedProducts.slice(0, MAX_SHOPPABLE_PRODUCTS);
 
   const direction = getLocaleDirection(locale);
   const htmlLang = getHtmlLang(locale);
@@ -292,64 +295,73 @@ export async function ShoppableImageBanner({
                 PRODUCTS
             ============================================================= */}
 
-            <div className="mt-8 grid gap-2.5 sm:mt-10">
-              {products.map((product, index) => {
-                const name = localizedText(
-                  product.label,
-                  locale,
-                  localizedText(product.name, locale, product.slug),
-                );
+            <div className="mt-8 sm:mt-10">
+              <ScrollFade
+                ariaLabel={copy.productLabel}
+                topClassName="h-8 bg-gradient-to-b from-[var(--shoppable-black)] via-[var(--shoppable-black)]/90 to-transparent"
+                bottomClassName="h-8 bg-gradient-to-t from-[var(--shoppable-black)] via-[var(--shoppable-black)]/90 to-transparent"
+                className="max-h-[min(46svh,380px)] touch-pan-y overflow-y-auto overscroll-contain pe-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              >
+                <div className="grid gap-2.5 py-1">
+                  {products.map((product, index) => {
+                    const name = localizedText(
+                      product.label,
+                      locale,
+                      localizedText(product.name, locale, product.slug),
+                    );
 
-                const price = formatMoney(
-                  product.priceMinor,
-                  product.currency,
-                  locale,
-                );
+                    const price = formatMoney(
+                      product.priceMinor,
+                      product.currency,
+                      locale,
+                    );
 
-                return (
-                  <Link
-                    key={product.id}
-                    href={localizedHref(product.href, locale)}
-                    className="group grid grid-cols-[74px_1fr_auto] items-center gap-3 border border-white/10 bg-white/[0.045] p-2.5 transition-[border-color,background-color] duration-500 hover:border-white/22 hover:bg-white/[0.075] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-                  >
-                    <span className="relative aspect-[4/5] overflow-hidden bg-white/[0.07]">
-                      {product.image?.url ? (
-                        <Image
-                          src={product.image.url}
-                          alt=""
-                          fill
-                          sizes="74px"
-                          className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                          style={{
-                            objectPosition:
-                              product.image.objectPosition ?? "center",
-                          }}
-                        />
-                      ) : null}
-                    </span>
-
-                    <span className="min-w-0">
-                      <span className="text-[9px] text-[var(--shoppable-copper)]">
-                        {copy.productLabel} {formatNumber(index + 1, locale)}
-                      </span>
-
-                      <strong className="mt-1 block truncate text-[14px] font-semibold leading-6 text-white">
-                        {name}
-                      </strong>
-
-                      {price ? (
-                        <span className="mt-1 block text-[10px] text-white/55">
-                          {price}
+                    return (
+                      <Link
+                        key={product.id}
+                        href={localizedHref(product.href, locale)}
+                        className="group grid grid-cols-[74px_1fr_auto] items-center gap-3 border border-white/10 bg-white/[0.045] p-2.5 transition-[border-color,background-color] duration-500 hover:border-white/22 hover:bg-white/[0.075] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      >
+                        <span className="relative aspect-[4/5] overflow-hidden bg-white/[0.07]">
+                          {product.image?.url ? (
+                            <Image
+                              src={product.image.url}
+                              alt=""
+                              fill
+                              sizes="74px"
+                              className="object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                              style={{
+                                objectPosition:
+                                  product.image.objectPosition ?? "center",
+                              }}
+                            />
+                          ) : null}
                         </span>
-                      ) : null}
-                    </span>
 
-                    <span className="grid size-9 place-items-center border border-white/12 text-white/60 transition-[border-color,color,background-color] duration-500 group-hover:border-[var(--shoppable-copper)]/60 group-hover:bg-[var(--shoppable-copper)]/[0.10] group-hover:text-white">
-                      <ArrowLeftIcon />
-                    </span>
-                  </Link>
-                );
-              })}
+                        <span className="min-w-0">
+                          <span className="text-[9px] text-[var(--shoppable-copper)]">
+                            {copy.productLabel} {formatNumber(index + 1, locale)}
+                          </span>
+
+                          <strong className="mt-1 block truncate text-[14px] font-semibold leading-6 text-white">
+                            {name}
+                          </strong>
+
+                          {price ? (
+                            <span className="mt-1 block text-[10px] text-white/55">
+                              {price}
+                            </span>
+                          ) : null}
+                        </span>
+
+                        <span className="grid size-9 place-items-center border border-white/12 text-white/60 transition-[border-color,color,background-color] duration-500 group-hover:border-[var(--shoppable-copper)]/60 group-hover:bg-[var(--shoppable-copper)]/[0.10] group-hover:text-white">
+                          <ArrowLeftIcon />
+                        </span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </ScrollFade>
             </div>
 
             {/* ============================================================
