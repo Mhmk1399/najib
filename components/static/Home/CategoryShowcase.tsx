@@ -1,5 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
 import { type CSSProperties } from "react";
 
 import {
@@ -8,9 +6,9 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import type { HomeCopy } from "@/lib/i18n/home-copy";
-import { localizedHref } from "@/lib/i18n/routes";
 import { getStorefrontCatalog } from "@/services/catalog/storefront";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
+import { CategoryMarquee } from "./category-marquee";
 
 /* ========================================================================== 
    TYPES
@@ -172,8 +170,6 @@ export function CategoryShowcase({
 
   if (!visibleCategories.length) return null;
 
-  const gridLayout = getGridLayout(visibleCategories.length);
-
   return (
     <section
       aria-labelledby="category-showcase-title"
@@ -217,127 +213,13 @@ export function CategoryShowcase({
           />
         </header>
 
-        <div
-          className={`mx-auto mt-10 grid w-full gap-2.5 sm:mt-12 sm:gap-3 lg:mt-14 lg:gap-4 ${gridLayout}`}
-        >
-          {visibleCategories.map((category) => (
-            <CategoryCard
-              key={category.id}
-              category={category}
-              copy={copy}
-              locale={locale}
-              direction={direction}
-            />
-          ))}
-        </div>
+        <CategoryMarquee
+          categories={visibleCategories}
+          copy={copy}
+          locale={locale}
+          direction={direction}
+        />
       </div>
     </section>
-  );
-}
-
-function getGridLayout(count: number) {
-  if (count === 1) return "max-w-[620px] grid-cols-1";
-
-  if (count === 2) return "max-w-[1120px] grid-cols-1 sm:grid-cols-2";
-
-  if (count === 4) {
-    return "max-w-[1560px] grid-cols-1 sm:grid-cols-2 xl:grid-cols-4";
-  }
-
-  return "max-w-[1560px] grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-}
-
-/* ========================================================================== 
-   CATEGORY CARD
-============================================================================ */
-
-function CategoryCard({
-  category,
-  copy,
-  locale,
-  direction,
-}: {
-  category: CategoryItem;
-  copy: HomeCopy["categories"];
-  locale: Locale;
-  direction: "rtl" | "ltr";
-}) {
-  return (
-    <Link
-      href={localizedHref(category.href, locale)}
-      aria-label={`${copy.categoryAriaPrefix} ${category.name}`}
-      data-image-story-id={category.imageAssetId}
-      data-image-story-url={category.image}
-      className="group relative isolate mx-auto block aspect-[4/5] w-full max-w-[620px] overflow-hidden bg-[#0B0B0B] text-white outline-none focus-visible:ring-2 focus-visible:ring-black/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cat-bg)] sm:aspect-[3/4] lg:max-w-none"
-    >
-      <Image
-        src={category.image}
-        alt={category.imageAlt ?? category.name}
-        fill
-        draggable={false}
-        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, 33vw"
-        style={{
-          objectFit: category.imageFit ?? "cover",
-          objectPosition: category.imagePosition ?? "center",
-        }}
-        className="pointer-events-none select-none transition-transform duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025] motion-reduce:transform-none motion-reduce:transition-none"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(11,11,11,0.03)_0%,rgba(11,11,11,0.07)_40%,rgba(11,11,11,0.78)_100%)]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_38%,rgba(11,11,11,0.20)_120%)]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-3 border border-white/[0.08] opacity-0 transition-opacity duration-500 group-hover:opacity-100 motion-reduce:transition-none sm:inset-4"
-      />
-
-      <div className="absolute inset-x-5 bottom-6 flex flex-col items-center text-center sm:inset-x-6 sm:bottom-7 lg:bottom-8">
-        <h3 className="mt-2 text-balance text-[clamp(2.15rem,10vw,3.9rem)] font-semibold leading-[1.08] tracking-[-0.04em] text-white sm:text-[clamp(2.3rem,6vw,4rem)] md:text-[clamp(2.3rem,3.5vw,2rem)]">
-          {category.name}
-        </h3>
-
-        <span
-          aria-hidden="true"
-          className="mt-4 h-px w-8 bg-white/45 transition-[width,background-color] duration-500 group-hover:w-12 group-hover:bg-[var(--cat-accent)] motion-reduce:transition-none"
-        />
-
-       
-      </div>
-    </Link>
-  );
-}
-
-/* ========================================================================== 
-   ICON
-============================================================================ */
-
-function DirectionalArrow({ direction }: { direction: "rtl" | "ltr" }) {
-  const motionClass =
-    direction === "rtl"
-      ? "group-hover:-translate-x-1"
-      : "rotate-180 group-hover:translate-x-1";
-
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className={`size-3.5 transition-transform duration-300 motion-reduce:transition-none ${motionClass}`}
-    >
-      <path
-        d="M13.5 8H3M6.5 4.5L3 8L6.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-    </svg>
   );
 }

@@ -361,6 +361,24 @@ export type DynamicExtraRowAction<TRecord> = {
     tone?: "neutral" | "danger" | "warning" | "success";
 };
 
+export type DynamicStatusOption = DataSelectOption & {
+    tone?: "neutral" | "danger" | "warning" | "success";
+};
+
+export type DynamicStatusConfig<TRecord> = {
+    enabled?: boolean | ((record: TRecord) => boolean);
+    label?: string;
+    options: DynamicStatusOption[];
+    getValue: (record: TRecord) => string;
+    mutationFn: (args: {
+        id: string;
+        record: TRecord;
+        value: string;
+    }) => Promise<void | unknown>;
+    mapError?: (error: unknown) => string;
+    onSuccess?: (record: TRecord, value: string) => void;
+};
+
 export type DynamicCrudConfig<
     TRecord,
     TCreateValues extends DynamicFormValues,
@@ -369,6 +387,7 @@ export type DynamicCrudConfig<
     create?: DynamicCreateConfig<TRecord, TCreateValues>;
     edit?: DynamicEditConfig<TRecord, TEditValues>;
     view?: DynamicViewConfig<TRecord>;
+    status?: DynamicStatusConfig<TRecord>;
     delete?: DynamicDeleteConfig<TRecord>;
     extraRowActions?: DynamicExtraRowAction<TRecord>[];
 };

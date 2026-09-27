@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  Check,
   ChevronLeft,
   ChevronRight,
   Edit3,
@@ -387,7 +388,11 @@ export function DynamicDataTable<
   const hasQueryConstraints =
     Boolean(committedSearch) || activeFilterCount > 0 || sort.length > 0;
   const hasRowActions = Boolean(
-    crud?.view || crud?.edit || crud?.delete || crud?.extraRowActions?.length,
+    crud?.view ||
+      crud?.edit ||
+      crud?.status ||
+      crud?.delete ||
+      crud?.extraRowActions?.length,
   );
   const canCreate = Boolean(crud?.create && crud.create.enabled !== false);
   const canExportExcel =
@@ -1071,10 +1076,23 @@ function DesktopTable<
         }
 
         const scrollerRect = scroller.getBoundingClientRect();
-        const tableRect = table.getBoundingClientRect();
         const epsilon = 2;
-        const left = tableRect.left < scrollerRect.left - epsilon;
-        const right = tableRect.right > scrollerRect.right + epsilon;
+        const scrollableHeaders = Array.from(
+          scroller.querySelectorAll<HTMLElement>(
+            'thead th:not([data-adt-sticky-start="true"]):not([data-adt-sticky-end="true"])',
+          ),
+        );
+        const contentRects = scrollableHeaders.map((element) =>
+          element.getBoundingClientRect(),
+        );
+        const contentLeft = contentRects.length
+          ? Math.min(...contentRects.map((rect) => rect.left))
+          : scrollerRect.left;
+        const contentRight = contentRects.length
+          ? Math.max(...contentRects.map((rect) => rect.right))
+          : scrollerRect.right;
+        const left = contentLeft < scrollerRect.left - epsilon;
+        const right = contentRight > scrollerRect.right + epsilon;
 
         const stickyStartHeaders = Array.from(
           scroller.querySelectorAll<HTMLElement>(
@@ -1334,6 +1352,7 @@ function DesktopTable<
                     >
                       <RowActionMenu
                         record={record}
+                        getRowId={getRowId}
                         crud={crud}
                         openDialog={openDialog}
                         labels={labels}
@@ -1529,11 +1548,13 @@ function MobileCards<
 
             {crud?.view ||
             crud?.edit ||
+            crud?.status ||
             crud?.delete ||
             crud?.extraRowActions?.length ? (
               <div className="flex justify-end border-t border-[var(--adt-border)] bg-[var(--adt-surface-muted)]/[0.22] p-2">
                 <RowActionMenu
                   record={record}
+                  getRowId={getRowId}
                   crud={crud}
                   openDialog={openDialog}
                   labels={labels}
@@ -1554,12 +1575,14 @@ function RowActionMenu<
   TEditValues extends DynamicFormValues,
 >({
   record,
+  getRowId,
   crud,
   openDialog,
   labels,
   announce,
 }: {
   record: TRecord;
+  getRowId: (record: TRecord) => string;
   crud?: DynamicCrudConfig<TRecord, TCreateValues, TEditValues>;
   openDialog: (state: DialogState<TRecord>) => void;
   labels: Required<DynamicTableLabels>;
@@ -1567,6 +1590,7 @@ function RowActionMenu<
 }) {
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const [open, setOpen] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const canView = Boolean(
     crud?.view && isTruthyConfig(crud.view.enabled, record),
@@ -1576,6 +1600,11 @@ function RowActionMenu<
   );
   const canDelete = Boolean(
     crud?.delete && isTruthyConfig(crud.delete.enabled, record),
+  );
+  const canChangeStatus = Boolean(
+    crud?.status &&
+      crud.status.options.length > 0 &&
+      isTruthyConfig(crud.status.enabled, record),
   );
   const extra = (crud?.extraRowActions ?? []).filter(
     (action) => !isTruthyConfig(action.hidden, record, false),
@@ -1590,15 +1619,75 @@ function RowActionMenu<
         iconOnly
         tone="ghost"
         size="sm"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() =>
+          setOpen((current) => {
+            if (current) setStatusOpen(false);
+            return !current;
+          })
+        }
       />
       <FloatingPanel
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={() => {
+          setOpen(false);
+          setStatusOpen(false);
+        }}
         triggerRef={triggerRef}
-        title={labels.actions}
+        title={statusOpen ? crud?.status?.label ?? "وضعیت" : labels.actions}
         desktopWidth={220}
       >
+        {statusOpen ? (
+          <div className="p-2">
+            <MenuAction
+              icon={<ChevronRight size={14} />}
+              label="بازگشت به عملیات"
+              onClick={() => setStatusOpen(false)}
+            />
+            <div className="my-1 h-px bg-[var(--adt-border)]" />
+            {crud?.status?.options.map((option) => {
+              const currentValue = crud.status?.getValue(record);
+              const active = currentValue === option.value;
+              const actionId = `status:${option.value}`;
+              const disabled = Boolean(option.disabled) || active;
+
+              return (
+                <MenuAction
+                  key={actionId}
+                  icon={active ? <Check size={14} /> : undefined}
+                  label={option.label}
+                  tone={active ? "success" : option.tone}
+                  disabled={disabled || busyAction === actionId}
+                  loading={busyAction === actionId}
+                  onClick={async () => {
+                    if (!crud.status || active || disabled) return;
+
+                    setBusyAction(actionId);
+                    try {
+                      await crud.status.mutationFn({
+                        id: getRowId(record),
+                        record,
+                        value: option.value,
+                      });
+                      crud.status.onSuccess?.(record, option.value);
+                      setOpen(false);
+                      setStatusOpen(false);
+                    } catch (error) {
+                      announce(
+                        crud.status.mapError?.(error) ??
+                          (error instanceof Error
+                            ? error.message
+                            : "تغییر وضعیت انجام نشد. دوباره تلاش کنید."),
+                        "error",
+                      );
+                    } finally {
+                      setBusyAction(null);
+                    }
+                  }}
+                />
+              );
+            })}
+          </div>
+        ) : (
         <div className="p-2">
           {canView ? (
             <MenuAction
@@ -1649,6 +1738,13 @@ function RowActionMenu<
               />
             );
           })}
+          {canChangeStatus ? (
+            <MenuAction
+              icon={<ChevronLeft size={14} />}
+              label={crud?.status?.label ?? "وضعیت"}
+              onClick={() => setStatusOpen(true)}
+            />
+          ) : null}
           {canDelete ? (
             <>
               <div className="my-1 h-px bg-[var(--adt-border)]" />
@@ -1664,6 +1760,7 @@ function RowActionMenu<
             </>
           ) : null}
         </div>
+        )}
       </FloatingPanel>
     </div>
   );

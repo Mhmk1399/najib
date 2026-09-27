@@ -957,7 +957,7 @@ function WishlistPanel({
                     </Link>
                     <p className="mt-2 text-sm text-black/60" dir="ltr">
                       {item.priceMinor > 0
-                        ? money(item.priceMinor, item.currency, locale, copy)
+                        ? money(item.priceMinor, item.currency, locale)
                         : copy.wishlist.priceUnavailable}
                     </p>
                   </div>
