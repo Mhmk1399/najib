@@ -96,6 +96,14 @@ type ImageStoriesPayload = {
   stories: ImageStory[];
 };
 
+type StorefrontCatalogPayload = {
+  categories: Array<{
+    _id: string;
+    slug: string;
+    name: LocalizedText;
+  }>;
+};
+
 type WindowWithLenis = Window & {
   __lenis?: {
     start: () => void;
@@ -352,6 +360,15 @@ export function DynamicImageIsland() {
     enabled,
     ...queryOptions,
   });
+  const catalogQuery = useQuery({
+    queryKey: ["storefront", "catalog"],
+    queryFn: ({ signal }) =>
+      fetchJson<StorefrontCatalogPayload>("/api/storefront/catalog", {
+        signal,
+      }),
+    enabled,
+    ...queryOptions,
+  });
   const {
     data: storiesData,
     isFetching: storiesFetching,
@@ -542,6 +559,17 @@ export function DynamicImageIsland() {
     activeStory?.storyDescription ?? activeStory?.image.storyDescription;
   const configuredCtaLabel =
     activeStory?.storyCtaLabel ?? activeStory?.image.storyCtaLabel;
+  const categoryPrompts = useMemo(
+    () =>
+      catalogQuery.data?.categories.slice(0, 3).map((category) => ({
+        slug: category.slug,
+        label: text(category.name, locale, category.slug),
+      })) ?? [],
+    [catalogQuery.data?.categories, locale],
+  );
+  const quickPrompts = categoryPrompts.length
+    ? categoryPrompts
+    : copy.quickPrompts.map((label) => ({ slug: "", label }));
   const activeTitle = activeStory
     ? text(activeStory.image.alt, locale, copy.imageChoices)
     : copy.assistantTitle;
@@ -677,6 +705,13 @@ export function DynamicImageIsland() {
 
     const params = new URLSearchParams({ search: clean });
     router.push(localizedHref(`/shop?${params.toString()}`, locale));
+    closeIsland();
+  }
+
+  function submitCategory(slug: string) {
+    if (!slug) return;
+
+    router.push(localizedHref(`/shop?category=${encodeURIComponent(slug)}`, locale));
     closeIsland();
   }
 
@@ -1102,17 +1137,22 @@ export function DynamicImageIsland() {
                   </form>
 
                   <div className="flex flex-wrap items-center gap-1.5 px-1">
-                    {copy.quickPrompts.map((prompt) => (
+                    {quickPrompts.map((prompt) => (
                       <button
-                        key={prompt}
+                        key={prompt.slug || prompt.label}
                         type="button"
                         className="shrink-0 cursor-pointer rounded-full border border-white/[0.12] bg-white/[0.05] px-2.5 py-1.5 text-[8.5px] text-white/82 transition-[border-color,color,background-color,transform] duration-200 hover:-translate-y-px hover:border-white/[0.24] hover:bg-white/[0.09] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55 motion-reduce:transition-none"
                         onClick={() => {
-                          setQuery(prompt);
-                          submitSearch(prompt);
+                          if (prompt.slug) {
+                            submitCategory(prompt.slug);
+                            return;
+                          }
+
+                          setQuery(prompt.label);
+                          submitSearch(prompt.label);
                         }}
                       >
-                        {prompt}
+                        {prompt.label}
                       </button>
                     ))}
                     <Link

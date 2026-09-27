@@ -1028,9 +1028,9 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
           <div className="w-full">
             <div className="px-8 pb-16 pt-0 xl:px-10">
               {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
-              <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-3 xl:-mx-10 xl:px-10">
-                <div className="relative flex min-h-[52px] items-center justify-between gap-3">
-                  <div className="relative z-10 flex min-w-0 flex-1 items-center gap-1.5">
+              <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-4 xl:-mx-10 xl:px-10">
+                <div className="relative flex min-h-[60px] items-center justify-between gap-4">
+                  <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
                     <DesktopFilterIsland
                       expanded={desktopFilterExpanded}
                       pinned={desktopFilterPinned}
@@ -1068,7 +1068,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                               key={item.value}
                               type="button"
                               onClick={() => setCategory(item.value)}
-                              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                              className={`flex min-h-10 w-full items-center justify-between px-3.5 text-right text-[9px] font-semibold uppercase tracking-[0.06em] transition-colors ${
                                 active
                                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -1161,7 +1161,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                               key={item.value}
                               type="button"
                               onClick={() => setCollection(item.value)}
-                              className={`flex min-h-9 w-full items-center justify-between px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] transition-colors ${
+                              className={`flex min-h-10 w-full items-center justify-between px-3.5 text-right text-[9px] font-semibold uppercase tracking-[0.06em] transition-colors ${
                                 active
                                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -1179,7 +1179,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                   </div>
 
                   <div className="relative z-10 flex shrink-0 items-center gap-2">
-                    <span className="hidden text-[5.5px] font-semibold uppercase tracking-[0.12em] text-black/38 xl:block">
+                    <span className="hidden text-[8px] font-semibold uppercase tracking-[0.08em] text-black/48 xl:block">
                       {copy.sort.label}
                     </span>
                     <DesktopSortControl value={sort} onChange={setSort} />
@@ -1188,13 +1188,13 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
               </div>
 
               <div className="flex min-h-[54px] items-center justify-between border-b border-[var(--shop-border)] px-1">
-                <span className="text-[6.5px] font-semibold uppercase tracking-[0.18em] text-black/62">
+                <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-black/62">
                   {formatTemplate(copy.products.productCountTemplate, {
                     count: formatNumber(products.length, locale),
                   })}
                 </span>
                 <div className="flex items-center gap-4">
-                  <span className="text-[5.5px] font-semibold uppercase tracking-[0.2em] text-black/28">
+                  <span className="text-[7px] font-semibold uppercase tracking-[0.16em] text-black/38">
                     {copy.products.desktopSelectionLabel}
                   </span>
                   <span className="h-px w-16 bg-black/14" />
@@ -1230,11 +1230,11 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
               <span className="grid size-6 shrink-0 place-items-center bg-black/[0.055] text-black/70">
                 <FilterIcon />
               </span>
-              <span className="text-[7px] font-semibold uppercase tracking-[0.14em]">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.1em]">
                 {copy.filters.filters}
               </span>
               {filterCount > 0 && (
-                <span className="grid size-[18px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[7px] font-bold tabular-nums text-white">
+                <span className="grid size-5 shrink-0 place-items-center bg-[var(--shop-copper)] text-[8px] font-bold tabular-nums text-white">
                   {formatNumber(filterCount, locale)}
                 </span>
               )}
@@ -1417,7 +1417,7 @@ function DesktopToolbarPopover({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className={`group/filter-chip relative flex h-9 items-center gap-2 border px-3 text-[7px] font-semibold uppercase tracking-[0.08em] transition-[background-color,border-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`group/filter-chip relative flex h-11 items-center gap-2.5 border px-4 text-[9px] font-semibold uppercase tracking-[0.05em] transition-[background-color,border-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           open
             ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_26px_-20px_rgba(35,31,32,0.32)]"
             : active
@@ -1453,7 +1453,7 @@ function DesktopToolbarPopover({
             isRtl ? "text-right" : "text-left"
           }`}
         >
-          <p className="text-[5.5px] font-semibold uppercase tracking-[0.18em] text-[var(--shop-muted)]">
+          <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-muted)]">
             {label}
           </p>
         </div>
@@ -1610,7 +1610,7 @@ function DesktopFilterIsland({
         aria-controls={popoverId}
         onClick={togglePinned}
         onFocus={scheduleOpen}
-        className={`group/filter relative flex h-9 items-center gap-2 overflow-hidden border px-3 ${
+        className={`group/filter relative flex h-11 items-center gap-2.5 overflow-hidden border px-4 ${
           isRtl ? "text-right" : "text-left"
         } transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           expanded
@@ -1625,11 +1625,11 @@ function DesktopFilterIsland({
         >
           <FilterIcon />
         </span>
-        <span className="text-[7px] font-semibold uppercase tracking-[0.08em]">
+          <span className="text-[9px] font-semibold uppercase tracking-[0.05em]">
           {copy.filters.filters}
         </span>
         {filterCount > 0 && (
-          <span className="grid size-[16px] shrink-0 place-items-center bg-[var(--shop-copper)] text-[6px] font-bold tabular-nums text-white">
+          <span className="grid size-5 shrink-0 place-items-center bg-[var(--shop-copper)] text-[8px] font-bold tabular-nums text-white">
             {filterCount}
           </span>
         )}
@@ -1679,16 +1679,16 @@ function DesktopFilterIsland({
           }}
         />
         <div className={expanded ? "visible" : "invisible"}>
-          <div className="relative z-10 flex items-start justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 pb-4 pt-[18px]">
+          <div className="relative z-10 flex items-start justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 pb-5 pt-5">
             <div className="flex items-center gap-2.5">
               <span className="grid size-7 place-items-center border border-[var(--shop-copper)] bg-[var(--shop-copper)] text-white shadow-[0_8px_20px_-14px_rgba(11,11,11,0.60)]">
                 <FilterIcon />
               </span>
               <div>
-                <p className="text-[9px] font-semibold uppercase tracking-[0.17em] text-[var(--shop-text)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-text)]">
                   {copy.filters.filters}
                 </p>
-                <p className="mt-1 text-[6.5px] font-medium uppercase tracking-[0.10em] text-[var(--shop-muted)]">
+                <p className="mt-1 text-[8px] font-medium uppercase tracking-[0.07em] text-[var(--shop-muted)]">
                   {filterCount > 0
                     ? formatTemplate(copy.filters.activeFiltersTemplate, {
                         count: formatNumber(filterCount, locale),
@@ -1702,7 +1702,7 @@ function DesktopFilterIsland({
                 type="button"
                 onClick={resetFilters}
                 disabled={filterCount === 0}
-                className="min-h-8 px-2 text-[7px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-copper)] transition-opacity hover:opacity-65 disabled:pointer-events-none disabled:opacity-25"
+                className="min-h-9 px-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--shop-copper)] transition-opacity hover:opacity-65 disabled:pointer-events-none disabled:opacity-25"
               >
                 {copy.filters.clear}
               </button>
@@ -1735,7 +1735,7 @@ function DesktopFilterIsland({
                           : "border-transparent bg-transparent text-[var(--shop-muted)] hover:-translate-x-0.5 hover:border-[var(--shop-border)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                       }`}
                     >
-                      <span className="flex items-center gap-2.5 text-[8px] font-semibold uppercase tracking-[0.08em]">
+                      <span className="flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.05em]">
                         <span
                           className={`block size-1 transition-colors ${
                             active
@@ -2049,7 +2049,7 @@ function DesktopSortControl({
             : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-text)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)]"
         }`}
       >
-        <span className="truncate text-[7px] font-semibold tracking-[0.02em]">
+        <span className="truncate text-[9px] font-semibold tracking-[0.01em]">
           {current.label}
         </span>
         <ChevronDownIcon
@@ -3495,10 +3495,10 @@ function MobileFilters({
               <CloseIcon />
             </button>
             <div className="text-right">
-              <span className="block text-[9px] font-semibold uppercase tracking-[0.21em]">
+              <span className="block text-[11px] font-semibold uppercase tracking-[0.14em]">
                 {copy.filters.filters}
               </span>
-              <span className="mt-1 block text-[5.5px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-muted)]">
+              <span className="mt-1 block text-[8px] font-semibold uppercase tracking-[0.08em] text-[var(--shop-muted)]">
                 {formatTemplate(copy.filters.resultTemplate, {
                   count: formatNumber(resultCount, locale),
                 })}
@@ -3507,7 +3507,7 @@ function MobileFilters({
             <button
               type="button"
               onClick={resetFilters}
-              className="min-h-10 px-2 text-[7px] font-semibold uppercase tracking-[0.14em] text-[var(--shop-copper)] transition-opacity active:opacity-60"
+              className="min-h-10 px-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--shop-copper)] transition-opacity active:opacity-60"
             >
               {copy.filters.clearShort}
             </button>
@@ -3527,7 +3527,7 @@ function MobileFilters({
                       key={item.value}
                       type="button"
                       onClick={() => setCategory(item.value)}
-                      className={`relative min-h-11 border px-3 text-right text-[7px] font-semibold uppercase tracking-[0.08em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
+                      className={`relative min-h-12 border px-3 text-right text-[9px] font-semibold uppercase tracking-[0.05em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
                         active
                           ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
                           : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -3571,10 +3571,10 @@ function MobileFilters({
             </MobileFilterBlock>
             <div className="flex min-h-[82px] items-center justify-between gap-3 border-b border-[var(--shop-border)] py-3 text-right">
               <div>
-                <span className="block text-[8px] font-semibold uppercase tracking-[0.15em] text-[var(--shop-text)]">
+                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--shop-text)]">
                   {copy.sort.label}
                 </span>
-                <span className="mt-1 block text-[5.5px] font-medium uppercase tracking-[0.1em] text-[var(--shop-muted)]">
+                <span className="mt-1 block text-[8px] font-medium uppercase tracking-[0.07em] text-[var(--shop-muted)]">
                   {copy.sort.mobileDescription}
                 </span>
               </div>
