@@ -96,7 +96,7 @@ type InventoryLocationReference = {
   type?: string;
   storeId?:
     | string
-    | { _id: string; code?: string; name?: LocalizedText }
+    | { _id: string; code?: string; name?: LocalizedText; isActive?: boolean }
     | null;
   cityId?: string | { _id: string; isActive?: boolean } | null;
 };
@@ -1061,21 +1061,6 @@ export function ProductManager({
         id: "price",
         label: "قیمت ریال / دلار",
         minWidth: 190,
-        cell: ({ record }) => (
-          <span className="space-y-1">
-            <strong className="block">
-              {formatPrice(
-                record.priceIrrMinor ?? record.basePriceMinor,
-                "IRR",
-              )}
-            </strong>
-            <small className="block text-[var(--adt-muted)]">
-              {record.priceUsdMinor === undefined
-                ? "دلار: تعیین نشده"
-                : formatPrice(record.priceUsdMinor, "USD")}
-            </small>
-          </span>
-        ),
         cell: ({ record }) => (
           <span className="space-y-1">
             <strong className="block">
