@@ -478,7 +478,7 @@ function SubcategoryProducts({
           <h2
             id="subcategory-products-heading"
             className="
-              text-[8px]
+              text-[14px]
               font-semibold
 
               uppercase
@@ -505,7 +505,7 @@ function SubcategoryProducts({
             items-center
             gap-3
 
-            text-[7px]
+            text-[12px]
             font-semibold
 
             uppercase
@@ -757,7 +757,7 @@ function ProductCard({
 
                  
 
-                text-[clamp(2.15rem,7vw,3.35rem)]
+                text-xl 
 
                 leading-[0.95]
                 tracking-[-0.045em]
@@ -781,7 +781,7 @@ function ProductCard({
               {product.subtitle && (
                 <span
                   className="
-                    text-[8px]
+                    text-[9px] line-clamp-1
                     font-semibold
                     uppercase
                     tracking-[0.13em]

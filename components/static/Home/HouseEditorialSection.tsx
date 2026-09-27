@@ -127,18 +127,18 @@ export function HouseEditorialSection({
 
           <h2
             id={headingId}
-            className="mx-auto mt-5 max-w-[760px] text-balance text-[clamp(2.75rem,11vw,4.7rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-white [text-shadow:0_5px_30px_rgb(var(--house-black-rgb)/0.36)] sm:text-[clamp(3.5rem,8vw,5.4rem)] md:text-[clamp(4rem,6vw,6.25rem)] lg:text-[clamp(4.35rem,5vw,6.45rem)]"
+            className="mx-auto mt-5 max-w-[760px] text-balance text-[clamp(2.75rem,11vw,4.7rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-white [text-shadow:0_5px_30px_rgb(var(--house-black-rgb)/0.36)] sm:text-[clamp(3.5rem,8vw,5.4rem)] md:text-[clamp(4rem,6vw,6.25rem)] lg:text-5xl"
           >
             {copy.title}
           </h2>
 
-          {copy.description ? (
+          {/* {copy.description ? (
             <p className="mx-auto mt-5 max-w-[590px] text-pretty text-[12px] leading-7 text-white/68 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
               {copy.description}
             </p>
-          ) : null}
+          ) : null} */}
 
-          {(copy.primaryAction || copy.secondaryAction) && (
+          {/* {(copy.primaryAction || copy.secondaryAction) && (
             <div
               className={`mx-auto mt-7 grid w-full gap-2.5 sm:mt-8 sm:gap-3 ${
                 hasBothActions
@@ -174,7 +174,7 @@ export function HouseEditorialSection({
                 </Button>
               ) : null}
             </div>
-          )}
+          )} */}
         </header>
 
         {visibleFeatures.length ? (

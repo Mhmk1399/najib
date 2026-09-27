@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { CustomerDashboard } from "@/components/account/customer-dashboard";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 import { requireCustomerAccount } from "@/lib/auth/session";
 
@@ -58,14 +59,16 @@ export default async function CustomerDashboardPage({
   const account = await requireCustomerAccount();
 
   return (
-    <CustomerDashboard
-      locale={locale}
-      copy={copy}
-      initialAccount={{
-        firstName: account.firstName,
-        lastName: account.lastName,
-        email: account.email,
-      }}
-    />
+    <div className={estedad.className}>
+      <CustomerDashboard
+        locale={locale}
+        copy={copy}
+        initialAccount={{
+          firstName: account.firstName,
+          lastName: account.lastName,
+          email: account.email,
+        }}
+      />
+    </div>
   );
 }

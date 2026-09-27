@@ -117,18 +117,18 @@ export function WhyChooseUsSection({
               {copy.title}
             </span>
 
-            <span className="mt-2 block text-balance text-[clamp(1.65rem,6vw,2.8rem)] font-medium leading-[1.3] tracking-[-0.035em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2rem,4.5vw,3.3rem)] lg:text-[clamp(2.4rem,3vw,3.7rem)]">
+            {/* <span className="mt-2 block text-balance text-[clamp(1.65rem,6vw,2.8rem)] font-medium leading-[1.3] tracking-[-0.035em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2rem,4.5vw,3.3rem)] lg:text-[clamp(2.4rem,3vw,3.7rem)]">
               {copy.italicTitle}
-            </span>
+            </span> */}
           </h2>
 
-          {copy.description ? (
+          {/* {copy.description ? (
             <p className="mx-auto mt-5 max-w-[610px] text-pretty text-[12px] leading-7 text-white/62 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
               {copy.description}
             </p>
-          ) : null}
+          ) : null} */}
 
-          {copy.action ? (
+          {/* {copy.action ? (
             <div className="mx-auto mt-7 w-full max-w-[230px] sm:mt-8">
               <Button
                 href={localizedHref(copy.action.href, locale)}
@@ -142,7 +142,7 @@ export function WhyChooseUsSection({
                 {copy.action.label}
               </Button>
             </div>
-          ) : null}
+          ) : null} */}
         </header>
 
         <div className="mt-14 w-full border-r border-t border-white/[0.12] sm:mt-16 lg:mt-20">

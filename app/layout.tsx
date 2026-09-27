@@ -41,8 +41,9 @@ import {
   localizedOpenGraph,
   siteUrl,
 } from "@/lib/i18n/metadata";
-import { estedad } from "@/next-persian-fonts/estedad";
-import { Aria } from "@/next-persian-fonts/Aria Family";
+ import { Aria } from "@/next-persian-fonts/Aria Family";
+import { Amiri } from "@/next-persian-fonts/amiri";
+import { AmiriFont } from "@/next-persian-fonts/AmiriFont";
  
 export const metadata: Metadata = {
   title: "Najibzadeh | Luxury Menswear & Tailoring",
@@ -102,10 +103,10 @@ export default async function RootLayout({
   const direction = getLocaleDirection(locale);
 
   // Select font based on locale
-  const fontClass = locale === "en" ? Aria.className : estedad.className;
+  const fontClass = locale === "en" ? Aria.className : AmiriFont.className;
   
   // Set CSS variable for font family
-  const fontVariable = locale === "en" ? "--font-aria" : "--font-estedad";
+  const fontVariable = locale === "en" ? "--font-aria" : "--font-amiri";
 
   return (
     /*

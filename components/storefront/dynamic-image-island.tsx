@@ -25,6 +25,7 @@ import {
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { dispatchImageStoryProductReveal } from "@/components/storefront/image-story-product-reveal";
+import { ScrollFade } from "@/components/ui/scroll-fade";
 import {
   formatStoryMoney,
   formatStoryNumber,
@@ -95,6 +96,13 @@ type ImageStoriesPayload = {
   stories: ImageStory[];
 };
 
+type WindowWithLenis = Window & {
+  __lenis?: {
+    start: () => void;
+    stop: () => void;
+  };
+};
+
 type ObservedStoryTarget = {
   storyId?: string;
   storyUrl?: string;
@@ -151,6 +159,8 @@ const glassSurface = [
   "ring-inset",
   "ring-white/[0.055]",
 ].join(" ");
+
+const MAX_STORY_PRODUCTS = 8;
 
 async function fetchJson<T>(input: RequestInfo | URL, init?: RequestInit) {
   const response = await fetch(input, {
@@ -524,16 +534,8 @@ export function DynamicImageIsland() {
   const panelOpen =
     interactionPath === pathname &&
     (finePointer ? hoverOpen || focusOpen : touchOpen);
-  const productLimit = Math.max(
-    1,
-    Math.min(
-      6,
-      activeStory?.storyProductLimit ??
-        activeStory?.image.storyProductLimit ??
-        3,
-    ),
-  );
-  const products = activeStory?.linkedProducts.slice(0, productLimit) ?? [];
+  const products =
+    activeStory?.linkedProducts.slice(0, MAX_STORY_PRODUCTS) ?? [];
   const configuredTitle =
     activeStory?.storyTitle ?? activeStory?.image.storyTitle;
   const configuredDescription =
@@ -569,6 +571,43 @@ export function DynamicImageIsland() {
     setTouchOpen(false);
     setInteractionPath(null);
   };
+
+  useEffect(() => {
+    if (!panelOpen) return;
+
+    const body = document.body;
+    const documentElement = document.documentElement;
+    const lenis = (window as WindowWithLenis).__lenis;
+    const previous = {
+      bodyOverflow: body.style.overflow,
+      htmlOverflow: documentElement.style.overflow,
+      htmlOverscrollBehavior: documentElement.style.overscrollBehavior,
+      htmlScrollbarGutter: documentElement.style.getPropertyValue(
+        "scrollbar-gutter",
+      ),
+    };
+
+    lenis?.stop();
+    body.style.overflow = "hidden";
+    documentElement.style.overflow = "hidden";
+    documentElement.style.overscrollBehavior = "none";
+    documentElement.style.setProperty("scrollbar-gutter", "stable");
+
+    return () => {
+      body.style.overflow = previous.bodyOverflow;
+      documentElement.style.overflow = previous.htmlOverflow;
+      documentElement.style.overscrollBehavior = previous.htmlOverscrollBehavior;
+      if (previous.htmlScrollbarGutter) {
+        documentElement.style.setProperty(
+          "scrollbar-gutter",
+          previous.htmlScrollbarGutter,
+        );
+      } else {
+        documentElement.style.removeProperty("scrollbar-gutter");
+      }
+      lenis?.start();
+    };
+  }, [panelOpen]);
 
   useEffect(() => {
     if (!panelOpen) return;
@@ -920,74 +959,79 @@ export function DynamicImageIsland() {
                     </div>
 
                     {products.length ? (
-                      <div className="max-h-[min(38vh,280px)] divide-y divide-white/[0.075] overflow-y-auto overscroll-contain sm:max-h-none sm:overflow-visible">
-                        {products.map((product, index) => {
-                          const title = text(
-                            product.label,
-                            locale,
-                            text(product.name, locale, product.slug),
-                          );
-                          const price = formatStoryMoney(
-                            product.priceMinor,
-                            product.currency,
-                            locale,
-                          );
+                      <ScrollFade
+                        ariaLabel={copy.relatedProducts}
+                        topClassName="h-7 bg-gradient-to-b from-[#151619] via-[#151619]/40 to-transparent"
+                        bottomClassName="h-7  bg-gradient-to-t from-[#151619] via-[#151619]/40 to-transparent"
+                        className="max-h-[min(192px,38vh)]  touch-pan-y divide-y divide-white/[0.075] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                      >
+                          {products.map((product, index) => {
+                            const title = text(
+                              product.label,
+                              locale,
+                              text(product.name, locale, product.slug),
+                            );
+                            const price = formatStoryMoney(
+                              product.priceMinor,
+                              product.currency,
+                              locale,
+                            );
 
-                          return (
-                            <button
-                              key={product.id}
-                              type="button"
-                              aria-label={copy.quickView(title)}
-                              onPointerEnter={() => prefetchProduct(product)}
-                              onFocus={() => prefetchProduct(product)}
-                              onClick={() => revealProduct(product)}
-                              style={{
-                                transitionDelay: panelOpen
-                                  ? `${index * 45}ms`
-                                  : "0ms",
-                              }}
-                              className="group flex min-h-[64px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-start transform-gpu transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/55 motion-reduce:transition-none"
-                            >
-                              <span className="relative aspect-[4/5] w-10 shrink-0 overflow-hidden rounded-[7px] border border-white/[0.08] bg-white/[0.05]">
-                                {product.image?.url ? (
-                                  <Image
-                                    src={product.image.url}
-                                    alt=""
-                                    fill
-                                    sizes="40px"
-                                    className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transition-none"
-                                    style={{
-                                      objectPosition:
-                                        product.image.objectPosition ??
-                                        "center",
-                                    }}
+                            return (
+                              <button
+                                key={product.id}
+                                type="button"
+                                aria-label={copy.quickView(title)}
+                                onPointerEnter={() => prefetchProduct(product)}
+                                onFocus={() => prefetchProduct(product)}
+                                onClick={() => revealProduct(product)}
+                                style={{
+                                  transitionDelay: panelOpen
+                                    ? `${index * 45}ms`
+                                    : "0ms",
+                                }}
+                                className="group flex min-h-[64px] w-full min-w-0 cursor-pointer items-center gap-2.5 px-3 py-2 text-start transform-gpu transition-[background-color,color,transform] duration-200 hover:bg-white/[0.07] active:scale-[0.995] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/55 motion-reduce:transition-none"
+                              >
+                                <span className="relative aspect-[4/5] w-10 shrink-0 overflow-hidden rounded-[7px] border border-white/[0.08] bg-white/[0.05]">
+                                  {product.image?.url ? (
+                                    <Image
+                                      src={product.image.url}
+                                      alt=""
+                                      fill
+                                      sizes="40px"
+                                      className="object-cover transition-transform duration-500 group-hover:scale-[1.035] motion-reduce:transition-none"
+                                      style={{
+                                        objectPosition:
+                                          product.image.objectPosition ??
+                                          "center",
+                                      }}
+                                    />
+                                  ) : (
+                                    <ShoppingBag className="m-auto mt-4 size-3.5 text-white/42" />
+                                  )}
+                                </span>
+
+                                <span className="min-w-0 flex-1">
+                                  <strong className="block truncate text-[10.5px] font-semibold leading-4 text-white/96 sm:text-[11px]">
+                                    {title}
+                                  </strong>
+                                  {price ? (
+                                    <span className="mt-0.5 block truncate text-[8.5px] leading-4 text-white/78">
+                                      {price}
+                                    </span>
+                                  ) : null}
+                                </span>
+
+                                <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/[0.10] text-white/42 transition-[border-color,color,transform] duration-200 group-hover:-translate-x-0.5 group-hover:border-[#B7835A]/55 group-hover:text-[#D5B08D]">
+                                  <ArrowLeft
+                                    className="size-3"
+                                    aria-hidden="true"
                                   />
-                                ) : (
-                                  <ShoppingBag className="m-auto mt-4 size-3.5 text-white/42" />
-                                )}
-                              </span>
-
-                              <span className="min-w-0 flex-1">
-                                <strong className="block truncate text-[10.5px] font-semibold leading-4 text-white/96 sm:text-[11px]">
-                                  {title}
-                                </strong>
-                                {price ? (
-                                  <span className="mt-0.5 block truncate text-[8.5px] leading-4 text-white/78">
-                                    {price}
-                                  </span>
-                                ) : null}
-                              </span>
-
-                              <span className="grid size-7 shrink-0 place-items-center rounded-full border border-white/[0.10] text-white/42 transition-[border-color,color,transform] duration-200 group-hover:-translate-x-0.5 group-hover:border-[#B7835A]/55 group-hover:text-[#D5B08D]">
-                                <ArrowLeft
-                                  className="size-3"
-                                  aria-hidden="true"
-                                />
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
+                                </span>
+                              </button>
+                            );
+                          })}
+                      </ScrollFade>
                     ) : (
                       <div className="flex min-h-[108px] items-center justify-center px-4 text-center text-[10px] leading-5 text-white/82">
                         {copy.emptyProducts}

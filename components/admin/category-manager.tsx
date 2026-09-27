@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Boxes, Copy, ImageIcon, Layers3 } from "lucide-react";
+import { Boxes, Copy, ExternalLink, ImageIcon, Layers3 } from "lucide-react";
 import { DynamicDataTable } from "@/components/global/table/DynamicTable";
 import { DataButton } from "@/components/global/table/primitives";
 import type {
@@ -23,6 +23,8 @@ import type {
   ImageObjectFit,
   ImageObjectPosition,
 } from "@/lib/catalog/image-presentation";
+import { defaultLocale } from "@/lib/i18n/config";
+import { localizedPath } from "@/lib/i18n/routes";
 
 type Resource = "categories" | "subcategories";
 
@@ -185,6 +187,7 @@ function emptyForm(resource: Resource): TaxonomyFormValues {
 
 function normalizeForm(record: TaxonomyRecord, resource: Resource): TaxonomyFormValues {
   const fallback = emptyForm(resource);
+  const pageContent = record.pageContent ?? {};
   return {
     ...fallback,
     ...record,
@@ -193,25 +196,25 @@ function normalizeForm(record: TaxonomyRecord, resource: Resource): TaxonomyForm
     categoryId: resource === "subcategories" ? (record.categoryId ?? "") : undefined,
     pageContent: {
       ...fallback.pageContent,
-      ...record.pageContent,
+      ...pageContent,
       primaryBanner: {
         ...fallback.pageContent.primaryBanner,
-        ...record.pageContent.primaryBanner,
+        ...pageContent.primaryBanner,
       },
       primaryDescription: {
         ...fallback.pageContent.primaryDescription,
-        ...record.pageContent.primaryDescription,
+        ...pageContent.primaryDescription,
       },
       secondaryBanner: {
         ...fallback.pageContent.secondaryBanner,
-        ...record.pageContent.secondaryBanner,
+        ...pageContent.secondaryBanner,
       },
       secondaryDescription: {
         ...fallback.pageContent.secondaryDescription,
-        ...record.pageContent.secondaryDescription,
+        ...pageContent.secondaryDescription,
       },
-      seoTitle: record.pageContent.seoTitle ?? emptyLocalizedText(),
-      seoDescription: record.pageContent.seoDescription ?? emptyLocalizedText(),
+      seoTitle: pageContent.seoTitle ?? emptyLocalizedText(),
+      seoDescription: pageContent.seoDescription ?? emptyLocalizedText(),
     },
   };
 }
@@ -778,6 +781,16 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
       ),
     [categoryReferenceQuery.data?.items],
   );
+  const categorySlugs = useMemo(
+    () =>
+      new Map(
+        (categoryReferenceQuery.data?.items ?? []).map((category) => [
+          category._id,
+          category.slug,
+        ]),
+      ),
+    [categoryReferenceQuery.data?.items],
+  );
 
   const imageMap = useMemo(
     () =>
@@ -874,10 +887,10 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
         cell: ({ record }) => (
           <div className="flex items-center gap-2">
             <ImagePreview
-              image={imageMap.get(record.pageContent.primaryBanner.imageId)}
+              image={imageMap.get(record.pageContent?.primaryBanner?.imageId ?? "")}
             />
             <ImagePreview
-              image={imageMap.get(record.pageContent.secondaryBanner.imageId)}
+              image={imageMap.get(record.pageContent?.secondaryBanner?.imageId ?? "")}
             />
           </div>
         ),
@@ -1112,8 +1125,8 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
                 label: "بنر اول",
                 render: ({ record }) => (
                   <span className="inline-flex items-center gap-3">
-                    <ImagePreview image={imageMap.get(record.pageContent.primaryBanner.imageId)} />
-                    <span>{fa(record.pageContent.primaryBanner.heading)}</span>
+                    <ImagePreview image={imageMap.get(record.pageContent?.primaryBanner?.imageId ?? "")} />
+                    <span>{fa(record.pageContent?.primaryBanner?.heading)}</span>
                   </span>
                 ),
               },
@@ -1122,8 +1135,8 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
                 label: "بنر دوم",
                 render: ({ record }) => (
                   <span className="inline-flex items-center gap-3">
-                    <ImagePreview image={imageMap.get(record.pageContent.secondaryBanner.imageId)} />
-                    <span>{fa(record.pageContent.secondaryBanner.heading)}</span>
+                    <ImagePreview image={imageMap.get(record.pageContent?.secondaryBanner?.imageId ?? "")} />
+                    <span>{fa(record.pageContent?.secondaryBanner?.heading)}</span>
                   </span>
                 ),
               },
@@ -1131,13 +1144,13 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
                 id: "primaryDescription",
                 label: "متن اول",
                 colSpan: "full",
-                render: ({ record }) => fa(record.pageContent.primaryDescription.body),
+                render: ({ record }) => fa(record.pageContent?.primaryDescription?.body),
               },
               {
                 id: "secondaryDescription",
                 label: "متن دوم",
                 colSpan: "full",
-                render: ({ record }) => fa(record.pageContent.secondaryDescription.body),
+                render: ({ record }) => fa(record.pageContent?.secondaryDescription?.body),
               },
             ],
             sections: [
@@ -1181,6 +1194,34 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
               }
             : undefined,
           extraRowActions: [
+            {
+              id: "open-public-page",
+              label: "مشاهده در سایت",
+              icon: <ExternalLink size={14} />,
+              disabled:
+                resource === "subcategories"
+                  ? (record) => !record.categoryId || !categorySlugs.has(record.categoryId)
+                  : undefined,
+              onClick: (record) => {
+                const parentSlug =
+                  resource === "subcategories" && record.categoryId
+                    ? categorySlugs.get(record.categoryId)
+                    : undefined;
+                const path =
+                  resource === "categories"
+                    ? `/${record.slug}`
+                    : parentSlug
+                      ? `/${parentSlug}/${record.slug}`
+                      : null;
+
+                if (!path) throw new Error("مسیر عمومی این مورد پیدا نشد.");
+                window.open(
+                  localizedPath(path, defaultLocale),
+                  "_blank",
+                  "noopener,noreferrer",
+                );
+              },
+            },
             {
               id: "copy-slug",
               label: "کپی شناسه URL",

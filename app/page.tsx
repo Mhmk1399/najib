@@ -107,7 +107,7 @@ export default async function Page() {
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />
-      <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
+      <ShoppableImageBanner copy={copy.shoppableImage}  locale={locale} />
       {/* <DynamicIslandExperienceSections
         copy={copy.dynamicIsland}
         locale={locale}

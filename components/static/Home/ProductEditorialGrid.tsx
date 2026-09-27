@@ -325,7 +325,7 @@ export function ProductEditorialGrid({
       </header>
 
       <div className="mx-auto w-full max-w-[1680px] px-3 pb-3 sm:px-4 sm:pb-4 lg:px-5 lg:pb-5">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3 lg:grid-cols-3 lg:gap-4">
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 sm:gap-1 lg:grid-cols-3 lg:gap-1">
           {visibleProducts.map((product) => (
             <ProductCard
               key={product.id}
@@ -394,7 +394,7 @@ function ProductCard({
             </p>
           ) : null} */}
 
-          <h3 className="mt-2 max-w-[92%] text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-3xl">
+          <h3 className="mt-2 max-w-[92%] text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-2xl">
             {product.title}
           </h3>
 
@@ -403,11 +403,11 @@ function ProductCard({
             className="mt-4 h-px w-8 bg-white/55 transition-[width,background-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:w-14 group-hover:bg-white/80 motion-reduce:transition-none"
           />
 
-          <span className="mt-3 inline-flex items-center gap-2 text-[7px] font-semibold uppercase tracking-[0.16em] text-white/62 transition-colors duration-300 group-hover:text-white sm:text-[7.5px]">
+          {/* <span className="mt-3 inline-flex items-center gap-2 text-[7px] font-semibold uppercase tracking-[0.16em] text-white/62 transition-colors duration-300 group-hover:text-white sm:text-[7.5px]">
             {copy.productActionLabel}
 
             <ArrowIcon isRtl={isRtl} />
-          </span>
+          </span> */}
         </div>
       </div>
     </Link>

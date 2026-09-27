@@ -22,6 +22,12 @@ body {
   background: #111;
 }
 
+/* Amiri uses its bundled bold face only for the two primary heading levels. */
+h1,
+h2 {
+  font-weight: 700;
+}
+
 .navbar-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(175, 135, 102, 0.58) transparent;
@@ -69,8 +75,6 @@ body {
     transform: translateX(0);
   }
 }
-
-
 
 @keyframes luxury-navbar-enter {
   0% {
