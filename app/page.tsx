@@ -7,10 +7,14 @@ import {
 import { CollectionShowcase } from "@/components/static/Home/CollectionShowcase";
 import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
 import { HeroSection } from "@/components/static/Home/HeroSection";
-import { HouseEditorialSection } from "@/components/static/Home/HouseEditorialSection";
+import { DynamicIslandExperienceSections } from "@/components/static/Home/DynamicIslandExperienceSections";
+import { JournalPreviewSection } from "@/components/static/Home/JournalPreviewSection";
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
 import { ShoppableImageBanner } from "@/components/static/Home/ShoppableImageBanner";
 import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
+import { PrivateAppointmentSection } from "@/components/static/Contact/PrivateAppointmentSection";
+import { blogCopy } from "@/lib/i18n/blog-copy";
+import { contactCopy } from "@/lib/i18n/contact-copy";
 import { homeCopy } from "@/lib/i18n/home-copy";
 import { getRequestLocale } from "@/lib/i18n/server";
 
@@ -78,6 +82,8 @@ export const FAQ_DEMO_ITEMS: FAQItem[] = [
 export default async function Page() {
   const locale = await getRequestLocale();
   const copy = homeCopy[locale];
+  const appointmentCopy = contactCopy[locale].appointment;
+  const journalCopy = blogCopy[locale];
   const categoryShowcaseItems = await getHomeCategoryShowcaseItems(locale);
 
   return (
@@ -86,6 +92,12 @@ export default async function Page() {
       <CategoryShowcase
         categories={categoryShowcaseItems}
         copy={copy.categories}
+        locale={locale}
+      />
+      <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
+      <ProductEditorialGrid copy={copy.productEditorial} locale={locale} />
+      <DynamicIslandExperienceSections
+        copy={copy.dynamicIsland}
         locale={locale}
       />
       <CinematicVideoSection
@@ -99,20 +111,15 @@ export default async function Page() {
         locale={locale}
         backgroundImage="/assets/images/Whu.png"
       />
-      <HouseEditorialSection
-        copy={copy.houseEditorial}
+      <CollectionShowcase locale={locale} />
+      <PrivateAppointmentSection
+        copy={appointmentCopy}
         locale={locale}
-        imageSrc="/assets/images/bag.png"
-        mobileImagePosition="62% center"
+        imageSrc="/assets/images/banner.webp"
+        mobileImagePosition="70% center"
         desktopImagePosition="center"
       />
-      <ShoppableImageBanner copy={copy.shoppableImage} locale={locale} />
-      {/* <DynamicIslandExperienceSections
-        copy={copy.dynamicIsland}
-        locale={locale}
-      /> */}
-      <ProductEditorialGrid copy={copy.productEditorial} locale={locale} />
-      <CollectionShowcase locale={locale} />
+      <JournalPreviewSection copy={journalCopy} locale={locale} />
       <FAQ
         locale={locale}
         eyebrow={copy.faq.eyebrow}
@@ -121,7 +128,7 @@ export default async function Page() {
         items={copy.faq.items}
         emptyState={copy.faq.emptyState}
       />
-      <BrandStorySection copy={copy.brandStory} locale={locale} />{" "}
+      <BrandStorySection copy={copy.brandStory} locale={locale} />
     </main>
   );
 }
