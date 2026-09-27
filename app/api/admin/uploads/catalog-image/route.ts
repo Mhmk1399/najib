@@ -30,17 +30,17 @@ type CatalogImageKind = (typeof allowedKinds)[number];
 async function assertCatalogUploadAccess() {
   const session = await getAdminSession();
   if (!session || !session.staff.permissions.includes("admin.access")) {
-    unauthorized("Your staff session has expired.");
+    unauthorized("نشست ادمین منقضی شده است؛ دوباره وارد شوید.");
   }
   if (!session.staff.permissions.includes("catalog.write")) {
-    forbidden("You do not have permission to upload catalog images.");
+    forbidden("دسترسی آپلود تصویر برای حساب شما فعال نیست.");
   }
 }
 
 function parseKind(request: Request): CatalogImageKind {
   const kind = new URL(request.url).searchParams.get("kind");
   if (!kind || !allowedKinds.includes(kind as CatalogImageKind)) {
-    badRequest("A valid catalog image kind is required.");
+    badRequest("کاربرد تصویر معتبر نیست.");
   }
   return kind as CatalogImageKind;
 }
@@ -53,6 +53,14 @@ function filenameAlt(fileName: string) {
   return base || "Catalog image";
 }
 
+function optionalAlt(body: FormData, key: string, fallback: string) {
+  const value = body.get(key);
+  if (typeof value !== "string") return fallback;
+  const clean = value.trim();
+  if (clean.length > 500) badRequest("متن جایگزین تصویر باید حداکثر ۵۰۰ نویسه باشد.");
+  return clean || fallback;
+}
+
 export async function POST(request: Request) {
   try {
     await assertCatalogUploadAccess();
@@ -60,13 +68,19 @@ export async function POST(request: Request) {
     const kind = parseKind(request);
     const body = await request.formData();
     const file = body.get("file");
-    if (!(file instanceof File)) badRequest("Catalog image file is required.");
+    if (!(file instanceof File)) badRequest("انتخاب فایل تصویر الزامی است.");
     if (!IMAGE_EXTENSIONS[file.type]) {
-      badRequest("Catalog image must be a JPG, PNG, or WebP image.");
+      badRequest("تصویر باید از نوع JPG، PNG یا WebP باشد.");
     }
     if (file.size > MAX_CATALOG_IMAGE_SIZE_BYTES) {
-      badRequest("Catalog image must be smaller than 5 MB.");
+      badRequest("حجم تصویر باید کمتر از ۵ مگابایت باشد.");
     }
+    const fallbackAlt = filenameAlt(file.name);
+    const alt = {
+      fa: optionalAlt(body, "altFa", fallbackAlt),
+      en: optionalAlt(body, "altEn", fallbackAlt),
+      ar: optionalAlt(body, "altAr", fallbackAlt),
+    };
 
     const extension = IMAGE_EXTENSIONS[file.type];
     const result = await uploadToBucket({
@@ -82,10 +96,9 @@ export async function POST(request: Request) {
     });
 
     await connectToDatabase();
-    const alt = filenameAlt(file.name);
     const image = await ImageAsset.create({
       url: result.url,
-      alt: { fa: alt, en: alt, ar: alt },
+      alt,
       kind,
       objectFit: "cover",
       objectPosition: "center",

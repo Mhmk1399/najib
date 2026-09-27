@@ -11,6 +11,7 @@ import {
 import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
 import { ProductComposer } from "@/components/admin/product-composer";
 import { ProductStockModal } from "@/components/admin/product-stock-modal";
+import { CatalogImagePreview, CatalogImageUploader, type UploadedCatalogImage } from "@/components/admin/catalog-image-uploader";
 import { DataButton } from "@/components/global/table/primitives";
 import { DynamicDataTable } from "@/components/global/table/DynamicTable";
 import type {
@@ -135,9 +136,6 @@ type ProductFormValues = {
   primaryImageObjectFit: ImageObjectFit;
   primaryImageObjectPosition: ImageObjectPosition;
   imageIds: string[];
-  galleryUploadOne: string;
-  galleryUploadTwo: string;
-  galleryUploadThree: string;
 };
 
 type ApiError = Error & {
@@ -279,18 +277,9 @@ function coerceImageId(value: unknown) {
 }
 
 function uniqueImageIds(values: ProductFormValues) {
-  return Array.from(
-    new Set(
-      [
-        ...values.imageIds,
-        values.galleryUploadOne,
-        values.galleryUploadTwo,
-        values.galleryUploadThree,
-      ]
-        .map(coerceImageId)
-        .filter(Boolean),
-    ),
-  );
+  return Array.from(new Set(values.imageIds.map(coerceImageId).filter(Boolean)))
+    .filter((id) => id !== coerceImageId(values.primaryImageId))
+    .slice(0, 12);
 }
 
 function productToForm(product: Product): ProductFormValues {
@@ -318,10 +307,18 @@ function productToForm(product: Product): ProductFormValues {
     primaryImageObjectPosition:
       product.primaryImageObjectPosition ?? "center",
     imageIds: product.imageIds ?? [],
-    galleryUploadOne: "",
-    galleryUploadTwo: "",
-    galleryUploadThree: "",
   };
+}
+
+function ProductGalleryField({ value, values, setValue, imageMap, imageOptions, setUploadPending, setUploadError, onAssetUploaded }: { value: unknown; values: ProductFormValues; setValue: (value: unknown) => void; imageMap: Map<string, ImageReference>; imageOptions: DataSelectOption[]; setUploadPending: (pending: boolean) => void; setUploadError: (message: string | null) => void; onAssetUploaded: (image: ImageReference) => void }) {
+  const [uploaded, setUploaded] = useState<UploadedCatalogImage[]>([]);
+  const [capacityMessage, setCapacityMessage] = useState("");
+  const ids = Array.isArray(value) ? value.map(String).filter((id) => id !== values.primaryImageId).slice(0, 12) : [];
+  const localMap = new Map<string, { _id: string; url: string; alt: LocalizedText }>();
+  imageMap.forEach((image, id) => localMap.set(id, image));
+  uploaded.forEach((image) => localMap.set(image._id, image));
+  const move = (index: number, delta: number) => { const next = [...ids]; const target = index + delta; if (target < 0 || target >= next.length) return; [next[index], next[target]] = [next[target], next[index]]; setValue(next); };
+  return <div className="space-y-3" dir="rtl"><CatalogImageUploader compact kind="product" disabled={ids.length >= 12} onPendingChange={setUploadPending} onUploaded={(image) => { setUploaded((current) => [image, ...current]); onAssetUploaded(image); if (ids.length >= 12) { setCapacityMessage("تصویر در کتابخانه ذخیره شد؛ برای اتصال یک تصویر را حذف کنید."); setUploadError("گالری به سقف ۱۲ تصویر رسیده است."); return; } setValue([...new Set([...ids, image._id])]); setCapacityMessage(""); setUploadError(null); }} />{capacityMessage || ids.length >= 12 ? <p role="status" className="border-r-2 border-[var(--adt-warning)] px-3 py-2 text-[10px]">{capacityMessage || "گالری کامل است؛ برای افزودن تصویر جدید یکی را حذف کنید."}</p> : null}<select disabled={ids.length >= 12} value="" onChange={(event) => { const id = event.target.value; if (!id || id === values.primaryImageId) return; if (ids.length >= 12) return setCapacityMessage("حداکثر ۱۲ تصویر در گالری مجاز است."); setValue([...new Set([...ids, id])]); }} className="min-h-11 w-full border border-[var(--adt-border-strong)] bg-[var(--adt-surface)] px-3 text-[10px] disabled:opacity-50"><option value="">{ids.length >= 12 ? "گالری کامل است" : "افزودن از کتابخانه تصاویر…"}</option>{imageOptions.filter((option) => !ids.includes(String(option.value)) && String(option.value) !== values.primaryImageId).map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select><div className="flex min-h-32 gap-2 overflow-x-auto border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] p-2">{ids.length ? ids.map((id, index) => <article key={id} className="w-32 shrink-0 border border-[var(--adt-border)] bg-[var(--adt-surface)] p-1"><CatalogImagePreview image={localMap.get(id)} className="h-20 w-full object-cover" /><div className="mt-1 flex min-h-11 items-center justify-between"><button type="button" aria-label="جابه‌جایی به قبل" disabled={index === 0} onClick={() => move(index, -1)} className="grid size-10 place-items-center disabled:opacity-25">→</button><span className="text-[10px]">{numberFormatter.format(index + 1)}</span><button type="button" aria-label="حذف از گالری" onClick={() => { setValue(ids.filter((item) => item !== id)); setCapacityMessage(""); setUploadError(null); }} className="min-h-10 px-2 text-[10px] text-[var(--adt-danger)]">حذف</button><button type="button" aria-label="جابه‌جایی به بعد" disabled={index === ids.length - 1} onClick={() => move(index, 1)} className="grid size-10 place-items-center disabled:opacity-25">←</button></div></article>) : <p className="m-auto text-[10px] text-[var(--adt-muted)]">هنوز تصویری در گالری نیست.</p>}</div><p className="text-[10px] text-[var(--adt-muted)]">ترتیب کارت‌ها، ترتیب گالری فروشگاه است. حداکثر ۱۲ تصویر.</p></div>;
 }
 
 function cleanLocalized(value?: LocalizedText | null) {
@@ -479,6 +476,7 @@ function imageUploadField(
   label: string,
   imageMap: Map<string, ImageReference>,
   required = false,
+  onAssetUploaded?: (image: ImageReference) => void,
 ) {
   return {
     kind: "file" as const,
@@ -495,6 +493,10 @@ function imageUploadField(
     cancelLabel: "لغو آپلود",
     helperText: "فایل JPG، PNG یا WebP تا ۵ مگابایت قابل آپلود است.",
     parseUploadResponse: uploadedImageId,
+    onUploadSuccess: (response: unknown) => {
+      const image = (response as { image?: ImageReference }).image;
+      if (image?._id) onAssetUploaded?.(image);
+    },
     format: (value: unknown) => {
       const imageId = coerceImageId(value);
       return imageMap.get(imageId)?.url ?? imageId;
@@ -510,6 +512,7 @@ function buildSchema({
   sizeOptions,
   imageOptions,
   imageMap,
+  onAssetUploaded,
 }: {
   categoryOptions: DataSelectOption[];
   subcategoryOptions: DataSelectOption[];
@@ -518,6 +521,7 @@ function buildSchema({
   sizeOptions: DataSelectOption[];
   imageOptions: DataSelectOption[];
   imageMap: Map<string, ImageReference>;
+  onAssetUploaded: (image: ImageReference) => void;
 }): DynamicFormSchema<ProductFormValues> {
   return {
     validate: validateProduct,
@@ -618,7 +622,7 @@ function buildSchema({
         options: statusOptions,
         required: true,
       },
-      imageUploadField("primaryImageId", "تصویر اصلی محصول", imageMap, false),
+      imageUploadField("primaryImageId", "تصویر اصلی محصول", imageMap, false, onAssetUploaded),
       {
         kind: "select",
         name: "primaryImageObjectFit",
@@ -634,16 +638,12 @@ function buildSchema({
         required: true,
       },
       {
-        kind: "multi-select",
+        kind: "custom",
         name: "imageIds",
-        label: "گالری تصاویر موجود",
-        options: imageOptions,
-        searchable: true,
-        helperText: "تصاویر آپلودشده قبلی را به گالری محصول اضافه کنید.",
+        label: "گالری تصاویر",
+        colSpan: "full",
+        render: ({ value, values, setValue, setUploadPending, setUploadError }) => <ProductGalleryField value={value} values={values} setValue={setValue} imageMap={imageMap} imageOptions={imageOptions} setUploadPending={setUploadPending} setUploadError={setUploadError} onAssetUploaded={onAssetUploaded} />,
       },
-      imageUploadField("galleryUploadOne", "آپلود تصویر گالری ۱", imageMap),
-      imageUploadField("galleryUploadTwo", "آپلود تصویر گالری ۲", imageMap),
-      imageUploadField("galleryUploadThree", "آپلود تصویر گالری ۳", imageMap),
       ...localizedFields("material", "متریال‌ها", "textarea"),
       ...localizedFields("fit", "فیت", "input"),
       ...localizedFields("silhouette", "سیلوئت", "input"),
@@ -691,9 +691,6 @@ function buildSchema({
           "primaryImageObjectFit",
           "primaryImageObjectPosition",
           "imageIds",
-          "galleryUploadOne",
-          "galleryUploadTwo",
-          "galleryUploadThree",
         ],
       },
       {
@@ -780,6 +777,7 @@ export function ProductManager({
   const queryClient = useQueryClient();
   const [composerOpen, setComposerOpen] = useState(false);
   const [stockProduct, setStockProduct] = useState<Product | null>(null);
+  const [uploadedImageReferences, setUploadedImageReferences] = useState<ImageReference[]>([]);
 
   const categoriesQuery = useQuery({
     queryKey: ["catalog", "categories", "options"],
@@ -849,7 +847,15 @@ export function ProductManager({
   const collections = collectionsQuery.data?.items ?? emptyReferenceItems;
   const colors = colorsQuery.data?.items ?? emptyReferenceItems;
   const sizes = sizesQuery.data?.items ?? emptyReferenceItems;
-  const images = imagesQuery.data?.items ?? emptyImageReferences;
+  const images = useMemo(() => {
+    const map = new Map<string, ImageReference>();
+    [...uploadedImageReferences, ...(imagesQuery.data?.items ?? emptyImageReferences)].forEach((image) => map.set(image._id, image));
+    return [...map.values()];
+  }, [imagesQuery.data?.items, uploadedImageReferences]);
+  const onAssetUploaded = useCallback((image: ImageReference) => {
+    setUploadedImageReferences((current) => [image, ...current.filter((item) => item._id !== image._id)]);
+    queryClient.setQueryData<ListResponse<ImageReference>>(["catalog", "product-images", "options"], (current) => current ? { ...current, items: [image, ...current.items.filter((item) => item._id !== image._id)] } : current);
+  }, [queryClient]);
   const locations = (locationsQuery.data?.items ?? []).filter((location) => location.type === "store" && Boolean(location.storeId) && (typeof location.cityId !== "object" || location.cityId?.isActive !== false) && (typeof location.storeId !== "object" || location.storeId?.isActive !== false));
 
   const categoryNames = useMemo(
@@ -947,6 +953,7 @@ export function ProductManager({
         sizeOptions,
         imageOptions,
         imageMap,
+        onAssetUploaded,
       }),
     [
       categoryOptions,
@@ -954,6 +961,7 @@ export function ProductManager({
       colorOptions,
       imageMap,
       imageOptions,
+      onAssetUploaded,
       sizeOptions,
       subcategoryOptions,
     ],

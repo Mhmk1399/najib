@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
-import { Boxes, Check, ChevronLeft, PackagePlus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Boxes, Check, ChevronLeft, PackagePlus, Plus, Trash2 } from "lucide-react";
+import { CatalogImagePreview, CatalogImageUploader, type UploadedCatalogImage } from "@/components/admin/catalog-image-uploader";
 import { DynamicModal } from "@/components/global/table/DynamicModal";
 import { DataButton, DataInput } from "@/components/global/table/primitives";
 import { useToast } from "@/components/ui/CustomToast";
@@ -9,7 +10,7 @@ import { fa, type LocalizedText } from "@/lib/admin/localization";
 
 type Reference = { _id: string; name: LocalizedText; code?: string; slug?: string; hex?: string; categoryId?: string };
 type Location = { _id: string; name: LocalizedText; code: string; type?: string; storeId?: string | { _id: string; name?: LocalizedText; code?: string } | null };
-type ImageReference = { _id: string; url: string; alt: LocalizedText };
+type ImageReference = { _id: string; url: string; alt: LocalizedText; kind?: string; isActive?: boolean };
 type VariantDraft = { colorId: string; sizeId: string; enabled: boolean; sku: string; skuManual: boolean; barcode: string; priceOverrideIrr: string; priceOverrideUsd: string };
 type ComposerProps = {
   open: boolean;
@@ -67,6 +68,10 @@ export function ProductComposer(props: ComposerProps) {
   const [priceUsd, setPriceUsd] = useState("");
   const [status, setStatus] = useState<"draft" | "active">("draft");
   const [primaryImageId, setPrimaryImageId] = useState("");
+  const [imageIds, setImageIds] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<UploadedCatalogImage[]>([]);
+  const [mediaUploading, setMediaUploading] = useState(false);
+  const [mediaMessage, setMediaMessage] = useState("");
   const [colorIds, setColorIds] = useState<string[]>([]);
   const [sizeIds, setSizeIds] = useState<string[]>([]);
   const [variants, setVariants] = useState<VariantDraft[]>([]);
@@ -79,6 +84,12 @@ export function ProductComposer(props: ComposerProps) {
   const subcategories = props.subcategories.filter((item) => !categoryId || item.categoryId === categoryId);
   const colorMap = useMemo(() => new Map(props.colors.map((item) => [item._id, item])), [props.colors]);
   const sizeMap = useMemo(() => new Map(props.sizes.map((item) => [item._id, item])), [props.sizes]);
+  const images = useMemo(() => {
+    const map = new Map<string, ImageReference>();
+    [...uploadedImages, ...props.images].forEach((image) => map.set(image._id, image));
+    return [...map.values()];
+  }, [props.images, uploadedImages]);
+  const imageMap = useMemo(() => new Map(images.map((image) => [image._id, image])), [images]);
   const enabled = variants.filter((item) => item.enabled);
   const totalUnits = enabled.reduce((sum, variant) => sum + props.locations.reduce((locationSum, location) => locationSum + (Number(stock[`${variant.colorId}:${variant.sizeId}:${location._id}`]) || 0), 0), 0);
   const locationsUsed = props.locations.filter((location) => enabled.some((variant) => Number(stock[`${variant.colorId}:${variant.sizeId}:${location._id}`]) > 0));
@@ -117,11 +128,12 @@ export function ProductComposer(props: ComposerProps) {
 
   function resetDraft() {
     setName({ fa: "", en: "", ar: "" }); setDescription({ fa: "", en: "", ar: "" }); setSlug(""); setSlugManual(false);
-    setCategoryId(""); setSubcategoryId(""); setPriceIrr(""); setPriceUsd(""); setStatus("draft"); setPrimaryImageId(""); setColorIds([]); setSizeIds([]); setVariants([]); setStock({}); setMessage(""); setRequestKey(idempotencyKey());
+    setCategoryId(""); setSubcategoryId(""); setPriceIrr(""); setPriceUsd(""); setStatus("draft"); setPrimaryImageId(""); setImageIds([]); setUploadedImages([]); setMediaUploading(false); setMediaMessage(""); setColorIds([]); setSizeIds([]); setVariants([]); setStock({}); setMessage(""); setRequestKey(idempotencyKey());
   }
 
   async function submit() {
     setMessage("");
+    if (mediaUploading) return setMessage("آپلود تصویر هنوز کامل نشده است؛ چند لحظه صبر کنید.");
     const positiveStockRows = enabled.flatMap((item) => props.locations.map((location) => ({ variantKey: `${item.colorId}:${item.sizeId}`, locationId: location._id, quantity: Number(stock[`${item.colorId}:${item.sizeId}:${location._id}`]) || 0 })).filter((row) => row.quantity > 0));
     if (!name.fa.trim() || !name.en.trim() || !name.ar.trim()) return setMessage("نام محصول را در هر سه زبان وارد کنید.");
     if (!slugify(slug)) return setMessage("شناسه URL انگلیسی محصول را وارد کنید.");
@@ -137,7 +149,7 @@ export function ProductComposer(props: ComposerProps) {
     try {
       const response = await fetch("/api/admin/catalog/products/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         idempotencyKey: requestKey,
-        product: { name, slug: slugify(slug), description, categoryId, subcategoryId, priceIrrMinor: Number(priceIrr), priceUsdMinor: usdCents, status, primaryImageId: primaryImageId || null, primaryImageObjectFit: "cover", primaryImageObjectPosition: "center" },
+        product: { name, slug: slugify(slug), description, categoryId, subcategoryId, priceIrrMinor: Number(priceIrr), priceUsdMinor: usdCents, status, primaryImageId: primaryImageId || null, imageIds: imageIds.filter((id) => id !== primaryImageId), primaryImageObjectFit: "cover", primaryImageObjectPosition: "center" },
         variants: enabled.map((item) => ({ colorId: item.colorId, sizeId: item.sizeId, sku: item.sku.trim().toUpperCase(), ...(item.barcode.trim() ? { barcode: item.barcode.trim() } : {}), ...(item.priceOverrideIrr ? { priceOverrideIrrMinor: Number(item.priceOverrideIrr) } : {}), ...(item.priceOverrideUsd ? { priceOverrideUsdMinor: Math.round(Number(item.priceOverrideUsd) * 100) } : {}) })),
         stock: positiveStockRows,
       }) });
@@ -149,7 +161,7 @@ export function ProductComposer(props: ComposerProps) {
     finally { setBusy(false); }
   }
 
-  return <DynamicModal open={props.open} onClose={props.onClose} busy={busy} size="xl" title="ساخت یکپارچه محصول" description="محصول، تنوع‌های رنگ و سایز و موجودی اولیه شعبه‌ها را یک‌جا ثبت کنید." footer={<div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] text-[var(--adt-muted)]">ثبت نهایی اتمیک است؛ اگر بخشی خطا داشته باشد هیچ داده ناقصی ساخته نمی‌شود.</span><div className="flex gap-2"><DataButton onClick={props.onClose} disabled={busy}>انصراف</DataButton><DataButton tone="primary" loading={busy} disabled={props.loading || props.error} icon={<PackagePlus size={15} />} onClick={submit}>ثبت محصول و موجودی</DataButton></div></div>}>
+  return <DynamicModal open={props.open} onClose={props.onClose} busy={busy || mediaUploading} size="xl" title="ساخت یکپارچه محصول" description="محصول، تنوع‌های رنگ و سایز و موجودی اولیه شعبه‌ها را یک‌جا ثبت کنید." footer={<div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between"><span className="text-[10px] text-[var(--adt-muted)]">ثبت نهایی اتمیک است؛ اگر بخشی خطا داشته باشد هیچ داده ناقصی ساخته نمی‌شود.</span><div className="flex gap-2"><DataButton onClick={props.onClose} disabled={busy || mediaUploading}>انصراف</DataButton><DataButton tone="primary" loading={busy || mediaUploading} disabled={props.loading || props.error || mediaUploading} icon={<PackagePlus size={15} />} onClick={submit}>ثبت محصول و موجودی</DataButton></div></div>}>
     <div dir="rtl" className="space-y-5 p-4 text-[var(--adt-text)] sm:p-5">
       {props.loading ? <div className="border border-[var(--adt-border)] p-6 text-center text-[11px] text-[var(--adt-muted)]">در حال آماده‌سازی رنگ‌ها، سایزها و شعبه‌ها…</div> : null}
       {props.error ? <div role="alert" className="flex items-center justify-between gap-3 border border-[var(--adt-danger)]/35 bg-[var(--adt-danger)]/[0.06] p-4 text-[10px] text-[var(--adt-danger)]"><span>اطلاعات پایه کامل دریافت نشد.</span><DataButton size="sm" tone="danger" onClick={props.onRetry}>تلاش دوباره</DataButton></div> : null}
@@ -165,7 +177,20 @@ export function ProductComposer(props: ComposerProps) {
           <Field label="قیمت ریالی" hint="مبلغ دقیق به ریال؛ تبدیل ارزی انجام نمی‌شود."><DataInput dir="ltr" inputMode="numeric" value={priceIrr} onChange={(e) => setPriceIrr(latinDigits(e.target.value).replace(/\D/g, ""))} suffixText="ریال" /></Field>
           <Field label="قیمت دلاری" hint="مبلغ دلار؛ در سیستم به سنت ذخیره می‌شود."><DataInput dir="ltr" inputMode="decimal" value={priceUsd} onChange={(e) => setPriceUsd(latinDigits(e.target.value).replace(/[^\d.]/g, ""))} suffixText="USD" /></Field>
           <Field label="وضعیت"><select className={selectInput} value={status} onChange={(e) => setStatus(e.target.value as "draft" | "active")}><option value="draft">پیش‌نویس</option><option value="active">فعال و قابل فروش</option></select></Field>
-          <Field label="تصویر اصلی"><div className="flex items-center gap-2"><select className={selectInput} value={primaryImageId} onChange={(e) => setPrimaryImageId(e.target.value)}><option value="">بدون تصویر؛ بعداً اضافه می‌کنم</option>{props.images.map((item) => <option key={item._id} value={item._id}>{fa(item.alt)}</option>)}</select>{primaryImageId ? <span className="size-11 shrink-0 border border-[var(--adt-border)] bg-cover bg-center" role="img" aria-label="پیش‌نمایش تصویر اصلی" style={{ backgroundImage: `url(${props.images.find((item) => item._id === primaryImageId)?.url})` }} /> : null}</div></Field>
+          <div className="md:col-span-3 space-y-3 border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] p-3">
+            <div><h4 className="text-[11px] font-extrabold">تصاویر محصول</h4><p className="mt-1 text-[9px] text-[var(--adt-muted)]">تصویر را مستقیم آپلود کنید یا از کتابخانه انتخاب کنید. اولین قاب تصویر اصلی است.</p></div>
+            <CatalogImageUploader compact kind="product" alt={name} disabled={Boolean(primaryImageId) && imageIds.length >= 12} onPendingChange={setMediaUploading} onUploaded={(image) => { setUploadedImages((current) => [image, ...current.filter((item) => item._id !== image._id)]); if (!primaryImageId) setPrimaryImageId(image._id); else if (imageIds.length >= 12) setMediaMessage("گالری کامل است؛ تصویر در کتابخانه ذخیره شد اما برای اتصال باید یک تصویر را حذف کنید."); else if (!imageIds.includes(image._id)) setImageIds((current) => [...current, image._id]); }} />
+            {mediaMessage || (primaryImageId && imageIds.length >= 12) ? <p role="status" className="border-r-2 border-[var(--adt-warning)] px-3 py-2 text-[10px] text-[var(--adt-text)]">{mediaMessage || "گالری به سقف ۱۲ تصویر رسیده است؛ برای افزودن تصویر جدید یکی را حذف کنید."}</p> : null}
+            <div className="grid gap-2 sm:grid-cols-2">
+              <Field label="تصویر اصلی از کتابخانه"><select className={selectInput} value={primaryImageId} onChange={(e) => { const id = e.target.value; setPrimaryImageId(id); setImageIds((current) => current.filter((item) => item !== id)); }}><option value="">بدون تصویر اصلی</option>{images.map((item) => <option key={item._id} value={item._id}>{fa(item.alt)}</option>)}</select></Field>
+              <Field label="افزودن تصویر موجود به گالری"><select className={selectInput} disabled={imageIds.length >= 12} value="" onChange={(e) => { const id = e.target.value; if (!id || id === primaryImageId) return; if (imageIds.length >= 12) return setMediaMessage("حداکثر ۱۲ تصویر در گالری مجاز است."); setImageIds((current) => [...new Set([...current, id])]); setMediaMessage(""); }}><option value="">{imageIds.length >= 12 ? "گالری کامل است" : "انتخاب از کتابخانه…"}</option>{images.filter((item) => item._id !== primaryImageId && !imageIds.includes(item._id)).map((item) => <option key={item._id} value={item._id}>{fa(item.alt)}</option>)}</select></Field>
+            </div>
+            <div className="flex min-h-28 gap-2 overflow-x-auto pb-1">
+              {primaryImageId ? <article className="relative w-36 shrink-0 border-2 border-[var(--adt-accent)] bg-[var(--adt-surface)] p-1"><CatalogImagePreview image={imageMap.get(primaryImageId)} className="h-24 w-full object-cover" /><strong className="mt-1 block text-center text-[10px] text-[var(--adt-accent-strong)]">تصویر اصلی</strong></article> : <div className="grid w-36 shrink-0 place-items-center border border-dashed border-[var(--adt-border)] text-center text-[10px] text-[var(--adt-muted)]">بدون تصویر اصلی</div>}
+              {imageIds.map((id, index) => { const image = imageMap.get(id); return <article key={id} className="relative w-44 shrink-0 border border-[var(--adt-border)] bg-[var(--adt-surface)] p-1"><CatalogImagePreview image={image} className="h-24 w-full object-cover" /><span className="absolute right-1 top-1 bg-black/75 px-2 py-1 text-[10px] text-white">{digits.format(index + 1)}</span><div className="mt-1 grid grid-cols-4 gap-1"><button type="button" aria-label="انتقال به قبل" disabled={index === 0} onClick={() => setImageIds((current) => { const next = [...current]; [next[index - 1], next[index]] = [next[index], next[index - 1]]; return next; })} className="grid size-10 place-items-center border border-[var(--adt-border)] disabled:opacity-30"><ArrowRight size={14} /></button><button type="button" aria-label="انتخاب به عنوان تصویر اصلی" onClick={() => { setPrimaryImageId(id); setImageIds((current) => [...(primaryImageId ? [primaryImageId] : []), ...current.filter((item) => item !== id)].slice(0, 12)); }} className="min-h-10 border border-[var(--adt-border)] px-1 text-[10px] font-bold text-[var(--adt-accent-strong)]">اصلی</button><button type="button" aria-label="حذف از گالری" onClick={() => setImageIds((current) => current.filter((item) => item !== id))} className="grid size-10 place-items-center border border-[var(--adt-border)] text-[var(--adt-danger)]"><Trash2 size={14} /></button><button type="button" aria-label="انتقال به بعد" disabled={index === imageIds.length - 1} onClick={() => setImageIds((current) => { const next = [...current]; [next[index + 1], next[index]] = [next[index], next[index + 1]]; return next; })} className="grid size-10 place-items-center border border-[var(--adt-border)] disabled:opacity-30"><ArrowLeft size={14} /></button></div></article>; })}
+            </div>
+            <p className="text-[9px] text-[var(--adt-muted)]">حداکثر ۱۲ تصویر گالری؛ تصویر اصلی به‌صورت تکراری در گالری ذخیره نمی‌شود.</p>
+          </div>
           <div className="md:col-span-3 grid gap-3 md:grid-cols-3">{(["fa", "en", "ar"] as const).map((locale) => <Field key={locale} label={`توضیحات ${locale === "fa" ? "فارسی" : locale === "en" ? "انگلیسی" : "عربی"}`}><textarea dir={locale === "en" ? "ltr" : "rtl"} rows={3} className={`${textInput} py-3`} value={description[locale]} onChange={(e) => setDescription({ ...description, [locale]: e.target.value })} /></Field>)}</div>
         </div>
       </section>

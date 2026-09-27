@@ -226,6 +226,7 @@ export type DynamicFileField<TValues extends DynamicFormValues> =
         cancelLabel?: string;
         format?: (value: unknown, values: TValues) => string | null;
         parseUploadResponse?: (response: unknown, values: TValues) => unknown;
+        onUploadSuccess?: (response: unknown, values: TValues) => void;
     };
 
 export type DynamicCustomField<TValues extends DynamicFormValues> =
@@ -238,6 +239,8 @@ export type DynamicCustomField<TValues extends DynamicFormValues> =
             error?: string;
             disabled: boolean;
             readOnly: boolean;
+            setUploadPending: (pending: boolean) => void;
+            setUploadError: (message: string | null) => void;
         }) => ReactNode;
     };
 
@@ -590,6 +593,7 @@ export type DynamicDataTableProps<
     emptyState?: DynamicEmptyStateConfig;
     labels?: DynamicTableLabels;
     renderMeta?: (meta: unknown) => ReactNode;
+    editRequest?: { record: TRecord; nonce: number } | null;
     onStateChange?: (state: {
         page: number;
         pageSize: number;

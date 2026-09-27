@@ -10,7 +10,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { CatalogImageUploader, type CatalogImageKind } from "@/components/admin/catalog-image-uploader";
 import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
 import { DynamicDataTable } from "@/components/global/table/DynamicTable";
 import {
@@ -1017,6 +1018,10 @@ export function ImageStories({
   canWrite: boolean;
 }) {
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const [uploadKind, setUploadKind] = useState<CatalogImageKind>("product");
+  const [recentImage, setRecentImage] = useState<ImageAsset | null>(null);
+  const [editRequest, setEditRequest] = useState<{ record: ImageAsset; nonce: number } | null>(null);
 
   const productsQuery = useQuery({
     queryKey: ["catalog", "products", "image-story-options"],
@@ -1435,6 +1440,12 @@ export function ImageStories({
     <div className="min-w-0 space-y-3 p-3 sm:p-4 lg:p-5">
       <CatalogSectionNav />
 
+      {canWrite ? <section className="border border-[var(--adt-border-strong)] bg-[var(--adt-surface)] p-4" aria-labelledby="catalog-upload-title">
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[9px] font-bold tracking-[.16em] text-[var(--adt-accent-strong)]">آپلود در فضای ذخیره‌سازی</p><h2 id="catalog-upload-title" className="mt-1 text-[14px] font-extrabold">آپلود تصویر</h2><p className="mt-1 text-[9px] text-[var(--adt-muted)]">فایل مستقیماً در فضای ذخیره‌سازی قرار می‌گیرد و همان لحظه به کتابخانه اضافه می‌شود.</p></div><label className="w-full sm:w-56"><span className="mb-1 block text-[9px] font-bold">کاربرد تصویر</span><select value={uploadKind} onChange={(event) => setUploadKind(event.target.value as CatalogImageKind)} className="min-h-11 w-full border border-[var(--adt-border-strong)] bg-[var(--adt-surface)] px-3 text-[10px] outline-none focus:border-[var(--adt-accent)]">{kindOptions.map((option) => <option key={String(option.value)} value={String(option.value)}>{option.label}</option>)}</select></label></div>
+        <CatalogImageUploader kind={uploadKind} onUploaded={(image) => { setRecentImage({ ...image, focalPointX: 50, focalPointY: 50, linkedProducts: [] } as ImageAsset); toast.success("تصویر آپلود شد", { description: `${fa(image.alt)} آماده اتصال به محصول یا استایل است.` }); void queryClient.invalidateQueries({ queryKey: ["catalog", "images"] }); }} />
+        {recentImage ? <article className="mt-3 flex flex-col gap-3 border border-[var(--adt-accent)] bg-[var(--adt-accent)]/[.04] p-3 sm:flex-row sm:items-center"><ImageThumb asset={recentImage} /><div className="min-w-0 flex-1"><strong className="block text-[11px]">آخرین تصویر آپلودشده: {fa(recentImage.alt)}</strong><span className="mt-1 block truncate text-[9px] text-[var(--adt-muted)]">{recentImage.url}</span><p className="mt-1 text-[9px] text-[var(--adt-muted)]">برای تکمیل عنوان، توضیح، پیوند محصول و نقاط خریدپذیر، همین تصویر را مستقیم ویرایش کنید.</p></div><button type="button" onClick={() => setEditRequest({ record: recentImage, nonce: Date.now() })} className="min-h-11 border border-[var(--adt-border-strong)] bg-[var(--adt-surface)] px-4 text-[10px] font-bold">ویرایش همین تصویر</button></article> : null}
+      </section> : null}
+
       <DynamicDataTable<
         ImageAsset,
         ImageFormValues,
@@ -1458,6 +1469,7 @@ export function ImageStories({
         crud={crud}
         labels={labels}
         emptyState={emptyState}
+        editRequest={editRequest}
       />
     </div>
   );

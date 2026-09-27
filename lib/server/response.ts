@@ -41,13 +41,13 @@ export function jsonError(error: unknown) {
     return jsonResponse({ error: "Database is not configured." }, { status: 503 });
   }
   if (error instanceof Error && error.message === "S3 upload storage is not configured.") {
-    return jsonResponse({ error: "Upload storage is not configured." }, { status: 503 });
+    return jsonResponse({ error: "فضای ذخیره‌سازی آپلود تنظیم نشده است." }, { status: 503 });
   }
   if (isStorageProviderError(error)) {
     return NextResponse.json(
       {
         error:
-          "Upload storage rejected the file. Check S3 endpoint, bucket, credentials, ACL, and public URL settings.",
+          "فضای ذخیره‌سازی فایل را نپذیرفت؛ تنظیمات Bucket، دسترسی و آدرس عمومی را بررسی کنید.",
       },
       { status: 502 },
     );

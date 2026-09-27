@@ -138,3 +138,9 @@ the system cannot report a paid order without controlling exact-variant stock.
 - [x] Single cart with checkout-time IRR/USD repricing
 - [x] Explicit dual shipping fees per store and fee-per-used-shipment calculation
 - [x] Atomic idempotent batch stock entry directly from a Products row
+# Catalog media upload
+
+- The Persian admin image library uploads JPG, PNG, and WebP files (maximum 5 MiB) through `POST /api/admin/uploads/catalog-image` to the configured S3-compatible bucket.
+- A successful upload creates exactly one `ImageAsset`; product and image-story screens reuse that returned asset instead of creating a second record from its URL.
+- The unified product composer and product edit flow support a main image plus an ordered, de-duplicated gallery of up to 12 active assets. The main image is excluded from the gallery.
+- Upload credentials remain server-only. Validation and provider failures are returned as safe admin-facing messages.
