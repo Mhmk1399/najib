@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Copy, Phone, UserRound } from "lucide-react";
 import { DynamicDataTable } from "@/components/global/table/DynamicTable";
 import type {
@@ -386,6 +387,7 @@ function AvatarPreview({ user }: { user: Pick<AdminUser, "avatarUrl" | "firstNam
 
 export function UserManager() {
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   const columns = useMemo<DynamicColumn<AdminUser>[]>(
     () => [
@@ -674,6 +676,27 @@ export function UserManager() {
                 fieldIds: ["lastLoginAt", "createdAt"],
               },
             ],
+          },
+          status: {
+            label: "وضعیت کاربر",
+            options: statusOptions,
+            getValue: (record) => record.status,
+            mutationFn: async ({ id, value }) => {
+              await fetchJson(`/api/admin/users/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ status: value }),
+              });
+            },
+            mapError: (error) =>
+              error instanceof Error
+                ? error.message
+                : "تغییر وضعیت کاربر انجام نشد.",
+            onSuccess: (record, value) => {
+              void queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+              toast.success("وضعیت کاربر تغییر کرد", {
+                description: `${fullName(record)}: ${userStatusLabel(value as UserStatusValue)}`,
+              });
+            },
           },
           delete: {
             title: (record) => `حذف ${fullName(record)}`,

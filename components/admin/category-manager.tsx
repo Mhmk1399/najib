@@ -1158,33 +1158,28 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
               },
             ],
           },
-          delete: {
-            enabled: canWrite,
-            title: (record) => `غیرفعال کردن ${fa(record.name)}`,
-            description: (record) => (
-              <>
-                مورد <strong>{fa(record.name)}</strong> حذف فیزیکی نمی‌شود؛ فقط از
-                لیست فعال خارج خواهد شد.
-              </>
-            ),
-            dangerLevel: "soft",
-            confirmLabel: "غیرفعال کردن",
-            mutationFn: async ({ id }) => {
-              await fetchJson(`/api/catalog/${resource}/${id}`, {
-                method: "PATCH",
-                body: JSON.stringify({ isActive: false }),
-              });
-            },
-            mapError: (error) =>
-              error instanceof Error
-                ? error.message
-                : "غیرفعال‌سازی انجام نشد. دوباره تلاش کنید.",
-            onSuccess: (record) => {
-              toast.warning("مورد غیرفعال شد", {
-                description: `${fa(record.name)} از نمایش فعال خارج شد.`,
-              });
-            },
-          },
+          status: canWrite
+            ? {
+                label: "وضعیت رکورد",
+                options: statusOptions,
+                getValue: (record) => String(record.isActive),
+                mutationFn: ({ id, value }) =>
+                  fetchJson(`/api/catalog/${resource}/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ isActive: value === "true" }),
+                  }),
+                mapError: (error) =>
+                  error instanceof Error
+                    ? error.message
+                    : "تغییر وضعیت انجام نشد.",
+                onSuccess: (record, value) => {
+                  reloadReferences();
+                  toast.success("وضعیت رکورد تغییر کرد", {
+                    description: `${fa(record.name)}: ${value === "true" ? "فعال" : "غیرفعال"}`,
+                  });
+                },
+              }
+            : undefined,
           extraRowActions: [
             {
               id: "copy-slug",

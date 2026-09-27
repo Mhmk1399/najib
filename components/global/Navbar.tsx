@@ -1379,7 +1379,7 @@ export default function Navbar({
           aria-hidden={!open}
           aria-label={copy.navbar.mainMenuAria}
           className={cx(
-            "fixed inset-x-0 bottom-0 top-[70px] z-[990] md:top-[78px]",
+            "fixed inset-x-0 bottom-0 top-[70px] z-[100000000] md:top-[78px]",
             "transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
             "motion-reduce:transition-none",
             menuVisible
@@ -1418,7 +1418,7 @@ export default function Navbar({
                   </span>
                 </div>
 
-                <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 xl:px-4">
+                <div className="navbar-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 xl:px-4 xl:py-3.5">
                   {menuSections.map((section, index) => {
                     const selected = resolvedActiveId === section.id;
 
@@ -1437,7 +1437,7 @@ export default function Navbar({
                         onClick={() => setActiveId(section.id)}
                         aria-pressed={selected}
                         className={cx(
-                          "group relative flex min-h-[72px] w-full items-center gap-4 px-4 text-start",
+                          "group relative flex min-h-[58px] w-full items-center gap-3 px-3 text-start",
                           "transition-[background-color,transform] duration-300",
                           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/60 focus-visible:ring-inset",
                           selected
@@ -1515,7 +1515,7 @@ export default function Navbar({
 
               <section
                 aria-label={copy.navbar.collectionDetails}
-                className="min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-start xl:px-12 xl:py-10"
+                className="navbar-scrollbar min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-start xl:px-12 xl:py-10"
               >
                 <div
                   key={active.id}
@@ -1632,7 +1632,7 @@ export default function Navbar({
 
             <div
               className={cx(
-                "h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-start sm:px-6 lg:hidden",
+                "navbar-scrollbar h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-start sm:px-6 lg:hidden",
                 themeClasses.megaMenu,
               )}
             >
@@ -1677,7 +1677,7 @@ export default function Navbar({
                           setActiveId(section.id);
                         }}
                         className={cx(
-                          "flex min-h-[70px] w-full items-center gap-3 px-4 text-start sm:px-5",
+                          "flex min-h-[58px] w-full items-center gap-3 px-3 text-start sm:px-4",
                           "transition-colors duration-300",
                           expanded
                             ? "bg-black/[0.025] dark:bg-white/[0.035]"

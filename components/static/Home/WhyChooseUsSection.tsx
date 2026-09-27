@@ -42,7 +42,7 @@ type WhyChooseUsSectionProps = {
 export function WhyChooseUsSection({
   copy,
   locale,
-  backgroundImage = "/assets/images/whyus.webp",
+  backgroundImage = "/assets/images/Whu.png",
   backgroundPosition = "center",
   className = "",
 }: WhyChooseUsSectionProps) {

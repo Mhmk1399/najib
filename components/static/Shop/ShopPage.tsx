@@ -641,16 +641,22 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
     [catalogSubcategories, selectedSubcategorySlug],
   );
 
-  const categoryOptions = useMemo<CategoryOption[]>(
-    () => [
+  const categoryOptions = useMemo<CategoryOption[]>(() => {
+    const seen = new Set<string>();
+    const options: CategoryOption[] = [
       { value: "all", label: copy.filters.all },
       ...catalogSubcategories.map((item) => ({
         value: item.slug,
         label: localizedText(item.name, locale, item.slug),
       })),
-    ],
-    [catalogSubcategories, copy.filters.all, locale],
-  );
+    ];
+
+    return options.filter((item) => {
+      if (seen.has(item.value)) return false;
+      seen.add(item.value);
+      return true;
+    });
+  }, [catalogSubcategories, copy.filters.all, locale]);
 
   const updateUrlFilters = useCallback(
     (

@@ -98,12 +98,12 @@ export default async function Page() {
       <WhyChooseUsSection
         copy={copy.whyChooseUs}
         locale={locale}
-        backgroundImage="/assets/images/whyus.webp"
+        backgroundImage="/assets/images/Whu.png"
       />
       <HouseEditorialSection
         copy={copy.houseEditorial}
         locale={locale}
-        imageSrc="/assets/images/p2.webp"
+        imageSrc="/assets/images/bag.png"
         mobileImagePosition="62% center"
         desktopImagePosition="center"
       />

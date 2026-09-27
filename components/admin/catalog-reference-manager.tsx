@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ArchiveRestore,
   Layers3,
   Palette,
   Ruler,
@@ -891,6 +890,28 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
               },
             ],
           },
+          status: canWrite
+            ? {
+                label: "وضعیت رکورد",
+                options: statusOptions,
+                getValue: (record) => String(record.isActive),
+                mutationFn: ({ id, value }) =>
+                  api(`/api/catalog/${resource}/${id}`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ isActive: value === "true" }),
+                  }),
+                onSuccess: (record, value) => {
+                  invalidate();
+                  toast.success("وضعیت رکورد تغییر کرد", {
+                    description: `${recordLabel(record)}: ${value === "true" ? "فعال" : "غیرفعال"}`,
+                  });
+                },
+                mapError: (error) =>
+                  error instanceof Error
+                    ? error.message
+                    : "تغییر وضعیت انجام نشد.",
+              }
+            : undefined,
           delete:
             resource === "collections" && canWrite
               ? {
@@ -915,26 +936,7 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
                       : "حذف کالکشن انجام نشد.",
                 }
               : undefined,
-          extraRowActions: canWrite
-            ? [
-                {
-                  id: "lifecycle",
-                  label: "تغییر وضعیت",
-                  icon: <ArchiveRestore size={14} />,
-                  tone: "warning",
-                  onClick: async (record) => {
-                    await api(`/api/catalog/${resource}/${record._id}`, {
-                      method: "PATCH",
-                      body: JSON.stringify({ isActive: !record.isActive }),
-                    });
-                    invalidate();
-                    toast.success(
-                      record.isActive ? "رکورد غیرفعال شد" : "رکورد فعال شد",
-                    );
-                  },
-                },
-              ]
-            : [],
+          extraRowActions: [],
         }}
         emptyState={{
           title: `هنوز ${current.label} ثبت نشده است.`,

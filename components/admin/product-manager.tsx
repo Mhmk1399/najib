@@ -2,7 +2,12 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Copy, ImageIcon, PackageOpen, PackagePlus } from "lucide-react";
+import {
+  Copy,
+  ImageIcon,
+  PackageOpen,
+  PackagePlus,
+} from "lucide-react";
 import { CatalogSectionNav } from "@/components/admin/catalog-section-nav";
 import { ProductComposer } from "@/components/admin/product-composer";
 import { ProductStockModal } from "@/components/admin/product-stock-modal";
@@ -1340,30 +1345,54 @@ export function ProductManager({
               },
             ],
           },
-          delete: {
+          status: {
             enabled: canWrite,
-            title: (record) => `آرشیو کردن ${fa(record.name)}`,
-            description: (record) => (
-              <>
-                محصول <strong>{fa(record.name)}</strong> حذف فیزیکی نمی‌شود؛
-                وضعیت آن به آرشیو تغییر می‌کند.
-              </>
-            ),
-            dangerLevel: "soft",
-            confirmLabel: "آرشیو کردن",
-            mutationFn: async ({ id }) => {
+            label: "وضعیت محصول",
+            options: statusOptions,
+            getValue: (record) => record.status,
+            mutationFn: async ({ id, value }) => {
               await fetchJson(`/api/catalog/products/${id}`, {
                 method: "PATCH",
-                body: JSON.stringify({ status: "archived" }),
+                body: JSON.stringify({ status: value }),
               });
             },
             mapError: (error) =>
               error instanceof Error
                 ? error.message
-                : "آرشیو محصول انجام نشد. دوباره تلاش کنید.",
+                : "تغییر وضعیت محصول انجام نشد.",
+            onSuccess: (record, value) => {
+              void queryClient.invalidateQueries({ queryKey: ["catalog", "products"] });
+              void queryClient.invalidateQueries({ queryKey: ["inventory"] });
+              toast.success("وضعیت محصول تغییر کرد", {
+                description: `${fa(record.name)}: ${statusLabel(value as ProductStatus)}`,
+              });
+            },
+          },
+          delete: {
+            enabled: canWrite,
+            title: (record) => `حذف دائمی ${fa(record.name)}`,
+            description: (record) => (
+              <>
+                محصول <strong>{fa(record.name)}</strong> به‌همراه واریانت‌های
+                آن به‌صورت دائمی حذف می‌شود. این عملیات قابل بازگشت نیست.
+              </>
+            ),
+            dangerLevel: "hard",
+            confirmLabel: "حذف دائمی",
+            mutationFn: async ({ id }) => {
+              await fetchJson(`/api/catalog/products/${id}`, {
+                method: "DELETE",
+              });
+            },
+            mapError: (error) =>
+              error instanceof Error
+                ? error.message
+                : "حذف محصول انجام نشد. دوباره تلاش کنید.",
             onSuccess: (record) => {
-              toast.warning("محصول آرشیو شد", {
-                description: `${fa(record.name)} از لیست محصولات فعال خارج شد.`,
+              reloadReferences();
+              void queryClient.invalidateQueries({ queryKey: ["inventory"] });
+              toast.success("محصول حذف شد", {
+                description: `${fa(record.name)} به‌صورت دائمی حذف شد.`,
               });
             },
           },
@@ -1389,7 +1418,7 @@ export function ProductManager({
           create: "محصول جدید",
           view: "مشاهده",
           edit: "ویرایش",
-          delete: "آرشیو",
+          delete: "حذف دائمی",
           actions: "عملیات",
           rowsPerPage: "تعداد در صفحه",
         }}

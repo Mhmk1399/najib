@@ -687,7 +687,7 @@ export function DynamicImageIsland() {
       dir={direction}
       lang={htmlLang}
       aria-label={copy.aria}
-      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+10px)] z-[2147483500] flex justify-center px-2.5 sm:bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+16px)] sm:px-5"
+      className="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+10px)] z-[10000] flex justify-center px-2.5 sm:bottom-[calc(env(safe-area-inset-bottom)+var(--image-island-keyboard-inset)+16px)] sm:px-5"
       style={
         {
           "--image-island-keyboard-inset": `${keyboardInset}px`,

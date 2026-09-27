@@ -12,6 +12,7 @@ import { Product } from "@/models/catalog/product";
 import { SizeGroup } from "@/models/catalog/size-group";
 import { Size } from "@/models/catalog/size";
 import { Subcategory } from "@/models/catalog/subcategory";
+import { User } from "@/models/auth/user";
 import {
   catalogResources,
   createSchemas,
@@ -264,11 +265,45 @@ export class CatalogService {
 
   async remove(resource: CatalogResource, id: string) {
     await connectToDatabase();
-    if (resource !== "collections") {
-      badRequest("Only collection records can be deleted from this endpoint");
-    }
 
     try {
+      if (resource === "products") {
+        const product = await Product.findById(id).select({ _id: 1 }).lean();
+        if (!product) notFound("products record was not found");
+
+        const variants = await ProductVariant.find({ productId: id })
+          .select({ _id: 1 })
+          .lean();
+        const variantIds = variants.map((variant) => variant._id);
+
+        await Promise.all([
+          Collection.updateMany(
+            { productIds: id },
+            { $pull: { productIds: id } },
+          ),
+          ImageAsset.updateMany(
+            { "linkedProducts.productId": id },
+            { $pull: { linkedProducts: { productId: id } } },
+          ),
+          User.updateMany(
+            { wishlistProductIds: id },
+            { $pull: { wishlistProductIds: id } },
+          ),
+          ProductVariant.deleteMany({ productId: id }),
+          Product.deleteOne({ _id: id }),
+        ]);
+
+        return {
+          id,
+          deleted: true,
+          deletedVariants: variantIds.length,
+        };
+      }
+
+      if (resource !== "collections") {
+        badRequest("Only product and collection records can be deleted from this endpoint");
+      }
+
       const existing = await Collection.findById(id).lean();
       if (!existing) notFound("collections record was not found");
 

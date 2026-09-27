@@ -80,13 +80,16 @@ function textArray(value: unknown) {
   ].filter((item): item is string => typeof item === "string" && item.trim().length > 0);
 }
 
-function storyImagePayload(image: PlainCatalogRecord | null | undefined) {
+function storyImagePayload(
+  image: PlainCatalogRecord | null | undefined,
+  altOverride?: unknown,
+) {
   if (!image) return null;
 
   return {
     id: String(image._id),
     url: image.url,
-    alt: image.alt,
+    alt: altOverride ?? image.alt,
     storyTitle: image.storyTitle,
     storyDescription: image.storyDescription,
     storyCtaLabel: image.storyCtaLabel,
@@ -481,6 +484,7 @@ export async function getStorefrontImageStories() {
         .lean(),
       Category.find({ isActive: true })
         .select({
+          name: 1,
           thumbnailImageId: 1,
           pageContent: 1,
         })
@@ -488,6 +492,7 @@ export async function getStorefrontImageStories() {
       Subcategory.find({ isActive: true })
         .select({
           categoryId: 1,
+          name: 1,
           thumbnailImageId: 1,
           pageContent: 1,
         })
@@ -575,10 +580,31 @@ export async function getStorefrontImageStories() {
 
   const productIdsByCategory = new Map<string, string[]>();
   const productIdsBySubcategory = new Map<string, string[]>();
+  const productImageNamesByImageId = new Map<string, unknown>();
+  const categoryImageNamesByImageId = new Map<string, unknown>();
+  const subcategoryImageNamesByImageId = new Map<string, unknown>();
+
+  function setFirstImageName(
+    target: Map<string, unknown>,
+    imageId: unknown,
+    name: unknown,
+  ) {
+    const id = String(imageId ?? "");
+    if (id && name && !target.has(id)) target.set(id, name);
+  }
+
   for (const product of products) {
     const productId = String(product._id);
     const categoryId = String(product.categoryId ?? "");
     const subcategoryId = String(product.subcategoryId ?? "");
+    const imageIds = uniqueIds([
+      product.primaryImageId,
+      ...(Array.isArray(product.imageIds) ? product.imageIds : []),
+    ]);
+
+    imageIds.forEach((imageId) =>
+      setFirstImageName(productImageNamesByImageId, imageId, product.name),
+    );
 
     if (categoryId) {
       const current = productIdsByCategory.get(categoryId) ?? [];
@@ -636,6 +662,26 @@ export async function getStorefrontImageStories() {
     ]);
   }
 
+  for (const category of categories) {
+    linkedImageIds(category).forEach((imageId) =>
+      setFirstImageName(
+        categoryImageNamesByImageId,
+        imageId,
+        category.name,
+      ),
+    );
+  }
+
+  for (const subcategory of subcategories) {
+    linkedImageIds(subcategory).forEach((imageId) =>
+      setFirstImageName(
+        subcategoryImageNamesByImageId,
+        imageId,
+        subcategory.name,
+      ),
+    );
+  }
+
   for (const product of products) {
     const productId = String(product._id);
     const imageIds = uniqueIds([
@@ -688,6 +734,11 @@ export async function getStorefrontImageStories() {
         sortOrder: Number(link.sortOrder ?? index),
       }),
     );
+
+    const firstProduct = links
+      .map((link) => productMap.get(String(link.productId ?? "")))
+      .find(Boolean);
+    setFirstImageName(productImageNamesByImageId, image._id, firstProduct?.name);
   }
 
   const storyImageIds = [...storyLinksByImageId.keys()];
@@ -737,6 +788,14 @@ export async function getStorefrontImageStories() {
   const stories = storyImages
     .map((image) => {
       const links = storyLinksByImageId.get(String(image._id)) ?? [];
+      const storyAlt =
+        image.kind === "category_banner"
+          ? categoryImageNamesByImageId.get(String(image._id))
+          : image.kind === "subcategory_banner"
+            ? subcategoryImageNamesByImageId.get(String(image._id))
+            : image.kind === "product"
+              ? productImageNamesByImageId.get(String(image._id))
+              : undefined;
 
       const linkedProducts = links
         .map((link) => {
@@ -756,7 +815,7 @@ export async function getStorefrontImageStories() {
             hotspotX: link.hotspotX,
             hotspotY: link.hotspotY,
             sortOrder: Number(link.sortOrder ?? 0),
-            image: storyImagePayload(primaryImage),
+            image: storyImagePayload(primaryImage, product.name),
             colors: recordIds(product.colorIds)
               .map((colorId) => colorMap.get(colorId))
               .filter(Boolean),
@@ -784,7 +843,7 @@ export async function getStorefrontImageStories() {
         storyCtaLabel: image.storyCtaLabel,
         storyProductLimit: image.storyProductLimit,
         storyRevealEnabled: image.storyRevealEnabled,
-        image: storyImagePayload(image),
+        image: storyImagePayload(image, storyAlt ?? image.alt),
         linkedProducts,
         updatedAt: image.updatedAt,
       };
