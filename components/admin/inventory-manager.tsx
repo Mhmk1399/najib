@@ -117,9 +117,9 @@ type MasterForm = Record<string, unknown> & {
   poolId: string;
   storeId: string;
   address: LocalizedText;
-  shippingFeeMinor: number;
-  shippingFeeIrrMinor: number;
-  shippingFeeUsd: number;
+  shippingFeeMinor: number | null;
+  shippingFeeIrrMinor: number | null;
+  shippingFeeUsd: number | null;
   type: "warehouse" | "store" | "virtual";
   isActive: boolean;
 };
@@ -240,7 +240,7 @@ function locationOptions(items: MasterRecord[]): DataSelectOption[] {
   }));
 }
 function emptyMaster(): MasterForm {
-  return { code: "", name: emptyLocalizedText(), countryCode: "IR", cityId: "", poolId: "", storeId: "", address: emptyLocalizedText(), shippingFeeMinor: 0, shippingFeeIrrMinor: 0, shippingFeeUsd: 0, type: "warehouse", isActive: true };
+  return { code: "", name: emptyLocalizedText(), countryCode: "IR", cityId: "", poolId: "", storeId: "", address: emptyLocalizedText(), shippingFeeMinor: null, shippingFeeIrrMinor: null, shippingFeeUsd: null, type: "warehouse", isActive: true };
 }
 function localizedFields(prefix: "name" | "address", label: string, required = false) {
   return (["fa", "en", "ar"] as const).map((locale) => ({
@@ -430,7 +430,7 @@ function MasterManager({ resource, setResource, canWrite, refs, onChanged }: { r
     { id: "name", label: "عنوان", sticky: "start", lockVisibility: true, minWidth: 190, cell: ({ record }) => <span><strong className="block text-[12px] leading-5">{fa(record.name)}</strong><small dir="ltr" className="mt-1 block text-left text-[11px] leading-5 text-[var(--adt-muted)]">{record.code}</small></span>, mobile: { priority: 1, showLabel: false } },
     ...(resource === "cities" ? [{ id: "country", label: "کشور", cell: ({ record }: { record: MasterRecord }) => <span dir="ltr">{record.countryCode}</span> }] : []),
     ...(resource !== "cities" ? [{ id: "city", label: "شهر", cell: ({ record }: { record: MasterRecord }) => refLabel(record.cityId) }] : []),
-    ...(resource === "stores" ? [{ id: "shipping", label: "ارسال ریال / دلار", cell: ({ record }: { record: MasterRecord }) => <span dir="ltr">{number.format(record.shippingFeeIrrMinor ?? record.shippingFeeMinor ?? 0)} IRR · {record.shippingFeeUsdMinor === undefined ? "—" : `${number.format(record.shippingFeeUsdMinor / 100)} USD`}</span> }] : []),
+    ...(resource === "stores" ? [{ id: "shipping", label: "ارسال ریال / دلار", cell: ({ record }: { record: MasterRecord }) => <span dir="ltr">{(record.shippingFeeIrrMinor ?? record.shippingFeeMinor) == null ? "IRR: سراسری" : `${number.format(record.shippingFeeIrrMinor ?? record.shippingFeeMinor ?? 0)} IRR`} · {record.shippingFeeUsdMinor == null ? "USD: سراسری" : `${number.format(record.shippingFeeUsdMinor / 100)} USD`}</span> }] : []),
     ...(resource === "locations" ? [{ id: "type", label: "نوع", cell: ({ record }: { record: MasterRecord }) => ({ warehouse: "انبار", store: "فروشگاه", virtual: "مجازی" }[record.type ?? "warehouse"]) }, { id: "pool", label: "استخر", cell: ({ record }: { record: MasterRecord }) => refLabel(record.poolId) }] : []),
     { id: "status", label: "وضعیت", cell: ({ record }) => <StatusBadge tone={record.isActive ? "success" : "neutral"}>{record.isActive ? "فعال" : "غیرفعال"}</StatusBadge>, mobile: { priority: 2 } },
   ];
@@ -444,17 +444,17 @@ function MasterManager({ resource, setResource, canWrite, refs, onChanged }: { r
 function masterSchema(resource: MasterResource, refs: Record<string, DataSelectOption[]>): DynamicFormSchema<MasterForm> {
   const fields: DynamicFormSchema<MasterForm>["fields"] = [{ kind: "input", name: "code", label: "کد یکتا", dir: "ltr", required: true }, ...localizedFields("name", "نام", true)];
   if (resource === "cities") fields.push({ kind: "input", name: "countryCode", label: "کد دوحرفی کشور", dir: "ltr", required: true, maxLength: 2 });
-  if (resource === "stores") fields.push({ kind: "select", name: "cityId", label: "شهر", options: refs.cities, searchable: true, required: true }, { kind: "input", name: "shippingFeeIrrMinor", label: "هزینه ارسال ریالی", inputType: "number", min: 0, step: 1, dir: "ltr", required: true, suffixText: "ریال" }, { kind: "input", name: "shippingFeeUsd", label: "هزینه ارسال دلاری", inputType: "number", min: 0, step: 0.01, dir: "ltr", required: true, suffixText: "USD", helperText: "این مبلغ مستقل است و از ریال تبدیل نمی‌شود." }, ...localizedFields("address", "نشانی"));
+  if (resource === "stores") fields.push({ kind: "select", name: "cityId", label: "شهر", options: refs.cities, searchable: true, required: true }, { kind: "input", name: "shippingFeeIrrMinor", label: "هزینه ارسال ریالی شعبه (اختیاری)", inputType: "number", min: 0, step: 1, dir: "ltr", suffixText: "ریال", helperText: "خالی = استفاده از هزینه سراسری؛ صفر = ارسال رایگان همین شعبه." }, { kind: "input", name: "shippingFeeUsd", label: "هزینه ارسال دلاری شعبه (اختیاری)", inputType: "number", min: 0, step: 0.01, dir: "ltr", suffixText: "USD", helperText: "خالی = استفاده از هزینه سراسری؛ صفر = ارسال رایگان همین شعبه." }, ...localizedFields("address", "نشانی"));
   if (resource === "pools") fields.push({ kind: "select", name: "cityId", label: "شهر (اختیاری)", options: refs.cities, searchable: true, clearable: true });
   if (resource === "locations") fields.push({ kind: "select", name: "type", label: "نوع مکان", required: true, options: [{ value: "warehouse", label: "انبار" }, { value: "store", label: "فروشگاه" }, { value: "virtual", label: "مجازی" }] }, { kind: "select", name: "cityId", label: "شهر", options: refs.cities, searchable: true, required: true }, { kind: "select", name: "poolId", label: "استخر موجودی", options: refs.pools, searchable: true, required: true }, { kind: "select", name: "storeId", label: "فروشگاه مرتبط", options: refs.stores, searchable: true, clearable: true, hidden: (v) => v.type !== "store", required: true });
   fields.push({ kind: "boolean", name: "isActive", label: "وضعیت", onLabel: "فعال", offLabel: "غیرفعال" });
-  return { fields, validate: (values) => { const errors: Record<string, string> = {}; if (!/^[A-Za-z0-9_-]{2,40}$/.test(values.code.trim())) errors.code = "کد باید ۲ تا ۴۰ نویسه انگلیسی باشد."; if (!values.name.fa.trim() || !values.name.en.trim() || !values.name.ar.trim()) errors["name.fa"] = "نام باید در هر سه زبان تکمیل شود."; if (resource === "cities" && !/^[A-Za-z]{2}$/.test(values.countryCode)) errors.countryCode = "کد کشور باید دو حرف باشد."; if (["stores", "locations"].includes(resource) && !values.cityId) errors.cityId = "شهر را انتخاب کنید."; if (resource === "stores" && (!Number.isSafeInteger(Number(values.shippingFeeIrrMinor)) || Number(values.shippingFeeIrrMinor) < 0)) errors.shippingFeeIrrMinor = "هزینه ریالی باید عدد صحیح نامنفی باشد."; if (resource === "stores" && (!Number.isFinite(Number(values.shippingFeeUsd)) || Number(values.shippingFeeUsd) < 0)) errors.shippingFeeUsd = "هزینه دلاری معتبر وارد کنید."; if (resource === "locations" && !values.poolId) errors.poolId = "استخر موجودی را انتخاب کنید."; if (resource === "locations" && values.type === "store" && !values.storeId) errors.storeId = "برای این نوع، فروشگاه الزامی است."; return errors; } };
+  return { fields, validate: (values) => { const errors: Record<string, string> = {}; if (!/^[A-Za-z0-9_-]{2,40}$/.test(values.code.trim())) errors.code = "کد باید ۲ تا ۴۰ نویسه انگلیسی باشد."; if (!values.name.fa.trim() || !values.name.en.trim() || !values.name.ar.trim()) errors["name.fa"] = "نام باید در هر سه زبان تکمیل شود."; if (resource === "cities" && !/^[A-Za-z]{2}$/.test(values.countryCode)) errors.countryCode = "کد کشور باید دو حرف باشد."; if (["stores", "locations"].includes(resource) && !values.cityId) errors.cityId = "شهر را انتخاب کنید."; if (resource === "stores" && values.shippingFeeIrrMinor !== null && (!Number.isSafeInteger(Number(values.shippingFeeIrrMinor)) || Number(values.shippingFeeIrrMinor) < 0)) errors.shippingFeeIrrMinor = "هزینه ریالی باید عدد صحیح نامنفی باشد."; if (resource === "stores" && values.shippingFeeUsd !== null && (!Number.isFinite(Number(values.shippingFeeUsd)) || Number(values.shippingFeeUsd) < 0)) errors.shippingFeeUsd = "هزینه دلاری معتبر وارد کنید."; if (resource === "locations" && !values.poolId) errors.poolId = "استخر موجودی را انتخاب کنید."; if (resource === "locations" && values.type === "store" && !values.storeId) errors.storeId = "برای این نوع، فروشگاه الزامی است."; return errors; } };
 }
-function masterToForm(record: MasterRecord): MasterForm { return { ...emptyMaster(), ...record, cityId: refId(record.cityId), poolId: refId(record.poolId), storeId: refId(record.storeId), address: record.address ?? emptyLocalizedText(), shippingFeeIrrMinor: record.shippingFeeIrrMinor ?? record.shippingFeeMinor ?? 0, shippingFeeUsd: record.shippingFeeUsdMinor === undefined ? 0 : record.shippingFeeUsdMinor / 100 }; }
+function masterToForm(record: MasterRecord): MasterForm { return { ...emptyMaster(), ...record, cityId: refId(record.cityId), poolId: refId(record.poolId), storeId: refId(record.storeId), address: record.address ?? emptyLocalizedText(), shippingFeeIrrMinor: record.shippingFeeIrrMinor ?? record.shippingFeeMinor ?? null, shippingFeeUsd: record.shippingFeeUsdMinor == null ? null : record.shippingFeeUsdMinor / 100 }; }
 function masterPayload(resource: MasterResource, values: MasterForm) {
   const base = { code: values.code.trim().toUpperCase(), name: trimLocalized(values.name), isActive: values.isActive };
   if (resource === "cities") return { ...base, countryCode: values.countryCode.trim().toUpperCase() };
-  if (resource === "stores") return { ...base, cityId: values.cityId, shippingFeeMinor: Number(values.shippingFeeIrrMinor), shippingFeeIrrMinor: Number(values.shippingFeeIrrMinor), shippingFeeUsdMinor: Math.round(Number(values.shippingFeeUsd) * 100), address: trimLocalized(values.address) };
+  if (resource === "stores") return { ...base, cityId: values.cityId, shippingFeeMinor: null, shippingFeeIrrMinor: values.shippingFeeIrrMinor === null ? null : Number(values.shippingFeeIrrMinor), shippingFeeUsdMinor: values.shippingFeeUsd === null ? null : Math.round(Number(values.shippingFeeUsd) * 100), address: trimLocalized(values.address) };
   if (resource === "pools") return { ...base, cityId: values.cityId || null };
   return { ...base, type: values.type, cityId: values.cityId, poolId: values.poolId, storeId: values.type === "store" ? values.storeId : null };
 }

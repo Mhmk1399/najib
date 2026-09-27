@@ -238,5 +238,6 @@ npm run test:api
 - `PATCH /api/account/cart` with `{ "currency": "IRR" | "USD" }` reprices the same active cart. There is no exchange-rate conversion and currency never partitions the cart.
 - Checkout preview `GET /api/account/checkouts?currency=USD` and checkout start both use the selected currency. The fulfillment hash contains that currency, exact line prices, allocations and shipping fees.
 - Stores keep independent `shippingFeeIrrMinor` and `shippingFeeUsdMinor`. Each used store is one shipment and contributes its selected-currency fee once.
+- Global per-branch defaults are configured with `SHIPPING_FEE_IRR_MINOR` and `SHIPPING_FEE_USD_MINOR` (stored minor units). Missing or blank values block that currency; explicit `0` means free shipping. Store fees are optional overrides and blank means inherit global.
 - `GET /api/admin/inventory/product-stock?productId=...&locationId=...` returns active variants and their balances for the compact stock form.
 - `POST /api/admin/inventory/product-stock` atomically adds positive quantities for several variants of one product at one active location. Body: `{ idempotencyKey, productId, locationId, items: [{ variantId, quantity }] }`. It requires both catalog and inventory write permissions.

@@ -225,8 +225,15 @@ export class CatalogService {
           await this.assertTaxonomyReferences(resource, merged);
         }
       }
+      const updateInput = { ...(input as Record<string, unknown>) };
+      const unset: Record<string, 1> = {};
+      if (resource === "variants") {
+        for (const field of ["priceOverrideMinor", "priceOverrideIrrMinor", "priceOverrideUsdMinor"] as const) {
+          if (updateInput[field] === null) { delete updateInput[field]; unset[field] = 1; }
+        }
+      }
       const item = await models[resource]
-        .findByIdAndUpdate(id, input as Record<string, unknown>, {
+        .findByIdAndUpdate(id, Object.keys(unset).length ? { $set: updateInput, $unset: unset } : updateInput, {
           new: true,
           runValidators: true,
         })
@@ -244,8 +251,10 @@ export class CatalogService {
         );
       }
       if (resource === "variants") {
-        const value = input as { priceOverrideIrrMinor?: number; priceOverrideUsdMinor?: number };
-        await ProductVariant.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(value.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: value.priceOverrideIrrMinor }), ...(value.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: value.priceOverrideUsdMinor }) } });
+        const value = input as { priceOverrideMinor?: number | null; priceOverrideIrrMinor?: number | null; priceOverrideUsdMinor?: number | null };
+        const explicitSet = { ...(typeof value.priceOverrideIrrMinor === "number" ? { priceOverrideIrrMinor: value.priceOverrideIrrMinor } : {}), ...(typeof value.priceOverrideUsdMinor === "number" ? { priceOverrideUsdMinor: value.priceOverrideUsdMinor } : {}) };
+        const explicitUnset = { ...(value.priceOverrideMinor === null ? { priceOverrideMinor: 1 as const } : {}), ...(value.priceOverrideIrrMinor === null ? { priceOverrideIrrMinor: 1 as const } : {}), ...(value.priceOverrideUsdMinor === null ? { priceOverrideUsdMinor: 1 as const } : {}) };
+        await ProductVariant.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { ...(Object.keys(explicitSet).length ? { $set: explicitSet } : {}), ...(Object.keys(explicitUnset).length ? { $unset: explicitUnset } : {}) });
       }
       return item;
     } catch (error) {

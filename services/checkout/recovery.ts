@@ -115,9 +115,10 @@ async function recoveryItems(record: AbandonedRecord, cart: CartRecord | null, s
     sizeQuery.session(session);
     locationQuery.session(session);
   }
-  const [products, colors, sizes, locations] = await Promise.all([
-    productQuery.lean(), colorQuery.lean(), sizeQuery.lean(), locationQuery.lean(),
-  ]);
+  const products = await productQuery.lean();
+  const colors = await colorQuery.lean();
+  const sizes = await sizeQuery.lean();
+  const locations = await locationQuery.lean();
   const balanceQuery = InventoryBalance.find({
     variantId: { $in: variantIds },
     locationId: { $in: locations.map((item) => item._id) },
@@ -151,8 +152,9 @@ async function recoveryItems(record: AbandonedRecord, cart: CartRecord | null, s
       : null;
     const existingQuantity = cartQuantity.get(snapshot.variantId) ?? 0;
     const availableQuantity = availableMap.get(snapshot.variantId) ?? 0;
-    let skipCode: "not_sellable" | "out_of_stock" | "quantity_limit" | null = null;
+    let skipCode: "not_sellable" | "price_unavailable" | "out_of_stock" | "quantity_limit" | null = null;
     if (!variant || !product || !color || !size) skipCode = "not_sellable";
+    else if (currentPriceMinor === null) skipCode = "price_unavailable";
     else if (availableQuantity <= existingQuantity) skipCode = "out_of_stock";
     else if (existingQuantity >= 99) skipCode = "quantity_limit";
     const restorableQuantity = skipCode
@@ -161,6 +163,7 @@ async function recoveryItems(record: AbandonedRecord, cart: CartRecord | null, s
     if (!skipCode && restorableQuantity === 0) skipCode = "out_of_stock";
     const skipReason: Record<Exclude<typeof skipCode, null>, LocalizedText> = {
       not_sellable: { fa: "این تنوع دیگر قابل فروش نیست.", en: "This variant is no longer sellable.", ar: "هذا الخيار لم يعد متاحاً للبيع." },
+      price_unavailable: { fa: "این کالا در ارز سبد فعلی قیمت ندارد.", en: "This item has no price in the current cart currency.", ar: "لا يوجد سعر لهذا المنتج بعملة السلة الحالية." },
       out_of_stock: { fa: "موجودی قابل فروش کافی نیست.", en: "No sellable stock is currently available.", ar: "لا يتوفر مخزون قابل للبيع حالياً." },
       quantity_limit: { fa: "سقف ۹۹ عدد برای این تنوع پر شده است.", en: "The 99-item limit is already reached.", ar: "تم الوصول إلى حد 99 قطعة." },
     };
@@ -174,8 +177,10 @@ async function recoveryItems(record: AbandonedRecord, cart: CartRecord | null, s
       availableQuantity,
       restorableQuantity,
       previousUnitPriceMinor: snapshot.unitPriceMinor,
+      previousCurrency: record.currency,
       currentUnitPriceMinor: currentPriceMinor,
-      priceChanged: currentPriceMinor !== null && currentPriceMinor !== snapshot.unitPriceMinor,
+      currentCurrency: currency,
+      priceChanged: currentPriceMinor !== null && currency === record.currency && currentPriceMinor !== snapshot.unitPriceMinor,
       available: restorableQuantity > 0,
       skipCode,
       skipReason: skipCode ? skipReason[skipCode] : null,
@@ -237,23 +242,21 @@ export const recoveryService = {
         },
         { session },
       );
-      await Promise.all([
-        StaffAudit.create([{
+      await StaffAudit.create([{
           userId: actorId,
           action: "abandoned_checkout.rotate_recovery_link",
           outcome: "success",
           reason: input.reason,
           targetType: "abandoned_checkout",
           targetId: record.id,
-        }], { session }),
-        Outbox.create([{
+        }], { session });
+      await Outbox.create([{
           eventId: randomUUID(),
           eventType: "AbandonedCheckoutRecoveryLinkRotated",
           correlationId: `abandoned:${record.id}`,
           destination: "events",
           payload: { abandonedCheckoutId: record.id, actorId, expiresAt },
-        }], { session }),
-      ]);
+        }], { session });
       return { locale, recoveryStatus: record.recoveryStatus };
     });
     return {

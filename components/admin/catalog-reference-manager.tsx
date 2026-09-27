@@ -56,6 +56,7 @@ type ReferenceRecord = {
   priceOverrideMinor?: number;
   priceOverrideIrrMinor?: number;
   priceOverrideUsdMinor?: number;
+  currency?: string;
   isActive: boolean;
   sortOrder?: number;
   startsAt?: string;
@@ -208,7 +209,7 @@ function formatCount(value: number) {
   return new Intl.NumberFormat("fa-IR", { useGrouping: false }).format(value);
 }
 
-function normalize(record: ReferenceRecord): FormValues {
+function normalize(record: ReferenceRecord, parentCurrency?: string): FormValues {
   return {
     ...emptyForm(),
     ...record,
@@ -223,8 +224,8 @@ function normalize(record: ReferenceRecord): FormValues {
       record.priceOverrideMinor === undefined
         ? null
         : record.priceOverrideMinor,
-    priceOverrideIrr: record.priceOverrideIrrMinor ?? null,
-    priceOverrideUsd: record.priceOverrideUsdMinor === undefined ? null : record.priceOverrideUsdMinor / 100,
+    priceOverrideIrr: record.priceOverrideIrrMinor ?? (parentCurrency === "IRR" ? record.priceOverrideMinor ?? null : null),
+    priceOverrideUsd: record.priceOverrideUsdMinor === undefined ? (parentCurrency === "USD" && record.priceOverrideMinor !== undefined ? record.priceOverrideMinor / 100 : null) : record.priceOverrideUsdMinor / 100,
     startsAt: record.startsAt?.slice(0, 10) ?? "",
     endsAt: record.endsAt?.slice(0, 10) ?? "",
   };
@@ -858,7 +859,7 @@ export function CatalogReferenceManager({ canWrite }: { canWrite: boolean }) {
             enabled: canWrite,
             title: (record) => `ویرایش ${recordLabel(record)}`,
             schema,
-            toInitialValues: normalize,
+            toInitialValues: (record) => normalize(record, (products.data ?? []).find((product) => product._id === record.productId)?.currency),
             mutationFn: ({ id, values }) => save(id, values),
             onSuccess: () => {
               invalidate();

@@ -148,20 +148,18 @@ async function orderItems(checkout: CheckoutRecord, session: ClientSession) {
     .session(session)
     .lean() as unknown as VariantRecord[];
   const variantMap = new Map(variants.map((item) => [String(item._id), item]));
-  const [products, colors, sizes] = await Promise.all([
-    Product.find({ _id: { $in: variants.map((item) => item.productId) } })
+  const products = await Product.find({ _id: { $in: variants.map((item) => item.productId) } })
       .select("name")
       .session(session)
-      .lean() as unknown as Promise<ProductRecord[]>,
-    Color.find({ _id: { $in: variants.map((item) => item.colorId) } })
+      .lean() as unknown as ProductRecord[];
+  const colors = await Color.find({ _id: { $in: variants.map((item) => item.colorId) } })
       .select("name")
       .session(session)
-      .lean() as unknown as Promise<ColorRecord[]>,
-    Size.find({ _id: { $in: variants.map((item) => item.sizeId) } })
+      .lean() as unknown as ColorRecord[];
+  const sizes = await Size.find({ _id: { $in: variants.map((item) => item.sizeId) } })
       .select("name")
       .session(session)
-      .lean() as unknown as Promise<SizeRecord[]>,
-  ]);
+      .lean() as unknown as SizeRecord[];
   const productMap = new Map(products.map((item) => [String(item._id), item]));
   const colorMap = new Map(colors.map((item) => [String(item._id), item]));
   const sizeMap = new Map(sizes.map((item) => [String(item._id), item]));
@@ -450,22 +448,21 @@ export const paymentService = {
         );
         if (!recovery) conflict("پرونده بازیابی برای تکمیل سفارش معتبر نیست.");
       }
-      await Promise.all([
-        currentPayment.save({ session }),
-        currentCheckout.save({ session }),
-        PaymentAttempt.updateOne({ _id: attempt.id }, {
+      await currentPayment.save({ session });
+      await currentCheckout.save({ session });
+      await PaymentAttempt.updateOne({ _id: attempt.id }, {
           $set: {
             status: "succeeded",
             providerAttemptId: providerResult.providerAttemptId,
           },
           $unset: { errorCode: 1 },
-        }, { session }),
-        Cart.updateOne(
+        }, { session });
+      await Cart.updateOne(
           { _id: currentCheckout.cartId, userId: accountId, status: "checkout_started" },
           { $set: { status: "converted" } },
           { session },
-        ),
-        Outbox.create([{
+        );
+      await Outbox.create([{
           eventId: randomUUID(),
           eventType: "OrderConfirmed",
           correlationId: currentCheckout.correlationId,
@@ -488,8 +485,7 @@ export const paymentService = {
           correlationId: currentCheckout.correlationId,
           destination: "events",
           payload: { orderId: order.id, userId: accountId, phone: user.phone ?? null },
-        }], { session, ordered: true }),
-      ]);
+        }], { session, ordered: true });
       return { payment: currentPayment, order, user, idempotent: false };
     });
 

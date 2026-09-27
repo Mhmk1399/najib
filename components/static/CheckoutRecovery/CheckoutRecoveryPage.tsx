@@ -23,7 +23,9 @@ type RecoveryItem = {
   availableQuantity: number;
   restorableQuantity: number;
   previousUnitPriceMinor: number;
+  previousCurrency: string;
   currentUnitPriceMinor: number | null;
+  currentCurrency: string;
   priceChanged: boolean;
   available: boolean;
   skipReason: LocalizedText | null;
@@ -209,8 +211,8 @@ export function CheckoutRecoveryPage({ locale, token }: { locale: Locale; token:
               <span className={`inline-flex min-h-7 items-center border px-3 text-[10px] font-semibold ${item.available ? "border-[var(--recovery-success)] text-[var(--recovery-success)]" : "border-[var(--recovery-danger)] text-[var(--recovery-danger)]"}`}>{item.available ? t.available : t.unavailable}</span>
             </div>
             <div className="mt-6 grid gap-px border border-[var(--recovery-border)] bg-[var(--recovery-border)] sm:grid-cols-2">
-              <div className="bg-[var(--recovery-surface)] p-4"><span className="text-[10px] text-[var(--recovery-muted)]">{t.previous}</span><strong className={`mt-1 block text-sm tabular-nums ${item.priceChanged ? "text-[var(--recovery-muted)] line-through" : ""}`}>{formatMoney(item.previousUnitPriceMinor, data.currency, locale)}</strong></div>
-              <div className="bg-[var(--recovery-surface)] p-4"><span className="text-[10px] text-[var(--recovery-muted)]">{t.current}</span><strong className="mt-1 block text-sm tabular-nums">{item.currentUnitPriceMinor === null ? "—" : formatMoney(item.currentUnitPriceMinor, data.currency, locale)}</strong></div>
+              <div className="bg-[var(--recovery-surface)] p-4"><span className="text-[10px] text-[var(--recovery-muted)]">{t.previous}</span><strong className={`mt-1 block text-sm tabular-nums ${item.priceChanged ? "text-[var(--recovery-muted)] line-through" : ""}`}>{formatMoney(item.previousUnitPriceMinor, item.previousCurrency, locale)}</strong></div>
+              <div className="bg-[var(--recovery-surface)] p-4"><span className="text-[10px] text-[var(--recovery-muted)]">{t.current}</span><strong className="mt-1 block text-sm tabular-nums">{item.currentUnitPriceMinor === null ? "—" : formatMoney(item.currentUnitPriceMinor, item.currentCurrency, locale)}</strong></div>
             </div>
             <dl className="mt-4 flex flex-wrap gap-x-7 gap-y-2 text-xs text-[var(--recovery-muted)]"><div><dt className="inline">{t.requested}: </dt><dd className="inline font-semibold text-[var(--recovery-text)]">{number.format(item.requestedQuantity)}</dd></div><div><dt className="inline">{t.restoredQty}: </dt><dd className="inline font-semibold text-[var(--recovery-text)]">{number.format(item.restorableQuantity)}</dd></div>{item.existingQuantity ? <div><dt className="inline">{t.existing}: </dt><dd className="inline font-semibold text-[var(--recovery-text)]">{number.format(item.existingQuantity)}</dd></div> : null}</dl>
             {item.skipReason ? <p className="mt-4 border-s-2 border-[var(--recovery-danger)] ps-3 text-xs leading-6 text-[var(--recovery-danger)]">{localeText(item.skipReason, locale)}</p> : null}
