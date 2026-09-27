@@ -73,6 +73,20 @@ function duplicateKey(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === 11000;
 }
 
+const storeFeeFields = ["shippingFeeMinor", "shippingFeeIrrMinor", "shippingFeeUsdMinor"] as const;
+
+function storeWriteParts(input: Record<string, unknown>) {
+  const set = { ...input };
+  const unset: Record<string, 1> = {};
+  for (const field of storeFeeFields) {
+    if (Object.hasOwn(set, field) && set[field] === null) {
+      delete set[field];
+      unset[field] = 1;
+    }
+  }
+  return { set, unset };
+}
+
 async function requireExists(
   model: Model<unknown>,
   id: string | null | undefined,
@@ -193,7 +207,8 @@ export async function adjustInventoryInSession(
   session: ClientSession,
   writeStaffAudit = true,
 ) {
-  await Promise.all([activeVariant(input.variantId, session), activeLocation(input.locationId, session)]);
+  await activeVariant(input.variantId, session);
+  await activeLocation(input.locationId, session);
   const existing = await InventoryBalance.findOne({ variantId: input.variantId, locationId: input.locationId }).session(session);
   const current = existing ?? new InventoryBalance({ variantId: input.variantId, locationId: input.locationId });
   const nextOnHand = current.onHand + input.delta;
@@ -233,10 +248,8 @@ export async function reserveInventoryInSession(
 ) {
   const reservationId = new mongoose.Types.ObjectId();
   for (const [index, item] of input.items.entries()) {
-    await Promise.all([
-      activeVariant(item.variantId, session),
-      activeLocation(item.locationId, session),
-    ]);
+    await activeVariant(item.variantId, session);
+    await activeLocation(item.locationId, session);
     const balance = await InventoryBalance.findOneAndUpdate(
       {
         variantId: item.variantId,
@@ -347,10 +360,11 @@ export const inventoryService = {
   async productStock(productId: string, locationId: string) {
     parseId(productId); parseId(locationId);
     await connectToDatabase();
-    const location = await InventoryLocation.findOne({ _id: locationId, isActive: true, type: "store", storeId: { $ne: null } }).select("code name type storeId cityId isActive").lean();
+    const location = await InventoryLocation.findOne({ _id: locationId, isActive: true, type: "store", storeId: { $ne: null } }).select("code name type storeId cityId isActive").lean() as { _id: unknown; storeId: unknown; cityId: unknown } | null;
     if (!location) notFound("شعبه یا انبار فعال پیدا نشد.");
     const store = await Store.findOne({ _id: location.storeId, cityId: location.cityId, isActive: true }).select("_id").lean();
     if (!store) badRequest("این محل به شعبه فعال و هم‌شهر متصل نیست و برای فروش آنلاین قابل استفاده نیست.");
+    if (!await City.exists({ _id: location.cityId, isActive: true })) badRequest("شهر این شعبه غیرفعال است و موجودی آن برای فروش آنلاین قابل استفاده نیست.");
     const variants = await ProductVariant.find({ productId, isActive: true }).select("sku colorId sizeId isActive").populate("colorId", "name hex code").populate("sizeId", "name code").sort({ sku: 1 }).lean();
     const balances = await InventoryBalance.find({ variantId: { $in: variants.map((item) => item._id) }, locationId }).lean();
     const balanceMap = new Map(balances.map((item) => [String(item.variantId), serializeBalance(item as unknown as Record<string, unknown>)]));
@@ -387,13 +401,20 @@ export const inventoryService = {
     await validateMasterReferences(resource, input);
     try {
       const created = await mongoose.connection.transaction(async (session) => {
+        const write = resource === "stores" ? storeWriteParts(input) : { set: input, unset: {} };
         const [item] = await resourceModels[resource].create(
-          [{ ...input, code: String(input.code).toUpperCase() }],
+          [{ ...write.set, code: String(input.code).toUpperCase() }],
           { session },
         );
         if (resource === "stores") {
-          const fees = input as { shippingFeeIrrMinor?: number; shippingFeeUsdMinor?: number };
-          await Store.collection.updateOne({ _id: item._id as mongoose.Types.ObjectId }, { $set: { ...(fees.shippingFeeIrrMinor === undefined ? {} : { shippingFeeIrrMinor: fees.shippingFeeIrrMinor }), ...(fees.shippingFeeUsdMinor === undefined ? {} : { shippingFeeUsdMinor: fees.shippingFeeUsdMinor }) } }, { session });
+          const feeSet = Object.fromEntries(storeFeeFields.filter((field) => typeof write.set[field] === "number").map((field) => [field, write.set[field]]));
+          const feeUnset = Object.fromEntries(storeFeeFields.filter((field) => write.unset[field]).map((field) => [field, ""]));
+          if (Object.keys(feeSet).length || Object.keys(feeUnset).length) {
+            await Store.collection.updateOne({ _id: item._id as mongoose.Types.ObjectId }, {
+              ...(Object.keys(feeSet).length ? { $set: feeSet } : {}),
+              ...(Object.keys(feeUnset).length ? { $unset: feeUnset } : {}),
+            }, { session });
+          }
         }
         await audit(actorId, `inventory.${resource}.create`, item.id, "ایجاد رکورد پایه موجودی", session);
         return item.toObject();
@@ -421,14 +442,24 @@ export const inventoryService = {
     if (input.code) input.code = String(input.code).toUpperCase();
     try {
       const updated = await mongoose.connection.transaction(async (session) => {
+        const write = resource === "stores" ? storeWriteParts(input) : { set: input, unset: {} };
         const item = await resourceModels[resource]
-          .findByIdAndUpdate(parseId(id), input, { new: true, runValidators: true })
+          .findByIdAndUpdate(parseId(id), {
+            ...(Object.keys(write.set).length ? { $set: write.set } : {}),
+            ...(Object.keys(write.unset).length ? { $unset: write.unset } : {}),
+          }, { new: true, runValidators: true })
           .session(session)
           .lean();
         if (!item) notFound("رکورد موجودی پیدا نشد.");
         if (resource === "stores") {
-          const fees = input as { shippingFeeIrrMinor?: number; shippingFeeUsdMinor?: number };
-          await Store.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $set: { ...(fees.shippingFeeIrrMinor === undefined ? {} : { shippingFeeIrrMinor: fees.shippingFeeIrrMinor }), ...(fees.shippingFeeUsdMinor === undefined ? {} : { shippingFeeUsdMinor: fees.shippingFeeUsdMinor }) } }, { session });
+          const feeSet = Object.fromEntries(storeFeeFields.filter((field) => typeof write.set[field] === "number").map((field) => [field, write.set[field]]));
+          const feeUnset = Object.fromEntries(storeFeeFields.filter((field) => write.unset[field]).map((field) => [field, ""]));
+          if (Object.keys(feeSet).length || Object.keys(feeUnset).length) {
+            await Store.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, {
+              ...(Object.keys(feeSet).length ? { $set: feeSet } : {}),
+              ...(Object.keys(feeUnset).length ? { $unset: feeUnset } : {}),
+            }, { session });
+          }
         }
         await audit(actorId, `inventory.${resource}.update`, id, "ویرایش رکورد پایه موجودی", session);
         return item;
@@ -488,6 +519,8 @@ export const inventoryService = {
         if (location.type !== "store" || !location.storeId) badRequest("در این فرم فقط شعبه فروش آنلاین قابل انتخاب است؛ موجودی انبار مرکزی را از بخش پیشرفته ثبت کنید.");
         const store = await Store.findOne({ _id: location.storeId, cityId: location.cityId, isActive: true }).session(session).lean();
         if (!store) badRequest("شعبه متصل به این محل فعال نیست یا شهر محل و شعبه یکسان نیست.");
+        const city = await City.exists({ _id: location.cityId, isActive: true }).session(session);
+        if (!city) badRequest("شهر این شعبه غیرفعال است؛ ابتدا شهر را فعال کنید.");
         const variants = await ProductVariant.find({ _id: { $in: input.items.map((item) => item.variantId) }, productId: input.productId, isActive: true }).session(session).lean();
         if (variants.length !== input.items.length) badRequest("یک یا چند تنوع فعال به این محصول تعلق ندارد.");
         const balances = [];
@@ -579,7 +612,8 @@ export const inventoryService = {
     }
 
     return mongoose.connection.transaction(async (session) => {
-      await Promise.all([activeLocation(input.sourceLocationId, session), activeLocation(input.destinationLocationId, session)]);
+      await activeLocation(input.sourceLocationId, session);
+      await activeLocation(input.destinationLocationId, session);
       const transferId = new mongoose.Types.ObjectId();
       for (const [index, item] of input.items.entries()) {
         await activeVariant(item.variantId, session);
@@ -598,8 +632,7 @@ export const inventoryService = {
           { $inc: { onHand: item.quantity, version: 1 }, $setOnInsert: { reserved: 0, safetyStock: 0 } },
           { new: true, upsert: true, session, runValidators: true },
         );
-        await Promise.all([
-          createMovement({
+        await createMovement({
             idempotencyKey: `${input.idempotencyKey}:out:${index}`,
             type: "transfer_out",
             variantId: item.variantId,
@@ -611,8 +644,8 @@ export const inventoryService = {
             referenceId: transferId.toString(),
             reason: input.reason,
             actorId,
-          }, session),
-          createMovement({
+          }, session);
+        await createMovement({
             idempotencyKey: `${input.idempotencyKey}:in:${index}`,
             type: "transfer_in",
             variantId: item.variantId,
@@ -624,8 +657,7 @@ export const inventoryService = {
             referenceId: transferId.toString(),
             reason: input.reason,
             actorId,
-          }, session),
-        ]);
+          }, session);
       }
       const [transfer] = await InventoryTransfer.create([{
         _id: transferId,

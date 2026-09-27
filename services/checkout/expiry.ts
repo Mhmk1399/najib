@@ -46,20 +46,18 @@ async function abandonedItems(checkout: ExpiringCheckout, session: ClientSession
     .session(session)
     .lean();
   const variantMap = new Map(variants.map((item) => [String(item._id), item]));
-  const [products, colors, sizes] = await Promise.all([
-    Product.find({ _id: { $in: variants.map((item) => item.productId) } })
+  const products = await Product.find({ _id: { $in: variants.map((item) => item.productId) } })
       .select("name slug")
       .session(session)
-      .lean(),
-    Color.find({ _id: { $in: variants.map((item) => item.colorId) } })
+      .lean();
+  const colors = await Color.find({ _id: { $in: variants.map((item) => item.colorId) } })
       .select("name slug")
       .session(session)
-      .lean(),
-    Size.find({ _id: { $in: variants.map((item) => item.sizeId) } })
+      .lean();
+  const sizes = await Size.find({ _id: { $in: variants.map((item) => item.sizeId) } })
       .select("name code")
       .session(session)
-      .lean(),
-  ]);
+      .lean();
   const productMap = new Map(products.map((item) => [String(item._id), item]));
   const colorMap = new Map(colors.map((item) => [String(item._id), item]));
   const sizeMap = new Map(sizes.map((item) => [String(item._id), item]));
@@ -113,8 +111,7 @@ async function expireOne(checkoutId: string, now: Date) {
       0,
     );
 
-    await Promise.all([
-      AbandonedCheckout.updateOne(
+    await AbandonedCheckout.updateOne(
         { checkoutSessionId: String(checkout._id) },
         {
           $setOnInsert: {
@@ -134,21 +131,21 @@ async function expireOne(checkoutId: string, now: Date) {
           },
         },
         { upsert: true, session },
-      ),
-      Cart.updateOne(
+      );
+    await Cart.updateOne(
         { _id: checkout.cartId, status: "checkout_started" },
         { $set: { status: "abandoned" } },
         { session },
-      ),
-      PaymentIntent.updateOne(
+      );
+    await PaymentIntent.updateOne(
         {
           checkoutSessionId: checkout._id,
           status: { $in: ["requires_action", "processing", "failed"] },
         },
         { $set: { status: "cancelled" } },
         { session },
-      ),
-      Outbox.create(
+      );
+    await Outbox.create(
         [
           {
             eventId: randomUUID(),
@@ -164,8 +161,7 @@ async function expireOne(checkoutId: string, now: Date) {
           },
         ],
         { session },
-      ),
-    ]);
+      );
     return true;
   });
 }

@@ -134,6 +134,8 @@ type CartRecord = {
 };
 
 type SellableVariantRecord = {
+  _id?: unknown;
+  sku?: string;
   productId: unknown;
   colorId: unknown;
   sizeId: unknown;
@@ -147,6 +149,7 @@ type SellableProductRecord = {
   currency: string;
   priceIrrMinor?: number;
   priceUsdMinor?: number;
+  name?: LocalizedText;
 };
 
 type CartProductRecord = {
@@ -273,19 +276,19 @@ async function loadSellableVariant(variantId: string, currency: CheckoutCurrency
     .lean() as unknown as SellableVariantRecord | null;
   if (!variant) notFound("تنوع فعال محصول پیدا نشد.");
 
-  const [product, color, size] = await Promise.all([
-    Product.findOne({ _id: variant.productId, status: "active" })
-      .select("basePriceMinor currency priceIrrMinor priceUsdMinor")
-      .session(session)
-      .lean() as unknown as Promise<SellableProductRecord | null>,
-    Color.exists({ _id: variant.colorId, isActive: true }).session(session),
-    Size.exists({ _id: variant.sizeId, isActive: true }).session(session),
-  ]);
+  const product = await Product.findOne({ _id: variant.productId, status: "active" })
+    .select("basePriceMinor currency priceIrrMinor priceUsdMinor name")
+    .session(session)
+    .lean() as unknown as SellableProductRecord | null;
+  const color = await Color.exists({ _id: variant.colorId, isActive: true }).session(session);
+  const size = await Size.exists({ _id: variant.sizeId, isActive: true }).session(session);
   if (!product || !color || !size) notFound("این تنوع در حال حاضر قابل فروش نیست.");
 
   return {
     currency,
     unitPriceMinor: explicitPriceForCurrency({ priceIrrMinor: variant.priceOverrideIrrMinor, priceUsdMinor: variant.priceOverrideUsdMinor, basePriceMinor: variant.priceOverrideMinor, currency: product.currency }, currency) ?? explicitPriceForCurrency(product, currency),
+    productName: product.name,
+    sku: variant.sku,
   };
 }
 
@@ -300,7 +303,7 @@ async function repriceActiveCart(
   for (const item of cart.items) {
     try {
       const sellable = await loadSellableVariant(String(item.variantId), cart.currency as CheckoutCurrency, session);
-      if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: String(item.variantId), currency: cart.currency });
+      if (sellable.unitPriceMinor === null) conflict("یکی از کالاهای سبد در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: String(item.variantId), currency: cart.currency, productName: sellable.productName, sku: sellable.sku });
       item.unitPriceMinor = sellable.unitPriceMinor;
     } catch (error) {
       if (!isApiError(error) || error.status !== 404) throw error;
@@ -509,7 +512,7 @@ export const accountService = {
         }], { session });
       }
       const sellable = await loadSellableVariant(input.variantId, cart.currency as CheckoutCurrency, session);
-      if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: input.variantId, currency: cart.currency });
+      if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: input.variantId, currency: cart.currency, productName: sellable.productName, sku: sellable.sku });
       const existing = cart.items.find(
         (item: { variantId: unknown }) => String(item.variantId) === input.variantId,
       );

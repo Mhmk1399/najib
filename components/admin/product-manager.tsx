@@ -97,6 +97,7 @@ type InventoryLocationReference = {
     | string
     | { _id: string; code?: string; name?: LocalizedText }
     | null;
+  cityId?: string | { _id: string; isActive?: boolean } | null;
 };
 
 type Pagination = {
@@ -257,6 +258,18 @@ function formatPrice(minor: number, currency: string) {
   } catch {
     return `${numberFormatter.format(amount)} ${currency}`;
   }
+}
+function irrPrice(product: Product) {
+  return (
+    product.priceIrrMinor ??
+    (product.currency === "IRR" ? product.basePriceMinor : undefined)
+  );
+}
+function usdPrice(product: Product) {
+  return (
+    product.priceUsdMinor ??
+    (product.currency === "USD" ? product.basePriceMinor : undefined)
+  );
 }
 
 function formatDate(value?: string) {
@@ -871,7 +884,13 @@ export function ProductManager({
   const sizes = sizesQuery.data?.items ?? emptyReferenceItems;
   const images = imagesQuery.data?.items ?? emptyImageReferences;
   const locations = (locationsQuery.data?.items ?? []).filter(
-    (location) => location.type === "store" && Boolean(location.storeId),
+    (location) =>
+      location.type === "store" &&
+      Boolean(location.storeId) &&
+      (typeof location.cityId !== "object" ||
+        location.cityId?.isActive !== false) &&
+      (typeof location.storeId !== "object" ||
+        location.storeId?.isActive !== false),
   );
 
   const categoryNames = useMemo(
@@ -1044,6 +1063,20 @@ export function ProductManager({
               {record.priceUsdMinor === undefined
                 ? "دلار: تعیین نشده"
                 : formatPrice(record.priceUsdMinor, "USD")}
+            </small>
+          </span>
+        ),
+        cell: ({ record }) => (
+          <span className="space-y-1">
+            <strong className="block">
+              {irrPrice(record) === undefined
+                ? "ریال: تعیین نشده"
+                : formatPrice(irrPrice(record)!, "IRR")}
+            </strong>
+            <small className="block text-[var(--adt-muted)]">
+              {usdPrice(record) === undefined
+                ? "دلار: تعیین نشده"
+                : formatPrice(usdPrice(record)!, "USD")}
             </small>
           </span>
         ),
@@ -1363,7 +1396,7 @@ export function ProductManager({
                 id: "price",
                 label: "قیمت ریال / دلار",
                 render: ({ record }) =>
-                  `${formatPrice(record.priceIrrMinor ?? record.basePriceMinor, "IRR")} · ${record.priceUsdMinor === undefined ? "دلار تعیین نشده" : formatPrice(record.priceUsdMinor, "USD")}`,
+                  `${irrPrice(record) === undefined ? "ریال تعیین نشده" : formatPrice(irrPrice(record)!, "IRR")} · ${usdPrice(record) === undefined ? "دلار تعیین نشده" : formatPrice(usdPrice(record)!, "USD")}`,
               },
               {
                 id: "colors",

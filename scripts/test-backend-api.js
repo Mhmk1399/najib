@@ -355,6 +355,8 @@ async function runAuthFlow() {
         colorIds: [cartColorId],
         sizeIds: [cartSizeId],
         basePriceMinor: 900_000,
+        priceIrrMinor: 900_000,
+        priceUsdMinor: 900_000,
         currency: "USD",
         primaryImageId: cartImageId,
         status: "active",
@@ -403,6 +405,8 @@ async function runAuthFlow() {
         sizeId: cartSizeId,
         sku: `CART-${suffix}`.toUpperCase(),
         priceOverrideMinor: 850_000,
+        priceOverrideIrrMinor: 850_000,
+        priceOverrideUsdMinor: 850_000,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -434,6 +438,8 @@ async function runAuthFlow() {
         name: { fa: "فروشگاه Checkout", en: "Checkout store", ar: "متجر الدفع" },
         cityId: checkoutCityId,
         shippingFeeMinor: 75_000,
+        shippingFeeIrrMinor: 75_000,
+        shippingFeeUsdMinor: 75_000,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -453,6 +459,8 @@ async function runAuthFlow() {
         name: { fa: "شعبه دوم ارسال", en: "Second shipping branch", ar: "فرع الشحن الثاني" },
         cityId: checkoutCityId,
         shippingFeeMinor: 25_000,
+        shippingFeeIrrMinor: 25_000,
+        shippingFeeUsdMinor: 25_000,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -623,14 +631,15 @@ async function runAuthFlow() {
         unavailablePlan.body?.unavailableItems?.[0]?.available === 4,
       `${unavailablePlan.response.status}/${unavailablePlan.body?.unavailableItems?.[0]?.requested}/${unavailablePlan.body?.unavailableItems?.[0]?.available}`,
     );
-    await db.collection("productvariants").updateOne({ _id: cartVariantId }, { $set: { priceOverrideMinor: 860_000 } });
+    const usdCheckoutPlan = await apiRequest("/api/account/checkouts?currency=USD", { jar: customerCookies });
+    await db.collection("productvariants").updateOne({ _id: cartVariantId }, { $set: { priceOverrideUsdMinor: 860_000 } });
     const staleCheckout = await apiRequest("/api/account/checkouts", {
       method: "POST", jar: customerCookies,
-      body: { idempotencyKey: `checkout-stale-${suffix}`, fulfillmentPlanHash: checkoutDestinations.body?.fulfillmentPlanHash },
+      body: { idempotencyKey: `checkout-stale-${suffix}`, currency: "USD", fulfillmentPlanHash: usdCheckoutPlan.body?.fulfillmentPlanHash },
     });
     const staleReservation = await db.collection("inventoryreservations").findOne({ idempotencyKey: `checkout-stale-${suffix}:inventory` });
-    await db.collection("productvariants").updateOne({ _id: cartVariantId }, { $set: { priceOverrideMinor: 850_000 } });
-    const refreshedCheckoutPlan = await apiRequest("/api/account/checkouts", { jar: customerCookies });
+    await db.collection("productvariants").updateOne({ _id: cartVariantId }, { $set: { priceOverrideUsdMinor: 850_000 } });
+    const refreshedCheckoutPlan = await apiRequest("/api/account/checkouts?currency=USD", { jar: customerCookies });
     failed += result(
       "stale price plan rolls back without a partial reservation",
       staleCheckout.response.status === 409 && staleCheckout.body?.details?.code === "STALE_FULFILLMENT_PLAN" && !staleReservation,
@@ -642,6 +651,7 @@ async function runAuthFlow() {
       jar: customerCookies,
       body: {
         idempotencyKey: checkoutKey,
+        currency: "USD",
         fulfillmentPlanHash: refreshedCheckoutPlan.body?.fulfillmentPlanHash,
       },
     });
@@ -651,6 +661,7 @@ async function runAuthFlow() {
       jar: customerCookies,
       body: {
         idempotencyKey: checkoutKey,
+        currency: "USD",
         fulfillmentPlanHash: refreshedCheckoutPlan.body?.fulfillmentPlanHash,
       },
     });
@@ -700,10 +711,20 @@ async function runAuthFlow() {
       `${cancelCheckout.response.status}/${cancelCheckoutAgain.response.status}/${releasedBalance?.reserved}/${reopenedCart?.status}`,
     );
 
+    const currencyCartBefore = await db.collection("carts").findOne({ _id: cartId });
+    const currencyUsd = await apiRequest("/api/account/cart", { method: "PATCH", jar: customerCookies, body: { currency: "USD" } });
+    const currencyIrr = await apiRequest("/api/account/cart", { method: "PATCH", jar: customerCookies, body: { currency: "IRR" } });
+    const currencyCartAfter = await db.collection("carts").findOne({ _id: cartId });
+    failed += result(
+      "cart currency switches IRR to USD and back without replacing the cart",
+      currencyUsd.response.status === 200 && currencyUsd.body?.currency === "USD" && currencyIrr.response.status === 200 && currencyIrr.body?.currency === "IRR" && String(currencyCartBefore?._id) === String(currencyCartAfter?._id) && currencyCartAfter?.currency === "IRR",
+      `${currencyUsd.response.status}/${currencyIrr.response.status}/${currencyCartAfter?.currency}`,
+    );
+
     const sourceProduct = await db.collection("products").findOne({ _id: cartProductId });
     await Promise.all([
-      db.collection("products").insertOne({ ...sourceProduct, _id: splitProductId, name: { fa: "شلوار تست ارسال", en: "Split shipping trousers", ar: "بنطال اختبار الشحن" }, slug: `split-product-${suffix}`, currency: "EUR", primaryImageId: cartImageId, createdAt: now, updatedAt: now }),
-      db.collection("productvariants").insertOne({ _id: splitVariantId, productId: splitProductId, colorId: cartColorId, sizeId: cartSizeId, sku: `SPLIT-${suffix}`.toUpperCase(), priceOverrideMinor: 600_000, isActive: true, createdAt: now, updatedAt: now }),
+      db.collection("products").insertOne({ ...sourceProduct, _id: splitProductId, name: { fa: "شلوار تست ارسال", en: "Split shipping trousers", ar: "بنطال اختبار الشحن" }, slug: `split-product-${suffix}`, basePriceMinor: 650_000, priceIrrMinor: 650_000, priceUsdMinor: 650_000, currency: "IRR", primaryImageId: cartImageId, createdAt: now, updatedAt: now }),
+      db.collection("productvariants").insertOne({ _id: splitVariantId, productId: splitProductId, colorId: cartColorId, sizeId: cartSizeId, sku: `SPLIT-${suffix}`.toUpperCase(), priceOverrideMinor: 600_000, priceOverrideIrrMinor: 600_000, priceOverrideUsdMinor: 600_000, isActive: true, createdAt: now, updatedAt: now }),
       db.collection("inventorybalances").updateOne({ variantId: cartVariantId, locationId: checkoutLocationId }, { $set: { onHand: 0, reserved: 0 } }),
       db.collection("inventorybalances").insertOne({ _id: new mongoose.Types.ObjectId(), variantId: splitVariantId, locationId: checkoutLocationId, onHand: 1, reserved: 0, safetyStock: 0, version: 0, createdAt: now, updatedAt: now }),
     ]);
@@ -733,7 +754,7 @@ async function runAuthFlow() {
     const clearUnavailableCart = await apiRequest("/api/account/cart", { method: "DELETE", jar: customerCookies });
     failed += result(
       "cart stays readable and removable with multiple unavailable legacy-currency lines",
-      readableUnavailableCart.response.status === 200 && readableUnavailableCart.body?.currency === "IRR" && readableUnavailableCart.body?.items?.length === 3 && readableUnavailableCart.body.items.filter((item) => item.available === false).length === 2 && readableUnavailableCart.body.items.find((item) => item.variantId === String(splitVariantId))?.unitPriceMinor === 600_000 && removeUnavailableOne.response.status === 200 && clearUnavailableCart.response.status === 200,
+      readableUnavailableCart.response.status === 200 && readableUnavailableCart.body?.currency === "USD" && readableUnavailableCart.body?.items?.length === 3 && readableUnavailableCart.body.items.filter((item) => item.available === false).length === 2 && readableUnavailableCart.body.items.find((item) => item.variantId === String(splitVariantId))?.unitPriceMinor === 600_000 && removeUnavailableOne.response.status === 200 && clearUnavailableCart.response.status === 200,
       `${readableUnavailableCart.response.status}/${removeUnavailableOne.response.status}/${clearUnavailableCart.response.status}`,
     );
     await Promise.all([
@@ -802,6 +823,7 @@ async function runAuthFlow() {
       jar: customerCookies,
       body: {
         idempotencyKey: paymentCheckoutKey,
+        currency: paymentPlan.body?.currency ?? "IRR",
         fulfillmentPlanHash: paymentPlan.body?.fulfillmentPlanHash,
       },
     });
@@ -1027,6 +1049,28 @@ async function runAuthFlow() {
       [cityCreate, poolCreate, storeCreate, sourceCreate, destinationCreate].map(({ response }) => response.status).join("/"),
     );
 
+    const inheritedStoreCreate = await apiRequest("/api/admin/inventory/stores", {
+      method: "POST", jar: adminCookies, body: {
+        code: `inherit_${suffix}`,
+        name: localizedName("شعبه ارث‌بری", "Inherited branch", "فرع موروث"),
+        cityId, shippingFeeMinor: null, shippingFeeIrrMinor: null, shippingFeeUsdMinor: null, isActive: true,
+      },
+    });
+    const inheritedStoreId = inheritedStoreCreate.body?._id;
+    if (inheritedStoreId) inventoryIds.push(inheritedStoreId);
+    const inheritedCreated = inheritedStoreId ? await db.collection("stores").findOne({ _id: new mongoose.Types.ObjectId(inheritedStoreId) }) : null;
+    const overrideStore = inheritedStoreId ? await apiRequest(`/api/admin/inventory/stores/${inheritedStoreId}`, { method: "PATCH", jar: adminCookies, body: { shippingFeeIrrMinor: 123_456, shippingFeeUsdMinor: 789 } }) : { response: { status: 0 } };
+    const overriddenStore = inheritedStoreId ? await db.collection("stores").findOne({ _id: new mongoose.Types.ObjectId(inheritedStoreId) }) : null;
+    const clearStore = inheritedStoreId ? await apiRequest(`/api/admin/inventory/stores/${inheritedStoreId}`, { method: "PATCH", jar: adminCookies, body: { shippingFeeMinor: null, shippingFeeIrrMinor: null, shippingFeeUsdMinor: null } }) : { response: { status: 0 } };
+    const clearedStore = inheritedStoreId ? await db.collection("stores").findOne({ _id: new mongoose.Types.ObjectId(inheritedStoreId) }) : null;
+    const zeroStore = inheritedStoreId ? await apiRequest(`/api/admin/inventory/stores/${inheritedStoreId}`, { method: "PATCH", jar: adminCookies, body: { shippingFeeIrrMinor: 0, shippingFeeUsdMinor: 0 } }) : { response: { status: 0 } };
+    const zeroedStore = inheritedStoreId ? await db.collection("stores").findOne({ _id: new mongoose.Types.ObjectId(inheritedStoreId) }) : null;
+    failed += result(
+      "store shipping fees persist inherit, override, clear, and explicit zero",
+      inheritedStoreCreate.response.status === 201 && inheritedCreated?.shippingFeeMinor === undefined && inheritedCreated?.shippingFeeIrrMinor === undefined && inheritedCreated?.shippingFeeUsdMinor === undefined && overrideStore.response.status === 200 && overriddenStore?.shippingFeeIrrMinor === 123_456 && overriddenStore?.shippingFeeUsdMinor === 789 && clearStore.response.status === 200 && clearedStore?.shippingFeeMinor === undefined && clearedStore?.shippingFeeIrrMinor === undefined && clearedStore?.shippingFeeUsdMinor === undefined && zeroStore.response.status === 200 && zeroedStore?.shippingFeeIrrMinor === 0 && zeroedStore?.shippingFeeUsdMinor === 0,
+      `${inheritedStoreCreate.response.status}/${overrideStore.response.status}/${clearStore.response.status}/${zeroStore.response.status}`,
+    );
+
     const composerBody = {
       idempotencyKey: `composer:${suffix}:success`,
       product: {
@@ -1035,7 +1079,8 @@ async function runAuthFlow() {
         description: localizedName("توضیح تست", "Test description", "وصف اختباري"),
         categoryId: String(composerCategoryId),
         subcategoryId: String(composerSubcategoryId),
-        basePriceMinor: 100_000,
+        priceIrrMinor: 100_000,
+        priceUsdMinor: 2_500,
         status: "draft",
         primaryImageId: null,
         primaryImageObjectFit: "cover",
@@ -1063,8 +1108,17 @@ async function runAuthFlow() {
     ]) : [[], []];
     failed += result(
       "product composer atomically creates exact stock and is idempotent",
-      composerCreate.response.status === 201 && composerCreate.body?.currency === "IRR" && composerCreate.body?.product?.basePriceMinor === 100_000 && composerCreate.body?.product?.colorIds?.length === 2 && composerCreate.body?.product?.sizeIds?.length === 1 && composerCreate.body?.totalUnits === 10 && composerBalances.length === 3 && composerBalances.reduce((sum, row) => sum + row.onHand, 0) === 10 && composerMovements.length === 3 && composerMovements.every((row) => row.reason === "موجودی اولیه هنگام ساخت محصول" && row.onHandDelta > 0) && composerRetry.response.status === 201 && composerRetry.body?.idempotent === true && composerMismatch.response.status === 409,
-      `${composerCreate.response.status}/${composerRetry.response.status}/${composerMismatch.response.status}; balances=${composerBalances.length}; movements=${composerMovements.length}`,
+      composerCreate.response.status === 201 && composerCreate.body?.currency === "IRR" && composerCreate.body?.product?.basePriceMinor === 100_000 && composerCreate.body?.product?.priceIrrMinor === 100_000 && composerCreate.body?.product?.priceUsdMinor === 2_500 && composerCreate.body?.product?.colorIds?.length === 2 && composerCreate.body?.product?.sizeIds?.length === 1 && composerCreate.body?.totalUnits === 10 && composerBalances.length === 3 && composerBalances.reduce((sum, row) => sum + row.onHand, 0) === 10 && composerMovements.length === 3 && composerMovements.every((row) => row.reason === "موجودی اولیه هنگام ساخت محصول" && row.onHandDelta > 0) && composerRetry.response.status === 201 && composerRetry.body?.idempotent === true && composerMismatch.response.status === 409,
+      `${composerCreate.response.status}/${composerRetry.response.status}/${composerMismatch.response.status}; balances=${composerBalances.length}; movements=${composerMovements.length}; error=${composerCreate.body?.diagnostic ?? composerCreate.body?.error ?? "none"}`,
+    );
+
+    const overrideVariant = await apiRequest(`/api/catalog/variants/${composerVariantId}`, { method: "PATCH", jar: adminCookies, body: { priceOverrideIrrMinor: 88_000, priceOverrideUsdMinor: 1_900 } });
+    const clearVariant = await apiRequest(`/api/catalog/variants/${composerVariantId}`, { method: "PATCH", jar: adminCookies, body: { priceOverrideMinor: null, priceOverrideIrrMinor: null, priceOverrideUsdMinor: null } });
+    const clearedVariant = composerVariantId ? await db.collection("productvariants").findOne({ _id: new mongoose.Types.ObjectId(composerVariantId) }) : null;
+    failed += result(
+      "variant currency overrides can be cleared back to product prices",
+      overrideVariant.response.status === 200 && clearVariant.response.status === 200 && clearedVariant?.priceOverrideMinor === undefined && clearedVariant?.priceOverrideIrrMinor === undefined && clearedVariant?.priceOverrideUsdMinor === undefined,
+      `${overrideVariant.response.status}/${clearVariant.response.status}`,
     );
 
     const duplicateSlug = `composer-duplicate-${suffix}`;
@@ -1094,6 +1148,69 @@ async function runAuthFlow() {
     const inventoryOnlyForbidden = await apiRequest("/api/admin/catalog/products/complete", { method: "POST", jar: inventoryOnlyCookies, body: composerBody });
     const composerOverLimit = await apiRequest("/api/admin/catalog/products/complete", { method: "POST", jar: adminCookies, body: { ...composerBody, idempotencyKey: `composer:${suffix}:limit`, variants: Array.from({ length: 101 }, (_, index) => ({ ...composerBody.variants[0], sku: `LIMIT-${suffix}-${index}`.toUpperCase() })), stock: [] } });
     failed += result("product composer independently requires catalog and inventory write permissions", catalogOnlyForbidden.response.status === 403 && inventoryOnlyForbidden.response.status === 403 && composerOverLimit.response.status === 400, `${catalogOnlyForbidden.response.status}/${inventoryOnlyForbidden.response.status}/${composerOverLimit.response.status}`);
+
+    const batchPrefix = `${inventoryKeyPrefix}:product-stock`;
+    const batchBody = {
+      idempotencyKey: `${batchPrefix}:success`,
+      productId: String(cartProductId),
+      locationId: destinationLocationId,
+      items: [{ variantId: String(cartVariantId), quantity: 4 }],
+    };
+    const balanceBeforeBatch = await db.collection("inventorybalances").findOne({ variantId: cartVariantId, locationId: new mongoose.Types.ObjectId(destinationLocationId) });
+    const productStockCreate = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: batchBody });
+    const productStockRetry = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: batchBody });
+    const productStockMismatch = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: { ...batchBody, items: [{ variantId: String(cartVariantId), quantity: 5 }] } });
+    const balanceAfterBatch = await db.collection("inventorybalances").findOne({ variantId: cartVariantId, locationId: new mongoose.Types.ObjectId(destinationLocationId) });
+    const batchMovements = await db.collection("inventorymovements").find({ idempotencyKey: { $regex: `^${batchPrefix}:success:` } }).toArray();
+    failed += result(
+      "product-stock batch succeeds once, replays idempotently, and rejects key mismatch",
+      productStockCreate.response.status === 201 && productStockCreate.body?.totalUnits === 4 && productStockCreate.body?.idempotent === false &&
+        productStockRetry.response.status === 201 && productStockRetry.body?.idempotent === true && productStockMismatch.response.status === 409 &&
+        (balanceAfterBatch?.onHand ?? 0) - (balanceBeforeBatch?.onHand ?? 0) === 4 && batchMovements.length === 1,
+      `${productStockCreate.response.status}/${productStockRetry.response.status}/${productStockMismatch.response.status}; delta=${(balanceAfterBatch?.onHand ?? 0) - (balanceBeforeBatch?.onHand ?? 0)}; movements=${batchMovements.length}`,
+    );
+
+    const multiBatchKey = `${batchPrefix}:multi`;
+    const multiBefore = await db.collection("inventorybalances").find({ variantId: { $in: composerVariantIds }, locationId: new mongoose.Types.ObjectId(destinationLocationId) }).toArray();
+    const multiBeforeMap = new Map(multiBefore.map((row) => [String(row.variantId), row.onHand]));
+    const multiStock = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: { idempotencyKey: multiBatchKey, productId: String(composerProductId), locationId: destinationLocationId, items: composerVariantIds.map((id, index) => ({ variantId: String(id), quantity: index + 2 })) } });
+    const multiAfter = await db.collection("inventorybalances").find({ variantId: { $in: composerVariantIds }, locationId: new mongoose.Types.ObjectId(destinationLocationId) }).toArray();
+    const multiMovements = await db.collection("inventorymovements").find({ idempotencyKey: { $regex: `^${multiBatchKey}:` } }).toArray();
+    failed += result(
+      "product-stock batch updates multiple variants with exact balances and movements",
+      multiStock.response.status === 201 && multiStock.body?.totalUnits === 5 && multiAfter.length === 2 && multiAfter.every((row) => row.onHand - (multiBeforeMap.get(String(row.variantId)) ?? 0) === composerVariantIds.findIndex((id) => String(id) === String(row.variantId)) + 2) && multiMovements.length === 2 && multiMovements.reduce((sum, row) => sum + row.onHandDelta, 0) === 5,
+      `${multiStock.response.status}; balances=${multiAfter.length}; movements=${multiMovements.length}`,
+    );
+
+    const unrelatedProductId = new mongoose.Types.ObjectId();
+    const wrongProduct = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: { ...batchBody, idempotencyKey: `${batchPrefix}:wrong-product`, productId: String(unrelatedProductId) } });
+    await db.collection("inventorylocations").updateOne({ _id: new mongoose.Types.ObjectId(destinationLocationId) }, { $set: { isActive: false } });
+    const inactiveLocation = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: { ...batchBody, idempotencyKey: `${batchPrefix}:inactive-location` } });
+    await db.collection("inventorylocations").updateOne({ _id: new mongoose.Types.ObjectId(destinationLocationId) }, { $set: { isActive: true } });
+    await db.collection("cities").updateOne({ _id: new mongoose.Types.ObjectId(cityId) }, { $set: { isActive: false } });
+    const inactiveCity = await apiRequest("/api/admin/inventory/product-stock", { method: "POST", jar: adminCookies, body: { ...batchBody, idempotencyKey: `${batchPrefix}:inactive-city` } });
+    await db.collection("cities").updateOne({ _id: new mongoose.Types.ObjectId(cityId) }, { $set: { isActive: true } });
+    failed += result(
+      "product-stock rejects wrong product, inactive location, and inactive city",
+      wrongProduct.response.status === 400 && inactiveLocation.response.status === 400 && inactiveCity.response.status === 400,
+      `${wrongProduct.response.status}/${inactiveLocation.response.status}/${inactiveCity.response.status}`,
+    );
+
+    const rollbackBefore = await db.collection("inventorybalances").findOne({ variantId: cartVariantId, locationId: new mongoose.Types.ObjectId(destinationLocationId) });
+    const rollback = await apiRequest("/api/admin/inventory/product-stock", {
+      method: "POST", jar: adminCookies, body: {
+        ...batchBody,
+        idempotencyKey: `${batchPrefix}:rollback`,
+        items: [{ variantId: String(cartVariantId), quantity: 2 }, { variantId: String(splitVariantId), quantity: 3 }],
+      },
+    });
+    const rollbackAfter = await db.collection("inventorybalances").findOne({ variantId: cartVariantId, locationId: new mongoose.Types.ObjectId(destinationLocationId) });
+    const rollbackMovements = await db.collection("inventorymovements").countDocuments({ idempotencyKey: { $regex: `^${batchPrefix}:rollback:` } });
+    failed += result(
+      "product-stock batch rolls back fully when any variant is invalid",
+      rollback.response.status === 400 && (rollbackAfter?.onHand ?? 0) === (rollbackBefore?.onHand ?? 0) && rollbackMovements === 0,
+      `${rollback.response.status}; before=${rollbackBefore?.onHand ?? 0}; after=${rollbackAfter?.onHand ?? 0}; movements=${rollbackMovements}`,
+    );
 
     const adjustmentBody = {
       idempotencyKey: `${inventoryKeyPrefix}:adjust`,
@@ -1239,7 +1356,7 @@ async function runAuthFlow() {
     });
     await db.collection("productvariants").updateOne(
       { _id: cartVariantId },
-      { $set: { priceOverrideMinor: 910_000 } },
+      { $set: { priceOverrideMinor: 910_000, priceOverrideIrrMinor: 910_000 } },
     );
 
     const firstLink = await apiRequest(`/api/admin/abandoned-checkouts/${recoveryAbandonedId}/recovery-link`, {
@@ -1347,7 +1464,7 @@ async function runAuthFlow() {
     const recoveryCheckout = await apiRequest("/api/account/checkouts", {
       method: "POST",
       jar: customerCookies,
-      body: { idempotencyKey: `recovery-checkout-${suffix}`, fulfillmentPlanHash: recoveryPlan.body?.fulfillmentPlanHash },
+      body: { idempotencyKey: `recovery-checkout-${suffix}`, currency: recoveryPlan.body?.currency ?? "IRR", fulfillmentPlanHash: recoveryPlan.body?.fulfillmentPlanHash },
     });
     recoveryCheckoutId = recoveryCheckout.body?.id;
     const recoveryPayment = await apiRequest(`/api/account/checkouts/${recoveryCheckoutId}/payment-intents`, {
@@ -1455,6 +1572,7 @@ async function runAuthFlow() {
         db.collection("products").deleteMany({ _id: splitProductId }),
         db.collection("products").deleteMany({ _id: composerProductId ? new mongoose.Types.ObjectId(composerProductId) : null }),
         db.collection("productcreaterequests").deleteMany({ key: { $regex: `^composer:${suffix}` } }),
+        db.collection("inventorybatchrequests").deleteMany({ key: { $regex: `^${inventoryKeyPrefix}:product-stock` } }),
         db.collection("categories").deleteMany({ _id: composerCategoryId }),
         db.collection("subcategories").deleteMany({ _id: composerSubcategoryId }),
         db.collection("imageassets").deleteMany({ _id: cartImageId }),

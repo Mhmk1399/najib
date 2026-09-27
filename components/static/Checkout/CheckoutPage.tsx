@@ -104,7 +104,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
       window.location.assign(loginHref("/checkout"));
       return;
     }
-    toast.error(title, { description: messageFor(error) });
+    toast.error(title, { description: messageFor(error, locale) });
   };
 
   useEffect(() => {
@@ -351,7 +351,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                   </div>
                   <div className="mt-7 border border-black/15 bg-[#F6F2EB] p-5">
                     {destinationsQuery.isError ? (
-                      <p className="text-xs text-[#A33A32]" role="alert">{copy.loadError}</p>
+                      <p className="text-xs text-[#A33A32]" role="alert">{messageFor(destinationsQuery.error, locale)}</p>
                     ) : destinationsQuery.isFetching ? (
                       <p className="text-xs text-black/55" role="status">{copy.loading}</p>
                     ) : !destinationsQuery.data?.fulfillable || !destinationsQuery.data.shipments.length ? (
@@ -524,8 +524,20 @@ function Success({ order, locale }: { order: ConfirmResult["order"]; locale: Loc
   );
 }
 
-function messageFor(error: unknown) {
-  return error instanceof Error ? error.message : "لطفاً دوباره تلاش کنید.";
+function messageFor(error: unknown, locale: Locale = "fa") {
+  if (error instanceof CommerceApiError) {
+    const details = error.details as { code?: string; productName?: { fa?: string; en?: string; ar?: string }; sku?: string; stores?: Array<{ storeName?: { fa?: string; en?: string; ar?: string }; storeCode?: string }> } | undefined;
+    const pick = (value?: { fa?: string; en?: string; ar?: string }) => value?.[locale]?.trim() || value?.fa?.trim() || value?.en?.trim() || value?.ar?.trim();
+    if (details?.code === "PRICE_NOT_AVAILABLE") {
+      const identity = [pick(details.productName), details.sku].filter(Boolean).join(" · ");
+      return locale === "en" ? `${identity || "An item"} has no price in the selected currency.` : locale === "ar" ? `${identity || "أحد المنتجات"} ليس له سعر بالعملة المحددة.` : `${identity || "یکی از کالاها"} در ارز انتخاب‌شده قیمت ندارد.`;
+    }
+    if (details?.code === "SHIPPING_PRICE_UNAVAILABLE") {
+      const stores = (details.stores ?? []).map((store) => pick(store.storeName) || store.storeCode).filter(Boolean).join("، ");
+      return locale === "en" ? `Delivery pricing is not configured for: ${stores || "required branches"}.` : locale === "ar" ? `لم يتم تحديد رسوم التوصيل للفروع: ${stores || "الفروع المطلوبة"}.` : `هزینه ارسال برای این شعبه‌ها تعیین نشده است: ${stores || "شعبه‌های لازم"}.`;
+    }
+  }
+  return error instanceof Error ? error.message : locale === "en" ? "Please try again." : locale === "ar" ? "يرجى المحاولة مرة أخرى." : "لطفاً دوباره تلاش کنید.";
 }
 
 function formatLocaleInteger(value: number, locale: Locale, minimumIntegerDigits = 1) {

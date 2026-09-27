@@ -32,14 +32,15 @@ async function validateReferences(input: CompleteProductInput, session: ClientSe
   const colorIds = [...new Set(input.variants.map((item) => item.colorId))];
   const sizeIds = [...new Set(input.variants.map((item) => item.sizeId))];
   const locationIds = [...new Set(input.stock.filter((item) => item.quantity > 0).map((item) => item.locationId))];
-  const [category, subcategory, colorCount, sizeCount, locationCount, imageCount] = await Promise.all([
-    Category.exists({ _id: input.product.categoryId, isActive: true }).session(session),
-    Subcategory.findOne({ _id: input.product.subcategoryId, categoryId: input.product.categoryId, isActive: true }).session(session).lean(),
-    Color.countDocuments({ _id: { $in: colorIds }, isActive: true }).session(session),
-    Size.countDocuments({ _id: { $in: sizeIds }, isActive: true }).session(session),
-    InventoryLocation.countDocuments({ _id: { $in: locationIds }, isActive: true }).session(session),
-    input.product.primaryImageId ? ImageAsset.countDocuments({ _id: input.product.primaryImageId, isActive: true }).session(session) : Promise.resolve(1),
-  ]);
+  // The Node driver does not support parallel operations on one transaction session.
+  const category = await Category.exists({ _id: input.product.categoryId, isActive: true }).session(session);
+  const subcategory = await Subcategory.findOne({ _id: input.product.subcategoryId, categoryId: input.product.categoryId, isActive: true }).session(session).lean();
+  const colorCount = await Color.countDocuments({ _id: { $in: colorIds }, isActive: true }).session(session);
+  const sizeCount = await Size.countDocuments({ _id: { $in: sizeIds }, isActive: true }).session(session);
+  const locationCount = await InventoryLocation.countDocuments({ _id: { $in: locationIds }, isActive: true }).session(session);
+  const imageCount = input.product.primaryImageId
+    ? await ImageAsset.countDocuments({ _id: input.product.primaryImageId, isActive: true }).session(session)
+    : 1;
   if (!category) badRequest("دسته‌بندی فعال پیدا نشد.");
   if (!subcategory) badRequest("زیردسته فعال نیست یا به دسته انتخاب‌شده تعلق ندارد.");
   if (colorCount !== colorIds.length) badRequest("یک یا چند رنگ فعال پیدا نشد.");
@@ -79,12 +80,16 @@ export const productComposerService = {
         }
         const { colorIds, sizeIds } = await validateReferences(value, session);
         const [product] = await Product.create([{ ...value.product, basePriceMinor: value.product.priceIrrMinor, currency: CATALOG_CURRENCY, colorIds, sizeIds, collectionIds: [], imageIds: [], material: { fa: [], en: [], ar: [] }, seasons: { fa: [], en: [], ar: [] }, occasions: { fa: [], en: [], ar: [] }, styleTags: { fa: [], en: [], ar: [] } }], { session });
-        const variants = await ProductVariant.create(value.variants.map((item) => ({ ...item, productId: product._id, sku: item.sku.toUpperCase(), isActive: true })), { session });
+        const variants = await ProductVariant.create(
+          value.variants.map((item) => ({ ...item, productId: product._id, sku: item.sku.toUpperCase(), isActive: true })),
+          { session, ordered: true },
+        );
         // Preserve newly introduced fields while Next dev still holds an older cached Mongoose model.
         await Product.collection.updateOne({ _id: product._id }, { $set: { priceIrrMinor: value.product.priceIrrMinor, priceUsdMinor: value.product.priceUsdMinor } }, { session });
         for (const [index, variant] of variants.entries()) {
           const source = value.variants[index];
-          await ProductVariant.collection.updateOne({ _id: variant._id }, { $set: { ...(source.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: source.priceOverrideIrrMinor }), ...(source.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: source.priceOverrideUsdMinor }) } }, { session });
+          const overrides = { ...(source.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: source.priceOverrideIrrMinor }), ...(source.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: source.priceOverrideUsdMinor }) };
+          if (Object.keys(overrides).length) await ProductVariant.collection.updateOne({ _id: variant._id }, { $set: overrides }, { session });
         }
         const variantByKey = new Map(variants.map((variant) => [`${variant.colorId}:${variant.sizeId}`, variant]));
         let totalUnits = 0;
@@ -96,7 +101,7 @@ export const productComposerService = {
           totalUnits += row.quantity;
         }
         await StaffAudit.create([{ userId: actorId, action: "catalog.product.complete.create", outcome: "success", reason: "ساخت یکپارچه محصول و موجودی اولیه", targetType: "product", targetId: product.id }], { session });
-        const result = { product: product.toObject(), variants: variants.map((item) => item.toObject()), totalUnits, currency: CATALOG_CURRENCY, idempotent: false };
+        const result = { product: { ...product.toObject(), priceIrrMinor: value.product.priceIrrMinor, priceUsdMinor: value.product.priceUsdMinor }, variants: variants.map((item, index) => ({ ...item.toObject(), ...(value.variants[index]?.priceOverrideIrrMinor === undefined ? {} : { priceOverrideIrrMinor: value.variants[index]?.priceOverrideIrrMinor }), ...(value.variants[index]?.priceOverrideUsdMinor === undefined ? {} : { priceOverrideUsdMinor: value.variants[index]?.priceOverrideUsdMinor }) })), totalUnits, currency: CATALOG_CURRENCY, idempotent: false };
         await ProductCreateRequest.create([{ key: value.idempotencyKey, requestHash: hash, productId: product._id, result }], { session });
         return result;
       });
