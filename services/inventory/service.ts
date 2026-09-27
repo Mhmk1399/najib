@@ -347,8 +347,10 @@ export const inventoryService = {
   async productStock(productId: string, locationId: string) {
     parseId(productId); parseId(locationId);
     await connectToDatabase();
-    const location = await InventoryLocation.findOne({ _id: locationId, isActive: true }).select("code name type storeId isActive").lean();
+    const location = await InventoryLocation.findOne({ _id: locationId, isActive: true, type: "store", storeId: { $ne: null } }).select("code name type storeId cityId isActive").lean();
     if (!location) notFound("شعبه یا انبار فعال پیدا نشد.");
+    const store = await Store.findOne({ _id: location.storeId, cityId: location.cityId, isActive: true }).select("_id").lean();
+    if (!store) badRequest("این محل به شعبه فعال و هم‌شهر متصل نیست و برای فروش آنلاین قابل استفاده نیست.");
     const variants = await ProductVariant.find({ productId, isActive: true }).select("sku colorId sizeId isActive").populate("colorId", "name hex code").populate("sizeId", "name code").sort({ sku: 1 }).lean();
     const balances = await InventoryBalance.find({ variantId: { $in: variants.map((item) => item._id) }, locationId }).lean();
     const balanceMap = new Map(balances.map((item) => [String(item.variantId), serializeBalance(item as unknown as Record<string, unknown>)]));
@@ -482,7 +484,10 @@ export const inventoryService = {
           if (String(replay.requestHash) !== requestHash) conflict("این کلید ثبت قبلاً برای درخواست دیگری استفاده شده است.");
           return { ...(replay.result as Record<string, unknown>), idempotent: true };
         }
-        await activeLocation(input.locationId, session);
+        const location = await activeLocation(input.locationId, session) as unknown as { type: string; storeId?: unknown; cityId: unknown };
+        if (location.type !== "store" || !location.storeId) badRequest("در این فرم فقط شعبه فروش آنلاین قابل انتخاب است؛ موجودی انبار مرکزی را از بخش پیشرفته ثبت کنید.");
+        const store = await Store.findOne({ _id: location.storeId, cityId: location.cityId, isActive: true }).session(session).lean();
+        if (!store) badRequest("شعبه متصل به این محل فعال نیست یا شهر محل و شعبه یکسان نیست.");
         const variants = await ProductVariant.find({ _id: { $in: input.items.map((item) => item.variantId) }, productId: input.productId, isActive: true }).session(session).lean();
         if (variants.length !== input.items.length) badRequest("یک یا چند تنوع فعال به این محصول تعلق ندارد.");
         const balances = [];

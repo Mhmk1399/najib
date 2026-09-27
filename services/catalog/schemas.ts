@@ -212,9 +212,9 @@ const variantSchema = z
     sizeId: objectIdSchema,
     sku: z.string().trim().min(1).max(80),
     barcode: z.string().trim().max(120).optional(),
-    priceOverrideMinor: z.number().int().nonnegative().optional(),
-    priceOverrideIrrMinor: z.number().int().nonnegative().optional(),
-    priceOverrideUsdMinor: z.number().int().nonnegative().optional(),
+    priceOverrideMinor: z.number().int().nonnegative().nullable().optional(),
+    priceOverrideIrrMinor: z.number().int().nonnegative().nullable().optional(),
+    priceOverrideUsdMinor: z.number().int().nonnegative().nullable().optional(),
     isActive: active,
   })
   .strict();

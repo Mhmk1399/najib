@@ -842,7 +842,7 @@ export function ProductManager({
   const colors = colorsQuery.data?.items ?? emptyReferenceItems;
   const sizes = sizesQuery.data?.items ?? emptyReferenceItems;
   const images = imagesQuery.data?.items ?? emptyImageReferences;
-  const locations = locationsQuery.data?.items ?? [];
+  const locations = (locationsQuery.data?.items ?? []).filter((location) => location.type === "store" && Boolean(location.storeId));
 
   const categoryNames = useMemo(
     () => new Map(categories.map((item) => [item._id, fa(item.name)])),

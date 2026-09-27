@@ -223,7 +223,7 @@ function normalize(record: ReferenceRecord): FormValues {
       record.priceOverrideMinor === undefined
         ? null
         : record.priceOverrideMinor,
-    priceOverrideIrr: record.priceOverrideIrrMinor ?? (record.priceOverrideMinor === undefined ? null : record.priceOverrideMinor),
+    priceOverrideIrr: record.priceOverrideIrrMinor ?? null,
     priceOverrideUsd: record.priceOverrideUsdMinor === undefined ? null : record.priceOverrideUsdMinor / 100,
     startsAt: record.startsAt?.slice(0, 10) ?? "",
     endsAt: record.endsAt?.slice(0, 10) ?? "",
@@ -568,9 +568,9 @@ function payload(resource: Resource, value: FormValues) {
     sizeId: value.sizeId,
     sku: value.sku.trim().toUpperCase(),
     barcode: value.barcode.trim() || undefined,
-    priceOverrideMinor: value.priceOverrideIrr === null ? undefined : Math.round(Number(value.priceOverrideIrr)),
-    priceOverrideIrrMinor: value.priceOverrideIrr === null ? undefined : Math.round(Number(value.priceOverrideIrr)),
-    priceOverrideUsdMinor: value.priceOverrideUsd === null ? undefined : Math.round(Number(value.priceOverrideUsd) * 100),
+    priceOverrideMinor: null,
+    priceOverrideIrrMinor: value.priceOverrideIrr === null ? null : Math.round(Number(value.priceOverrideIrr)),
+    priceOverrideUsdMinor: value.priceOverrideUsd === null ? null : Math.round(Number(value.priceOverrideUsd) * 100),
     isActive: value.isActive,
   };
 }
