@@ -47,6 +47,18 @@ function latinDigits(value: string) {
   return value.replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)));
 }
 
+function emptyLocalizedText(): LocalizedText {
+  return { fa: "", en: "", ar: "" };
+}
+
+function splitLocalizedList(value: string) {
+  return value.split(/[,،\n]/).map((item) => item.trim()).filter(Boolean);
+}
+
+function localizedList(value: LocalizedText) {
+  return { fa: splitLocalizedList(value.fa), en: splitLocalizedList(value.en), ar: splitLocalizedList(value.ar) };
+}
+
 function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return <label className="block min-w-0"><span className="mb-1.5 block text-[10px] font-bold text-[var(--adt-text)]">{label}</span>{children}{hint ? <span className="mt-1 block text-[9px] leading-5 text-[var(--adt-muted)]">{hint}</span> : null}</label>;
 }
@@ -61,6 +73,13 @@ export function ProductComposer(props: ComposerProps) {
   const toast = useToast();
   const [name, setName] = useState({ fa: "", en: "", ar: "" });
   const [description, setDescription] = useState({ fa: "", en: "", ar: "" });
+  const [material, setMaterial] = useState<LocalizedText>(emptyLocalizedText);
+  const [fit, setFit] = useState<LocalizedText>(emptyLocalizedText);
+  const [silhouette, setSilhouette] = useState<LocalizedText>(emptyLocalizedText);
+  const [pattern, setPattern] = useState<LocalizedText>(emptyLocalizedText);
+  const [seasons, setSeasons] = useState<LocalizedText>(emptyLocalizedText);
+  const [occasions, setOccasions] = useState<LocalizedText>(emptyLocalizedText);
+  const [styleTags, setStyleTags] = useState<LocalizedText>(emptyLocalizedText);
   const [slug, setSlug] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -128,6 +147,7 @@ export function ProductComposer(props: ComposerProps) {
 
   function resetDraft() {
     setName({ fa: "", en: "", ar: "" }); setDescription({ fa: "", en: "", ar: "" }); setSlug(""); setSlugManual(false);
+    setMaterial(emptyLocalizedText()); setFit(emptyLocalizedText()); setSilhouette(emptyLocalizedText()); setPattern(emptyLocalizedText()); setSeasons(emptyLocalizedText()); setOccasions(emptyLocalizedText()); setStyleTags(emptyLocalizedText());
     setCategoryId(""); setSubcategoryId(""); setPriceIrr(""); setPriceUsd(""); setStatus("draft"); setPrimaryImageId(""); setImageIds([]); setUploadedImages([]); setMediaUploading(false); setMediaMessage(""); setColorIds([]); setSizeIds([]); setVariants([]); setStock({}); setMessage(""); setRequestKey(idempotencyKey());
   }
 
@@ -149,7 +169,7 @@ export function ProductComposer(props: ComposerProps) {
     try {
       const response = await fetch("/api/admin/catalog/products/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({
         idempotencyKey: requestKey,
-        product: { name, slug: slugify(slug), description, categoryId, subcategoryId, priceIrrMinor: Number(priceIrr), priceUsdMinor: usdCents, status, primaryImageId: primaryImageId || null, imageIds: imageIds.filter((id) => id !== primaryImageId), primaryImageObjectFit: "cover", primaryImageObjectPosition: "center" },
+        product: { name, slug: slugify(slug), description, categoryId, subcategoryId, priceIrrMinor: Number(priceIrr), priceUsdMinor: usdCents, status, material: localizedList(material), fit, silhouette, pattern, seasons: localizedList(seasons), occasions: localizedList(occasions), styleTags: localizedList(styleTags), primaryImageId: primaryImageId || null, imageIds: imageIds.filter((id) => id !== primaryImageId), primaryImageObjectFit: "cover", primaryImageObjectPosition: "center" },
         variants: enabled.map((item) => ({ colorId: item.colorId, sizeId: item.sizeId, sku: item.sku.trim().toUpperCase(), ...(item.barcode.trim() ? { barcode: item.barcode.trim() } : {}), ...(item.priceOverrideIrr ? { priceOverrideIrrMinor: Number(item.priceOverrideIrr) } : {}), ...(item.priceOverrideUsd ? { priceOverrideUsdMinor: Math.round(Number(item.priceOverrideUsd) * 100) } : {}) })),
         stock: positiveStockRows,
       }) });
@@ -192,6 +212,20 @@ export function ProductComposer(props: ComposerProps) {
             <p className="text-[9px] text-[var(--adt-muted)]">حداکثر ۱۲ تصویر گالری؛ تصویر اصلی به‌صورت تکراری در گالری ذخیره نمی‌شود.</p>
           </div>
           <div className="md:col-span-3 grid gap-3 md:grid-cols-3">{(["fa", "en", "ar"] as const).map((locale) => <Field key={locale} label={`توضیحات ${locale === "fa" ? "فارسی" : locale === "en" ? "انگلیسی" : "عربی"}`}><textarea dir={locale === "en" ? "ltr" : "rtl"} rows={3} className={`${textInput} py-3`} value={description[locale]} onChange={(e) => setDescription({ ...description, [locale]: e.target.value })} /></Field>)}</div>
+          <div className="md:col-span-3 border-t border-[var(--adt-border)] pt-4">
+            <div className="mb-3"><h4 className="text-[11px] font-extrabold">ویژگی‌های محصول</h4><p className="mt-1 text-[9px] text-[var(--adt-muted)]">اطلاعات تکمیلی نمایش محصول را به سه زبان وارد کنید. برای فهرست‌ها از ویرگول یا خط جدید استفاده کنید.</p></div>
+            <div className="grid gap-4">
+              {([
+                { key: "material", label: "متریال‌ها", value: material, setValue: setMaterial, list: true },
+                { key: "fit", label: "نوع فیت", value: fit, setValue: setFit, list: false },
+                { key: "silhouette", label: "سیلوئت", value: silhouette, setValue: setSilhouette, list: false },
+                { key: "pattern", label: "طرح", value: pattern, setValue: setPattern, list: false },
+                { key: "seasons", label: "فصل‌ها", value: seasons, setValue: setSeasons, list: true },
+                { key: "occasions", label: "موقعیت‌های استفاده", value: occasions, setValue: setOccasions, list: true },
+                { key: "styleTags", label: "تگ‌های استایل", value: styleTags, setValue: setStyleTags, list: true },
+              ] as const).map((attribute) => <fieldset key={attribute.key} className="grid gap-2 border border-[var(--adt-border)] bg-[var(--adt-surface-muted)] p-3 md:grid-cols-3"><legend className="px-2 text-[10px] font-bold text-[var(--adt-text)]">{attribute.label}</legend>{(["fa", "en", "ar"] as const).map((locale) => <Field key={locale} label={locale === "fa" ? "فارسی" : locale === "en" ? "English" : "العربية"}>{attribute.list ? <textarea dir={locale === "en" ? "ltr" : "rtl"} rows={2} className={`${textInput} py-3`} value={attribute.value[locale]} placeholder="با ویرگول یا خط جدید جدا کنید" onChange={(e) => attribute.setValue({ ...attribute.value, [locale]: e.target.value })} /> : <input dir={locale === "en" ? "ltr" : "rtl"} maxLength={120} className={textInput} value={attribute.value[locale]} onChange={(e) => attribute.setValue({ ...attribute.value, [locale]: e.target.value })} />}</Field>)}</fieldset>)}
+            </div>
+          </div>
         </div>
       </section>
 

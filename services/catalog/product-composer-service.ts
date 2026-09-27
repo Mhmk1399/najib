@@ -81,7 +81,7 @@ export const productComposerService = {
           return { ...(replay.result as Record<string, unknown>), idempotent: true };
         }
         const { colorIds, sizeIds, normalizedImageIds } = await validateReferences(value, session);
-        const [product] = await Product.create([{ ...value.product, basePriceMinor: value.product.priceIrrMinor, currency: CATALOG_CURRENCY, colorIds, sizeIds, collectionIds: [], imageIds: normalizedImageIds, material: { fa: [], en: [], ar: [] }, seasons: { fa: [], en: [], ar: [] }, occasions: { fa: [], en: [], ar: [] }, styleTags: { fa: [], en: [], ar: [] } }], { session });
+        const [product] = await Product.create([{ ...value.product, basePriceMinor: value.product.priceIrrMinor, currency: CATALOG_CURRENCY, colorIds, sizeIds, collectionIds: [], imageIds: normalizedImageIds }], { session });
         const variants = await ProductVariant.create(
           value.variants.map((item) => ({ ...item, productId: product._id, sku: item.sku.toUpperCase(), isActive: true })),
           { session, ordered: true },

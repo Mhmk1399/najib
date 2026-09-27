@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { imageObjectFits, imageObjectPositions } from "@/lib/catalog/image-presentation";
-import { localizedTextSchema, objectIdSchema } from "@/services/catalog/schemas";
+import { localizedTextListSchema, localizedTextSchema, objectIdSchema } from "@/services/catalog/schemas";
 
 const key = z.string().trim().min(8).max(160).regex(/^[A-Za-z0-9._:-]+$/);
 
@@ -13,6 +13,13 @@ const product = z.object({
   priceIrrMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   priceUsdMinor: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
   status: z.enum(["draft", "active"]).default("draft"),
+  material: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+  fit: localizedTextSchema(120, 0).optional(),
+  silhouette: localizedTextSchema(120, 0).optional(),
+  pattern: localizedTextSchema(120, 0).optional(),
+  seasons: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+  occasions: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
+  styleTags: localizedTextListSchema.default({ fa: [], en: [], ar: [] }),
   primaryImageId: objectIdSchema.nullable().optional(),
   imageIds: z.array(objectIdSchema).max(12).default([]),
   primaryImageObjectFit: z.enum(imageObjectFits).default("cover"),
