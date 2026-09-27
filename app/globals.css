@@ -6,6 +6,17 @@
   --warm-glass: rgba(63, 47, 34, 0.76);
   --dark-glass: rgba(20, 17, 14, 0.8);
   --line: rgba(255, 255, 255, 0.2);
+  --shop-navbar-offset: 70px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --shop-navbar-offset: 78px;
+  }
+}
+
+:root[data-navbar-visibility="hidden"] {
+  --shop-navbar-offset: 0px;
 }
 * {
   box-sizing: border-box;

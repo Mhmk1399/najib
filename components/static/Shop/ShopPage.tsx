@@ -21,6 +21,14 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  DollarSign,
+  Layers,
+  Palette,
+  Ruler,
+  Sparkles,
+  Tags,
+} from "lucide-react";
 
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { Button } from "@/components/ui/Button";
@@ -476,7 +484,9 @@ function mapStorefrontProduct({
     title,
     subtitle: subcategoryLabel,
     description: localizedText(product.description, locale, title),
-    price: Math.round(amountForCurrencyDisplay(product.basePriceMinor, product.currency)),
+    price: Math.round(
+      amountForCurrencyDisplay(product.basePriceMinor, product.currency),
+    ),
     currency: product.currency,
     href: `/shop/${product.slug}`,
     image: fallbackImage.src,
@@ -1028,9 +1038,9 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
           <div className="w-full">
             <div className="px-8 pb-16 pt-0 xl:px-10">
               {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
-              <div className="sticky top-[76px] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-4 xl:-mx-10 xl:px-10">
-                <div className="relative flex min-h-[60px] items-center justify-between gap-4">
-                  <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
+              <div className="sticky top-[var(--shop-navbar-offset)] z-[90] -mx-8 mb-0 border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-8 py-3 backdrop-blur-[14px] transition-[top] duration-300 ease-out xl:-mx-10 xl:px-10">
+                <div className="relative grid min-h-[64px] grid-cols-[minmax(0,1fr)_auto] items-center gap-4  -[16px] border border-black/[0.055] bg-white/70 p-2.5 shadow-[0_14px_42px_-32px_rgba(35,31,32,0.42),inset_0_1px_0_rgba(255,255,255,0.9)]">
+                  <div className="relative z-10 flex min-w-0 flex-wrap items-center gap-2">
                     <DesktopFilterIsland
                       expanded={desktopFilterExpanded}
                       pinned={desktopFilterPinned}
@@ -1057,10 +1067,12 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.category}
+                      icon={<Tags className="size-3.5" aria-hidden="true" />}
                       active={category !== "all"}
-                      widthClass="w-[220px]"
+                      badge={category !== "all" ? 1 : undefined}
+                      widthClass="w-[290px]"
                     >
-                      <div className="p-1.5">
+                      <div className="space-y-1 p-2">
                         {categoryOptions.map((item) => {
                           const active = category === item.value;
                           return (
@@ -1068,7 +1080,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                               key={item.value}
                               type="button"
                               onClick={() => setCategory(item.value)}
-                              className={`flex min-h-10 w-full items-center justify-between px-3.5 text-right text-[9px] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                              className={`flex min-h-11 w-full items-center justify-between  -[10px] px-3.5 text-right text-[10px] font-semibold tracking-[0.015em] transition-colors ${
                                 active
                                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -1086,10 +1098,12 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.size}
+                      icon={<Ruler className="size-3.5" aria-hidden="true" />}
                       active={selectedSizes.length > 0}
-                      widthClass="w-[250px]"
+                      badge={selectedSizes.length || undefined}
+                      widthClass="w-[310px]"
                     >
-                      <div className="p-4">
+                      <div className="p-5">
                         <SizeSelector
                           options={sizeFilterOptions}
                           values={selectedSizes}
@@ -1100,10 +1114,12 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.color}
+                      icon={<Palette className="size-3.5" aria-hidden="true" />}
                       active={selectedColors.length > 0}
-                      widthClass="w-[290px]"
+                      badge={selectedColors.length || undefined}
+                      widthClass="w-[360px]"
                     >
-                      <div className="p-4">
+                      <div className="p-5">
                         <ColorSelector
                           options={colorFilterOptions}
                           values={selectedColors}
@@ -1114,10 +1130,14 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.price}
+                      icon={
+                        <DollarSign className="size-3.5" aria-hidden="true" />
+                      }
                       active={maxPrice < defaultMaxPrice}
-                      widthClass="w-[270px]"
+                      badge={maxPrice < defaultMaxPrice ? 1 : undefined}
+                      widthClass="w-[320px]"
                     >
-                      <div className="p-4">
+                      <div className="p-5">
                         <PriceSelector
                           value={maxPrice}
                           max={defaultMaxPrice}
@@ -1128,10 +1148,12 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.material}
+                      icon={<Layers className="size-3.5" aria-hidden="true" />}
                       active={selectedMaterials.length > 0}
-                      widthClass="w-[230px]"
+                      badge={selectedMaterials.length || undefined}
+                      widthClass="w-[300px]"
                     >
-                      <div className="p-4">
+                      <div className="p-5">
                         <MaterialSelector
                           values={selectedMaterials}
                           onChange={setSelectedMaterials}
@@ -1141,10 +1163,14 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
 
                     <DesktopToolbarPopover
                       label={copy.filters.collection}
+                      icon={
+                        <Sparkles className="size-3.5" aria-hidden="true" />
+                      }
                       active={collection !== "all"}
-                      widthClass="w-[210px]"
+                      badge={collection !== "all" ? 1 : undefined}
+                      widthClass="w-[270px]"
                     >
-                      <div className="p-1.5">
+                      <div className="space-y-1 p-2">
                         {[
                           {
                             value: "all" as const,
@@ -1161,7 +1187,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                               key={item.value}
                               type="button"
                               onClick={() => setCollection(item.value)}
-                              className={`flex min-h-10 w-full items-center justify-between px-3.5 text-right text-[9px] font-semibold uppercase tracking-[0.06em] transition-colors ${
+                              className={`flex min-h-11 w-full items-center justify-between  -[10px] px-3.5 text-right text-[10px] font-semibold tracking-[0.015em] transition-colors ${
                                 active
                                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -1178,8 +1204,8 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                     </DesktopToolbarPopover>
                   </div>
 
-                  <div className="relative z-10 flex shrink-0 items-center gap-2">
-                    <span className="hidden text-[8px] font-semibold uppercase tracking-[0.08em] text-black/48 xl:block">
+                  <div className="relative z-10 flex shrink-0 items-center gap-2 border-s border-black/[0.07] ps-3">
+                    <span className="hidden text-[9px] font-semibold tracking-[0.02em] text-black/48 2xl:block">
                       {copy.sort.label}
                     </span>
                     <DesktopSortControl value={sort} onChange={setSort} />
@@ -1220,21 +1246,21 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
         </section>
 
         {/* Mobile sticky toolbar */}
-        <div className="sticky top-[72px] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2 lg:hidden">
-          <div className="relative z-10 grid grid-cols-2 gap-2">
+        <div className="sticky top-[var(--shop-navbar-offset)] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2.5 backdrop-blur-[16px] transition-[top] duration-300 ease-out lg:hidden">
+          <div className="relative z-10 grid grid-cols-2 gap-2.5">
             <button
               type="button"
               onClick={() => setMobileFiltersOpen(true)}
-              className="group/mobile-filter relative flex h-11 min-w-0 items-center justify-center gap-2 overflow-hidden border border-white/70 bg-white/32 px-3 text-black shadow-[0_8px_22px_-16px_rgba(11,11,11,0.32),inset_0_1px_0_rgba(255,255,255,0.80)] ring-1 ring-inset ring-black/[0.025] backdrop-blur-[18px] transition-[background-color,border-color,transform,box-shadow] duration-200 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15"
+              className="group/mobile-filter relative flex h-12 min-w-0 items-center justify-center gap-2.5 overflow-hidden  -[14px] border border-black/[0.075] bg-white/[0.78] px-3 text-black shadow-[0_10px_28px_-22px_rgba(11,11,11,0.40),inset_0_1px_0_rgba(255,255,255,0.90)] ring-1 ring-inset ring-black/[0.02] backdrop-blur-[16px] transition-[background-color,border-color,transform,box-shadow] duration-200 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
             >
-              <span className="grid size-6 shrink-0 place-items-center bg-black/[0.055] text-black/70">
+              <span className="grid size-7 shrink-0 place-items-center  -[9px] bg-black/[0.055] text-black/70">
                 <FilterIcon />
               </span>
-              <span className="text-[9px] font-semibold uppercase tracking-[0.1em]">
+              <span className="text-[10px] font-semibold tracking-[0.02em]">
                 {copy.filters.filters}
               </span>
               {filterCount > 0 && (
-                <span className="grid size-5 shrink-0 place-items-center bg-[var(--shop-copper)] text-[8px] font-bold tabular-nums text-white">
+                <span className="grid min-w-5 shrink-0 place-items-center  -full bg-[var(--shop-copper)] px-1.5 text-[8px] font-bold tabular-nums text-white">
                   {formatNumber(filterCount, locale)}
                 </span>
               )}
@@ -1298,6 +1324,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
           defaultMaxPrice={defaultMaxPrice}
           resetFilters={resetFilters}
           resultCount={products.length}
+          filterCount={filterCount}
         />
       </main>
     </ShopI18nContext.Provider>
@@ -1372,36 +1399,35 @@ function ShopHero({
 
 function DesktopToolbarPopover({
   label,
+  icon,
   active = false,
-  widthClass = "w-[240px]",
+  badge,
+  widthClass = "w-[260px]",
   children,
 }: {
   label: string;
+  icon?: ReactNode;
   active?: boolean;
+  badge?: number;
   widthClass?: string;
   children: ReactNode;
 }) {
   const { locale } = useShopI18n();
-
   const isRtl = getLocaleDirection(locale) === "rtl";
-
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const menuId = useId();
 
   useEffect(() => {
     if (!open) return;
-
     const onPointerDown = (event: PointerEvent) => {
       const root = rootRef.current;
       if (!root || root.contains(event.target as Node)) return;
       setOpen(false);
     };
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setOpen(false);
     };
-
     document.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -1417,43 +1443,43 @@ function DesktopToolbarPopover({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className={`group/filter-chip relative flex h-11 items-center gap-2.5 border px-4 text-[9px] font-semibold uppercase tracking-[0.05em] transition-[background-color,border-color,color] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
+        className={`group/filter-chip relative flex h-12 items-center gap-2.5  -[12px] border px-3.5 text-[10px] font-semibold tracking-[0.015em] shadow-[inset_0_1px_0_rgba(255,255,255,0.78)] transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)] ${
           open
-            ? "border-[var(--shop-copper)] bg-[var(--shop-surface)] text-[var(--shop-text)] shadow-[0_10px_26px_-20px_rgba(35,31,32,0.32)]"
+            ? "border-[var(--shop-copper)] bg-white text-[var(--shop-text)] shadow-[0_12px_30px_-22px_rgba(35,31,32,0.42),inset_0_1px_0_rgba(255,255,255,0.88)]"
             : active
               ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
-              : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:text-[var(--shop-text)]"
+              : "border-black/[0.07] bg-white/[0.78] text-[var(--shop-muted)] hover:-translate-y-px hover:border-[var(--shop-copper)] hover:bg-white hover:text-[var(--shop-text)]"
         }`}
       >
-        <span>{label}</span>
-        {active ? (
-          <span
-            aria-hidden="true"
-            className={`size-1.5 ${open ? "bg-[var(--shop-copper)]" : "bg-[var(--shop-copper)]"}`}
-          />
+        {icon ? (
+          <span className="grid size-5 shrink-0 place-items-center text-[var(--shop-copper)]">
+            {icon}
+          </span>
+        ) : null}
+        <span className="whitespace-nowrap">{label}</span>
+        {badge ? (
+          <span className="grid min-w-[20px] place-items-center  -full bg-[var(--shop-copper)] px-1.5 py-0.5 text-[8px] font-bold tabular-nums text-white">
+            {badge}
+          </span>
         ) : null}
         <ChevronDownIcon
-          className={`size-2.5 transition-transform duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+          className={`size-3 shrink-0 text-[var(--shop-soft)] transition-transform duration-200 ${open ? "rotate-180 text-[var(--shop-copper)]" : "rotate-0"}`}
         />
       </button>
 
       <div
         id={menuId}
         aria-hidden={!open}
-        className={`absolute top-[calc(100%_+_7px)] z-[130] ${widthClass} border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_18px_42px_-26px_rgba(35,31,32,0.30)] ${
+        className={`absolute top-[calc(100%_+_9px)] z-[130] ${widthClass} overflow-hidden  -[16px] border border-black/[0.07] bg-[var(--shop-surface)] shadow-[0_24px_70px_-32px_rgba(35,31,32,0.42),inset_0_1px_0_rgba(255,255,255,0.88)] ${
           isRtl
             ? "right-0 origin-top-right text-right"
             : "left-0 origin-top-left text-left"
-        } ${
-          open ? "pointer-events-auto visible" : "pointer-events-none invisible"
-        }`}
+        } ${open ? "pointer-events-auto visible" : "pointer-events-none invisible"}`}
       >
         <div
-          className={`border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 py-2.5 ${
-            isRtl ? "text-right" : "text-left"
-          }`}
+          className={`flex min-h-12 items-center border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 ${isRtl ? "text-right" : "text-left"}`}
         >
-          <p className="text-[8px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-muted)]">
+          <p className="text-[10px] font-semibold tracking-[0.02em] text-[var(--shop-text)]">
             {label}
           </p>
         </div>
@@ -1610,7 +1636,7 @@ function DesktopFilterIsland({
         aria-controls={popoverId}
         onClick={togglePinned}
         onFocus={scheduleOpen}
-        className={`group/filter relative flex h-11 items-center gap-2.5 overflow-hidden border px-4 ${
+        className={`group/filter relative flex h-12 items-center gap-2.5 overflow-hidden  -[12px] border px-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ${
           isRtl ? "text-right" : "text-left"
         } transition-[background-color,border-color,color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           expanded
@@ -1619,17 +1645,17 @@ function DesktopFilterIsland({
         }`}
       >
         <span
-          className={`grid size-5 shrink-0 place-items-center transition-colors ${
+          className={`grid size-7 shrink-0 place-items-center  -[9px] bg-black/[0.045] transition-colors ${
             expanded ? "text-[var(--shop-copper)]" : "text-[var(--shop-muted)]"
           }`}
         >
           <FilterIcon />
         </span>
-          <span className="text-[9px] font-semibold uppercase tracking-[0.05em]">
+        <span className="text-[10px] font-semibold tracking-[0.02em]">
           {copy.filters.filters}
         </span>
         {filterCount > 0 && (
-          <span className="grid size-5 shrink-0 place-items-center bg-[var(--shop-copper)] text-[8px] font-bold tabular-nums text-white">
+          <span className="grid min-w-5 shrink-0 place-items-center  -full bg-[var(--shop-copper)] px-1.5 py-0.5 text-[8px] font-bold tabular-nums text-white">
             {filterCount}
           </span>
         )}
@@ -1663,7 +1689,7 @@ function DesktopFilterIsland({
         role="region"
         aria-label={copy.filters.productFiltersAriaLabel}
         aria-hidden={!expanded}
-        className={`absolute top-[calc(100%_+_11px)] z-[60] w-[342px] max-w-[calc(100vw_-_2rem)] ${
+        className={`absolute top-[calc(100%_+_11px)] z-[60] w-[460px] max-w-[calc(100vw_-_2rem)] ${
           isRtl
             ? "right-0 origin-top-right text-right"
             : "left-0 origin-top-left text-left"
@@ -1671,7 +1697,7 @@ function DesktopFilterIsland({
       >
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_24px_60px_-34px_rgba(35,31,32,0.34)] ${
+          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden  -[18px] border border-black/[0.075] bg-[var(--shop-surface)] shadow-[0_28px_80px_-36px_rgba(35,31,32,0.46),inset_0_1px_0_rgba(255,255,255,0.9)] ${
             expanded ? "opacity-100" : "opacity-[0.001]"
           }`}
           style={{
@@ -1679,16 +1705,16 @@ function DesktopFilterIsland({
           }}
         />
         <div className={expanded ? "visible" : "invisible"}>
-          <div className="relative z-10 flex items-start justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 pb-5 pt-5">
+          <div className="relative z-10 flex min-h-[70px] items-center justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 py-3.5">
             <div className="flex items-center gap-2.5">
-              <span className="grid size-7 place-items-center border border-[var(--shop-copper)] bg-[var(--shop-copper)] text-white shadow-[0_8px_20px_-14px_rgba(11,11,11,0.60)]">
+              <span className="grid size-9 place-items-center  -[11px] border border-[var(--shop-copper)] bg-[var(--shop-copper)] text-white shadow-[0_8px_20px_-14px_rgba(11,11,11,0.60)]">
                 <FilterIcon />
               </span>
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--shop-text)]">
+                <p className="text-[13px] font-semibold tracking-[-0.01em] text-[var(--shop-text)]">
                   {copy.filters.filters}
                 </p>
-                <p className="mt-1 text-[8px] font-medium uppercase tracking-[0.07em] text-[var(--shop-muted)]">
+                <p className="mt-1 text-[9px] font-medium tracking-[0.01em] text-[var(--shop-muted)]">
                   {filterCount > 0
                     ? formatTemplate(copy.filters.activeFiltersTemplate, {
                         count: formatNumber(filterCount, locale),
@@ -1710,7 +1736,7 @@ function DesktopFilterIsland({
                 type="button"
                 aria-label={copy.filters.closeAriaLabel}
                 onClick={closeFilter}
-                className="grid size-8 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
+                className="grid size-10 place-items-center  -[10px] border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
               >
                 <CloseIcon />
               </button>
@@ -1718,9 +1744,13 @@ function DesktopFilterIsland({
           </div>
           <div
             data-lenis-prevent=""
-            className="relative z-10 max-h-[min(640px,calc(100svh_-_190px))] overflow-y-auto overscroll-contain px-5 py-2 [scrollbar-color:rgb(11_11_11_/_0.18)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent"
+            className="relative z-10 max-h-[min(650px,calc(100svh_-_190px))] overflow-y-auto overscroll-contain px-5 py-3 [scrollbar-color:rgb(11_11_11_/_0.18)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-black/15 [&::-webkit-scrollbar-track]:bg-transparent"
           >
-            <IslandAccordion title={copy.filters.category} defaultOpen>
+            <IslandAccordion
+              title={copy.filters.category}
+              icon={<Tags className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
               <div className="space-y-0.5">
                 {categoryOptions.map((item) => {
                   const active = category === item.value;
@@ -1729,13 +1759,13 @@ function DesktopFilterIsland({
                       key={item.value}
                       type="button"
                       onClick={() => setCategory(item.value)}
-                      className={`group/category flex min-h-[32px] w-full items-center justify-between border px-2.5 text-right backdrop-blur-sm transition-[background-color,border-color,color,transform] duration-200 ${
+                      className={`group/category flex min-h-11 w-full items-center justify-between  -[10px] border px-3 text-right backdrop-blur-sm transition-[background-color,border-color,color,transform] duration-200 ${
                         active
                           ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
                           : "border-transparent bg-transparent text-[var(--shop-muted)] hover:-translate-x-0.5 hover:border-[var(--shop-border)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                       }`}
                     >
-                      <span className="flex items-center gap-2.5 text-[10px] font-semibold uppercase tracking-[0.05em]">
+                      <span className="flex items-center gap-2.5 text-[10.5px] font-semibold tracking-[0.01em]">
                         <span
                           className={`block size-1 transition-colors ${
                             active
@@ -1753,27 +1783,41 @@ function DesktopFilterIsland({
                 })}
               </div>
             </IslandAccordion>
-            <IslandAccordion title={copy.filters.size}>
+            <IslandAccordion
+              title={copy.filters.size}
+              icon={<Ruler className="size-3.5" aria-hidden="true" />}
+            >
               <SizeSelector
                 options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </IslandAccordion>
-            <IslandAccordion title={copy.filters.color} defaultOpen>
+            <IslandAccordion
+              title={copy.filters.color}
+              icon={<Palette className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
               <ColorSelector
                 options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
             </IslandAccordion>
-            <IslandAccordion title={copy.filters.material}>
+            <IslandAccordion
+              title={copy.filters.material}
+              icon={<Layers className="size-3.5" aria-hidden="true" />}
+            >
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
             </IslandAccordion>
-            <IslandAccordion title={copy.filters.price} defaultOpen>
+            <IslandAccordion
+              title={copy.filters.price}
+              icon={<DollarSign className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
               <PriceSelector
                 value={maxPrice}
                 max={defaultMaxPrice}
@@ -1781,7 +1825,7 @@ function DesktopFilterIsland({
               />
             </IslandAccordion>
           </div>
-          <div className="relative z-10 flex items-center justify-between border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 py-3">
+          <div className="relative z-10 flex min-h-12 items-center justify-between border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-5 py-2.5">
             <div className="flex items-center gap-2">
               <span
                 className={`size-1.5 ${
@@ -1848,7 +1892,7 @@ function GlassSortControl({
   return (
     <div
       ref={rootRef}
-      className={`relative ${compact ? "min-w-0" : "min-w-[196px]"}`}
+      className={`relative ${compact ? "min-w-0" : "min-w-[210px]"}`}
     >
       <button
         type="button"
@@ -1856,7 +1900,9 @@ function GlassSortControl({
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
         className={`group/sort relative flex w-full items-center overflow-hidden border shadow-[0_9px_24px_-18px_rgba(11,11,11,0.34),inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-inset backdrop-blur-[18px] backdrop-saturate-150 transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 ${
-          compact ? "h-11 gap-2 px-3" : "h-10 gap-3 px-3.5"
+          compact
+            ? "h-12 gap-2.5  -[14px] px-3.5"
+            : "h-12 gap-3  -[12px] px-4"
         } ${
           dark
             ? open
@@ -1868,7 +1914,7 @@ function GlassSortControl({
         }`}
       >
         <span
-          className={`grid size-6 shrink-0 place-items-center border ${
+          className={`grid size-7 shrink-0 place-items-center  -[9px] border ${
             dark
               ? "border-white/10 bg-white/[0.08] text-white/72"
               : "border-[var(--shop-border)] bg-[var(--shop-surface-muted)] text-[var(--shop-muted)]"
@@ -1887,7 +1933,7 @@ function GlassSortControl({
             </span>
           )}
           <span
-            className={`${compact ? "text-[7px]" : "mt-0.5 text-[7.5px]"} block truncate font-semibold uppercase tracking-[0.10em] ${
+            className={`${compact ? "text-[9px]" : "mt-0.5 text-[9.5px]"} block truncate font-semibold tracking-[0.015em] ${
               dark ? "text-white/84" : "text-[var(--shop-text)]"
             }`}
           >
@@ -1912,7 +1958,7 @@ function GlassSortControl({
         role="listbox"
         aria-label={copy.sort.ariaLabel}
         aria-hidden={!open}
-        className={`absolute top-[calc(100%_+_8px)] z-[120] w-[228px] ${
+        className={`absolute top-[calc(100%_+_8px)] z-[120] w-[min(280px,calc(100vw_-_24px))] ${
           align === "right"
             ? "right-0 origin-top-right"
             : "left-0 origin-top-left"
@@ -1920,7 +1966,7 @@ function GlassSortControl({
       >
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border shadow-[0_26px_62px_-22px_rgba(11,11,11,0.42),inset_0_1px_0_rgba(255,255,255,0.30)] ring-1 ring-inset ${
+          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden  -[16px] border shadow-[0_24px_62px_-28px_rgba(11,11,11,0.38),inset_0_1px_0_rgba(255,255,255,0.50)] ring-1 ring-inset ${
             dark
               ? "border-white/22 ring-white/[0.06]"
               : "border-white/82 ring-black/[0.055]"
@@ -1929,9 +1975,8 @@ function GlassSortControl({
             background: dark
               ? "linear-gradient(145deg, rgba(19,19,19,0.76) 0%, rgba(6,6,6,0.72) 100%)"
               : "var(--shop-surface)",
-            backdropFilter: "blur(42px) saturate(145%)",
-            WebkitBackdropFilter: "blur(42px) saturate(145%)",
-            willChange: "opacity, backdrop-filter",
+            backdropFilter: "blur(18px) saturate(135%)",
+            WebkitBackdropFilter: "blur(18px) saturate(135%)",
           }}
         />
         <div
@@ -1940,19 +1985,19 @@ function GlassSortControl({
           }`}
         >
           <div
-            className={`border-b px-4 py-3 ${
+            className={`border-b px-4 py-3.5 ${
               dark ? "border-white/10" : "border-black/[0.06]"
             }`}
           >
             <p
-              className={`text-[6px] font-semibold uppercase tracking-[0.16em] ${
+              className={`text-[9px] font-semibold tracking-[0.02em] ${
                 dark ? "text-white/36" : "text-black/34"
               }`}
             >
               {copy.sort.menuTitle}
             </p>
           </div>
-          <div className="p-1.5">
+          <div className="space-y-1 p-2">
             {sortMenuOptions.map((opt) => {
               const sel = opt.value === value;
               return (
@@ -1965,7 +2010,7 @@ function GlassSortControl({
                     onChange(opt.value);
                     setOpen(false);
                   }}
-                  className={`group/option flex min-h-10 w-full items-center justify-between border px-3 text-right transition-[background-color,border-color,color,transform] duration-180 ${
+                  className={`group/option flex min-h-12 w-full items-center justify-between  -[10px] border px-3.5 text-right transition-[background-color,border-color,color,transform] duration-180 ${
                     dark
                       ? sel
                         ? "border-white/18 bg-white/14 text-white"
@@ -1975,11 +2020,11 @@ function GlassSortControl({
                         : "border-transparent text-[var(--shop-muted)] hover:-translate-x-0.5 hover:border-[var(--shop-border)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
                   }`}
                 >
-                  <span className="text-[7px] font-semibold uppercase tracking-[0.09em]">
+                  <span className="text-[10px] font-semibold tracking-[0.01em]">
                     {opt.label}
                   </span>
                   <span
-                    className={`grid size-5 place-items-center border transition-colors ${
+                    className={`grid size-6 place-items-center  -[7px] border transition-colors ${
                       sel
                         ? "border-[var(--shop-copper)] bg-[var(--shop-copper)] text-white"
                         : dark
@@ -2035,13 +2080,13 @@ function DesktopSortControl({
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative w-[150px] xl:w-[164px]">
+    <div ref={rootRef} className="relative w-[188px] xl:w-[205px]">
       <button
         type="button"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((state) => !state)}
-        className={`flex h-9 w-full items-center justify-between gap-3 border px-3 ${
+        className={`flex h-12 w-full items-center justify-between gap-3  -[12px] border px-3.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] ${
           isRtl ? "text-right" : "text-left"
         } transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black/15 ${
           open
@@ -2049,7 +2094,7 @@ function DesktopSortControl({
             : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-text)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)]"
         }`}
       >
-        <span className="truncate text-[9px] font-semibold tracking-[0.01em]">
+        <span className="truncate text-[10px] font-semibold tracking-[0.01em]">
           {current.label}
         </span>
         <ChevronDownIcon
@@ -2062,7 +2107,7 @@ function DesktopSortControl({
         role="listbox"
         aria-label={copy.sort.ariaLabel}
         aria-hidden={!open}
-        className={`absolute top-[calc(100%_+_7px)] z-[140] w-[210px] border border-[var(--shop-border)] bg-[var(--shop-surface)] p-1.5 shadow-[0_20px_55px_-24px_rgba(11,11,11,0.34)] ${
+        className={`absolute top-[calc(100%_+_8px)] z-[140] w-[250px]  -[16px] border border-black/[0.07] bg-[var(--shop-surface)] p-2 shadow-[0_24px_65px_-28px_rgba(11,11,11,0.40)] ${
           isRtl
             ? "left-0 origin-top-left text-right"
             : "right-0 origin-top-right text-left"
@@ -2082,9 +2127,9 @@ function DesktopSortControl({
                 onChange(option.value);
                 setOpen(false);
               }}
-              className={`flex min-h-9 w-full items-center justify-between px-3 ${
+              className={`flex min-h-11 w-full items-center justify-between  -[10px] px-3.5 ${
                 isRtl ? "text-right" : "text-left"
-              } text-[7px] font-semibold tracking-[0.02em] transition-colors ${
+              } text-[9.5px] font-semibold tracking-[0.01em] transition-colors ${
                 active
                   ? "bg-[var(--shop-copper-soft)] text-[var(--shop-text)] ring-1 ring-inset ring-[var(--shop-copper)]"
                   : "text-[var(--shop-muted)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -2106,27 +2151,34 @@ function DesktopSortControl({
 
 function IslandAccordion({
   title,
+  icon,
   children,
   defaultOpen = false,
 }: {
   title: string;
+  icon?: ReactNode;
   children: ReactNode;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-black/8 py-3 last:border-b-0">
+    <div className="border-b border-black/8 py-2 last:border-b-0">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex min-h-7 w-full items-center justify-between text-right"
+        className="flex min-h-11 w-full items-center justify-between  -[9px] px-1 text-right transition-colors hover:bg-black/[0.025]"
       >
-        <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-black/80">
-          {title}
+        <span className="flex items-center gap-2 text-[10px] font-semibold tracking-[0.02em] text-black/80">
+          {icon ? (
+            <span className="grid size-6 shrink-0 place-items-center text-[var(--shop-copper)]">
+              {icon}
+            </span>
+          ) : null}
+          <span>{title}</span>
         </span>
         <span
-          className={`text-[13px] font-light text-black/40 transition-transform duration-300 ${
+          className={`grid size-7 place-items-center  -full bg-black/[0.035] text-[15px] font-light text-black/45 transition-transform duration-300 ${
             open ? "rotate-45" : "rotate-0"
           }`}
         >
@@ -2139,7 +2191,7 @@ function IslandAccordion({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="pt-3">{children}</div>
+          <div className="pb-2 pt-2">{children}</div>
         </div>
       </div>
     </div>
@@ -2586,7 +2638,8 @@ function ProductCard({
     } catch (error) {
       if (error instanceof CommerceApiError && error.status === 401) return;
       toast.error(copy.cart.errorTitle, {
-        description: error instanceof Error ? error.message : copy.cart.errorFallback,
+        description:
+          error instanceof Error ? error.message : copy.cart.errorFallback,
       });
     }
   }
@@ -3421,6 +3474,7 @@ function MobileFilters({
   defaultMaxPrice,
   resetFilters,
   resultCount,
+  filterCount,
 }: {
   open: boolean;
   onClose: () => void;
@@ -3442,6 +3496,7 @@ function MobileFilters({
   defaultMaxPrice: number;
   resetFilters: () => void;
   resultCount: number;
+  filterCount: number;
 }) {
   const { copy, locale } = useShopI18n();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -3465,19 +3520,19 @@ function MobileFilters({
       <div
         aria-hidden="true"
         onClick={onClose}
-        className={`fixed inset-0 z-[1199] bg-black/35 transition-opacity duration-300 lg:hidden ${
+        className={`fixed inset-0 z-[1199] bg-black/[0.45] backdrop-blur-[2px] transition-opacity duration-300 lg:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
       <aside
         aria-hidden={!open}
-        className={`fixed inset-x-2 bottom-2 top-[84px] z-[1200] flex flex-col lg:hidden ${
+        className={`fixed inset-x-0 bottom-0 top-[78px] z-[1200] flex flex-col px-2 pb-2 lg:hidden ${
           open ? "pointer-events-auto" : "pointer-events-none"
         }`}
       >
         <div
           aria-hidden="true"
-          className={`pointer-events-none absolute inset-0 z-0 overflow-hidden border border-[var(--shop-border)] bg-[var(--shop-surface)] shadow-[0_28px_70px_-30px_rgba(35,31,32,0.38)] ring-1 ring-inset ring-black/[0.03] ${
+          className={`pointer-events-none absolute inset-x-2 bottom-2 top-0 z-0 overflow-hidden  -t-[24px]  -b-[16px] border border-black/[0.075] bg-[var(--shop-surface)] shadow-[0_32px_90px_-32px_rgba(35,31,32,0.48)] ring-1 ring-inset ring-black/[0.025] ${
             open ? "opacity-100" : "opacity-[0.001]"
           }`}
           style={{ background: "var(--shop-surface)" }}
@@ -3485,29 +3540,36 @@ function MobileFilters({
         <div
           className={`${open ? "visible" : "invisible"} relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden text-[var(--shop-text)]`}
         >
-          <div className="relative z-10 flex h-16 flex-none items-center justify-between border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 text-right">
+          <div className="relative z-10 mx-2 flex h-[72px] flex-none items-center justify-between  -t-[24px] border-b border-[var(--shop-border)] bg-[var(--shop-surface-muted)] px-4 text-right">
             <button
               type="button"
               aria-label={copy.filters.closeAriaLabel}
               onClick={onClose}
-              className="grid size-10 place-items-center border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
+              className="grid size-11 place-items-center  -[12px] border border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] transition-[background-color,border-color,color,transform] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-copper-soft)] hover:text-[var(--shop-copper-strong)] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--shop-copper-soft-strong)]"
             >
               <CloseIcon />
             </button>
             <div className="text-right">
-              <span className="block text-[11px] font-semibold uppercase tracking-[0.14em]">
+              <span className="block text-[13px] font-semibold tracking-[-0.01em]">
                 {copy.filters.filters}
               </span>
-              <span className="mt-1 block text-[8px] font-semibold uppercase tracking-[0.08em] text-[var(--shop-muted)]">
-                {formatTemplate(copy.filters.resultTemplate, {
-                  count: formatNumber(resultCount, locale),
-                })}
+              <span className="mt-1 flex items-center justify-end gap-2 text-[9px] font-medium text-[var(--shop-muted)]">
+                <span>
+                  {formatTemplate(copy.filters.resultTemplate, {
+                    count: formatNumber(resultCount, locale),
+                  })}
+                </span>
+                {filterCount > 0 ? (
+                  <span className="inline-flex min-h-5 items-center  -full bg-[var(--shop-copper-soft-strong)] px-2 text-[8px] font-bold tabular-nums text-[var(--shop-copper-strong)]">
+                    {formatNumber(filterCount, locale)}
+                  </span>
+                ) : null}
               </span>
             </div>
             <button
               type="button"
               onClick={resetFilters}
-              className="min-h-10 px-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--shop-copper)] transition-opacity active:opacity-60"
+              className="min-h-10  -[10px] px-2.5 text-[10px] font-semibold text-[var(--shop-copper)] transition-opacity active:opacity-60"
             >
               {copy.filters.clearShort}
             </button>
@@ -3515,11 +3577,15 @@ function MobileFilters({
           <div
             ref={scrollRef}
             data-lenis-prevent
-            className="relative z-10 flex-1 overflow-y-auto overscroll-contain px-4 pb-6 [scrollbar-color:rgb(193_84_39_/_0.42)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[var(--shop-copper)] [&::-webkit-scrollbar-track]:bg-transparent"
+            className="relative z-10 mx-2 flex-1 overflow-y-auto overscroll-contain px-3 pb-7 pt-2 [scrollbar-color:rgb(193_84_39_/_0.42)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:bg-[var(--shop-copper)] [&::-webkit-scrollbar-track]:bg-transparent"
             style={{ WebkitOverflowScrolling: "touch" }}
           >
-            <MobileFilterBlock title={copy.filters.category} defaultOpen>
-              <div className="grid grid-cols-2 gap-2 pt-3">
+            <MobileFilterBlock
+              title={copy.filters.category}
+              icon={<Tags className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
+              <div className="grid grid-cols-1 gap-2 pt-2 min-[410px]:grid-cols-2">
                 {categoryOptions.map((item) => {
                   const active = category === item.value;
                   return (
@@ -3527,7 +3593,7 @@ function MobileFilters({
                       key={item.value}
                       type="button"
                       onClick={() => setCategory(item.value)}
-                      className={`relative min-h-12 border px-3 text-right text-[9px] font-semibold uppercase tracking-[0.05em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
+                      className={`relative min-h-[50px]  -[12px] border px-3.5 text-right text-[10px] font-semibold tracking-[0.01em] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] backdrop-blur-md transition-[border-color,color,background-color,transform] active:scale-[0.985] ${
                         active
                           ? "border-[var(--shop-copper)] bg-[var(--shop-copper-soft)] text-[var(--shop-text)]"
                           : "border-[var(--shop-border)] bg-[var(--shop-surface)] text-[var(--shop-muted)] hover:border-[var(--shop-copper)] hover:bg-[var(--shop-surface-muted)] hover:text-[var(--shop-text)]"
@@ -3542,43 +3608,57 @@ function MobileFilters({
                 })}
               </div>
             </MobileFilterBlock>
-            <MobileFilterBlock title={copy.filters.size}>
+            <MobileFilterBlock
+              title={copy.filters.size}
+              icon={<Ruler className="size-3.5" aria-hidden="true" />}
+            >
               <SizeSelector
                 options={sizeOptions}
                 values={selectedSizes}
                 onChange={setSelectedSizes}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title={copy.filters.color} defaultOpen>
+            <MobileFilterBlock
+              title={copy.filters.color}
+              icon={<Palette className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
               <ColorSelector
                 options={colorOptions}
                 values={selectedColors}
                 onChange={setSelectedColors}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title={copy.filters.material}>
+            <MobileFilterBlock
+              title={copy.filters.material}
+              icon={<Layers className="size-3.5" aria-hidden="true" />}
+            >
               <MaterialSelector
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock title={copy.filters.price} defaultOpen>
+            <MobileFilterBlock
+              title={copy.filters.price}
+              icon={<DollarSign className="size-3.5" aria-hidden="true" />}
+              defaultOpen
+            >
               <PriceSelector
                 value={maxPrice}
                 max={defaultMaxPrice}
                 onChange={setMaxPrice}
               />
             </MobileFilterBlock>
-            <div className="flex min-h-[82px] items-center justify-between gap-3 border-b border-[var(--shop-border)] py-3 text-right">
+            <div className="my-2  -[14px] border border-[var(--shop-border)] bg-white/[0.58] p-3.5 text-right shadow-[inset_0_1px_0_rgba(255,255,255,0.78)]">
               <div>
-                <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--shop-text)]">
+                <span className="block text-[11px] font-semibold text-[var(--shop-text)]">
                   {copy.sort.label}
                 </span>
-                <span className="mt-1 block text-[8px] font-medium uppercase tracking-[0.07em] text-[var(--shop-muted)]">
+                <span className="mt-1 block text-[9px] font-medium leading-5 text-[var(--shop-muted)]">
                   {copy.sort.mobileDescription}
                 </span>
               </div>
-              <div className="w-[168px] max-w-[58vw]">
+              <div className="mt-3 w-full">
                 <GlassSortControl
                   value={sort}
                   onChange={setSort}
@@ -3588,7 +3668,7 @@ function MobileFilters({
               </div>
             </div>
           </div>
-          <div className="relative z-10 flex-none border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] p-3">
+          <div className="relative z-10 mx-2 flex-none  -b-[16px] border-t border-[var(--shop-border)] bg-[var(--shop-surface-muted)] p-3">
             <Button
               type="button"
               variant="black"
@@ -3609,27 +3689,34 @@ function MobileFilters({
 
 function MobileFilterBlock({
   title,
+  icon,
   defaultOpen = false,
   children,
 }: {
   title: string;
+  icon?: ReactNode;
   defaultOpen?: boolean;
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-[var(--shop-border)] py-5">
+    <div className="my-2 overflow-hidden  -[14px] border border-[var(--shop-border)] bg-white/[0.56] shadow-[inset_0_1px_0_rgba(255,255,255,0.76)]">
       <button
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between text-right"
+        className="flex min-h-[52px] w-full items-center justify-between px-3.5 text-right transition-colors active:bg-black/[0.025]"
       >
-        <span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[var(--shop-text)]">
-          {title}
+        <span className="flex items-center gap-2 text-[10.5px] font-semibold tracking-[0.01em] text-[var(--shop-text)]">
+          {icon ? (
+            <span className="grid size-7 shrink-0 place-items-center text-[var(--shop-copper)]">
+              {icon}
+            </span>
+          ) : null}
+          <span>{title}</span>
         </span>
         <span
-          className={`text-[14px] font-light text-[var(--shop-soft)] transition-transform duration-300 ${
+          className={`grid size-8 place-items-center  -full bg-black/[0.035] text-[16px] font-light text-[var(--shop-soft)] transition-transform duration-300 ${
             open ? "rotate-45" : "rotate-0"
           }`}
         >
@@ -3642,7 +3729,9 @@ function MobileFilterBlock({
         }`}
       >
         <div className="overflow-hidden">
-          <div className="pt-4">{children}</div>
+          <div className="border-t border-[var(--shop-border)] px-3.5 pb-4 pt-3">
+            {children}
+          </div>
         </div>
       </div>
     </div>
@@ -3674,7 +3763,7 @@ function SizeSelector({
     );
   }
   return (
-    <div className="grid grid-cols-4 gap-2">
+    <div className="grid grid-cols-3 gap-2 min-[390px]:grid-cols-4">
       {items.map((size) => {
         const sel = values.includes(size.id);
         return (
@@ -3683,7 +3772,7 @@ function SizeSelector({
             type="button"
             aria-pressed={sel}
             onClick={() => toggle(size.id)}
-            className={`min-h-9 border text-[8px] font-semibold transition-[background-color,border-color,color] ${
+            className={`min-h-11  -[10px] border px-2 text-[9.5px] font-semibold transition-[background-color,border-color,color] ${
               dark
                 ? sel
                   ? "border-white bg-white text-black"
@@ -3720,7 +3809,7 @@ function ColorSelector({
     );
   }
   return (
-    <div className="flex flex-wrap gap-2.5">
+    <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
       {items.map((color) => {
         const sel = values.includes(color.id);
         return (
@@ -3730,10 +3819,10 @@ function ColorSelector({
             aria-label={color.label}
             aria-pressed={sel}
             onClick={() => toggle(color.id)}
-            className="group/color flex flex-col items-center gap-1.5"
+            className="group/color flex min-w-0 flex-col items-center gap-2  -[10px] px-1 py-1.5 transition-colors hover:bg-black/[0.025]"
           >
             <span
-              className={`relative grid size-8 place-items-center border transition-[border-color,opacity] ${
+              className={`relative grid size-10 place-items-center  -[11px] border transition-[border-color,opacity,transform] group-active/color:scale-[0.97] ${
                 sel
                   ? dark
                     ? "border-white"
@@ -3744,7 +3833,7 @@ function ColorSelector({
               }`}
             >
               <span
-                className="block size-5"
+                className="block size-6  -[6px]"
                 style={{ background: color.value }}
               />
               {sel && (
@@ -3752,7 +3841,7 @@ function ColorSelector({
               )}
             </span>
             <span
-              className={`text-[6px] uppercase tracking-[0.06em] ${
+              className={`max-w-full truncate text-[8px] font-medium tracking-[0.01em] ${
                 dark
                   ? sel
                     ? "text-white"
@@ -3787,7 +3876,7 @@ function MaterialSelector({
     );
   }
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {MATERIAL_OPTIONS.map((mat) => {
         const sel = values.includes(mat.toLowerCase());
         return (
@@ -3796,10 +3885,10 @@ function MaterialSelector({
             type="button"
             aria-pressed={sel}
             onClick={() => toggle(mat)}
-            className="group flex min-h-8 w-full items-center gap-3 text-right"
+            className="group flex min-h-11 w-full items-center gap-3  -[10px] px-2 text-right transition-colors hover:bg-black/[0.025]"
           >
             <span
-              className={`grid size-[16px] flex-none place-items-center border transition-colors ${
+              className={`grid size-5 flex-none place-items-center  -[6px] border transition-colors ${
                 dark
                   ? "border-white/20 group-hover:border-white/40"
                   : "border-[var(--shop-border)] group-hover:border-[var(--shop-copper)]"
@@ -3812,7 +3901,7 @@ function MaterialSelector({
               )}
             </span>
             <span
-              className={`text-[8px] font-medium uppercase tracking-[0.07em] transition-colors ${
+              className={`text-[9.5px] font-medium tracking-[0.01em] transition-colors ${
                 dark
                   ? sel
                     ? "text-white"
@@ -3848,7 +3937,7 @@ function PriceSelector({
   const pct = (Math.min(value, safeMax) / safeMax) * 100;
   return (
     <div>
-      <div className="flex justify-between text-[7px] font-semibold uppercase tracking-[0.08em]">
+      <div className="flex justify-between text-[9px] font-semibold tabular-nums tracking-[0.01em]">
         <span className={dark ? "text-white/34" : "text-black/34"}>
           {money(min, "USD", locale)}
         </span>
@@ -3856,14 +3945,14 @@ function PriceSelector({
           {money(value, "USD", locale)}
         </span>
       </div>
-      <div className="relative mt-4 h-6">
+      <div className="relative mt-4 h-9">
         <div
-          className={`absolute right-0 top-1/2 h-[2px] w-full -translate-y-1/2 ${
+          className={`absolute right-0 top-1/2 h-[3px] w-full -translate-y-1/2 ${
             dark ? "bg-white/10" : "bg-black/10"
           }`}
         />
         <div
-          className="absolute right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[var(--shop-copper)]"
+          className="absolute right-0 top-1/2 h-[3px] -translate-y-1/2 bg-[var(--shop-copper)]"
           style={{ width: `${pct}%` }}
         />
         <input
@@ -3878,7 +3967,7 @@ function PriceSelector({
         />
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 size-3 translate-x-1/2 -translate-y-1/2 border border-[var(--shop-copper)] bg-[var(--shop-surface)]"
+          className="pointer-events-none absolute top-1/2 size-[18px] translate-x-1/2 -translate-y-1/2  -full border-2 border-[var(--shop-copper)] bg-[var(--shop-surface)] shadow-[0_2px_10px_rgba(35,31,32,0.14)]"
           style={{ right: `${pct}%` }}
         />
       </div>

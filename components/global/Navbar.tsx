@@ -1075,6 +1075,16 @@ export default function Navbar({
   const navbarShown = navbarVisible || navbarLockedOpen;
 
   const navbarFloating = scrolled && !menuMounted;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.navbarVisibility = navbarShown ? "visible" : "hidden";
+
+    return () => {
+      delete root.dataset.navbarVisibility;
+    };
+  }, [navbarShown]);
+
   const lightBreadcrumbSurface =
     commerceSurface ||
     pathnameWithoutLocale === "/shop" ||
