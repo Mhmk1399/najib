@@ -259,13 +259,7 @@ export async function DynamicIslandExperienceSections({
       style={themeVars}
       className="isolate bg-[var(--island-sections-black)] text-[var(--island-sections-white)]"
     >
-      {completeLookStory ? (
-        <CompleteTheLookSection
-          story={completeLookStory}
-          copy={copy}
-          locale={locale}
-        />
-      ) : null}
+      
 
       {occasionStories.length ? (
         <OccasionIntentSection

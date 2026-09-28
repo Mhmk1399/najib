@@ -55,6 +55,10 @@ function DirectionalArrowIcon({ locale }: { locale: Locale }) {
   );
 }
 
+function textOverlayGradientAngle(locale: Locale) {
+  return getLocaleDirection(locale) === "rtl" ? "270deg" : "90deg";
+}
+
 export function SubcategoryLandingPage({
   data,
   locale,
@@ -82,7 +86,7 @@ export function SubcategoryLandingPage({
 
       <SubcategoryProducts data={data} locale={locale} copy={copy} />
 
-      <SubcategoryFeature data={data} />
+      <SubcategoryFeature data={data} locale={locale} />
 
       <SubcategoryFinalCTA data={data} locale={locale} />
     </main>
@@ -111,6 +115,7 @@ function SubcategoryHero({
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",
 
           "--hero-desktop-position": hero.desktopImagePosition ?? "center",
+          "--category-text-gradient-angle": textOverlayGradientAngle(locale),
         } as CSSProperties
       }
       className="
@@ -153,7 +158,7 @@ function SubcategoryHero({
           inset-0
           -z-20
 
-          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
+          bg-[linear-gradient(var(--category-text-gradient-angle),rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.06)_0%,rgb(var(--category-black-rgb)/0.12)_38%,rgb(var(--category-black-rgb)/0.88)_100%)]
         "
@@ -862,7 +867,13 @@ function ProductCard({
   );
 }
 
-function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
+function SubcategoryFeature({
+  data,
+  locale,
+}: {
+  data: SubcategoryPageData;
+  locale: Locale;
+}) {
   const feature = data.feature;
 
   return (
@@ -876,6 +887,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
 
           "--feature-desktop-position":
             feature.desktopImagePosition ?? "center",
+          "--category-text-gradient-angle": textOverlayGradientAngle(locale),
         } as CSSProperties
       }
       className="
@@ -917,7 +929,7 @@ function SubcategoryFeature({ data }: { data: SubcategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
+          bg-[linear-gradient(var(--category-text-gradient-angle),rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.05)_0%,rgb(var(--category-black-rgb)/0.20)_40%,rgb(var(--category-black-rgb)/0.90)_100%)]
         "

@@ -57,6 +57,7 @@ export type DynamicFormProps<TValues extends DynamicFormValues> = {
   mapError?: DynamicFormErrorMapper;
   disabled?: boolean;
   className?: string;
+  resetKey?: string | number;
   onBusyChange?: (busy: boolean) => void;
 };
 
@@ -70,6 +71,7 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   mapError,
   disabled = false,
   className,
+  resetKey,
   onBusyChange,
 }: DynamicFormProps<TValues>) {
   const [values, setValues] = useState<TValues>(initialValues);
@@ -81,12 +83,25 @@ export function DynamicForm<TValues extends DynamicFormValues>({
   );
   const [uploadErrors, setUploadErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement | null>(null);
+  const resetKeyRef = useRef<string | number | undefined>(resetKey);
   const formBusy = submitting || pendingUploads.size > 0;
 
   useEffect(() => {
     onBusyChange?.(formBusy);
     return () => onBusyChange?.(false);
   }, [formBusy, onBusyChange]);
+
+  useEffect(() => {
+    if (resetKeyRef.current === resetKey) return;
+
+    resetKeyRef.current = resetKey;
+    setValues(initialValues);
+    setErrors({});
+    setFormError(null);
+    setSubmitting(false);
+    setPendingUploads(new Set());
+    setUploadErrors({});
+  }, [initialValues, resetKey]);
 
   const fieldsByName = useMemo(
     () => new Map(schema.fields.map((field) => [field.name, field])),
@@ -260,7 +275,7 @@ export function DynamicForm<TValues extends DynamicFormValues>({
       dir="rtl"
       noValidate
       onSubmit={submit}
-      className={cx("min-w-0 space-y-6 text-right", className)}
+      className={cx("admin-data-font min-w-0 space-y-6 text-right", className)}
     >
       {formError ? (
         <div

@@ -353,8 +353,6 @@ function ProductCard({
   copy: HomeCopy["productEditorial"];
   locale: Locale;
 }) {
-  const isRtl = getLocaleDirection(locale) === "rtl";
-
   return (
     <Link
       href={localizedHref(product.href, locale)}
@@ -417,26 +415,3 @@ function ProductCard({
 /* ==========================================================================
    ICON
 ============================================================================ */
-
-function ArrowIcon({ isRtl }: { isRtl: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className={`size-3.5 transition-transform duration-300 motion-reduce:transition-none ${
-        isRtl
-          ? "rotate-180 group-hover:-translate-x-0.5"
-          : "group-hover:translate-x-0.5"
-      }`}
-    >
-      <path
-        d="M2.5 8H13M9.5 4.5L13 8L9.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-    </svg>
-  );
-}

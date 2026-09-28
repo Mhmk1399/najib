@@ -273,20 +273,12 @@ export function PrivateAppointmentSection({
 
               text-white
 
-              md:text-[clamp(4rem,5vw,5.7rem)]
+              md:text-5xl
             "
           >
             <span>{copy.title}</span>
 
-            <span
-              className="
-                mt-[0.1em]
-
-                text-white/76
-              "
-            >
-              {copy.italicTitle}
-            </span>
+             
           </h2>
 
           {/* DESCRIPTION */}

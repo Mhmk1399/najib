@@ -13,7 +13,9 @@ typography:
     fontSize: "16px"
     lineHeight: "1.5"
   persian:
-    fontFamily: "var(--font-dana), Inter, sans-serif"
+    fontFamily: "var(--font-amiri), Inter, sans-serif"
+  admin:
+    fontFamily: "var(--font-estedad), Tahoma, Arial, sans-serif"
   display:
     fontFamily: "Georgia, Times New Roman, serif"
 rounded:

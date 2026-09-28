@@ -23,6 +23,17 @@
   --serif: Georgia, "Times New Roman", serif;
 }
 
+.admin-data-font {
+  font-family: var(--font-estedad), Tahoma, Arial, sans-serif;
+}
+
+.admin-data-font button,
+.admin-data-font input,
+.admin-data-font textarea,
+.admin-data-font select {
+  font-family: inherit;
+}
+
 /* Admin workspace shell: compact desktop rail with an overlay expansion. */
 .admin-workspace-shell {
   --admin-shell-canvas: #090909;

@@ -115,11 +115,11 @@ export default async function Page() {
       <PrivateAppointmentSection
         copy={appointmentCopy}
         locale={locale}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p7.webp"
         mobileImagePosition="70% center"
-        desktopImagePosition="center"
+        desktopImagePosition="top"
       />
-      <JournalPreviewSection copy={journalCopy} locale={locale} />
+      {/* <JournalPreviewSection copy={journalCopy} locale={locale} /> */}
       <FAQ
         locale={locale}
         eyebrow={copy.faq.eyebrow}

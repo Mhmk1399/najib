@@ -366,10 +366,10 @@ export const homeCopy: Record<Locale, HomeCopy> = {
         eyebrow: "راهنمای انتخاب",
 
         title:
-          "چند نقطه هوشمند برای داینامیک ایلند",
+          "استایل نجیب‌زاده از جزئیات ساخته می‌شود",
 
         description:
-          "هر تصویر این بخش یک context جدا دارد؛ با رسیدن کاربر به هر تصویر، ایلند محصولات و پیشنهادهای همان فضا را نمایش می‌دهد.",
+          "هر تصویر، روایتی برای پوشیدن دارد؛ جزئیات استایل و انتخاب‌های هماهنگ را ببینید و قطعه مناسب خود را پیدا کنید.",
 
         storyFallbackTitle: "انتخاب {number}",
 
@@ -719,10 +719,10 @@ export const homeCopy: Record<Locale, HomeCopy> = {
         eyebrow: "Selection Guide",
 
         title:
-          "Smart touchpoints for the Dynamic Island",
+          "A Najibzadeh look, built from considered details",
 
         description:
-          "Each image creates its own context. As you reach a new scene, the island surfaces products and recommendations connected to that setting.",
+          "Explore the pieces behind each look, from refined garments and accessories to the finishing touches chosen to complete it.",
 
         storyFallbackTitle:
           "Selection {number}",
@@ -1072,10 +1072,10 @@ Everything we create should feel personal, enduring, and complete without unnece
         eyebrow: "دليل الاختيار",
 
         title:
-          "نقاط ذكية للجزيرة الديناميكية",
+          "إطلالة نجيب زاده، مصممة من تفاصيل مدروسة",
 
         description:
-          "توفر كل صورة في هذا القسم سياقاً مختلفاً؛ ومع الوصول إلى كل مشهد، تعرض الجزيرة المنتجات والاقتراحات المرتبطة به.",
+          "اكتشف القطع التي تكمل كل إطلالة، من الملابس والإكسسوارات إلى التفاصيل النهائية المختارة بعناية.",
 
         storyFallbackTitle:
           "الاختيار {number}",
