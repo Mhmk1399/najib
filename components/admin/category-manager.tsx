@@ -1193,6 +1193,40 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
                 },
               }
             : undefined,
+          delete: {
+            enabled: canWrite,
+            title: (record) => `حذف دائمی ${fa(record.name)}`,
+            description: (record) => (
+              <>
+                {resource === "categories" ? "دسته" : "زیردسته"}{" "}
+                <strong>{fa(record.name)}</strong> به‌صورت دائمی حذف می‌شود.
+                {resource === "categories"
+                  ? " اگر زیردسته یا محصولی به آن متصل باشد، حذف انجام نمی‌شود."
+                  : " اگر محصولی به آن متصل باشد، حذف انجام نمی‌شود."}{" "}
+                این عملیات قابل بازگشت نیست.
+              </>
+            ),
+            dangerLevel: "hard",
+            confirmLabel: "حذف دائمی",
+            mutationFn: async ({ id }) => {
+              await fetchJson(`/api/catalog/${resource}/${id}`, {
+                method: "DELETE",
+              });
+            },
+            mapError: (error) =>
+              error instanceof Error
+                ? error.message
+                : `حذف ${resource === "categories" ? "دسته" : "زیردسته"} انجام نشد. دوباره تلاش کنید.`,
+            onSuccess: (record) => {
+              void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+              toast.success(
+                resource === "categories" ? "دسته حذف شد" : "زیردسته حذف شد",
+                {
+                  description: `${fa(record.name)} به‌صورت دائمی حذف شد.`,
+                },
+              );
+            },
+          },
           extraRowActions: [
             {
               id: "open-public-page",
@@ -1242,7 +1276,7 @@ export function CategoryManager({ canWrite }: { canWrite: boolean }) {
           create: createLabel,
           view: "مشاهده",
           edit: "ویرایش",
-          delete: "غیرفعال‌سازی",
+          delete: "حذف دائمی",
           actions: "عملیات",
           rowsPerPage: "تعداد در صفحه",
         }}

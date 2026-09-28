@@ -300,8 +300,56 @@ export class CatalogService {
         };
       }
 
+      if (resource === "categories") {
+        const category = await Category.findById(id)
+          .select({ _id: 1 })
+          .lean();
+        if (!category) notFound("categories record was not found");
+
+        const [subcategoryCount, productCount] = await Promise.all([
+          Subcategory.countDocuments({ categoryId: id }),
+          Product.countDocuments({ categoryId: id }),
+        ]);
+
+        if (subcategoryCount > 0 || productCount > 0) {
+          conflict(
+            "این دسته هنوز زیردسته یا محصول متصل دارد. ابتدا موارد وابسته را حذف یا به دسته دیگری منتقل کنید.",
+            { subcategoryCount, productCount },
+          );
+        }
+
+        const deleted = await Category.findByIdAndDelete(id).lean();
+        if (!deleted) notFound("categories record was not found");
+
+        return { id, deleted: true };
+      }
+
+      if (resource === "subcategories") {
+        const subcategory = await Subcategory.findById(id)
+          .select({ _id: 1 })
+          .lean();
+        if (!subcategory) notFound("subcategories record was not found");
+
+        const productCount = await Product.countDocuments({
+          subcategoryId: id,
+        });
+        if (productCount > 0) {
+          conflict(
+            "این زیردسته هنوز محصول متصل دارد. ابتدا محصولات را حذف یا به زیردسته دیگری منتقل کنید.",
+            { productCount },
+          );
+        }
+
+        const deleted = await Subcategory.findByIdAndDelete(id).lean();
+        if (!deleted) notFound("subcategories record was not found");
+
+        return { id, deleted: true };
+      }
+
       if (resource !== "collections") {
-        badRequest("Only product and collection records can be deleted from this endpoint");
+        badRequest(
+          "Only category, subcategory, product, and collection records can be deleted from this endpoint",
+        );
       }
 
       const existing = await Collection.findById(id).lean();
@@ -343,9 +391,7 @@ export class CatalogService {
       badRequest("Product subcategory does not belong to the selected category");
     }
 
-    const collectionIds = Array.isArray(input.collectionIds)
-      ? input.collectionIds.map(String)
-      : [];
+    const collectionIds = this.idList(input.collectionIds);
     if (collectionIds.length > 0) {
       const collectionCount = await Collection.countDocuments({ _id: { $in: collectionIds } });
       if (collectionCount !== new Set(collectionIds).size) {
@@ -353,9 +399,7 @@ export class CatalogService {
       }
     }
 
-    const colorIds = Array.isArray(input.colorIds)
-      ? input.colorIds.map(String)
-      : [];
+    const colorIds = this.idList(input.colorIds);
     if (input.status !== "archived" && colorIds.length === 0) {
       badRequest("At least one product color is required");
     }
@@ -366,9 +410,7 @@ export class CatalogService {
       }
     }
 
-    const sizeIds = Array.isArray(input.sizeIds)
-      ? input.sizeIds.map(String)
-      : [];
+    const sizeIds = this.idList(input.sizeIds);
     if (input.status !== "archived" && sizeIds.length === 0) {
       badRequest("At least one product size is required");
     }
@@ -380,9 +422,12 @@ export class CatalogService {
     }
 
     const imageIds = new Set<string>();
-    if (input.primaryImageId) imageIds.add(String(input.primaryImageId));
+    const primaryImageId = this.idValue(input.primaryImageId);
+    if (primaryImageId) imageIds.add(primaryImageId);
     if (Array.isArray(input.imageIds)) {
-      for (const imageId of input.imageIds) imageIds.add(String(imageId));
+      for (const imageId of this.idList(input.imageIds)) {
+        imageIds.add(imageId);
+      }
     }
     if (imageIds.size > 0) {
       const imageCount = await ImageAsset.countDocuments({ _id: { $in: [...imageIds] } });
@@ -456,10 +501,25 @@ export class CatalogService {
     );
   }
 
+  private idValue(value: unknown): string | null {
+    if (!value) return null;
+    if (typeof value === "string") return value.trim() || null;
+    if (value instanceof mongoose.Types.ObjectId) return value.toHexString();
+    if (typeof value === "object") {
+      const record = value as { _id?: unknown; id?: unknown };
+      return this.idValue(record._id ?? record.id);
+    }
+    return null;
+  }
+
   private idList(value: unknown): string[] {
-    return Array.isArray(value)
-      ? [...new Set(value.filter(Boolean).map(String))]
-      : [];
+    if (!Array.isArray(value)) return [];
+
+    const ids = value
+      .map((item) => this.idValue(item))
+      .filter((id): id is string => Boolean(id));
+
+    return [...new Set(ids)];
   }
 
   private async assertTaxonomyReferences(

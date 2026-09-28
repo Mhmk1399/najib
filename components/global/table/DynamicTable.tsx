@@ -2,6 +2,8 @@
 
 import {
   keepPreviousData,
+  type QueryClient,
+  type QueryKey,
   useMutation,
   useQuery,
   useQueryClient,
@@ -46,6 +48,7 @@ import type {
   DynamicFormValues,
   DynamicSortRule,
   DynamicTableLabels,
+  DynamicTableResult,
 } from "./types";
 import {
   compactFilters,
@@ -118,6 +121,114 @@ type ImagePreviewState = {
   src: string;
   alt: string;
 };
+
+function detailQueryKey(baseKey: readonly unknown[], id: string): QueryKey {
+  return [...baseKey, "detail", id];
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeRecord<TRecord>(current: unknown, next: TRecord): TRecord {
+  if (isObjectRecord(current) && isObjectRecord(next)) {
+    return { ...current, ...next } as TRecord;
+  }
+
+  return next;
+}
+
+function isTableResult<TRecord>(
+  value: unknown,
+): value is DynamicTableResult<TRecord> {
+  return isObjectRecord(value) && Array.isArray(value.items);
+}
+
+function patchRecordInResult<TRecord>(
+  result: DynamicTableResult<TRecord>,
+  record: TRecord,
+  getRowId: (record: TRecord) => string,
+) {
+  const nextId = getRowId(record);
+  let changed = false;
+  const items = result.items.map((item) => {
+    if (getRowId(item) !== nextId) return item;
+    changed = true;
+    return mergeRecord(item, record);
+  });
+
+  return changed ? { ...result, items } : result;
+}
+
+function removeRecordFromResult<TRecord>(
+  result: DynamicTableResult<TRecord>,
+  record: TRecord,
+  getRowId: (record: TRecord) => string,
+) {
+  const removedId = getRowId(record);
+  const items = result.items.filter((item) => getRowId(item) !== removedId);
+
+  if (items.length === result.items.length) return result;
+
+  return {
+    ...result,
+    items,
+    total: Math.max(0, result.total - (result.items.length - items.length)),
+  };
+}
+
+function patchRecordCaches<TRecord>(
+  queryClient: QueryClient,
+  baseKey: readonly unknown[],
+  record: TRecord,
+  getRowId: (record: TRecord) => string,
+) {
+  const id = getRowId(record);
+
+  queryClient.setQueryData(detailQueryKey(baseKey, id), (current: unknown) =>
+    mergeRecord(current, record),
+  );
+
+  for (const query of queryClient
+    .getQueryCache()
+    .findAll({ queryKey: baseKey })) {
+    const data = query.state.data;
+    if (!isTableResult<TRecord>(data)) continue;
+
+    queryClient.setQueryData(query.queryKey, (current: unknown) =>
+      isTableResult<TRecord>(current)
+        ? patchRecordInResult(current, record, getRowId)
+        : current,
+    );
+  }
+}
+
+function removeRecordCaches<TRecord>(
+  queryClient: QueryClient,
+  baseKey: readonly unknown[],
+  record: TRecord,
+  getRowId: (record: TRecord) => string,
+) {
+  const id = getRowId(record);
+
+  queryClient.removeQueries({
+    queryKey: detailQueryKey(baseKey, id),
+    exact: true,
+  });
+
+  for (const query of queryClient
+    .getQueryCache()
+    .findAll({ queryKey: baseKey })) {
+    const data = query.state.data;
+    if (!isTableResult<TRecord>(data)) continue;
+
+    queryClient.setQueryData(query.queryKey, (current: unknown) =>
+      isTableResult<TRecord>(current)
+        ? removeRecordFromResult(current, record, getRowId)
+        : current,
+    );
+  }
+}
 
 export function DynamicDataTable<
   TRecord,
@@ -571,7 +682,7 @@ export function DynamicDataTable<
       dir={direction}
       style={themeVars}
       className={cx(
-        "relative isolate min-w-0 w-full overflow-hidden rounded-[24px] border border-[var(--adt-border)] bg-[var(--adt-surface)] text-right text-[var(--adt-text)] shadow-[0_30px_90px_-64px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.025)] [&_img]:cursor-zoom-in",
+        "admin-data-font relative isolate min-w-0 w-full overflow-hidden rounded-[24px] border border-[var(--adt-border)] bg-[var(--adt-surface)] text-right text-[var(--adt-text)] shadow-[0_30px_90px_-64px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.025)] [&_img]:cursor-zoom-in",
         className,
       )}
       onClickCapture={handleImagePreviewClick}
@@ -919,19 +1030,50 @@ export function DynamicDataTable<
         getRowLabel={getRowLabel}
         locale={locale}
         labels={labels}
-        onMutated={async (kind) => {
+        onMutated={async (kind, record) => {
+          const recordId = record ? getRowId(record) : "";
+
+          await queryClient.cancelQueries({ queryKey: source.queryKey });
+
+          if (record) {
+            if (kind === "delete") {
+              removeRecordCaches(queryClient, source.queryKey, record, getRowId);
+            } else {
+              patchRecordCaches(queryClient, source.queryKey, record, getRowId);
+            }
+          }
+
           if (kind === "delete" && records.length === 1 && page > 1) {
             setPage((current) => Math.max(1, current - 1));
           }
+
           await queryClient.invalidateQueries({
             queryKey: source.queryKey,
             refetchType: "none",
           });
+
+          if (recordId && kind !== "delete") {
+            await queryClient.invalidateQueries({
+              queryKey: detailQueryKey(source.queryKey, recordId),
+              exact: true,
+              refetchType: "none",
+            });
+          }
+
           await queryClient.refetchQueries({
             queryKey,
             exact: true,
             type: "active",
           });
+
+          if (recordId && kind !== "delete") {
+            await queryClient.refetchQueries({
+              queryKey: detailQueryKey(source.queryKey, recordId),
+              exact: true,
+              type: "active",
+            });
+          }
+
           announce(
             kind === "create"
               ? "مورد جدید با موفقیت ایجاد شد."
@@ -1970,7 +2112,7 @@ function CrudDialogs<
   const activeId = activeRecord ? getRowId(activeRecord) : "";
 
   const detailQuery = useQuery({
-    queryKey: [...source.queryKey, "detail", activeId],
+    queryKey: detailQueryKey(source.queryKey, activeId),
     queryFn: ({ signal }) => {
       if (!activeRecord) throw new Error("No active record");
       if (!source.fetchOne) return Promise.resolve(activeRecord);
@@ -1980,8 +2122,8 @@ function CrudDialogs<
       activeRecord && (state.type === "view" || state.type === "edit"),
     ),
     initialData: source.fetchOne ? undefined : (activeRecord ?? undefined),
-    staleTime: Infinity,
-    gcTime: Infinity,
+    staleTime: source.fetchOne ? 0 : Infinity,
+    gcTime: source.fetchOne ? 5 * 60_000 : Infinity,
     refetchOnWindowFocus: false,
   });
 
@@ -2017,6 +2159,14 @@ function CrudDialogs<
   const rowLabel = activeRecord
     ? (getRowLabel?.(activeRecord) ?? getRowId(activeRecord))
     : "";
+  const editInitialValues =
+    state.type === "edit" && resolvedRecord && crud.edit
+      ? crud.edit.toInitialValues(resolvedRecord)
+      : null;
+  const editFormKey =
+    state.type === "edit" && resolvedRecord && editInitialValues
+      ? `${getRowId(resolvedRecord)}:${stableStringify(editInitialValues)}`
+      : "edit";
 
   return (
     <>
@@ -2099,11 +2249,12 @@ function CrudDialogs<
         >
           {state.type === "edit" ? (
             <DetailGate query={detailQuery} labels={labels}>
-              {resolvedRecord ? (
+              {resolvedRecord && editInitialValues ? (
                 <DynamicForm
-                  key={getRowId(resolvedRecord)}
+                  key={editFormKey}
                   schema={crud.edit.schema}
-                  initialValues={crud.edit.toInitialValues(resolvedRecord)}
+                  initialValues={editInitialValues}
+                  resetKey={editFormKey}
                   submitLabel={labels.editSave}
                   cancelLabel={labels.cancel}
                   mapError={crud.edit.mapError}
@@ -2302,7 +2453,7 @@ function ImagePreviewModal({
       role="dialog"
       aria-modal="true"
       aria-label={preview.alt || "پیش‌نمایش تصویر"}
-      className="fixed inset-0 z-[100000] grid place-items-center bg-black/[0.78] p-3 sm:p-6"
+      className="admin-data-font fixed inset-0 z-[100000] grid place-items-center bg-black/[0.78] p-3 sm:p-6"
       onMouseDown={(event) => {
         if (event.currentTarget === event.target) onClose();
       }}
@@ -2361,13 +2512,14 @@ function DetailGate({
 }: {
   query: {
     isLoading: boolean;
+    isFetching: boolean;
     isError: boolean;
     refetch: () => unknown;
   };
   labels: Required<DynamicTableLabels>;
   children: ReactNode;
 }) {
-  if (query.isLoading) {
+  if (query.isLoading || query.isFetching) {
     return (
       <div className="grid min-h-[240px] place-items-center text-[10px] text-[var(--adt-muted)]">
         <span className="inline-flex items-center gap-2">

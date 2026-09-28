@@ -15,7 +15,7 @@ export default function AdminLayout({
   children: ReactNode;
 }>) {
   return (
-    <div lang="fa" dir="rtl" className={estedad.className}>
+    <div lang="fa" dir="rtl" className={`${estedad.className} admin-data-font`}>
       <AdminQueryProvider>
         {children}
       </AdminQueryProvider>

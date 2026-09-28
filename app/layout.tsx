@@ -41,9 +41,9 @@ import {
   localizedOpenGraph,
   siteUrl,
 } from "@/lib/i18n/metadata";
- import { Aria } from "@/next-persian-fonts/Aria Family";
-import { Amiri } from "@/next-persian-fonts/amiri";
+import { Aria } from "@/next-persian-fonts/Aria Family";
 import { AmiriFont } from "@/next-persian-fonts/AmiriFont";
+import { estedad } from "@/next-persian-fonts/estedad";
  
 export const metadata: Metadata = {
   title: "Najibzadeh | Luxury Menswear & Tailoring",
@@ -126,7 +126,7 @@ export default async function RootLayout({
 
       <body
         dir={direction}
-        className={`antialiased ${fontClass} min-h-dvh`}
+        className={`${estedad.variable} antialiased ${fontClass} min-h-dvh`}
       >
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>

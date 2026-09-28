@@ -490,7 +490,7 @@ export function FloatingPanel({
           backgroundColor: palette.overlay,
           color: palette.text,
         }}
-        className="fixed inset-0 z-[1700] flex items-end bg-[var(--adt-overlay)] text-right text-[var(--adt-text)]"
+        className="admin-data-font fixed inset-0 z-[1700] flex items-end bg-[var(--adt-overlay)] text-right text-[var(--adt-text)]"
         role="presentation"
       >
         <button
@@ -545,7 +545,7 @@ export function FloatingPanel({
       data-lenis-prevent
       data-lenis-prevent-wheel
       className={cx(
-        "fixed z-[1700] max-h-[min(72vh,620px)] overflow-y-auto overflow-x-hidden rounded-[8px] border border-[var(--adt-border-strong)] bg-[var(--adt-surface-raised)] text-right text-[var(--adt-text)] shadow-[0_24px_70px_rgba(0,0,0,0.28)]",
+        "admin-data-font fixed z-[1700] max-h-[min(72vh,620px)] overflow-y-auto overflow-x-hidden rounded-[8px] border border-[var(--adt-border-strong)] bg-[var(--adt-surface-raised)] text-right text-[var(--adt-text)] shadow-[0_24px_70px_rgba(0,0,0,0.28)]",
         className,
       )}
       style={{

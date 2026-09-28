@@ -167,7 +167,7 @@ export function DynamicModal({
         backgroundColor: palette.overlay,
         color: palette.text,
       }}
-      className="fixed inset-0 z-[1600] flex items-end justify-center bg-[var(--adt-overlay)] text-right text-[var(--adt-text)] sm:items-center sm:p-4"
+      className="admin-data-font fixed inset-0 z-[1600] flex items-end justify-center bg-[var(--adt-overlay)] text-right text-[var(--adt-text)] sm:items-center sm:p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget && closeOnBackdrop && !busy) {
           onClose();

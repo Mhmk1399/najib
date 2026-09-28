@@ -58,6 +58,10 @@ function DirectionalArrowIcon({ locale }: { locale: Locale }) {
   );
 }
 
+function textOverlayGradientAngle(locale: Locale) {
+  return getLocaleDirection(locale) === "rtl" ? "270deg" : "90deg";
+}
+
 /* ==========================================================================
    PAGE
 ============================================================================ */
@@ -105,7 +109,7 @@ export function CategoryLandingPage({
           FEATURE
       ================================================================ */}
 
-      <CategoryFeature data={data} />
+      <CategoryFeature data={data} locale={locale} />
 
       {/* ===============================================================
           FINAL CTA
@@ -142,6 +146,7 @@ function CategoryHero({
           "--hero-mobile-position": hero.mobileImagePosition ?? "center",
 
           "--hero-desktop-position": hero.desktopImagePosition ?? "center",
+          "--category-text-gradient-angle": textOverlayGradientAngle(locale),
         } as CSSProperties
       }
       className="
@@ -192,7 +197,7 @@ function CategoryHero({
           inset-0
           -z-20
 
-          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
+          bg-[linear-gradient(var(--category-text-gradient-angle),rgb(var(--category-black-rgb)/0.92)_0%,rgb(var(--category-black-rgb)/0.64)_32%,rgb(var(--category-black-rgb)/0.12)_70%,rgb(var(--category-black-rgb)/0.10)_100%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.06)_0%,rgb(var(--category-black-rgb)/0.12)_38%,rgb(var(--category-black-rgb)/0.88)_100%)]
         "
@@ -409,7 +414,6 @@ function CategoryHero({
           variant="cream"
           size="md"
           icon={<DirectionalArrowIcon locale={locale} />}
-           
           target="_blank"
           aria-label={hero.action.label}
         >
@@ -669,25 +673,22 @@ function CategoryCollections({
           list-none
           grid-cols-1
 
-          gap-px
+          gap-1
 
-          bg-black/10
-
-          p-0
+          px-4
+          py-0
 
           sm:grid-cols-2
+          sm:gap-1
+          sm:px-8
 
+          lg:grid-cols-3
           lg:px-12
         "
       >
-        {data.subcategories.map((category, index) => (
+        {data.subcategories.map((category) => (
           <li key={category.id} className="min-w-0">
-            <CategoryCard
-              category={category}
-              copy={copy}
-              index={index}
-              locale={locale}
-            />
+            <CategoryCard category={category} locale={locale} />
           </li>
         ))}
       </ul>
@@ -724,14 +725,9 @@ function CategoryCollections({
 
 function CategoryCard({
   category,
-  copy,
-  index,
   locale,
 }: {
   category: CategorySubcategory;
-  copy: CatalogPageCopy;
-
-  index: number;
   locale: Locale;
 }) {
   const direction = getLocaleDirection(locale);
@@ -744,25 +740,20 @@ function CategoryCard({
       className="
         group
         block
-        h-full
-
         relative
         isolate
 
-        min-h-[430px]
+        aspect-[4/5]
+        w-full
 
         overflow-hidden
 
-        bg-[#111111]
-
-        sm:min-h-[500px]
-
-        lg:min-h-[560px]
+        bg-transparent
 
         focus-visible:outline-none
         focus-visible:ring-2
         focus-visible:ring-inset
-        focus-visible:ring-white
+        focus-visible:ring-[var(--category-copper)]
       "
     >
       <Image
@@ -771,8 +762,9 @@ function CategoryCard({
         fill
         loading="lazy"
         sizes="
-          (max-width: 639px) 100vw,
-          50vw
+          (max-width: 639px) calc(100vw - 32px),
+          (max-width: 1023px) calc(50vw - 40px),
+          min(31vw, 500px)
         "
         draggable={false}
         style={{
@@ -784,11 +776,11 @@ function CategoryCard({
           object-cover
 
           transition-transform
-          duration-[1000ms]
+          duration-[900ms]
 
           ease-[cubic-bezier(0.22,1,0.36,1)]
 
-          group-hover:scale-[1.035]
+          group-hover:scale-[1.025]
 
           motion-reduce:transform-none
           motion-reduce:transition-none
@@ -806,34 +798,16 @@ function CategoryCard({
           inset-0
           -z-20
 
-          bg-gradient-to-t
+          bg-[linear-gradient(180deg,transparent_42%,rgb(var(--category-black-rgb)/0.08)_58%,rgb(var(--category-black-rgb)/0.78)_100%)]
 
-          from-black/75
-          via-black/5
-          to-transparent
+          transition-opacity
+          duration-500
+
+          group-hover:opacity-95
+
+          motion-reduce:transition-none
         "
       />
-
-      {/* index */}
-
-      <span
-        aria-hidden="true"
-        className="
-          absolute
-
-          start-5
-          top-5
-
-          text-[6px]
-          font-medium
-
-          tracking-[0.18em]
-
-          text-white/35
-        "
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
 
       {/* bottom */}
 
@@ -850,66 +824,53 @@ function CategoryCard({
 
           gap-6
 
-          p-6
+          p-5
 
-          sm:p-7
+          sm:p-6
 
-          lg:p-8
+          lg:p-7
         "
       >
-        <div>
+        <div className="min-w-0">
           <h3
             className="
-               
+              text-2xl
 
-              text-[clamp(2.3rem,8vw,4rem)]
+              md:text-4xl
 
-              leading-[0.95]
-              tracking-[-0.045em]
+              lg:text-[clamp(1.7rem,2.15vw,2.5rem)]
+
+              leading-[1.05]
 
               text-white
+
+              drop-shadow-[0_3px_18px_rgb(var(--category-black-rgb)/0.38)]
             "
           >
             {category.title}
           </h3>
-
-          <span
-            className="
-              mt-3
-
-              inline-flex
-
-              items-center
-              gap-2
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.15em]
-
-              text-white/55
-            "
-          >
-            {copy.viewCollection}
-            <span aria-hidden="true">{direction === "rtl" ? "←" : "→"}</span>
-          </span>
         </div>
 
         <span
           className="
             grid
-            size-10
+            size-11
 
             shrink-0
             place-items-center
 
             border
-            border-white/30
+            border-white/45
+
+            bg-black/10
 
             text-white
 
+            backdrop-blur-[4px]
+
             transition-[background-color,color,border-color,transform]
+
+            duration-300
 
             rtl:group-hover:-translate-x-1
             ltr:group-hover:translate-x-1
@@ -930,7 +891,13 @@ function CategoryCard({
    FEATURE
 ============================================================================ */
 
-function CategoryFeature({ data }: { data: CategoryPageData }) {
+function CategoryFeature({
+  data,
+  locale,
+}: {
+  data: CategoryPageData;
+  locale: Locale;
+}) {
   const feature = data.feature;
 
   return (
@@ -944,6 +911,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
 
           "--feature-desktop-position":
             feature.desktopImagePosition ?? "center",
+          "--category-text-gradient-angle": textOverlayGradientAngle(locale),
         } as CSSProperties
       }
       className="
@@ -985,7 +953,7 @@ function CategoryFeature({ data }: { data: CategoryPageData }) {
           inset-0
           -z-20
 
-          bg-[linear-gradient(270deg,rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
+          bg-[linear-gradient(var(--category-text-gradient-angle),rgb(var(--category-black-rgb)/0.94)_0%,rgb(var(--category-black-rgb)/0.70)_40%,rgb(var(--category-black-rgb)/0.12)_75%)]
 
           max-md:bg-[linear-gradient(180deg,rgb(var(--category-black-rgb)/0.05)_0%,rgb(var(--category-black-rgb)/0.20)_40%,rgb(var(--category-black-rgb)/0.90)_100%)]
         "

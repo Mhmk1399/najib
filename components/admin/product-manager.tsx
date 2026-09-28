@@ -194,11 +194,42 @@ function referenceLabel(item: ReferenceItem) {
   return label === "—" ? (item.code ?? item.slug ?? item._id) : label;
 }
 
+function referenceId(value: unknown) {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "object") {
+    const record = value as { _id?: unknown; id?: unknown };
+    return referenceId(record._id ?? record.id);
+  }
+  return "";
+}
+
+function uniqueReferenceIds(value: unknown) {
+  const values = Array.isArray(value) ? value : [];
+  return Array.from(new Set(values.map(referenceId).filter(Boolean)));
+}
+
+function filterKnownReferenceIds(
+  value: unknown,
+  knownIds?: ReadonlySet<string>,
+) {
+  const ids = uniqueReferenceIds(value);
+  return knownIds ? ids.filter((id) => knownIds.has(id)) : ids;
+}
+
 function joinedReferenceLabels(
   ids: string[] | undefined,
   names: Map<string, string>,
 ) {
-  return ids?.length ? ids.map((id) => names.get(id) ?? id).join("، ") : "—";
+  const labels = uniqueReferenceIds(ids)
+    .map((id) => names.get(id))
+    .filter((label): label is string => Boolean(label));
+
+  if (ids?.length && labels.length < ids.length) {
+    labels.push("نامعتبر/حذف‌شده");
+  }
+
+  return labels.length ? Array.from(new Set(labels)).join("، ") : "—";
 }
 
 function slugify(value: string) {
@@ -301,16 +332,26 @@ function uniqueImageIds(values: ProductFormValues) {
     .slice(0, 12);
 }
 
-function productToForm(product: Product): ProductFormValues {
+function productToForm(
+  product: Product,
+  referenceIds?: {
+    collectionIds?: ReadonlySet<string>;
+    colorIds?: ReadonlySet<string>;
+    sizeIds?: ReadonlySet<string>;
+  },
+): ProductFormValues {
   return {
     name: product.name,
     slug: product.slug,
     description: product.description,
     categoryId: product.categoryId,
     subcategoryId: product.subcategoryId,
-    collectionIds: product.collectionIds ?? [],
-    colorIds: product.colorIds ?? [],
-    sizeIds: product.sizeIds ?? [],
+    collectionIds: filterKnownReferenceIds(
+      product.collectionIds,
+      referenceIds?.collectionIds,
+    ),
+    colorIds: filterKnownReferenceIds(product.colorIds, referenceIds?.colorIds),
+    sizeIds: filterKnownReferenceIds(product.sizeIds, referenceIds?.sizeIds),
     priceIrr:
       product.priceIrrMinor ??
       (product.currency === "IRR" ? product.basePriceMinor : null),
@@ -350,16 +391,26 @@ function cleanLocalized(value?: LocalizedText | null) {
   return trimLocalized(value ?? emptyLocalizedText());
 }
 
-function formPayload(values: ProductFormValues) {
+function formPayload(
+  values: ProductFormValues,
+  referenceIds?: {
+    collectionIds?: ReadonlySet<string>;
+    colorIds?: ReadonlySet<string>;
+    sizeIds?: ReadonlySet<string>;
+  },
+) {
   return {
     name: cleanLocalized(values.name),
     slug: slugify(values.slug),
     description: cleanLocalized(values.description),
     categoryId: values.categoryId,
     subcategoryId: values.subcategoryId,
-    collectionIds: values.collectionIds,
-    colorIds: values.colorIds,
-    sizeIds: values.sizeIds,
+    collectionIds: filterKnownReferenceIds(
+      values.collectionIds,
+      referenceIds?.collectionIds,
+    ),
+    colorIds: filterKnownReferenceIds(values.colorIds, referenceIds?.colorIds),
+    sizeIds: filterKnownReferenceIds(values.sizeIds, referenceIds?.sizeIds),
     basePriceMinor: Math.round(Number(values.priceIrr ?? 0)),
     priceIrrMinor: Math.round(Number(values.priceIrr ?? 0)),
     priceUsdMinor: Math.round(Number(values.priceUsd ?? 0) * 100),
@@ -852,7 +903,7 @@ export function ProductManager({
     queryKey: ["catalog", "sizes", "options"],
     queryFn: () =>
       fetchJson<ListResponse<ReferenceItem>>(
-        "/api/catalog/sizes?limit=100&isActive=true",
+        "/api/catalog/sizes?limit=100",
       ),
     enabled: canRead,
   });
@@ -961,6 +1012,15 @@ export function ProductManager({
   const sizeOptions = useMemo<DataSelectOption[]>(
     () => sizes.map(referenceOption),
     [sizes],
+  );
+
+  const productReferenceIds = useMemo(
+    () => ({
+      collectionIds: new Set(collections.map((item) => item._id)),
+      colorIds: new Set(colors.map((item) => item._id)),
+      sizeIds: new Set(sizes.map((item) => item._id)),
+    }),
+    [collections, colors, sizes],
   );
 
   const imageOptions = useMemo<DataSelectOption[]>(
@@ -1349,11 +1409,12 @@ export function ProductManager({
             description:
               "تغییرات محصول، تصاویر و ویژگی‌ها بعد از ذخیره روی کاتالوگ اعمال می‌شود.",
             schema,
-            toInitialValues: productToForm,
+            toInitialValues: (record) =>
+              productToForm(record, productReferenceIds),
             mutationFn: async ({ id, values }) =>
               fetchJson<Product>(`/api/catalog/products/${id}`, {
                 method: "PATCH",
-                body: JSON.stringify(formPayload(values)),
+                body: JSON.stringify(formPayload(values, productReferenceIds)),
               }),
             mapError: mapFormError,
             onSuccess: (record) => {

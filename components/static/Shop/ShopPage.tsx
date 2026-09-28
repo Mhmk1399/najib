@@ -1146,7 +1146,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                       </div>
                     </DesktopToolbarPopover>
 
-                    <DesktopToolbarPopover
+                    {/* <DesktopToolbarPopover
                       label={copy.filters.material}
                       icon={<Layers className="size-3.5" aria-hidden="true" />}
                       active={selectedMaterials.length > 0}
@@ -1159,7 +1159,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
                           onChange={setSelectedMaterials}
                         />
                       </div>
-                    </DesktopToolbarPopover>
+                    </DesktopToolbarPopover> */}
 
                     <DesktopToolbarPopover
                       label={copy.filters.collection}
@@ -1804,7 +1804,7 @@ function DesktopFilterIsland({
                 onChange={setSelectedColors}
               />
             </IslandAccordion>
-            <IslandAccordion
+            {/* <IslandAccordion
               title={copy.filters.material}
               icon={<Layers className="size-3.5" aria-hidden="true" />}
             >
@@ -1812,7 +1812,7 @@ function DesktopFilterIsland({
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
-            </IslandAccordion>
+            </IslandAccordion> */}
             <IslandAccordion
               title={copy.filters.price}
               icon={<DollarSign className="size-3.5" aria-hidden="true" />}
@@ -1900,9 +1900,7 @@ function GlassSortControl({
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
         className={`group/sort relative flex w-full items-center overflow-hidden border shadow-[0_9px_24px_-18px_rgba(11,11,11,0.34),inset_0_1px_0_rgba(255,255,255,0.74)] ring-1 ring-inset backdrop-blur-[18px] backdrop-saturate-150 transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:outline-none focus-visible:ring-2 ${
-          compact
-            ? "h-12 gap-2.5  -[14px] px-3.5"
-            : "h-12 gap-3  -[12px] px-4"
+          compact ? "h-12 gap-2.5   px-3.5" : "h-12 gap-3    px-4"
         } ${
           dark
             ? open
@@ -2721,7 +2719,7 @@ function ProductCard({
       className={`group/product relative isolate min-w-0 overflow-hidden bg-[#0B0B0B] [contain:paint] ${
         compact
           ? "aspect-[3/4]"
-          : "aspect-[4/5] sm:aspect-[4/3] lg:aspect-[1.4/1]"
+          : "aspect-[4/5] sm:aspect-[4/3] lg:aspect-[1/1]"
       }`}
     >
       {/* Main product image */}
@@ -2736,7 +2734,8 @@ function ProductCard({
           key={activeImage.src}
           src={activeImage.src}
           alt={activeImage.alt ?? product.imageAlt ?? product.title}
-          fill
+          width={2000}
+          height={2000}
           preload={preload}
           sizes={compact ? "100vw" : "50vw"}
           draggable={false}
@@ -3629,7 +3628,7 @@ function MobileFilters({
                 onChange={setSelectedColors}
               />
             </MobileFilterBlock>
-            <MobileFilterBlock
+            {/* <MobileFilterBlock
               title={copy.filters.material}
               icon={<Layers className="size-3.5" aria-hidden="true" />}
             >
@@ -3637,7 +3636,7 @@ function MobileFilters({
                 values={selectedMaterials}
                 onChange={setSelectedMaterials}
               />
-            </MobileFilterBlock>
+            </MobileFilterBlock> */}
             <MobileFilterBlock
               title={copy.filters.price}
               icon={<DollarSign className="size-3.5" aria-hidden="true" />}

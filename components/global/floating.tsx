@@ -1,15 +1,109 @@
 "use client";
 
-import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import { usePathname } from "next/navigation";
 
-import { Button } from "@/components/ui/Button";
-import { brandColors, fontTokens } from "@/theme/theme-colors";
-import { usePathname } from "next/dist/client/components/navigation";
+import {
+  getHtmlLang,
+  getLocaleDirection,
+  type Locale,
+} from "@/lib/i18n/config";
+import { getLocaleFromPathname, splitLocalePathname } from "@/lib/i18n/routes";
+import { shellCopy } from "@/lib/i18n/shell-copy";
+import { brandColors } from "@/theme/theme-colors";
 
 type FloatingContactDockProps = {
   phone: string;
   whatsapp: string;
   location: string;
+};
+
+type ContactDockCopy = {
+  eyebrow: string;
+  trigger: string;
+  openAria: string;
+  close: string;
+  closeAria: string;
+  panelAria: string;
+  actionsAria: string;
+  title: string;
+  description: string;
+  call: string;
+  callDetail: string;
+  whatsapp: string;
+  whatsappDetail: string;
+  location: string;
+  locationDetail: string;
+  newWindow: string;
+};
+
+const CONTACT_DOCK_COPY: Record<Locale, ContactDockCopy> = {
+  fa: {
+    eyebrow: "خدمات اختصاصی",
+    trigger: "ارتباط با ما",
+    openAria: "باز کردن راه‌های ارتباطی با نجیب‌زاده",
+    close: "بستن",
+    closeAria: "بستن راه‌های ارتباطی",
+    panelAria: "راه‌های ارتباطی نجیب‌زاده",
+    actionsAria: "گزینه‌های تماس",
+    title: "چطور می‌توانیم همراهتان باشیم؟",
+    description:
+      "برای تماس مستقیم، گفت‌وگو در واتساپ یا مشاهده موقعیت، مسیر دلخواهتان را انتخاب کنید.",
+    call: "تماس تلفنی",
+    callDetail: "ارتباط مستقیم با پشتیبانی",
+    whatsapp: "واتساپ",
+    whatsappDetail: "گفت‌وگوی مستقیم با تیم نجیب‌زاده",
+    location: "موقعیت ما",
+    locationDetail: "باز کردن مسیر در نقشه",
+    newWindow: "در پنجره جدید باز می‌شود",
+  },
+  en: {
+    eyebrow: "Private client care",
+    trigger: "Client care",
+    openAria: "Open Najibzadeh contact options",
+    close: "Close",
+    closeAria: "Close contact options",
+    panelAria: "Najibzadeh contact options",
+    actionsAria: "Contact options",
+    title: "How may we assist you?",
+    description:
+      "Choose the most convenient way to call, message us on WhatsApp, or find our location.",
+    call: "Call",
+    callDetail: "Speak directly with client care",
+    whatsapp: "WhatsApp",
+    whatsappDetail: "Message the Najibzadeh team directly",
+    location: "Location",
+    locationDetail: "Open directions in Maps",
+    newWindow: "Opens in a new window",
+  },
+  ar: {
+    eyebrow: "خدمة العملاء الخاصة",
+    trigger: "تواصل معنا",
+    openAria: "فتح خيارات التواصل مع نجيب زاده",
+    close: "إغلاق",
+    closeAria: "إغلاق خيارات التواصل",
+    panelAria: "خيارات التواصل مع نجيب زاده",
+    actionsAria: "خيارات التواصل",
+    title: "كيف يمكننا مساعدتك؟",
+    description:
+      "اختر الطريقة الأنسب للاتصال أو مراسلتنا عبر واتساب أو فتح موقعنا على الخريطة.",
+    call: "اتصال",
+    callDetail: "تواصل مباشرة مع خدمة العملاء",
+    whatsapp: "واتساب",
+    whatsappDetail: "راسل فريق نجيب زاده مباشرة",
+    location: "الموقع",
+    locationDetail: "فتح الاتجاهات على الخريطة",
+    newWindow: "يفتح في نافذة جديدة",
+  },
 };
 
 function normalizePhone(value: string) {
@@ -20,6 +114,10 @@ function normalizeWhatsApp(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function FloatingContactDock({
   phone,
   whatsapp,
@@ -28,10 +126,22 @@ export default function FloatingContactDock({
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstActionRef = useRef<HTMLAnchorElement>(null);
   const reactId = useId();
-  const pathName = usePathname();
+  const pathname = usePathname();
+
+  const locale = getLocaleFromPathname(pathname);
+  const direction = getLocaleDirection(locale);
+  const htmlLang = getHtmlLang(locale);
+  const copy = CONTACT_DOCK_COPY[locale];
+  const brandName = shellCopy[locale].brandName;
+  const pathnameWithoutLocale = splitLocalePathname(
+    pathname ?? "/",
+  ).pathnameWithoutLocale;
 
   const panelId = `${reactId.replace(/:/g, "")}-contact-dock`;
+  const panelTitleId = `${panelId}-title`;
+  const panelDescriptionId = `${panelId}-description`;
   const telHref = `tel:${normalizePhone(phone)}`;
   const whatsappHref = `https://wa.me/${normalizeWhatsApp(whatsapp)}`;
 
@@ -40,6 +150,33 @@ export default function FloatingContactDock({
     "--contact-cream": brandColors.cream.hex,
     "--contact-copper": brandColors.copper.hex,
   } as CSSProperties;
+
+  const closeDock = useCallback((restoreFocus = false) => {
+    setOpen(false);
+
+    if (!restoreFocus) return;
+
+    requestAnimationFrame(() => {
+      triggerRef.current?.focus();
+    });
+  }, []);
+
+  const openDock = useCallback(() => {
+    setOpen(true);
+
+    requestAnimationFrame(() => {
+      firstActionRef.current?.focus();
+    });
+  }, []);
+
+  const toggleDock = useCallback(() => {
+    if (open) {
+      closeDock(false);
+      return;
+    }
+
+    openDock();
+  }, [closeDock, open, openDock]);
 
   useEffect(() => {
     if (!open) return;
@@ -50,14 +187,14 @@ export default function FloatingContactDock({
       if (!(target instanceof Node)) return;
       if (rootRef.current?.contains(target)) return;
 
-      setOpen(false);
+      closeDock(false);
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
 
-      setOpen(false);
-      triggerRef.current?.focus();
+      event.preventDefault();
+      closeDock(true);
     };
 
     document.addEventListener("pointerdown", onPointerDown, true);
@@ -67,228 +204,355 @@ export default function FloatingContactDock({
       document.removeEventListener("pointerdown", onPointerDown, true);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [open]);
+  }, [closeDock, open]);
+
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname]);
+
   if (
-    pathName === "/login" ||
-    pathName === "/signup" ||
-    pathName.startsWith("/admin")
+    pathnameWithoutLocale === "/login" ||
+    pathnameWithoutLocale === "/signup" ||
+    pathnameWithoutLocale.startsWith("/admin")
   ) {
     return null;
   }
+
   return (
     <div
       ref={rootRef}
-      dir="ltr"
-      style={{
-        ...themeVars,
-        fontFamily: fontTokens.english,
-      }}
+      dir={direction}
+      lang={htmlLang}
+      style={themeVars}
       className="pointer-events-none fixed bottom-[max(14px,env(safe-area-inset-bottom))] right-[max(14px,env(safe-area-inset-right))] z-[140] sm:bottom-[max(20px,env(safe-area-inset-bottom))] sm:right-[max(20px,env(safe-area-inset-right))]"
     >
-      {open && (
-        <section
-          id={panelId}
-          role="dialog"
-          aria-label="Contact Najibzadeh"
-          className="pointer-events-auto absolute bottom-[52px] right-0 w-[min(272px,calc(100vw-28px))] overflow-hidden border border-white/[0.13] bg-[#0B0B0B]/[0.90] text-white shadow-[0_16px_46px_rgba(0,0,0,0.22)] supports-[backdrop-filter]:bg-[#0B0B0B]/[0.80] supports-[backdrop-filter]:backdrop-blur-[8px] supports-[backdrop-filter]:backdrop-saturate-[1.04] motion-safe:animate-[contactDockIn_140ms_ease-out]"
-        >
-          <style>{`
-            @keyframes contactDockIn {
-              from { opacity: 0; transform: translateY(6px); }
-              to { opacity: 1; transform: translateY(0); }
-            }
-          `}</style>
+      <section
+        id={panelId}
+        role="dialog"
+        aria-labelledby={panelTitleId}
+        aria-describedby={panelDescriptionId}
+        aria-hidden={!open}
+        className={cx(
+          "pointer-events-auto absolute bottom-[62px] right-0 isolate w-[min(354px,calc(100vw-28px))] overflow-hidden rounded-[24px] border border-white/[0.10] bg-[#0B0A09]/[0.97] text-[var(--contact-cream)]",
+          "shadow-[0_22px_60px_rgba(0,0,0,0.24),0_6px_20px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.08)]",
+          "supports-[backdrop-filter]:bg-[#0B0A09]/[0.88] supports-[backdrop-filter]:backdrop-blur-[14px] supports-[backdrop-filter]:backdrop-saturate-[130%]",
+          "origin-bottom-right transform-gpu transition-[opacity,transform,visibility] duration-[220ms] ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none",
+          open
+            ? "visible translate-y-0 scale-100 opacity-100"
+            : "invisible pointer-events-none translate-y-2 scale-[0.985] opacity-0",
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[#D1A170]/80 to-transparent"
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_12%_0%,rgba(188,132,82,0.14),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.025),transparent_34%)]"
+        />
 
-          <div className="flex h-10 items-center justify-between border-b border-white/[0.10] px-3.5">
-            <span className="text-[7px] font-semibold uppercase tracking-[0.22em] text-white/85">
-              Client Care
-            </span>
+        <header className="flex items-start gap-4 border-b border-white/[0.085] px-5 pb-4 pt-5 sm:px-5.5">
+          <span
+            aria-hidden="true"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-white/[0.11] bg-white/[0.045] text-[var(--contact-cream)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+          >
+            <ConciergeIcon />
+          </span>
 
-            <span className="h-px w-8 bg-[var(--contact-copper)]/70" />
+          <div className="min-w-0 flex-1 text-start">
+            <div className="flex items-center gap-2.5">
+              <span className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#D0A06F]">
+                {copy.eyebrow}
+              </span>
+              <span className="h-px w-6 bg-[#D0A06F]/55" aria-hidden="true" />
+            </div>
+
+            <h2
+              id={panelTitleId}
+              className="mt-2 text-[17px] font-semibold leading-[1.45] tracking-[-0.018em] text-white sm:text-[18px]"
+            >
+              {copy.title}
+            </h2>
+
+            <p
+              id={panelDescriptionId}
+              className="mt-1.5 max-w-[260px] text-[10px] leading-5 text-white/48 sm:text-[10.5px]"
+            >
+              {copy.description}
+            </p>
           </div>
 
-          <nav aria-label="Contact options">
+          <button
+            type="button"
+            aria-label={copy.closeAria}
+            title={copy.close}
+            onClick={() => closeDock(true)}
+            className="grid size-9 shrink-0 cursor-pointer place-items-center rounded-full border border-white/[0.10] bg-white/[0.035] text-white/68 transition-[border-color,background-color,color,transform] duration-200 hover:-translate-y-px hover:border-[#D0A06F]/55 hover:bg-white/[0.07] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D0A06F]/70 motion-reduce:transform-none [&>svg]:size-[15px]"
+          >
+            <CloseIcon />
+          </button>
+        </header>
+
+        <nav aria-label={copy.actionsAria} className="p-2.5">
+          <div className="grid gap-1.5">
             <ContactAction
+              actionRef={firstActionRef}
               href={telHref}
-              label="Call"
-              detail={phone}
-              icon={<CallBrandIcon />}
-              onSelect={() => setOpen(false)}
+              index="01"
+              label={copy.call}
+              detail={phone || copy.callDetail}
+              secondaryDetail={phone ? copy.callDetail : undefined}
+              icon={<CallIcon />}
+              direction={direction}
+              onSelect={() => closeDock(false)}
             />
 
             <ContactAction
               href={whatsappHref}
-              label="WhatsApp"
-              detail="Message us directly"
-              icon={<WhatsAppBrandIcon />}
+              index="02"
+              label={copy.whatsapp}
+              detail={copy.whatsappDetail}
+              secondaryDetail={copy.newWindow}
+              icon={<WhatsAppIcon />}
+              direction={direction}
               target="_blank"
               rel="noopener noreferrer"
-              onSelect={() => setOpen(false)}
+              onSelect={() => closeDock(false)}
             />
 
             <ContactAction
               href={location}
-              label="Location"
-              detail="Open in Maps"
-              icon={<MapsBrandIcon />}
+              index="03"
+              label={copy.location}
+              detail={copy.locationDetail}
+              secondaryDetail={copy.newWindow}
+              icon={<LocationIcon />}
+              direction={direction}
               target="_blank"
               rel="noopener noreferrer"
-              onSelect={() => setOpen(false)}
-              last
+              onSelect={() => closeDock(false)}
             />
-          </nav>
-        </section>
-      )}
+          </div>
+        </nav>
+
+        <div className="flex items-center justify-between gap-4 border-t border-white/[0.075] px-5 py-3.5 text-start">
+          <span className="text-[7px] font-semibold uppercase tracking-[0.17em] text-white/30">
+            {brandName}
+          </span>
+          <span className="flex items-center gap-2 text-[7px] text-white/28">
+            <span
+              className="size-1 rounded-full bg-[#D0A06F]"
+              aria-hidden="true"
+            />
+            {copy.trigger}
+          </span>
+        </div>
+      </section>
 
       <div className="pointer-events-auto flex justify-end">
-        <Button
+        <button
+          ref={triggerRef}
           type="button"
-          variant="black"
-          size="md"
-          iconOnly
-          aria-label={open ? "Close contact options" : "Open contact options"}
+          aria-label={open ? copy.closeAria : copy.openAria}
           aria-expanded={open}
           aria-controls={panelId}
-          onClick={() => setOpen((current) => !current)}
-          className={[
-            "!size-11 !border-white/[0.16] !bg-[#0B0B0B]/[0.90] !p-0 !text-white",
-            "!shadow-[0_10px_28px_rgba(0,0,0,0.18)]",
-            "supports-[backdrop-filter]:!bg-[#0B0B0B]/[0.82]",
-            "supports-[backdrop-filter]:!backdrop-blur-[6px]",
-            "hover:!border-white/[0.28] hover:!bg-[#0B0B0B] hover:!text-white",
-            "active:!translate-y-px",
-            open
-              ? "!border-[var(--contact-copper)]/70 !text-[var(--contact-copper)]"
-              : "",
-          ].join(" ")}
-          icon={open ? <CloseIcon /> : <ConciergeIcon />}
-        />
+          onClick={toggleDock}
+          className={cx(
+            "group relative inline-flex h-12 cursor-pointer items-center overflow-hidden rounded-full border border-white/[0.13] bg-[#0B0A09]/[0.95] text-white",
+            "shadow-[0_12px_30px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]",
+            "supports-[backdrop-filter]:bg-[#0B0A09]/[0.86] supports-[backdrop-filter]:backdrop-blur-[10px] supports-[backdrop-filter]:backdrop-saturate-[125%]",
+            "transition-[border-color,background-color,transform,box-shadow] duration-200 ease-out",
+            "hover:-translate-y-px hover:border-white/[0.24] hover:bg-[#0B0A09] active:translate-y-0",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#D0A06F]/70 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent",
+            "motion-reduce:transform-none motion-reduce:transition-none",
+            open && "border-[#D0A06F]/55",
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#D0A06F]/75 to-transparent opacity-80"
+          />
+
+          <span className="grid size-11 shrink-0 place-items-center sm:ms-0.5 [&>svg]:size-[17px]">
+            {open ? <CloseIcon /> : <ConciergeIcon />}
+          </span>
+
+          <span className="hidden min-w-0 pe-4 ps-0.5 text-start sm:block">
+            <span className="block text-[6px] font-semibold uppercase leading-none tracking-[0.17em] text-[#D0A06F]">
+              {copy.eyebrow}
+            </span>
+            <span className="mt-1.5 block whitespace-nowrap text-[9px] font-semibold leading-none tracking-[0.01em] text-white/92">
+              {open ? copy.close : copy.trigger}
+            </span>
+          </span>
+
+          <span
+            aria-hidden="true"
+            className={cx(
+              "me-3 hidden h-px w-5 origin-center bg-white/24 transition-transform duration-300 sm:block",
+              open ? "scale-x-50" : "scale-x-100",
+            )}
+          />
+        </button>
       </div>
     </div>
   );
 }
 
 function ContactAction({
+  actionRef,
   href,
+  index,
   label,
   detail,
+  secondaryDetail,
   icon,
+  direction,
   target,
   rel,
   onSelect,
-  last = false,
 }: {
+  actionRef?: RefObject<HTMLAnchorElement | null>;
   href: string;
+  index: string;
   label: string;
   detail: string;
-  icon: React.ReactNode;
+  secondaryDetail?: string;
+  icon: ReactNode;
+  direction: "rtl" | "ltr";
   target?: "_blank" | "_self";
   rel?: string;
   onSelect: () => void;
-  last?: boolean;
 }) {
   return (
-    <Button
+    <a
+      ref={actionRef}
       href={href}
       target={target}
       rel={rel}
-      variant="black"
-      size="sm"
-      fullWidth
-      align="left"
       aria-label={label}
       onClick={onSelect}
-      className={[
-        "group/action !min-h-[54px] !w-full !border-0 !bg-transparent !px-3.5 !py-0 !text-white",
-        last ? "" : "!border-b !border-b-white/[0.08]",
-        "hover:!bg-white/[0.055] hover:!text-white",
-        "focus-visible:!ring-white/60 [&>span]:!w-full",
-      ].join(" ")}
+      className="group/action relative flex min-h-[68px] items-center gap-3 overflow-hidden rounded-[17px] border border-white/[0.075] bg-white/[0.025] px-3.5 py-3 text-start text-white transition-[border-color,background-color,transform] duration-200 hover:-translate-y-px hover:border-[#D0A06F]/30 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#D0A06F]/65 motion-reduce:transform-none sm:min-h-[72px] sm:px-4"
     >
-      <span className="grid w-full grid-cols-[28px_minmax(0,1fr)_14px] items-center gap-3 text-left">
-        <span
-          aria-hidden="true"
-          className="grid size-9 place-items-center [&>svg]:size-[29px]"
-        >
-          {icon}
-        </span>
+      <span
+        aria-hidden="true"
+        className="grid size-10 shrink-0 place-items-center rounded-full border border-white/[0.09] bg-black/20 text-white/78 transition-[border-color,color,background-color] duration-200 group-hover/action:border-[#D0A06F]/35 group-hover/action:bg-[#D0A06F]/[0.07] group-hover/action:text-[#E6C29E] [&>svg]:size-[18px]"
+      >
+        {icon}
+      </span>
 
-        <span className="min-w-0">
-          <span className="block text-[9px] font-semibold uppercase leading-none tracking-[0.14em] text-white">
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-2">
+          <span className="text-[7px] font-medium tabular-nums tracking-[0.12em] text-white/26">
+            {index}
+          </span>
+          <span className="text-[10px] font-semibold leading-none tracking-[0.015em] text-white/92 sm:text-[10.5px]">
             {label}
           </span>
-          <span className="mt-1.5 block truncate text-[8px] font-normal normal-case leading-none tracking-normal text-white/58">
-            {detail}
-          </span>
         </span>
 
-        <span
-          aria-hidden="true"
-          className="text-white/42 transition-transform duration-150 group-hover/action:translate-x-px"
-        >
+        <span className="mt-2 block truncate text-[9px] leading-none text-white/48">
+          {detail}
+        </span>
+
+        {secondaryDetail ? (
+          <span className="mt-1.5 hidden truncate text-[7px] leading-none text-white/25 sm:block">
+            {secondaryDetail}
+          </span>
+        ) : null}
+      </span>
+
+      <span
+        aria-hidden="true"
+        className={cx(
+          "grid size-7 shrink-0 place-items-center rounded-full border border-white/[0.07] text-white/35 transition-[border-color,color,transform] duration-200 group-hover/action:border-[#D0A06F]/30 group-hover/action:text-[#E6C29E]",
+          direction === "rtl"
+            ? "group-hover/action:-translate-x-0.5"
+            : "group-hover/action:translate-x-0.5",
+        )}
+      >
+        <span className={direction === "rtl" ? "rotate-180" : ""}>
           <ArrowIcon />
         </span>
       </span>
-    </Button>
-  );
-}
 
-function WhatsAppBrandIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 3.25A8.75 8.75 0 0 0 4.39 16.32L3.5 20.5l4.3-.84A8.75 8.75 0 1 0 12 3.25Z"
-        fill="#25D366"
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-y-4 start-0 w-px origin-center scale-y-0 bg-[#D0A06F]/70 transition-transform duration-200 group-hover/action:scale-y-100"
       />
-      <path
-        d="M8.05 7.6c.19-.43.39-.44.57-.45h.49c.16 0 .41.06.62.52.21.46.72 1.76.78 1.89.06.12.1.27.02.43-.08.16-.12.26-.25.4-.12.14-.26.31-.37.42-.12.12-.24.25-.1.49.14.25.62 1.02 1.34 1.65.92.82 1.69 1.08 1.94 1.2.25.12.39.1.54-.06.14-.16.62-.72.78-.97.16-.25.33-.2.56-.12.23.08 1.45.68 1.7.8.25.12.41.19.47.29.06.1.06.58-.14 1.13-.2.56-1.17 1.07-1.61 1.14-.42.07-.95.1-1.53-.08-.35-.11-.8-.26-1.38-.51-.24-.1-4.19-1.56-5.78-5.48-.16-.39-.01-1.22.35-1.69Z"
-        fill="white"
-      />
-    </svg>
-  );
-}
-
-function CallBrandIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <rect x="2.75" y="2.75" width="18.5" height="18.5" fill="#34C759" />
-      <path
-        d="M7.2 6.25 10 9.05 8.7 11.1c1.18 2.05 2.97 3.84 5.02 5.02l2.05-1.3 2.8 2.8-1.75 1.75c-.73.73-2.05.58-3.72-.25-1.64-.82-3.47-2.19-5.09-3.81-1.62-1.62-2.99-3.45-3.81-5.09-.83-1.67-.98-2.99-.25-3.72L5.7 4.75l1.5 1.5Z"
-        fill="white"
-      />
-    </svg>
-  );
-}
-
-function MapsBrandIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 2.75c-4.06 0-7.35 3.14-7.35 7.01 0 5.24 7.35 11.49 7.35 11.49s7.35-6.25 7.35-11.49c0-3.87-3.29-7.01-7.35-7.01Z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 2.75c-4.06 0-7.35 3.14-7.35 7.01 0 1.51.61 3.16 1.51 4.7L12 2.75Z"
-        fill="#34A853"
-      />
-      <path
-        d="M6.16 14.46C8.17 17.87 12 21.25 12 21.25l2.38-2.22-8.22-4.57Z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M19.35 9.76c0-3.87-3.29-7.01-7.35-7.01v7.01h7.35Z"
-        fill="#EA4335"
-      />
-      <rect x="9" y="6.75" width="6" height="6" fill="white" />
-    </svg>
+    </a>
   );
 }
 
 function ConciergeIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M4 5H20V15H12L7 19V15H4V5Z" stroke="currentColor" />
-      <path d="M8 9H16M8 12H13" stroke="currentColor" />
+      <path
+        d="M4.5 6.25h15v9.5h-7.2L8 19.1v-3.35H4.5v-9.5Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 10h8M8 12.9h5.1"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CallIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7.45 4.75 10 8.6 8.65 10.4c1.16 2.18 2.77 3.8 4.96 4.96L15.4 14l3.85 2.55-1.4 2.16c-.58.9-1.78 1.26-3.13.88-2.15-.6-4.54-2.16-6.58-4.2-2.04-2.04-3.6-4.43-4.2-6.58-.38-1.35-.02-2.55.88-3.13l2.63-.93Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function WhatsAppIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.75a8.25 8.25 0 0 0-7.17 12.34L4 20l4.02-.78A8.25 8.25 0 1 0 12 3.75Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.55 8.15c.2-.38.38-.39.56-.39h.42c.14 0 .36.05.54.45.18.39.62 1.47.68 1.57.05.11.09.23.02.37-.07.14-.11.22-.22.34-.11.12-.23.26-.32.36-.11.1-.21.21-.09.42.12.2.54.87 1.16 1.41.79.7 1.45.92 1.67 1.02.21.11.34.09.46-.05.13-.14.54-.62.68-.83.14-.21.28-.17.48-.1.2.07 1.25.58 1.46.68.21.11.35.16.4.25.05.09.05.49-.12.97-.17.47-1 .91-1.38.97-.36.06-.81.08-1.31-.07-.3-.09-.69-.22-1.18-.43-.2-.09-3.59-1.34-4.95-4.7-.14-.33-.01-1.04.3-1.44Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function LocationIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 20.25s6-5.23 6-10.14A6 6 0 0 0 6 10.1c0 4.92 6 10.15 6 10.15Z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle
+        cx="12"
+        cy="10"
+        r="2.25"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
     </svg>
   );
 }
@@ -296,15 +560,26 @@ function ConciergeIcon() {
 function CloseIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M5 5L19 19M19 5L5 19" stroke="currentColor" />
+      <path
+        d="M6 6 18 18M18 6 6 18"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
 
 function ArrowIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <path d="M2 8H14M10 4L14 8L10 12" stroke="currentColor" />
+    <svg viewBox="0 0 16 16" fill="none" aria-hidden="true" className="size-3">
+      <path
+        d="M2.5 8h10M9.5 5l3 3-3 3"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

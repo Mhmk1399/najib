@@ -38,7 +38,7 @@ export function DynamicRecordView<TRecord>({
       ];
 
   return (
-    <div dir="rtl" className="min-w-0 space-y-5 text-right">
+    <div dir="rtl" className="admin-data-font min-w-0 space-y-5 text-right">
       {sections.map((section) => {
         const hidden =
           typeof section.hidden === "function"
