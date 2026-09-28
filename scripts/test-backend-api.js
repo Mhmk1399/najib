@@ -99,6 +99,23 @@ const checks = [
     validate: (body, response) =>
       typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
   })),
+  ...[
+    ["customer addresses are protected", "/api/account/addresses"],
+    ["customer recommendations are protected", "/api/account/recommendations"],
+    ["customer personalization preference is protected", "/api/account/personalization"],
+    ["checkout expiry scheduler requires bearer auth", "/api/internal/jobs/expire-checkouts"],
+  ].map(([name, path]) => ({
+    name, path, status: 401,
+    validate: (body, response) => typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
+  })),
+  {
+    name: "customer activity is protected",
+    path: "/api/account/activity",
+    method: "POST",
+    body: {},
+    status: 401,
+    validate: (body, response) => typeof body.error === "string" && response.headers.get("cache-control") === "no-store",
+  },
 ];
 
 async function envValue(name) {
@@ -198,6 +215,9 @@ async function runAuthFlow() {
   let composerProductId;
   let composerVariantId;
   let composerColor2Id;
+  const recommendationProductIds = [];
+  const recommendationVariantIds = [];
+  const recommendationBalanceIds = [];
   const inventoryIds = [];
   const composerPermissionUserIds = [];
   const inventoryKeyPrefix = `inventory-test-${suffix}`;
@@ -904,6 +924,134 @@ async function runAuthFlow() {
       `${safeProfileUpdate.response.status}/${unsafeProfileUpdate.response.status}`,
     );
 
+    const createdAddress = await apiRequest("/api/account/addresses", {
+      method: "POST", jar: customerCookies,
+      body: { firstName: "کاربر", lastName: "آزمایشی", line1: "نشانی تست ایزوله", city: "تهران", postalCode: "1234567890", isDefault: true },
+    });
+    const createdAddressId = createdAddress.body?.items?.find((item) => item.line1 === "نشانی تست ایزوله")?.id;
+    const defaultsAfterCreate = createdAddress.body?.items?.filter((item) => item.isDefault) ?? [];
+    const deletedDefaultAddress = await apiRequest(`/api/account/addresses/${createdAddressId}`, { method: "DELETE", jar: customerCookies });
+    const defaultsAfterDelete = deletedDefaultAddress.body?.items?.filter((item) => item.isDefault) ?? [];
+    const remainingAddress = deletedDefaultAddress.body?.items?.[0];
+    const updatedAddress = await apiRequest(`/api/account/addresses/${remainingAddress?.id}`, { method: "PATCH", jar: customerCookies, body: { label: "خانه ویرایش‌شده", firstName: remainingAddress?.firstName, lastName: remainingAddress?.lastName, phone: remainingAddress?.phone ?? "", line1: remainingAddress?.line1, line2: remainingAddress?.line2 ?? "", city: remainingAddress?.city, region: remainingAddress?.region ?? "", postalCode: remainingAddress?.postalCode, countryCode: "US", isDefault: true } });
+    const madeDefault = await apiRequest(`/api/account/addresses/${remainingAddress?.id}/default`, { method: "POST", jar: customerCookies });
+    let lastAddressResponse;
+    for (let index = 2; index <= 10; index += 1) {
+      lastAddressResponse = await apiRequest("/api/account/addresses", { method: "POST", jar: customerCookies, body: { label: `نشانی ${index}`, firstName: "کاربر", lastName: "آزمایشی", phone: "", line1: `نشانی ایزوله ${index}`, line2: "", city: "تهران", region: "تهران", postalCode: `12345678${String(index).padStart(2, "0")}` } });
+    }
+    const overflowAddress = await apiRequest("/api/account/addresses", { method: "POST", jar: customerCookies, body: { label: "نشانی اضافی", firstName: "کاربر", lastName: "آزمایشی", phone: "", line1: "نباید ذخیره شود", line2: "", city: "تهران", region: "تهران", postalCode: "9999999999" } });
+    failed += result(
+      "address CRUD preserves exactly one default and normalizes country",
+      createdAddress.response.status === 201 && createdAddress.body?.items?.length === 2 && defaultsAfterCreate.length === 1 &&
+        defaultsAfterCreate[0]?.id === createdAddressId && defaultsAfterCreate[0]?.countryCode === "IR" &&
+        deletedDefaultAddress.response.status === 200 && deletedDefaultAddress.body?.items?.length === 1 && defaultsAfterDelete.length === 1 &&
+        updatedAddress.body?.items?.[0]?.label === "خانه ویرایش‌شده" && updatedAddress.body?.items?.[0]?.countryCode === "IR" && madeDefault.body?.items?.filter((item) => item.isDefault)?.length === 1 &&
+        lastAddressResponse?.body?.items?.length === 10 && overflowAddress.response.status === 409,
+      `${createdAddress.response.status}/${deletedDefaultAddress.response.status}`,
+    );
+
+    const invalidActivity = await apiRequest("/api/account/activity", { method: "POST", jar: customerCookies, body: { eventType: "purchase", productId: String(cartProductId), idempotencyKey: crypto.randomUUID() } });
+    const recommendationSource = await db.collection("products").findOne({ _id: cartProductId });
+    const matchingProductId = new mongoose.Types.ObjectId();
+    const recommendationUnrelatedProductId = new mongoose.Types.ObjectId();
+    const unavailableProductId = new mongoose.Types.ObjectId();
+    const matchingVariantId = new mongoose.Types.ObjectId();
+    const unrelatedVariantId = new mongoose.Types.ObjectId();
+    const unavailableVariantId = new mongoose.Types.ObjectId();
+    recommendationProductIds.push(matchingProductId, recommendationUnrelatedProductId, unavailableProductId);
+    recommendationVariantIds.push(matchingVariantId, unrelatedVariantId, unavailableVariantId);
+    const matchingBalanceId = new mongoose.Types.ObjectId();
+    const unrelatedBalanceId = new mongoose.Types.ObjectId();
+    const unavailableBalanceId = new mongoose.Types.ObjectId();
+    recommendationBalanceIds.push(matchingBalanceId, unrelatedBalanceId, unavailableBalanceId);
+    await Promise.all([
+      db.collection("products").insertOne({ ...recommendationSource, _id: matchingProductId, slug: `recommend-match-${suffix}`, name: { fa: "پیشنهاد مرتبط", en: "Matching recommendation", ar: "توصية مطابقة" }, createdAt: new Date(now.getTime() - 10_000), updatedAt: now }),
+      db.collection("products").insertOne({ ...recommendationSource, _id: recommendationUnrelatedProductId, slug: `recommend-unrelated-${suffix}`, name: { fa: "پیشنهاد عمومی", en: "General recommendation", ar: "توصية عامة" }, categoryId: new mongoose.Types.ObjectId(), subcategoryId: new mongoose.Types.ObjectId(), createdAt: new Date(now.getTime() - 20_000), updatedAt: now }),
+      db.collection("products").insertOne({ ...recommendationSource, _id: unavailableProductId, slug: `recommend-unavailable-${suffix}`, name: { fa: "پیشنهاد ناموجود", en: "Unavailable recommendation", ar: "توصية غير متاحة" }, createdAt: new Date(now.getTime() - 30_000), updatedAt: now }),
+      db.collection("productvariants").insertOne({ _id: matchingVariantId, productId: matchingProductId, colorId: cartColorId, sizeId: cartSizeId, sku: `REC-M-${suffix}`.toUpperCase(), isActive: true, createdAt: now, updatedAt: now }),
+      db.collection("productvariants").insertOne({ _id: unrelatedVariantId, productId: recommendationUnrelatedProductId, colorId: cartColorId, sizeId: cartSizeId, sku: `REC-U-${suffix}`.toUpperCase(), isActive: true, createdAt: now, updatedAt: now }),
+      db.collection("productvariants").insertOne({ _id: unavailableVariantId, productId: unavailableProductId, colorId: cartColorId, sizeId: cartSizeId, sku: `REC-X-${suffix}`.toUpperCase(), isActive: true, createdAt: now, updatedAt: now }),
+      db.collection("inventorybalances").insertOne({ _id: matchingBalanceId, variantId: matchingVariantId, locationId: checkoutLocationId, onHand: 3, reserved: 0, safetyStock: 0, version: 0, createdAt: now, updatedAt: now }),
+      db.collection("inventorybalances").insertOne({ _id: unrelatedBalanceId, variantId: unrelatedVariantId, locationId: checkoutLocationId, onHand: 2, reserved: 0, safetyStock: 0, version: 0, createdAt: now, updatedAt: now }),
+      db.collection("inventorybalances").insertOne({ _id: unavailableBalanceId, variantId: unavailableVariantId, locationId: checkoutLocationId, onHand: 1, reserved: 1, safetyStock: 0, version: 0, createdAt: now, updatedAt: now }),
+    ]);
+    const consentOn = await apiRequest("/api/account/personalization", { method: "PATCH", jar: customerCookies, body: { enabled: true } });
+    const viewKey = crypto.randomUUID();
+    const recordedView = await apiRequest("/api/account/activity", { method: "POST", jar: customerCookies, body: { eventType: "product_view", productId: String(cartProductId), idempotencyKey: viewKey, locale: "fa", source: "api_test" } });
+    const repeatedView = await apiRequest("/api/account/activity", { method: "POST", jar: customerCookies, body: { eventType: "product_view", productId: String(cartProductId), idempotencyKey: crypto.randomUUID(), locale: "fa", source: "api_test" } });
+    const consentOff = await apiRequest("/api/account/personalization", { method: "PATCH", jar: customerCookies, body: { enabled: false } });
+    const revokedView = await apiRequest("/api/account/activity", { method: "POST", jar: customerCookies, body: { eventType: "product_view", productId: String(cartProductId), idempotencyKey: crypto.randomUUID(), locale: "fa", source: "api_test" } });
+    const recommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=4", { jar: customerCookies });
+    const repeatedRecommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=4", { jar: customerCookies });
+    const clearHistory = await apiRequest("/api/account/activity", { method: "DELETE", jar: customerCookies });
+    await db.collection("users").updateOne({ _id: userId }, { $set: { wishlistProductIds: [] } });
+    const fallbackRecommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=4", { jar: customerCookies });
+    const rankedIds = recommendations.body?.items?.map((item) => item.id) ?? [];
+    const repeatedIds = repeatedRecommendations.body?.items?.map((item) => item.id) ?? [];
+    const fallbackIds = fallbackRecommendations.body?.items?.map((item) => item.id) ?? [];
+    failed += result(
+      "activity privacy boundary and recommendation fallback",
+      invalidActivity.response.status === 400 && consentOn.body?.enabled === true && recordedView.body?.recorded === true && repeatedView.body?.recorded === false &&
+        consentOff.body?.enabled === false && revokedView.body?.reason === "consent_required" && recommendations.response.status === 200 &&
+        rankedIds.includes(String(matchingProductId)) && rankedIds.includes(String(recommendationUnrelatedProductId)) && !rankedIds.includes(String(unavailableProductId)) &&
+        rankedIds.indexOf(String(matchingProductId)) < rankedIds.indexOf(String(recommendationUnrelatedProductId)) && JSON.stringify(rankedIds) === JSON.stringify(repeatedIds) &&
+        clearHistory.response.status === 200 && fallbackIds.length > 0 && fallbackIds.includes(String(matchingProductId)),
+      `${invalidActivity.response.status}/${recommendations.response.status}/${clearHistory.response.status}`,
+    );
+
+    await Promise.all([
+      db.collection("users").updateOne({ _id: userId }, { $set: { wishlistProductIds: [matchingProductId] } }),
+      db.collection("carts").updateOne({ _id: cartId }, { $set: { status: "converted", items: [] } }),
+    ]);
+    const wishlistOnlyRecommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=4", { jar: customerCookies });
+    await Promise.all([
+      db.collection("users").updateOne({ _id: userId }, { $set: { wishlistProductIds: [] } }),
+      db.collection("carts").updateOne({ _id: cartId }, { $set: { status: "active", items: [{ _id: new mongoose.Types.ObjectId(), variantId: matchingVariantId, quantity: 1, unitPriceMinor: 1, addedAt: now }] } }),
+    ]);
+    const cartOnlyRecommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=4", { jar: customerCookies });
+    const fixtureProductIds = [matchingProductId, recommendationUnrelatedProductId, unavailableProductId];
+    const scopedSellableRecommendationIds = async () => (await db.collection("inventorybalances").aggregate([
+      { $match: { $expr: { $gt: [{ $subtract: [{ $subtract: [{ $ifNull: ["$onHand", 0] }, { $ifNull: ["$reserved", 0] }] }, { $ifNull: ["$safetyStock", 0] }] }, 0] } } },
+      { $lookup: { from: "inventorylocations", localField: "locationId", foreignField: "_id", as: "location" } },
+      { $unwind: "$location" },
+      { $match: { "location.isActive": true, "location.storeId": { $ne: null } } },
+      { $lookup: { from: "stores", localField: "location.storeId", foreignField: "_id", as: "store" } },
+      { $unwind: "$store" },
+      { $match: { "store.isActive": true, $expr: { $eq: ["$location.cityId", "$store.cityId"] } } },
+      { $lookup: { from: "cities", localField: "store.cityId", foreignField: "_id", as: "city" } },
+      { $unwind: "$city" },
+      { $match: { "city.isActive": true } },
+      { $lookup: { from: "productvariants", localField: "variantId", foreignField: "_id", as: "variant" } },
+      { $unwind: "$variant" },
+      { $match: { "variant.isActive": true, "variant.productId": { $in: fixtureProductIds } } },
+      { $lookup: { from: "products", localField: "variant.productId", foreignField: "_id", as: "product" } },
+      { $unwind: "$product" },
+      { $match: { "product.status": "active" } },
+      { $group: { _id: "$product._id" } },
+    ]).toArray()).map((item) => String(item._id)).sort();
+    const scopedInitiallySellable = await scopedSellableRecommendationIds();
+    await db.collection("stores").updateOne({ _id: splitStoreId }, { $set: { isActive: false } });
+    const scopedWithInactiveStore = await scopedSellableRecommendationIds();
+    await db.collection("stores").updateOne({ _id: splitStoreId }, { $set: { isActive: true } });
+    await db.collection("inventorybalances").updateOne({ _id: unrelatedBalanceId }, { $set: { onHand: 0 } });
+    const onlySignalProductRecommendations = await apiRequest("/api/account/recommendations?locale=fa&limit=24", { jar: customerCookies });
+    const scopedOneSellable = await scopedSellableRecommendationIds();
+    await db.collection("inventorybalances").updateOne({ _id: matchingBalanceId }, { $set: { onHand: 0 } });
+    const scopedNoStock = await scopedSellableRecommendationIds();
+    await Promise.all([
+      db.collection("inventorybalances").updateOne({ _id: matchingBalanceId }, { $set: { onHand: 3 } }),
+      db.collection("inventorybalances").updateOne({ _id: unrelatedBalanceId }, { $set: { onHand: 2 } }),
+    ]);
+    failed += result(
+      "recommendations use wishlist/cart without view consent and explain no stock",
+      wishlistOnlyRecommendations.body?.mode === "personalized" && wishlistOnlyRecommendations.body?.items?.length > 0 &&
+        cartOnlyRecommendations.body?.mode === "personalized" && cartOnlyRecommendations.body?.items?.length > 0 &&
+        scopedInitiallySellable.includes(String(matchingProductId)) && scopedInitiallySellable.includes(String(recommendationUnrelatedProductId)) && !scopedInitiallySellable.includes(String(unavailableProductId)) &&
+        scopedWithInactiveStore.length === 0 && scopedOneSellable.length === 1 && scopedOneSellable[0] === String(matchingProductId) &&
+        onlySignalProductRecommendations.body?.items?.some((item) => item.id === String(matchingProductId)) && scopedNoStock.length === 0,
+      `${wishlistOnlyRecommendations.response.status}/${cartOnlyRecommendations.response.status}/${scopedInitiallySellable.length}/${scopedWithInactiveStore.length}/${scopedOneSellable.length}/${scopedNoStock.length}`,
+    );
+
     const customerAdmin = await apiRequest("/admin", { jar: customerCookies, redirect: "manual" });
     failed += result(
       "customer cannot enter admin",
@@ -1550,6 +1698,8 @@ async function runAuthFlow() {
     if (db && userId) {
       await Promise.all([
         db.collection("staffsessions").deleteMany({ userId }),
+        db.collection("userbehaviors").deleteMany({ userId }),
+        db.collection("userbehaviorratebuckets").deleteMany({ userId }),
         db.collection("staffsessions").deleteMany({ userId: foreignRecoveryUserId }),
         db.collection("staffaudits").deleteMany({ userId }),
         db.collection("orders").deleteMany({
@@ -1601,6 +1751,9 @@ async function runAuthFlow() {
         db.collection("stores").deleteMany({ _id: { $in: inventoryIds } }),
         db.collection("cities").deleteMany({ _id: { $in: inventoryIds } }),
         db.collection("productvariants").deleteMany({ _id: inventoryVariantId }),
+        db.collection("inventorybalances").deleteMany({ _id: { $in: recommendationBalanceIds } }),
+        db.collection("productvariants").deleteMany({ _id: { $in: recommendationVariantIds } }),
+        db.collection("products").deleteMany({ _id: { $in: recommendationProductIds } }),
         db.collection("users").deleteOne({ _id: userId }),
         db.collection("users").deleteOne({ _id: foreignRecoveryUserId }),
         db.collection("users").deleteMany({ _id: { $in: composerPermissionUserIds } }),

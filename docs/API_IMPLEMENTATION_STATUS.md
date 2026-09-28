@@ -61,6 +61,9 @@ added to the Admin navigation and interface.
 | Unified product composer | `POST /api/admin/catalog/products/complete`, `/admin/catalog/products` | Complete: one Persian flow creates a localized product, exact color-size variants, deterministic SKUs and initial stock per active branch/warehouse. The atomic transaction writes balances, movement ledger, audit and idempotency evidence. Catalog currency is fixed to IRR and is no longer an operator field. |
 | Checkout destinations | `GET /api/storefront/checkout-destinations` | Complete; returns only active localized cities and stores backed by active inventory locations, without warehouse or stock details |
 | Checkout reservation | `GET/POST /api/account/checkouts`, `GET/PATCH /api/account/checkouts/:id`, `/{locale}/checkout` | Complete: Cart-aware GET computes a deterministic multi-shipment plan across active branches, preferring the fewest shipments and then lower configured delivery cost. Exact variant quantities may split across branches. The fa/en/ar modal shows only branches used by the plan, their allocated lines, and a separate fee per shipment. POST verifies the plan hash and atomically reserves every allocation for 15 minutes; stale plans return `409` and require confirmation again. |
+| Customer addresses | `/api/account/addresses/*`, customer profile | Complete: protected CRUD, ten-address cap, automatic/default promotion, legacy normalization, and localized responsive management UI |
+| Personalized recommendations | `/api/account/activity`, `/api/account/personalization`, `/api/account/recommendations`, customer overview | Complete MVP: localized consent controls, atomically bounded consent-aware views, canonical wishlist/cart/checkout signals, order-derived purchases, stock-aware decayed ranking, active-product fallback, 365-day TTL, and clear-history action |
+| Checkout expiry schedule | `GET|POST /api/internal/jobs/expire-checkouts`, `vercel.json` | Complete: constant-time bearer auth, bounded batches with `hasMore`, no-store responses, one-minute Vercel schedule and external scheduler contract |
 | Temporary payment | `POST /api/account/checkouts/:id/payment-intents`, `GET /api/account/payments/:id`, `POST /api/account/payments/:id/confirm` | Complete with development-only mock providers: failed attempts remain retryable; verified success atomically commits inventory, creates the order, completes checkout, converts the cart, and requests confirmation SMS |
 | Abandoned checkout recovery | `GET/POST /api/account/abandoned-checkouts/recovery`, `/{locale}/recover-checkout` | Complete for authenticated owners in `fa`, `en`, and `ar`: secure-token preview, live repricing and exact-store availability, unavailable-item explanations, transactional merge into the active cart, idempotent retry, and source attribution through checkout/order conversion |
 | Customer profile | `GET/PATCH /api/account/profile` | Complete; full saved-address read and strict whitelist for editable profile fields |
@@ -125,7 +128,8 @@ cancel, mock payment outcomes, and order confirmation. The next batch is:
 1. Replace the temporary adapters when Payment and SMS provider credentials and
    callback contracts are available.
 2. Add capture, refund, and reconciliation APIs after the real gateway is chosen.
-3. Configure the scheduler to call `POST /api/internal/jobs/expire-checkouts`
+3. Set a non-empty `CRON_SECRET`. Vercel uses the one-minute `vercel.json` schedule;
+   other platforms must call `POST /api/internal/jobs/expire-checkouts` every minute
    with `Authorization: Bearer $CRON_SECRET`; the idempotent expiry worker,
    inventory release, cart abandonment, payment cancellation, and abandoned
    checkout snapshot are implemented.

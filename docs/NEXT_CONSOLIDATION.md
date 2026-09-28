@@ -68,6 +68,9 @@ MONGODB_DB_NAME=najib
 AUTH_ACCESS_TOKEN_TTL_SECONDS=900
 AUTH_REFRESH_TOKEN_TTL_SECONDS=1209600
 CRON_SECRET=replace-with-a-long-random-secret
+
+# Required in production. Vercel Cron sends it to the checkout expiry route.
+# On non-Vercel deployments, schedule an authenticated POST once per minute.
 ```
 
 Temporary local Payment/SMS providers (never selected implicitly in production):

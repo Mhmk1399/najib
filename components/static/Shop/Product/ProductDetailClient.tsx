@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { amountForCurrencyDisplay } from "@/lib/catalog/currency";
 
@@ -424,6 +424,26 @@ export function ProductDetailClient({
     () => (query.data ? mapProduct(query.data, locale) : null),
     [locale, query.data],
   );
+
+  useEffect(() => {
+    if (!query.data?.product._id) return;
+    try {
+      const windowId = Math.floor(Date.now() / (10 * 60_000));
+      const key = `najib-view:${query.data.product._id}:${windowId}`;
+      let idempotencyKey = sessionStorage.getItem(key);
+      if (!idempotencyKey) {
+        idempotencyKey = crypto.randomUUID();
+        sessionStorage.setItem(key, idempotencyKey);
+      }
+      void fetch("/api/account/activity", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventType: "product_view", productId: query.data.product._id, idempotencyKey, locale, source: "pdp" }),
+      }).catch(() => undefined);
+    } catch {
+      // Storage, UUID, auth, and tracking failures must never affect the PDP.
+    }
+  }, [locale, query.data?.product._id]);
 
   if (query.isLoading) {
     return <BrandSketchLoader open label={copy.loading} />;

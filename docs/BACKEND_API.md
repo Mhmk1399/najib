@@ -208,14 +208,36 @@ successful payment, inventory reservation, confirmation, or refund.
 Expired checkout cleanup is exposed as an idempotent internal job:
 
 - `POST /api/internal/jobs/expire-checkouts`
+- `GET /api/internal/jobs/expire-checkouts` (Vercel Cron)
 - Header: `Authorization: Bearer $CRON_SECRET`
 
-Each run claims at most 50 due checkout sessions, expires and releases their
+Each invocation processes up to four bounded batches of 50 and reports `hasMore` so bursts are visible. It expires and releases their
 inventory reservations transactionally, cancels unfinished payment intents,
 marks the cart abandoned, stores a localized abandoned-checkout snapshot, and
-writes a `CheckoutExpired` outbox event. Configure the deployment scheduler to
-call it once per minute. Repeated calls cannot release the same reservation
-twice.
+writes a `CheckoutExpired` outbox event. Repeated calls cannot release the same
+reservation twice.
+
+Vercel invokes this every minute through `vercel.json`. Other hosts must invoke
+the authenticated POST endpoint every minute; an in-process timer is intentionally
+not used because application instances are ephemeral.
+
+### Customer addresses and personalization
+
+- `GET|POST /api/account/addresses`
+- `PATCH|DELETE /api/account/addresses/:id`
+- `POST /api/account/addresses/:id/default`
+- `POST|DELETE /api/account/activity`
+- `GET|PATCH /api/account/personalization`
+- `GET /api/account/recommendations?locale=fa&limit=8`
+
+Address mutations are customer-owned, limited to ten records, and preserve exactly
+one default whenever a record exists. Behavior history is stored separately with
+365-day TTL retention; product views require the latest personalization consent.
+Customers can grant or revoke that consent from the profile privacy controls;
+revoked view history is excluded immediately while direct wishlist/cart/order
+signals remain available for the signed-in account experience.
+Recommendation responses contain safe localized product-card data and fall back to
+active sellable catalog products when no affinity signal exists.
 
 See `docs/API_IMPLEMENTATION_STATUS.md` for the current completion matrix and
 the delivery order for Inventory, Payment, Policy, AI, and integrations.

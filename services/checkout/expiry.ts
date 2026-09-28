@@ -191,5 +191,9 @@ export async function expireDueCheckouts(options: { limit?: number; now?: Date }
       });
     }
   }
-  return { scanned: due.length, expired, failed: failures.length, failures };
+  const hasMore = due.length === limit && Boolean(await CheckoutSession.exists({
+    status: { $in: ["reserved", "payment_pending"] },
+    expiresAt: { $lte: now },
+  }));
+  return { scanned: due.length, expired, failed: failures.length, failures, hasMore };
 }

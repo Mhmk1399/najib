@@ -87,6 +87,23 @@ type OrderSummary = {
   cancelledAt: string | null;
 };
 
+type Recommendation = { id: string; slug: string; name: string; priceMinor: number; currency: string; reason: string; image: null | { url: string; alt: string; objectPosition: string } };
+type RecommendationResponse = {
+  items: Recommendation[];
+  mode: "personalized" | "discovery";
+  emptyReason: "no_sellable_products" | null;
+};
+
+type ValidationIssue = { path?: Array<string | number>; message?: string };
+
+class DashboardApiError extends Error {
+  details?: ValidationIssue[];
+  constructor(message: string, details?: ValidationIssue[]) {
+    super(message);
+    this.details = details;
+  }
+}
+
 type OrderDetail = OrderSummary & {
   contact?: {
     firstName?: string;
@@ -208,9 +225,10 @@ async function api<T>(
 
   const body = (await response.json().catch(() => ({}))) as T & {
     error?: string;
+    details?: ValidationIssue[];
   };
 
-  if (!response.ok) throw new Error(body.error || fallbackError);
+  if (!response.ok) throw new DashboardApiError(body.error || fallbackError, body.details);
   return body;
 }
 
@@ -651,6 +669,21 @@ function Overview({
 
   const ForwardArrow = isRtl ? ArrowLeft : ArrowRight;
   const ForwardChevron = isRtl ? ChevronLeft : ChevronRight;
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [recommendationEmptyReason, setRecommendationEmptyReason] = useState<RecommendationResponse["emptyReason"]>(null);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(true);
+  const [recommendationsError, setRecommendationsError] = useState("");
+  const loadRecommendations = useCallback(async () => {
+    setRecommendationsLoading(true); setRecommendationsError("");
+    try { const result = await api<RecommendationResponse>(`/api/account/recommendations?locale=${locale}&limit=8`, undefined, copy.common.fetchError); setRecommendations(result.items); setRecommendationEmptyReason(result.emptyReason); }
+    catch (reason) { setRecommendationsError((reason as Error).message); }
+    finally { setRecommendationsLoading(false); }
+  }, [copy.common.fetchError, locale]);
+  useEffect(() => {
+    // Fetch protected recommendations when the overview becomes active.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void loadRecommendations();
+  }, [loadRecommendations]);
 
   if (loading) return <Skeleton />;
 
@@ -694,6 +727,14 @@ function Overview({
       </header>
 
       <JourneyRail />
+
+      <section aria-labelledby="recommendations-title" className="border-y border-black/10 py-8">
+        <div className="mb-6 flex items-end justify-between gap-4">
+          <div><p className="text-xs font-semibold text-[#9b7552]">{locale === "en" ? "Your edit" : locale === "ar" ? "اختياراتك" : "انتخاب برای شما"}</p><h2 id="recommendations-title" className="mt-1 text-xl font-semibold">{locale === "en" ? "Recommended products" : locale === "ar" ? "منتجات موصى بها" : "پیشنهادهای شخصی شما"}</h2></div>
+          {recommendationsError && <button type="button" onClick={() => void loadRecommendations()} className="min-h-11 border-b border-black text-xs font-semibold">{copy.common.retry}</button>}
+        </div>
+        {recommendationsLoading ? <div aria-label={copy.common.loading} className="grid grid-cols-2 gap-4 md:grid-cols-4">{[0,1,2,3].map((item) => <div key={item} className="h-64 animate-pulse bg-[#e7dfd2]" />)}</div> : recommendationsError ? <p role="alert" className="border border-red-800/20 bg-red-50 p-4 text-sm text-red-800">{recommendationsError}</p> : recommendations.length ? <div className="grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-4">{recommendations.map((item) => <Link key={item.id} href={localizedHref(`/shop/${item.slug}`, locale)} className="group block focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#9b7552]"><div className="relative aspect-[3/4] overflow-hidden bg-[#e8e1d7]">{item.image ? <Image src={item.image.url} alt={item.image.alt} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover transition duration-500 group-hover:scale-[1.025]" style={{ objectPosition: item.image.objectPosition }} /> : <div className="grid h-full place-items-center text-xs text-black/35">NAJIBZADEH</div>}</div><h3 className="mt-3 text-sm font-semibold">{item.name}</h3><p className="mt-1 text-xs text-black/50">{item.reason}</p><p dir="ltr" className="mt-2 text-xs font-semibold">{money(item.priceMinor, item.currency, locale)}</p></Link>)}</div> : <p className="border border-dashed border-black/20 p-6 text-sm text-black/55">{recommendationEmptyReason === "no_sellable_products" ? (locale === "en" ? "No active product with sellable stock is available right now." : locale === "ar" ? "لا يتوفر حالياً منتج نشط بمخزون قابل للبيع." : "در حال حاضر محصول فعال با موجودی قابل‌فروش وجود ندارد.") : (locale === "en" ? "Recommendations will appear as you explore the collection." : locale === "ar" ? "ستظهر التوصيات أثناء استكشافك للمجموعة." : "با دیدن محصولات، پیشنهادهای مناسب شما اینجا نمایش داده می‌شوند.")}</p>}
+      </section>
 
       <section
         aria-label={copy.overview.statsAriaLabel}
@@ -1358,6 +1399,54 @@ function ProfilePanel({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [addressEditor, setAddressEditor] = useState<Address | "new" | null>(null);
+  const [addressBusy, setAddressBusy] = useState(false);
+  const [addressError, setAddressError] = useState("");
+  const [personalization, setPersonalization] = useState<boolean | null>(null);
+  const [privacyBusy, setPrivacyBusy] = useState(false);
+  const [privacyError, setPrivacyError] = useState("");
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const addressTriggerRef = useRef<HTMLElement | null>(null);
+  const addressText = locale === "en" ? { add: "Add address", edit: "Edit", remove: "Delete", makeDefault: "Make default", cancel: "Cancel", save: "Save address", confirmDelete: "Delete this address?", clear: "Clear personalization history", cleared: "Personalization history cleared.", invalid: "Please review: {field}.", privacy: "Personalized suggestions", privacyDescription: "Allow product views to improve your suggestions. Wishlist, cart and order activity still personalize your signed-in account.", labels: ["Label", "First name", "Last name", "Phone", "Address", "Additional address", "City", "Region", "Postal code"] } : locale === "ar" ? { add: "إضافة عنوان", edit: "تعديل", remove: "حذف", makeDefault: "تعيين كافتراضي", cancel: "إلغاء", save: "حفظ العنوان", confirmDelete: "هل تريد حذف هذا العنوان؟", clear: "مسح سجل التخصيص", cleared: "تم مسح سجل التخصيص.", invalid: "راجع الحقل: {field}.", privacy: "اقتراحات مخصصة", privacyDescription: "اسمح باستخدام مشاهدات المنتجات لتحسين اقتراحاتك. تظل المفضلة والسلة والطلبات ضمن تجربة حسابك.", labels: ["العنوان", "الاسم", "اسم العائلة", "الهاتف", "العنوان", "تفاصيل إضافية", "المدينة", "المنطقة", "الرمز البريدي"] } : { add: "افزودن نشانی", edit: "ویرایش", remove: "حذف", makeDefault: "انتخاب به‌عنوان پیش‌فرض", cancel: "انصراف", save: "ذخیره نشانی", confirmDelete: "این نشانی حذف شود؟", clear: "پاک‌کردن تاریخچه شخصی‌سازی", cleared: "تاریخچه شخصی‌سازی پاک شد.", invalid: "فیلد «{field}» را بررسی کنید.", privacy: "پیشنهادهای شخصی‌سازی‌شده", privacyDescription: "اجازه می‌دهم بازدید محصولات برای بهترشدن پیشنهادها استفاده شود. علاقه‌مندی، سبد و سفارش‌ها همچنان برای تجربه مستقیم حساب استفاده می‌شوند.", labels: ["عنوان", "نام", "نام خانوادگی", "شماره تماس", "نشانی", "ادامه نشانی", "شهر", "استان", "کد پستی"] };
+
+  const openAddress = (editor: Address | "new") => { addressTriggerRef.current = document.activeElement as HTMLElement; setAddressError(""); setAddressEditor(editor); };
+  const closeAddress = useCallback(() => { if (addressBusy) return; setAddressEditor(null); requestAnimationFrame(() => addressTriggerRef.current?.focus()); }, [addressBusy]);
+
+  const applyAddresses = (items: Address[]) => {
+    const next = { ...profile!, addresses: items, addressCount: items.length };
+    setProfile(next); onSaved(next);
+  };
+
+  const mutateAddress = async (url: string, method: string, body?: unknown) => {
+    setAddressBusy(true); setAddressError(""); setError(""); setNotice("");
+    try {
+      const result = await api<{ items: Address[] }>(url, { method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined }, copy.common.fetchError);
+      applyAddresses(result.items); setAddressEditor(null); requestAnimationFrame(() => addressTriggerRef.current?.focus()); setNotice(copy.profile.savedNotice);
+    } catch (reason) { const issue = reason instanceof DashboardApiError ? reason.details?.[0] : undefined; const fieldName = String(issue?.path?.[0] ?? ""); const fields = ["label","firstName","lastName","phone","line1","line2","city","region","postalCode"]; const fieldLabel = addressText.labels[Math.max(0, fields.indexOf(fieldName))]; const message = (reason as Error).message === "Validation failed." ? addressText.invalid.replace("{field}", fieldLabel) : (reason as Error).message; setAddressError(message); requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLInputElement>(fieldName ? `[name="${fieldName}"]` : "input:invalid, input")?.focus()); }
+    finally { setAddressBusy(false); }
+  };
+
+  useEffect(() => {
+    if (!addressEditor) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    requestAnimationFrame(() => dialogRef.current?.querySelector<HTMLInputElement>("input")?.focus());
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !addressBusy) { event.preventDefault(); closeAddress(); return; }
+      if (event.key !== "Tab") return;
+      const items = [...(dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? [])];
+      if (!items.length) return;
+      const first = items[0], last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => { document.removeEventListener("keydown", handleKey); document.body.style.overflow = previousOverflow; };
+  }, [addressBusy, addressEditor, closeAddress]);
+
+  useEffect(() => {
+    void api<{ enabled: boolean }>("/api/account/personalization", undefined, copy.common.fetchError).then((value) => setPersonalization(value.enabled)).catch((reason) => { setPersonalization(false); setPrivacyError((reason as Error).message); });
+  }, [copy.common.fetchError]);
 
   const load = useCallback(
     async (showLoading = true) => {
@@ -1558,6 +1647,11 @@ function ProfilePanel({
           </div>
         </div>
 
+        <button type="button" disabled={addressBusy} onClick={() => openAddress("new")} className="mt-5 min-h-11 border border-black px-4 text-xs font-semibold transition hover:bg-black hover:text-white disabled:opacity-50">
+          {addressText.add}
+        </button>
+        {!addressEditor && addressError && <p role="alert" className="mt-4 border border-red-800/20 bg-red-50 p-3 text-sm text-red-800">{addressError}</p>}
+
         {profile.addresses?.length ? (
           <div className="mt-6 space-y-4">
             {profile.addresses.map((address) => (
@@ -1586,6 +1680,11 @@ function ProfilePanel({
                   {copy.profile.postalCodeLabel}{" "}
                   <span dir="ltr">{address.postalCode}</span>
                 </p>
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-black/10 pt-3">
+                  <button type="button" disabled={addressBusy} onClick={() => openAddress(address)} className="min-h-11 px-3 text-xs font-semibold underline underline-offset-4 disabled:opacity-50">{addressText.edit}</button>
+                  {!address.isDefault && <button type="button" disabled={addressBusy} onClick={() => void mutateAddress(`/api/account/addresses/${address.id}/default`, "POST")} className="min-h-11 px-3 text-xs font-semibold underline underline-offset-4">{addressText.makeDefault}</button>}
+                  <button type="button" disabled={addressBusy} onClick={() => { if (confirm(addressText.confirmDelete)) void mutateAddress(`/api/account/addresses/${address.id}`, "DELETE"); }} className="min-h-11 px-3 text-xs font-semibold text-red-800 underline underline-offset-4">{addressText.remove}</button>
+                </div>
               </article>
             ))}
           </div>
@@ -1612,8 +1711,27 @@ function ProfilePanel({
           <p className="mt-2 text-xs leading-6 text-black/50">
             {copy.profile.securityDescription}
           </p>
+          <label className="mt-5 flex min-h-14 cursor-pointer items-start justify-between gap-4 border-y border-black/10 py-4">
+            <span><span className="block text-xs font-semibold">{addressText.privacy}</span><span className="mt-1 block text-[11px] leading-5 text-black/55">{addressText.privacyDescription}</span></span>
+            <input type="checkbox" checked={Boolean(personalization)} disabled={personalization === null || privacyBusy} onChange={async (event) => { const enabled = event.target.checked; setPrivacyBusy(true); setPrivacyError(""); try { const value = await api<{ enabled: boolean }>("/api/account/personalization", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ enabled }) }, copy.common.fetchError); setPersonalization(value.enabled); setNotice(copy.profile.savedNotice); } catch (reason) { setPrivacyError((reason as Error).message); } finally { setPrivacyBusy(false); } }} className="mt-1 h-5 w-5 accent-[#1d1a17]" />
+          </label>
+          {privacyError && <p role="alert" className="mt-2 text-xs text-red-800">{privacyError}</p>}
+          <button disabled={privacyBusy} type="button" onClick={async () => { setPrivacyBusy(true); try { await api("/api/account/activity", { method: "DELETE" }, copy.common.fetchError); setNotice(addressText.cleared); } catch (reason) { setError((reason as Error).message); } finally { setPrivacyBusy(false); } }} className="mt-4 min-h-11 border-b border-black text-xs font-semibold disabled:opacity-50">{addressText.clear}</button>
         </div>
       </aside>
+
+      {addressEditor && (
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="address-dialog-title" aria-describedby={addressError ? "address-dialog-error" : undefined} className="fixed inset-0 z-50 grid place-items-center bg-black/55 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) closeAddress(); }}>
+          <form onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); const body = Object.fromEntries(["label","firstName","lastName","phone","line1","line2","city","region","postalCode"].map((key) => [key, String(data.get(key) ?? "").trim()])); void mutateAddress(addressEditor === "new" ? "/api/account/addresses" : `/api/account/addresses/${addressEditor.id}`, addressEditor === "new" ? "POST" : "PATCH", body); }} className="max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-[#f7f3ec] p-6 shadow-2xl sm:p-9">
+            <div className="flex items-center justify-between border-b border-black/10 pb-5"><h2 id="address-dialog-title" className="text-xl font-semibold">{addressEditor === "new" ? addressText.add : addressText.edit}</h2><button disabled={addressBusy} type="button" aria-label={addressText.cancel} onClick={closeAddress} className="min-h-11 min-w-11 text-2xl disabled:opacity-30">×</button></div>
+            {addressError && <p id="address-dialog-error" role="alert" className="mt-5 border border-red-800/20 bg-red-50 p-3 text-sm text-red-800">{addressError}</p>}
+            <div className="mt-6 grid gap-4 sm:grid-cols-2">
+              {["label","firstName","lastName","phone","line1","line2","city","region","postalCode"].map((name, index) => <Field key={name} label={addressText.labels[index]} name={name} defaultValue={addressEditor === "new" ? "" : String(addressEditor[name as keyof Address] ?? "")} required={["firstName","lastName","line1","city","postalCode"].includes(name)} dir={["phone","postalCode"].includes(name) ? "ltr" : direction} />)}
+            </div>
+            <div className="mt-7 flex gap-3"><button disabled={addressBusy} type="submit" className="min-h-12 bg-[#1d1a17] px-6 text-sm font-semibold text-white disabled:opacity-50">{addressBusy ? copy.profile.saving : addressText.save}</button><button disabled={addressBusy} type="button" onClick={closeAddress} className="min-h-12 border border-black/20 px-6 text-sm disabled:opacity-50">{addressText.cancel}</button></div>
+          </form>
+        </div>
+      )}
     </section>
   );
 }

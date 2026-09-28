@@ -16,6 +16,7 @@ import { ProductVariant } from "@/models/catalog/product-variant";
 import { Product } from "@/models/catalog/product";
 import { Size } from "@/models/catalog/size";
 import { type Locale } from "@/lib/i18n/config";
+import { recordAccountSignal } from "@/services/recommendations/service";
 
 export const cartLocaleQuerySchema = z.object({
   locale: z.enum(["fa", "en", "ar"]).default("fa"),
@@ -285,6 +286,7 @@ async function loadSellableVariant(variantId: string, currency: CheckoutCurrency
   if (!product || !color || !size) notFound("این تنوع در حال حاضر قابل فروش نیست.");
 
   return {
+    productId: String(variant.productId),
     currency,
     unitPriceMinor: explicitPriceForCurrency({ priceIrrMinor: variant.priceOverrideIrrMinor, priceUsdMinor: variant.priceOverrideUsdMinor, basePriceMinor: variant.priceOverrideMinor, currency: product.currency }, currency) ?? explicitPriceForCurrency(product, currency),
     productName: product.name,
@@ -498,6 +500,7 @@ export const accountService = {
   async addCartItem(accountId: string, value: unknown, locale: Locale = "fa") {
     const input = addCartItemSchema.parse(value);
     await connectToDatabase();
+    let signalProductId: string | null = null;
 
     await mongoose.connection.transaction(async (session) => {
       let cart = await loadMutableCart(accountId, session);
@@ -512,6 +515,7 @@ export const accountService = {
         }], { session });
       }
       const sellable = await loadSellableVariant(input.variantId, cart.currency as CheckoutCurrency, session);
+      signalProductId = sellable.productId;
       if (sellable.unitPriceMinor === null) conflict("این کالا در ارز انتخاب‌شده قیمت ندارد.", { code: "PRICE_NOT_AVAILABLE", variantId: input.variantId, currency: cart.currency, productName: sellable.productName, sku: sellable.sku });
       const existing = cart.items.find(
         (item: { variantId: unknown }) => String(item.variantId) === input.variantId,
@@ -533,6 +537,8 @@ export const accountService = {
       cart.expiresAt = cartExpiry();
       await cart.save({ session });
     });
+
+    if (signalProductId) await recordAccountSignal(accountId, signalProductId, "cart_add", input.variantId, input.quantity);
 
     return this.getCart(accountId, locale);
   },
@@ -689,6 +695,8 @@ export const accountService = {
       .select("wishlistProductIds")
       .lean();
     if (!user) notFound("حساب کاربری پیدا نشد.");
+
+    await recordAccountSignal(accountId, productId, "wishlist_add");
 
     return { productId, isFavorite: true };
   },
