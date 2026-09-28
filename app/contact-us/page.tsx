@@ -64,22 +64,22 @@ export default async function ContactPage({ params }: ContactPageProps) {
       <ContactHeroSection
         locale={locale}
         copy={copy.hero}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p7.webp"
         mobileImagePosition="70% center"
-        desktopImagePosition="center"
+        desktopImagePosition="top"
       />
 
-      <ContactSection
+      {/* <ContactSection
         locale={locale}
         copy={copy.services}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p4.webp"
         imagePosition="center"
-      />
+      /> */}
 
       <PrivateAppointmentSection
         locale={locale}
         copy={copy.appointment}
-        imageSrc="/assets/images/banner.webp"
+        imageSrc="/assets/images/p3.webp"
         mobileImagePosition="70% center"
         desktopImagePosition="center"
       />

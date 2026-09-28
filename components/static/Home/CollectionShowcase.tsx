@@ -66,7 +66,7 @@ const copy = {
     description:
       "هر مجموعه، انتخابی دقیق از قطعاتی است که کنار هم معنا پیدا می‌کنند.",
     productLabel: "محصولات مجموعه",
-    productAction: "مشاهده محصول",
+    productAction: "مشاهده  ",
     scrollHint: "برای دیدن بیشتر بکشید",
     fetchError: "دریافت مجموعه‌ها ناموفق بود.",
   },
@@ -76,7 +76,7 @@ const copy = {
     description:
       "Considered pieces, brought together to create a complete visual language.",
     productLabel: "Collection pieces",
-    productAction: "View product",
+    productAction: "View  ",
     scrollHint: "Scroll to explore more",
     fetchError: "Collections could not be loaded.",
   },
@@ -285,7 +285,7 @@ function CollectionCard({
           aria-hidden="true"
           className="absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,255,0.17),transparent_28%),radial-gradient(circle_at_82%_100%,rgba(173,99,60,0.16),transparent_34%)]"
         />
-
+        {/* 
         <div className="absolute inset-x-4 top-4 flex items-center justify-between gap-2.5 sm:inset-x-5 sm:top-5">
           <span className="inline-flex min-h-7 items-center border border-white/20 bg-black/18 px-2.5 text-[7.5px] font-medium tracking-[0.08em] text-white/78 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] backdrop-blur-md">
             {String(index + 1).padStart(2, "0")}
@@ -295,7 +295,7 @@ function CollectionCard({
             <span className="size-1.5 bg-[#D69A70]" />
             {numberFormatter.format(products.length)} {content.productLabel}
           </span>
-        </div>
+        </div> */}
 
         <div
           className={[
@@ -304,23 +304,21 @@ function CollectionCard({
           ].join(" ")}
         >
           <div className="min-w-0 max-w-[700px]">
-            <p className="flex items-center gap-2 text-[7.5px] font-semibold uppercase tracking-[0.18em] text-white/62">
+            {/* <p className="flex items-center gap-2 text-[7.5px] font-semibold uppercase tracking-[0.18em] text-white/62">
               <span aria-hidden="true" className="h-px w-5 bg-white/45" />
               {content.eyebrow}
-            </p>
+            </p> */}
 
             <h3
               className={[
                 "mt-2 text-balance font-normal leading-[0.96] tracking-[-0.045em]",
-                single
-                  ? "text-[clamp(2rem,6.4vw,4.4rem)]"
-                  : "text-[clamp(1.8rem,4.6vw,3.3rem)]",
+                single ? "text-[clamp(2rem,6.4vw,4.4rem)]" : "text-3xl",
               ].join(" ")}
             >
               {collection.name}
             </h3>
 
-            {collection.description ? (
+            {/* {collection.description ? (
               <p
                 className={[
                   "mt-2.5 line-clamp-2 text-[9.5px] leading-5 text-white/70 sm:text-[10.5px] sm:leading-5",
@@ -329,10 +327,10 @@ function CollectionCard({
               >
                 {collection.description}
               </p>
-            ) : null}
+            ) : null} */}
           </div>
 
-          <span className="grid size-10 shrink-0 place-items-center border border-white/28 bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-[transform,background-color,border-color] duration-300 group-hover/collection:-translate-x-0.5 group-hover/collection:border-white/55 group-hover/collection:bg-white/16 motion-reduce:transition-none sm:size-11">
+          <span className="grid size-7 shrink-0 place-items-center border border-white/28 bg-white/10 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_8px_24px_rgba(0,0,0,0.14)] backdrop-blur-md transition-[transform,background-color,border-color] duration-300 group-hover/collection:-translate-x-0.5 group-hover/collection:border-white/55 group-hover/collection:bg-white/16 motion-reduce:transition-none sm:size-8">
             <ActionIcon aria-hidden="true" />
           </span>
         </div>

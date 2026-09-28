@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { type CSSProperties } from "react";
 
-import { ArrowLeftIcon, Button } from "@/components/ui/Button";
+import { ArrowLeftIcon, ArrowRightIcon, Button } from "@/components/ui/Button";
 
 import type { HomeCopy } from "@/lib/i18n/home-copy";
 
@@ -42,7 +42,7 @@ type WhyChooseUsSectionProps = {
 export function WhyChooseUsSection({
   copy,
   locale,
-  backgroundImage = "/assets/images/Whu.png",
+  backgroundImage = "/assets/images/p4.webp",
   backgroundPosition = "center",
   className = "",
 }: WhyChooseUsSectionProps) {
@@ -52,11 +52,15 @@ export function WhyChooseUsSection({
 
   const direction = getLocaleDirection(locale);
   const htmlLang = getHtmlLang(locale);
+  const isRtl = direction === "rtl";
+  const ActionIcon = isRtl ? ArrowLeftIcon : ArrowRightIcon;
 
   const themeVars = {
     "--why-copper": brandColors.copper.hex,
+    "--why-black-rgb": brandColors.black.rgb,
     "--why-black": "#0B0B0B",
     "--why-cream": "#F6F2EB",
+    "--why-image-position": backgroundPosition,
   } as CSSProperties;
 
   return (
@@ -66,102 +70,78 @@ export function WhyChooseUsSection({
       style={themeVars}
       className={`relative isolate w-full overflow-hidden bg-[var(--why-black)] text-white ${className}`}
     >
-      <Image
-        src={backgroundImage}
-        alt={copy.backgroundImageAlt}
-        fill
-        sizes="100vw"
-        loading="lazy"
-        draggable={false}
-        style={{ objectPosition: backgroundPosition }}
-        className="-z-30 object-cover"
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-20 bg-[radial-gradient(circle_at_14%_12%,rgba(193,84,39,0.12),transparent_28%),radial-gradient(circle_at_86%_84%,rgba(255,255,255,0.07),transparent_30%)]"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(7,7,7,0.36)_0%,rgba(7,7,7,0.48)_42%,rgba(7,7,7,0.90)_100%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-px bg-white/[0.14]"
       />
 
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgba(6,6,6,0.15)_0%,rgba(6,6,6,0.18)_42%,rgba(6,6,6,0.90)_100%)]"
-      />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_0%,rgba(0,0,0,0.12)_42%,rgba(0,0,0,0.42)_115%)]"
-      />
-
-      <div className="mx-auto w-full max-w-[1540px] px-5 py-20 sm:px-8 sm:py-24 lg:px-10 lg:py-28 xl:px-14 xl:py-32">
-        <header className="mx-auto flex max-w-[760px] flex-col items-center text-center">
-          {copy.eyebrow ? (
-            <div className="flex items-center justify-center gap-3">
-              <span
-                aria-hidden="true"
-                className="h-px w-8 bg-[var(--why-copper)]"
-              />
-
-              <p className="text-[10px] font-medium leading-none text-white/58 sm:text-[11px]">
-                {copy.eyebrow}
-              </p>
-
-              <span
-                aria-hidden="true"
-                className="h-px w-8 bg-[var(--why-copper)]"
-              />
-            </div>
-          ) : null}
-
-          <h2 className="mt-5 sm:mt-6">
-            <span className="block text-balance text-[clamp(2.7rem,10vw,4.6rem)] font-semibold leading-[1.08] tracking-[-0.045em] text-white sm:text-[clamp(3.6rem,7vw,5.5rem)] lg:text-[clamp(4.2rem,5.2vw,6.2rem)]">
+      <div className="mx-auto w-full max-w-[1760px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10 ">
+        <header className="grid gap-8 border-b border-white/[0.10] pb-10 lg:grid-cols-[minmax(0,0.82fr)_minmax(420px,0.58fr)] lg:items-center lg:gap-12 lg:pb-12">
+          <div className="min-w-0">
+            <h2 className="mt-5 max-w-[900px] text-balance text-[clamp(3rem,12vw,5.8rem)] font-semibold leading-[1.02] tracking-[-0.055em] sm:text-[clamp(3.8rem,8vw,6.4rem)] lg:text-[clamp(4rem,5.1vw,6.9rem)]">
               {copy.title}
-            </span>
+            </h2>
+          </div>
 
-            {/* <span className="mt-2 block text-balance text-[clamp(1.65rem,6vw,2.8rem)] font-medium leading-[1.3] tracking-[-0.035em] text-[var(--why-cream)]/72 sm:mt-3 sm:text-[clamp(2rem,4.5vw,3.3rem)] lg:text-[clamp(2.4rem,3vw,3.7rem)]">
+          <div className="max-w-[560px] lg:pb-2">
+            <p className="text-balance text-[clamp(1.5rem,5vw,2.75rem)] font-medium leading-[1.22] tracking-[-0.04em] text-[var(--why-cream)]/76 lg:text-[clamp(2rem,2.55vw,3.35rem)]">
               {copy.italicTitle}
-            </span> */}
-          </h2>
-
-          {/* {copy.description ? (
-            <p className="mx-auto mt-5 max-w-[610px] text-pretty text-[12px] leading-7 text-white/62 sm:mt-6 sm:text-[13px] md:text-[14px] md:leading-8">
-              {copy.description}
             </p>
-          ) : null} */}
 
-          {/* {copy.action ? (
-            <div className="mx-auto mt-7 w-full max-w-[230px] sm:mt-8">
-              <Button
-                href={localizedHref(copy.action.href, locale)}
-                variant="cream"
-                size="md"
-                icon={<ArrowLeftIcon />}
-                iconPosition="right"
-                fullWidth
-                className="!tracking-normal"
-              >
-                {copy.action.label}
-              </Button>
-            </div>
-          ) : null} */}
+            {copy.description ? (
+              <p className="mt-5 text-pretty text-[12px] leading-7 text-white/58 sm:text-[13px] lg:text-[14px] lg:leading-8">
+                {copy.description}
+              </p>
+            ) : null}
+          </div>
         </header>
 
-        <div className="mt-14 w-full border-r border-t border-white/[0.12] sm:mt-16 lg:mt-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleFeatures.map((feature) => (
-              <FeatureCard key={feature.id} feature={feature} />
-            ))}
+        <div className="mt-5 grid overflow-hidden border border-white/[0.10] bg-white/[0.035] lg:mt-6 lg:grid-cols-[minmax(0,0.96fr)_minmax(420px,0.74fr)]">
+          <figure className="relative isolate min-h-[520px] overflow-hidden bg-white/[0.06] lg:min-h-[720px]">
+            <Image
+              src={backgroundImage}
+              alt={copy.backgroundImageAlt}
+              fill
+              sizes="(max-width: 1023px) 100vw, 58vw"
+              loading="lazy"
+              draggable={false}
+              className="-z-30  object-[var(--why-image-position)]"
+            />
+
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 -z-20 bg-[linear-gradient(180deg,rgb(var(--why-black-rgb)/0.08)_0%,rgb(var(--why-black-rgb)/0.18)_44%,rgb(var(--why-black-rgb)/0.82)_100%)]"
+            />
+
+            <figcaption className="absolute inset-x-5 bottom-5 sm:inset-x-7 sm:bottom-7 lg:inset-x-8 lg:bottom-8">
+              <p className="flex items-center gap-2 text-[8px] font-medium text-white/56 sm:text-[9px]">
+                <span aria-hidden="true" className="h-px w-7 bg-white/40" />
+                NAJIBZADEH ATELIER
+              </p>
+
+              <p className="mt-3 max-w-[720px] text-balance text-[clamp(2.3rem,10vw,5rem)] font-semibold leading-[1.02] tracking-[-0.055em] text-white sm:text-[clamp(3.2rem,7vw,6rem)] lg:text-[clamp(3.4rem,4.8vw,6.5rem)]">
+                {copy.italicTitle}
+              </p>
+            </figcaption>
+          </figure>
+
+          <div className="border-t border-white/[0.10] lg:border-s lg:border-t-0 lg:border-white/[0.10]">
+            <div className="grid">
+              {visibleFeatures.map((feature, index) => (
+                <FeatureRow
+                  key={feature.id}
+                  feature={feature}
+                  index={index}
+                  locale={locale}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-
-        <div
-          aria-hidden="true"
-          className="mt-8 flex items-center justify-center gap-3 text-white/24 sm:mt-10"
-        >
-          <span className="text-[7px] font-medium tracking-[0.22em]">
-            NAJIBZADEH
-          </span>
-
-          <span className="h-px w-10 bg-current" />
         </div>
       </div>
     </section>
@@ -172,35 +152,38 @@ export function WhyChooseUsSection({
    FEATURE CARD
 ============================================================================ */
 
-function FeatureCard({
+function FeatureRow({
   feature,
+  index,
+  locale,
 }: {
   feature: HomeCopy["whyChooseUs"]["features"][number];
+  index: number;
+  locale: Locale;
 }) {
   return (
-    <article className="group relative flex min-h-[162px] flex-col items-center justify-center border-b border-l border-white/[0.12] bg-black/[0.10] px-6 py-7 text-center backdrop-blur-[1px] transition-[background-color,border-color] duration-300 hover:border-white/[0.18] hover:bg-white/[0.035] sm:min-h-[178px] sm:px-7 lg:min-h-[198px] lg:px-8 lg:py-9">
-      <div className="flex w-full flex-col items-center justify-center gap-4">
-        <span className="grid size-10 shrink-0 place-items-center border border-white/20 text-white/66 transition-[border-color,color,transform,background-color] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--why-copper)]/70 group-hover:bg-[var(--why-copper)]/[0.06] group-hover:text-[var(--why-copper)]">
+    <article className="group grid min-h-[132px] grid-cols-[44px_minmax(0,1fr)] gap-4 border-b border-white/[0.10] bg-white/[0.015] px-4 py-5 transition-[background-color,border-color] duration-300 last:border-b-0 hover:border-white/[0.18] hover:bg-white/[0.045] sm:grid-cols-[54px_minmax(0,1fr)] sm:gap-5 sm:px-6 sm:py-6 lg:min-h-[120px] xl:px-7">
+      <div className="flex flex-col items-center gap-3">
+       
+
+        <span className="grid size-10 shrink-0 place-items-center border border-white/[0.16] text-white/62 transition-[border-color,color,background-color,transform] duration-300 group-hover:-translate-y-0.5 group-hover:border-[var(--why-copper)]/70 group-hover:bg-[var(--why-copper)]/[0.08] group-hover:text-[var(--why-copper)]">
           <FeatureIcon type={feature.icon} />
         </span>
-
-        <span
-          aria-hidden="true"
-          className="h-px w-10 bg-white/[0.12] transition-[width,background-color] duration-300 group-hover:w-14 group-hover:bg-[var(--why-copper)]/35"
-        />
       </div>
 
-      <h3 className="mt-5 max-w-[300px] text-[18px] font-semibold leading-[1.45] tracking-[-0.025em] text-white sm:text-[19px] lg:text-[20px]">
-        {feature.title}
-      </h3>
+      <div className="min-w-0">
+        <h3 className="text-balance text-[18px] font-semibold leading-[1.35] tracking-[-0.03em] text-white sm:text-[20px] lg:text-[21px]">
+          {feature.title}
+        </h3>
 
-      <p className="mt-3 max-w-[330px] text-[11px] leading-6 text-white/48 sm:text-[11.5px] lg:text-[12px]">
-        {feature.description}
-      </p>
+        <p className="mt-2 max-w-[520px] text-pretty text-[11px] leading-6 text-white/48 sm:text-[12px] lg:text-[12.5px] lg:leading-7">
+          {feature.description}
+        </p>
+      </div>
 
       <span
         aria-hidden="true"
-        className="absolute bottom-0 right-0 h-px w-0 bg-[var(--why-copper)] transition-[width] duration-500 ease-out group-hover:w-full"
+        className="col-span-2 h-px w-0 bg-[var(--why-copper)] transition-[width] duration-500 ease-out group-hover:w-full"
       />
     </article>
   );

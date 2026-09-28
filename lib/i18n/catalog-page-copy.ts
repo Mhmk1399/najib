@@ -70,7 +70,7 @@ export const catalogPageCopy: Record<Locale, CatalogPageCopy> = {
     subcategoryFinalTitle: (name) => `خرید ${name}`,
     subcategoryFinalDescription:
       "همه محصولات این زیردسته را در فروشگاه ببینید.",
-    viewProducts: "مشاهده محصولات",
+    viewProducts: "مشاهده  ",
     enterShop: "ورود به فروشگاه",
     viewShop: "مشاهده فروشگاه",
     subcategoriesHeading: "زیردسته ها",
@@ -127,7 +127,7 @@ export const catalogPageCopy: Record<Locale, CatalogPageCopy> = {
     subcategoryFinalTitle: (name) => `Shop ${name}`,
     subcategoryFinalDescription:
       "View every product from this subcategory in the store.",
-    viewProducts: "View products",
+    viewProducts: "View  ",
     enterShop: "Enter store",
     viewShop: "View store",
     subcategoriesHeading: "Subcategories",

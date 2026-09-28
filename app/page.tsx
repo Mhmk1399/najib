@@ -109,7 +109,8 @@ export default async function Page() {
       <WhyChooseUsSection
         copy={copy.whyChooseUs}
         locale={locale}
-        backgroundImage="/assets/images/Whu.png"
+        backgroundImage="/assets/images/p2.webp"
+        backgroundPosition="left"
       />
       <CollectionShowcase locale={locale} />
       <PrivateAppointmentSection
