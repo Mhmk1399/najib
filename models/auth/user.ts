@@ -105,7 +105,7 @@ const userSchema = new Schema(
     lockedUntil: { type: Date, select: false },
     passwordChangedAt: Date,
   },
-  { timestamps: true },
+  { timestamps: true, optimisticConcurrency: true },
 );
 
 userSchema.index({ email: 1 }, { unique: true });

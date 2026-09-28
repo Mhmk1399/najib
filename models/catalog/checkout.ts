@@ -76,6 +76,7 @@ const checkoutSessionSchema = new Schema(
   { timestamps: true },
 );
 checkoutSessionSchema.index({ idempotencyKey: 1 }, { unique: true });
+checkoutSessionSchema.index({ status: 1, expiresAt: 1, _id: 1 });
 
 const abandonedItemSchema = new Schema(
   {
