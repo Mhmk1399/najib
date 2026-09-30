@@ -1,0 +1,31 @@
+services:
+  web:
+    image: najib-app:latest
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+      secrets:
+        - env_production
+
+    container_name: najib-app
+
+    restart: unless-stopped
+    init: true
+
+    env_file:
+      - .env.production
+
+    ports:
+      - "127.0.0.1:${APP_PORT:-3130}:3000"
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+secrets:
+  env_production:
+    file: ./.env.production
