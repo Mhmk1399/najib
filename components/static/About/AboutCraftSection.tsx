@@ -5,32 +5,25 @@ import Image from "next/image";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 
 import type { AboutCopy, AboutCraftIcon } from "@/lib/i18n/about-copy";
-
 import {
   getHtmlLang,
   getLocaleDirection,
   type Locale,
 } from "@/lib/i18n/config";
-
+import { estedad } from "@/next-persian-fonts/estedad";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 
 type CraftImage = {
   id: string;
-
   src: string;
-
   alt: string;
-
   position?: string;
 };
 
 type AboutCraftSectionProps = {
   copy: AboutCopy["craft"];
-
   locale: Locale;
-
   images: CraftImage[];
-
   className?: string;
 };
 
@@ -48,408 +41,127 @@ export function AboutCraftSection({
   className = "",
 }: AboutCraftSectionProps) {
   const { ref, revealed } = useRevealOnce<HTMLElement>();
-
   const direction = getLocaleDirection(locale);
-
   const htmlLang = getHtmlLang(locale);
-
   const isRtl = direction === "rtl";
-
   const visibleImages = images.slice(0, 3);
 
   const themeVars = {
     "--craft-bg": lightTokens.surfaceBrand,
-
     "--craft-text": brandColors.black.hex,
-
     "--craft-muted": lightTokens.textMuted,
-
     "--craft-border": lightTokens.border,
-
     "--craft-copper": brandColors.copper.hex,
   } as CSSProperties;
 
   return (
     <section
+      id="about-craft"
       ref={ref}
       style={themeVars}
       dir={direction}
       lang={htmlLang}
-      className={`
-        w-full
-
-        bg-[var(--craft-bg)]
-
-        text-[var(--craft-text)]
-
-        ${className}
-      `}
+      aria-labelledby="about-craft-title"
+      aria-describedby="about-craft-description"
+      className={`w-full bg-[var(--craft-bg)] text-[var(--craft-text)] ${className}`}
     >
-      <div
-        className="
-          mx-auto
-
-          grid
-
-          w-full
-          max-w-[1600px]
-
-          gap-12
-
-          px-6
-          py-16
-
-          sm:px-8
-          sm:py-20
-
-          lg:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.95fr)]
-
-          lg:items-center
-          lg:gap-16
-
-          lg:px-12
-          lg:py-28
-
-          xl:gap-24
-          xl:px-16
-        "
-      >
-        {/* IMAGE TRIPTYCH */}
-
-        <div
-          className={`
-            grid
-
-            h-[500px]
-
-            grid-cols-3
-
-            overflow-hidden
-
-            border
-            border-[var(--craft-border)]
-
-            transition-[opacity,transform]
-
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            sm:h-[620px]
-
-            lg:h-[680px]
-
-            ${
-              revealed
-                ? "translate-y-0 opacity-100"
-                : "translate-y-10 opacity-0"
-            }
-          `}
+      <div className="mx-auto grid w-full max-w-[1600px] gap-9 px-5 py-14 sm:gap-11 sm:px-8 sm:py-[72px] lg:grid-cols-[minmax(0,1.06fr)_minmax(380px,0.94fr)] lg:items-center lg:gap-14 lg:px-12 lg:py-24 xl:gap-20 xl:px-16 xl:py-28">
+        <figure
+          className={`grid h-[360px] grid-cols-3 overflow-hidden border border-[var(--craft-border)] transition-[opacity,transform] duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none sm:h-[500px] lg:h-[610px] xl:h-[660px] ${
+            revealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+          }`}
         >
           {visibleImages.map((image, index) => (
             <div
               key={image.id}
-              className={`
-                  relative
-
-                  overflow-hidden
-
-                  border-black/10
-
-                  ${
-                    index < visibleImages.length - 1
-                      ? isRtl
-                        ? "border-l"
-                        : "border-r"
-                      : ""
-                  }
-                `}
+              className={`relative overflow-hidden border-black/10 ${
+                index < visibleImages.length - 1
+                  ? isRtl
+                    ? "border-l"
+                    : "border-r"
+                  : ""
+              }`}
             >
               <Image
                 src={image.src}
                 alt={image.alt}
                 fill
                 loading="lazy"
-                sizes="33vw"
+                sizes="(max-width: 1023px) 33vw, 20vw"
                 draggable={false}
-                style={{
-                  objectPosition: image.position ?? "center",
-                }}
-                className="
-                    scale-[1.01]
-
-                    object-cover
-
-                    transition-transform
-
-                    duration-[1200ms]
-
-                    ease-[cubic-bezier(0.22,1,0.36,1)]
-
-                    hover:scale-[1.04]
-                  "
+                style={{ objectPosition: image.position ?? "center" }}
+                className="scale-[1.01] object-cover transition-transform duration-[1000ms] ease-[cubic-bezier(0.22,1,0.36,1)] hover:scale-[1.035] motion-reduce:transition-none"
               />
-
               <div
                 aria-hidden="true"
-                className="
-                    pointer-events-none
-
-                    absolute
-                    inset-0
-
-                    bg-gradient-to-t
-
-                    from-black/22
-                    via-transparent
-                    to-black/[0.04]
-                  "
+                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/24 via-transparent to-black/[0.04]"
               />
-
               <span
-                className="
-                    absolute
-
-                    bottom-4
-                    left-1/2
-
-                    -translate-x-1/2
-
-                    text-center
-
-                    text-[6px]
-
-                    font-medium
-
-                    tracking-[0.12em]
-
-                    text-white/55
-                  "
+                aria-hidden="true"
+                className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[7px] font-medium tracking-[0.10em] text-white/55 sm:bottom-4"
               >
                 {formatIndex(index + 1, locale)}
               </span>
             </div>
           ))}
-        </div>
-
-        {/* CONTENT */}
+          <figcaption className="sr-only">{copy.title}</figcaption>
+        </figure>
 
         <div
-          className={`
-            text-center
-
-            transition-[opacity,transform]
-
-            duration-[900ms]
-
-            ease-[cubic-bezier(0.22,1,0.36,1)]
-
-            ${
-              revealed
-                ? "translate-y-0 opacity-100 delay-150"
-                : "translate-y-10 opacity-0"
-            }
-          `}
+          className={`text-start transition-[opacity,transform] duration-[850ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            revealed
+              ? "translate-y-0 opacity-100 lg:delay-100"
+              : "translate-y-8 opacity-0"
+          }`}
         >
-          {/* EYEBROW */}
-
-          <div
-            className="
-              mb-5
-
-              flex
-
-              items-center
-              justify-center
-
-              gap-3
-
-              text-[7px]
-
-              font-semibold
-
-              tracking-[0.12em]
-
-              text-[var(--craft-copper)]
-
-              sm:text-[8px]
-            "
-          >
-            <span
-              aria-hidden="true"
-              className="
-                h-px
-                w-6
-
-                bg-[var(--craft-copper)]
-              "
-            />
-
-            <span>{copy.eyebrow}</span>
-
-            <span
-              aria-hidden="true"
-              className="
-                h-px
-                w-6
-
-                bg-[var(--craft-copper)]
-              "
-            />
+          <div className="mb-4 flex items-center gap-3 text-[var(--craft-copper)] sm:mb-5">
+            <span aria-hidden="true" className="h-px w-6 bg-current" />
+            <span className="text-[8px] font-semibold tracking-[0.11em] sm:text-[9px]">
+              {copy.eyebrow}
+            </span>
           </div>
 
-          {/* TITLE */}
-
           <h2
-            className="
-              mx-auto
-
-              max-w-[620px]
-
-              text-center
-
-              text-[clamp(2.8rem,10vw,4.5rem)]
-
-              font-normal
-
-              leading-[1.05]
-
-              tracking-[-0.04em]
-
-              text-[var(--craft-text)]
-
-              sm:text-[clamp(3.4rem,7vw,5rem)]
-
-              lg:text-[clamp(3.8rem,4.5vw,5.5rem)]
-            "
+            id="about-craft-title"
+            className="max-w-[620px] text-balance text-[clamp(2.15rem,9.2vw,3.25rem)] font-normal leading-[1.08] tracking-[-0.038em] text-[var(--craft-text)] sm:text-[clamp(2.65rem,6.6vw,3.8rem)] lg:text-[clamp(3.05rem,3.85vw,4.45rem)] xl:text-[clamp(3.35rem,3.55vw,4.7rem)]"
           >
             {copy.title}
           </h2>
 
-          {/* DESCRIPTION */}
+          <div className="mt-5 max-w-[560px] sm:mt-6">
+            <p
+              id="about-craft-description"
+              className={`${estedad.className} text-pretty text-[12px] font-normal leading-[1.9] text-[var(--craft-muted)] sm:text-[13px] sm:leading-7 lg:text-[14px] lg:leading-8`}
+            >
+              {copy.description}
+            </p>
 
-          <p
-            className="
-              mx-auto
-              mt-7
+            <p
+              className={`${estedad.className} mt-3 text-pretty text-[12px] font-normal leading-[1.9] text-[var(--craft-muted)] sm:mt-4 sm:text-[13px] sm:leading-7 lg:text-[14px] lg:leading-8`}
+            >
+              {copy.secondaryDescription}
+            </p>
+          </div>
 
-              max-w-[510px]
-
-              text-center
-
-              text-[10px]
-
-              leading-[2]
-
-              text-[var(--craft-muted)]
-
-              sm:text-[11px]
-            "
-          >
-            {copy.description}
-          </p>
-
-          <p
-            className="
-              mx-auto
-              mt-4
-
-              max-w-[510px]
-
-              text-center
-
-              text-[10px]
-
-              leading-[2]
-
-              text-[var(--craft-muted)]
-
-              sm:text-[11px]
-            "
-          >
-            {copy.secondaryDescription}
-          </p>
-
-          {/* VALUES */}
-
-          <div
-            className={`
-              mt-10
-
-              grid
-              grid-cols-2
-
-              border-t
-              border-black/10
-
-              lg:grid-cols-4
-
-              ${isRtl ? "border-r" : "border-l"}
-            `}
+          <ul
+            className={`mt-8 grid grid-cols-2 border-t border-black/10 sm:mt-9 lg:grid-cols-4 ${isRtl ? "border-r" : "border-l"}`}
           >
             {copy.values.map((item) => (
-              <div
+              <li
                 key={item.id}
-                className={`
-                    flex
-
-                    min-h-[135px]
-
-                    flex-col
-
-                    items-center
-                    justify-center
-
-                    border-b
-                    border-black/10
-
-                    px-4
-                    py-5
-
-                    text-center
-
-                    ${isRtl ? "border-l" : "border-r"}
-                  `}
+                className={`flex min-h-[112px] flex-col items-center justify-center border-b border-black/10 px-3 py-4 text-center sm:min-h-[122px] sm:px-4 sm:py-5 ${
+                  isRtl ? "border-l" : "border-r"
+                }`}
               >
-                <span
-                  className="
-                      grid
-
-                      size-8
-
-                      place-items-center
-
-                      text-black/65
-                    "
-                >
+                <span className="grid size-8 place-items-center text-black/62 sm:size-9">
                   <CraftIcon type={item.icon} />
                 </span>
-
-                <p
-                  className="
-                      mx-auto
-                      mt-5
-
-                      max-w-[120px]
-
-                      text-center
-
-                      text-[7px]
-
-                      font-semibold
-
-                      leading-[1.8]
-
-                      tracking-[0.06em]
-
-                      text-black/60
-                    "
-                >
+                <span className="mt-3 max-w-[132px] text-balance text-[9px] font-semibold leading-[1.65] tracking-[0.035em] text-black/58 sm:mt-4 sm:text-[10px]">
                   {item.title}
-                </p>
-              </div>
+                </span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </div>
     </section>
@@ -470,7 +182,6 @@ function CraftIcon({ type }: { type: AboutCraftIcon }) {
           stroke="currentColor"
           strokeWidth="1"
         />
-
         <path
           d="M5 7L12 11L19 7M12 11V21"
           stroke="currentColor"
@@ -489,7 +200,6 @@ function CraftIcon({ type }: { type: AboutCraftIcon }) {
         aria-hidden="true"
       >
         <path d="M4 6H20V18H4V6Z" stroke="currentColor" strokeWidth="1" />
-
         <path
           d="M7 6V10M10 6V8M13 6V10M16 6V8"
           stroke="currentColor"
@@ -515,13 +225,11 @@ function CraftIcon({ type }: { type: AboutCraftIcon }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className="size-5" aria-hidden="true">
       <path d="M7 4H17M7 20H17" stroke="currentColor" strokeWidth="1" />
-
       <path
         d="M8 4C8 8 10 10 12 12C14 10 16 8 16 4"
         stroke="currentColor"
         strokeWidth="1"
       />
-
       <path
         d="M8 20C8 16 10 14 12 12C14 14 16 16 16 20"
         stroke="currentColor"
@@ -533,46 +241,29 @@ function CraftIcon({ type }: { type: AboutCraftIcon }) {
 
 function useRevealOnce<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
-
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     const node = ref.current;
-
     if (!node) return;
 
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      const frame = requestAnimationFrame(() => {
-        setRevealed(true);
-      });
-
+      const frame = requestAnimationFrame(() => setRevealed(true));
       return () => cancelAnimationFrame(frame);
     }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (!entry?.isIntersecting) {
-          return;
-        }
-
-        requestAnimationFrame(() => {
-          setRevealed(true);
-        });
-
+        if (!entry?.isIntersecting) return;
+        requestAnimationFrame(() => setRevealed(true));
         observer.disconnect();
       },
-      {
-        threshold: 0.08,
-      },
+      { threshold: 0.08 },
     );
 
     observer.observe(node);
-
     return () => observer.disconnect();
   }, []);
 
-  return {
-    ref,
-    revealed,
-  };
+  return { ref, revealed };
 }

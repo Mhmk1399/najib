@@ -20,13 +20,19 @@ import {
 import { getHtmlLang, getLocaleDirection, type Locale } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
 import type { CartCopy } from "@/lib/i18n/cart-copy";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 const FALLBACK_IMAGE = "/assets/images/banner.webp";
+
+function persianDescriptionFont(locale: Locale) {
+  return locale === "fa" ? estedad.className : "";
+}
 
 export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
   const router = useRouter();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const descriptionFont = persianDescriptionFont(locale);
   const cartQuery = useQuery({
     queryKey: [...cartQueryKey, locale],
     queryFn: ({ signal }) => fetchAccountCart(signal, locale),
@@ -97,7 +103,7 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
             <h1 className="mt-3 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">{copy.title}</h1>
           </div>
           {cart?.itemCount ? (
-            <p className="mt-4 text-sm text-black/65 md:mt-0">
+            <p className={`mt-4 text-sm text-black/65 md:mt-0 ${descriptionFont}`}>
               {formatCopy(copy.itemCount, { count: new Intl.NumberFormat(getHtmlLang(locale)).format(cart.itemCount) })}
             </p>
           ) : null}
@@ -110,13 +116,14 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
             icon={<ShoppingBag className="size-6" />}
             title={copy.signedOutTitle}
             description={copy.signedOutDescription}
+            locale={locale}
           >
             <Button href={localizedHref(loginHref(localizedHref("/cart", locale)), locale)} variant="black" size="lg">{copy.login}</Button>
           </StatePanel>
         ) : null}
 
         {cartQuery.isError && !signedOut ? (
-          <StatePanel title={copy.fetchError} description={messageFor(cartQuery.error, copy, locale)}>
+          <StatePanel title={copy.fetchError} description={messageFor(cartQuery.error, copy, locale)} locale={locale}>
             <Button type="button" variant="outline" size="lg" onClick={() => void cartQuery.refetch()}>
               {copy.retry}
             </Button>
@@ -130,6 +137,7 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
             icon={<ShoppingBag className="size-6" />}
             title={copy.emptyTitle}
             description={copy.emptyDescription}
+            locale={locale}
           >
             <Button href={localizedHref("/shop", locale)} variant="black" size="lg">{copy.shop}</Button>
           </StatePanel>
@@ -139,7 +147,7 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
           <div className="grid gap-12 pt-10 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-16">
             <section aria-label={copy.itemsLabel}>
               {locked ? (
-                <div className="mb-7 border-s-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7">
+                <div className={`mb-7 border-s-2 border-[#C15427] bg-white px-5 py-4 text-sm leading-7 ${descriptionFont}`}>
                   {copy.lockedNotice}
                 </div>
               ) : null}
@@ -224,7 +232,7 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
               <div className="mt-7 flex items-center justify-between border-b border-black/15 pb-5 text-sm">
                 <span>{copy.subtotal}</span><strong className="tabular-nums">{formatMinor(cart.subtotalMinor, cart.currency, locale)}</strong>
               </div>
-              <div className="space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/65">
+              <div className={`space-y-3 border-b border-black/15 py-5 text-xs leading-6 text-black/65 ${descriptionFont}`}>
                 <p className="flex justify-between gap-4"><span>{copy.shipping}</span><span className="text-end">{copy.shippingPending}</span></p>
                 <p className="flex justify-between gap-4"><span>{copy.discountTax}</span><span className="text-end">{copy.discountTaxNone}</span></p>
               </div>
@@ -234,7 +242,7 @@ export function CartPage({ locale, copy }: { locale: Locale; copy: CartCopy }) {
               <Button type="button" variant="black" size="xl" fullWidth onClick={() => router.push(localizedHref("/checkout", locale))}>
                 {locked ? copy.continuePayment : copy.continueCheckout}
               </Button>
-              <p className="mt-4 text-center text-xs leading-6 text-black/65">{copy.reservationNote}</p>
+              <p className={`mt-4 text-center text-xs leading-6 text-black/65 ${descriptionFont}`}>{copy.reservationNote}</p>
             </aside>
           </div>
         ) : null}
@@ -267,11 +275,13 @@ function StatePanel({
   icon,
   title,
   description,
+  locale,
   children,
 }: {
   icon?: React.ReactNode;
   title: string;
   description: string;
+  locale: Locale;
   children: React.ReactNode;
 }) {
   return (
@@ -282,7 +292,7 @@ function StatePanel({
         </div>
       ) : null}
       <h2 className="text-xl font-semibold">{title}</h2>
-      <p className="mt-4 max-w-md text-xs leading-7 text-black/65">
+      <p className={`mt-4 max-w-md text-xs leading-7 text-black/65 ${persianDescriptionFont(locale)}`}>
         {description}
       </p>
       <div className="mt-8">{children}</div>

@@ -9,6 +9,7 @@ import type { HomeCopy } from "@/lib/i18n/home-copy";
 import { getStorefrontCatalog } from "@/services/catalog/storefront";
 import { brandColors, lightTokens } from "@/theme/theme-colors";
 import { CategoryMarquee } from "./category-marquee";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ========================================================================== 
    TYPES
@@ -181,7 +182,7 @@ export function CategoryShowcase({
       <div className="mx-auto w-full max-w-[1760px] px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24 xl:px-10 xl:py-28">
         <header className="mx-auto flex max-w-[820px] flex-col items-center text-center">
           {copy.eyebrow ? (
-            <div className="flex items-center justify-center gap-3 text-[10px] font-medium text-[var(--cat-accent)] sm:text-[11px]">
+            <div className="flex items-center justify-center gap-3 text-[12px] font-medium text-[var(--cat-accent)] sm:text-[14px]">
               <span
                 aria-hidden="true"
                 className="h-px w-7 bg-[var(--cat-accent)]/70"
@@ -200,17 +201,6 @@ export function CategoryShowcase({
           >
             {copy.title}
           </h2>
-
-          {copy.description ? (
-            <p className="mt-5 max-w-[590px] text-pretty text-[12px] leading-7 text-[var(--cat-muted)] sm:text-[13px] lg:mt-6 lg:text-[14px] lg:leading-8">
-              {copy.description}
-            </p>
-          ) : null}
-
-          <span
-            aria-hidden="true"
-            className="mt-7 h-px w-12 bg-[var(--cat-accent)]/55 sm:mt-8"
-          />
         </header>
 
         <CategoryMarquee

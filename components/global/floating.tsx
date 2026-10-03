@@ -20,6 +20,7 @@ import {
 import { getLocaleFromPathname, splitLocalePathname } from "@/lib/i18n/routes";
 import { shellCopy } from "@/lib/i18n/shell-copy";
 import { brandColors } from "@/theme/theme-colors";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 type FloatingContactDockProps = {
   phone: string;
@@ -224,7 +225,7 @@ export default function FloatingContactDock({
       dir={direction}
       lang={htmlLang}
       style={themeVars}
-      className="pointer-events-none fixed bottom-[max(14px,env(safe-area-inset-bottom))] right-[max(14px,env(safe-area-inset-right))] z-[140] sm:bottom-[max(20px,env(safe-area-inset-bottom))] sm:right-[max(20px,env(safe-area-inset-right))]"
+      className={`pointer-events-none  ${estedad.className} fixed bottom-[max(14px,env(safe-area-inset-bottom))] right-[max(14px,env(safe-area-inset-right))] z-[140] sm:bottom-[max(20px,env(safe-area-inset-bottom))] sm:right-[max(20px,env(safe-area-inset-right))]`}
     >
       <section
         id={panelId}
@@ -260,16 +261,9 @@ export default function FloatingContactDock({
           </span>
 
           <div className="min-w-0 flex-1 text-start">
-            <div className="flex items-center gap-2.5">
-              <span className="text-[7px] font-semibold uppercase tracking-[0.16em] text-[#D0A06F]">
-                {copy.eyebrow}
-              </span>
-              <span className="h-px w-6 bg-[#D0A06F]/55" aria-hidden="true" />
-            </div>
-
             <h2
               id={panelTitleId}
-              className="mt-2 text-[17px] font-semibold leading-[1.45] tracking-[-0.018em] text-white sm:text-[18px]"
+              className="mt-2 text-[17px] font-semibold leading-[1.45] tracking-[-0.018em] text-white sm:text-[14px]"
             >
               {copy.title}
             </h2>
@@ -334,22 +328,9 @@ export default function FloatingContactDock({
             />
           </div>
         </nav>
-
-        <div className="flex items-center justify-between gap-4 border-t border-white/[0.075] px-5 py-3.5 text-start">
-          <span className="text-[7px] font-semibold uppercase tracking-[0.17em] text-white/30">
-            {brandName}
-          </span>
-          <span className="flex items-center gap-2 text-[7px] text-white/28">
-            <span
-              className="size-1 rounded-full bg-[#D0A06F]"
-              aria-hidden="true"
-            />
-            {copy.trigger}
-          </span>
-        </div>
       </section>
 
-      <div className="pointer-events-auto flex justify-end">
+      <div className="pointer-events-auto flex justify-center items-center">
         <button
           ref={triggerRef}
           type="button"
@@ -358,7 +339,7 @@ export default function FloatingContactDock({
           aria-controls={panelId}
           onClick={toggleDock}
           className={cx(
-            "group relative inline-flex h-12 cursor-pointer items-center overflow-hidden rounded-full border border-white/[0.13] bg-[#0B0A09]/[0.95] text-white",
+            "group relative inline-flex h-12 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-white/[0.13] bg-[#0B0A09]/[0.95] text-white",
             "shadow-[0_12px_30px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.08)]",
             "supports-[backdrop-filter]:bg-[#0B0A09]/[0.86] supports-[backdrop-filter]:backdrop-blur-[10px] supports-[backdrop-filter]:backdrop-saturate-[125%]",
             "transition-[border-color,background-color,transform,box-shadow] duration-200 ease-out",
@@ -368,31 +349,9 @@ export default function FloatingContactDock({
             open && "border-[#D0A06F]/55",
           )}
         >
-          <span
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[#D0A06F]/75 to-transparent opacity-80"
-          />
-
-          <span className="grid size-11 shrink-0 place-items-center sm:ms-0.5 [&>svg]:size-[17px]">
+          <span className="grid size-11 shrink-0 place-items-center  [&>svg]:size-[17px]">
             {open ? <CloseIcon /> : <ConciergeIcon />}
           </span>
-
-          <span className="hidden min-w-0 pe-4 ps-0.5 text-start sm:block">
-            <span className="block text-[6px] font-semibold uppercase leading-none tracking-[0.17em] text-[#D0A06F]">
-              {copy.eyebrow}
-            </span>
-            <span className="mt-1.5 block whitespace-nowrap text-[9px] font-semibold leading-none tracking-[0.01em] text-white/92">
-              {open ? copy.close : copy.trigger}
-            </span>
-          </span>
-
-          <span
-            aria-hidden="true"
-            className={cx(
-              "me-3 hidden h-px w-5 origin-center bg-white/24 transition-transform duration-300 sm:block",
-              open ? "scale-x-50" : "scale-x-100",
-            )}
-          />
         </button>
       </div>
     </div>

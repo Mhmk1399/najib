@@ -71,49 +71,49 @@ export const brandColors = {
 // -----------------------------------------------------------------------------
 
 export const lightTokens = {
-  /* Main page */
-  canvas: "#FFFFFF",
+    /* Main page */
+    canvas: "#FFFFFF",
 
-  /* Cards / navbar / sections */
-  surface: "#FFFFFF",
+    /* Cards / navbar / sections */
+    surface: "#FFFFFF",
 
-  /* Very subtle neutral separation */
-  surfaceMuted: "#F7F7F7",
+    /* Very subtle neutral separation */
+    surfaceMuted: "#F7F7F7",
 
-  /**
-   * Editorial background only.
-   * This is the ONLY cream surface.
-   */
-  surfaceBrand: "#F6F2EB",
+    /**
+     * Editorial background only.
+     * This is the ONLY cream surface.
+     */
+    surfaceBrand: "#F6F2EB",
 
-  /* Main typography */
-  text: "#0B0B0B",
+    /* Main typography */
+    text: "#0B0B0B",
 
-  /* Secondary typography */
-  textMuted: "#707070",
+    /* Secondary typography */
+    textMuted: "#707070",
 
-  /* Tiny tertiary copy */
-  textSoft: "#989898",
+    /* Tiny tertiary copy */
+    textSoft: "#989898",
 
-  /* Structure */
-  border: "#E5E5E5",
+    /* Structure */
+    border: "#E5E5E5",
 
-  borderStrong: "#B8B8B8",
+    borderStrong: "#B8B8B8",
 
-  /**
-   * Copper = eyebrow only.
-   */
-  accent: "#C15427",
+    /**
+     * Copper = eyebrow only.
+     */
+    accent: "#C15427",
 
-  accentStrong: "#C15427",
+    accentStrong: "#C15427",
 
-  accentForeground: "#FFFFFF",
+    accentForeground: "#FFFFFF",
 
-  destructive: "#A33A32",
+    destructive: "#A33A32",
 
-  success: "#347155",
+    success: "#347155",
 
-  warning: "#9B5B22",
+    warning: "#9B5B22",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -121,39 +121,39 @@ export const lightTokens = {
 // -----------------------------------------------------------------------------
 
 export const darkTokens = {
-  canvas: "#0B0B0B",
+    canvas: "#0B0B0B",
 
-  surface: "#111111",
+    surface: "#111111",
 
-  surfaceMuted: "#181818",
+    surfaceMuted: "#181818",
 
-  /**
-   * Warm editorial dark.
-   * Use rarely.
-   */
-  surfaceBrand: "#161311",
+    /**
+     * Warm editorial dark.
+     * Use rarely.
+     */
+    surfaceBrand: "#161311",
 
-  text: "#FFFFFF",
+    text: "#FFFFFF",
 
-  textMuted: "#B5B5B5",
+    textMuted: "#B5B5B5",
 
-  textSoft: "#777777",
+    textSoft: "#777777",
 
-  border: "#292929",
+    border: "#292929",
 
-  borderStrong: "#474747",
+    borderStrong: "#474747",
 
-  accent: "#C15427",
+    accent: "#C15427",
 
-  accentStrong: "#C15427",
+    accentStrong: "#C15427",
 
-  accentForeground: "#FFFFFF",
+    accentForeground: "#FFFFFF",
 
-  destructive: "#D95C54",
+    destructive: "#D95C54",
 
-  success: "#76BC98",
+    success: "#76BC98",
 
-  warning: "#E1A66C",
+    warning: "#E1A66C",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -161,9 +161,9 @@ export const darkTokens = {
 // -----------------------------------------------------------------------------
 
 export const fontTokens = {
-    persian: "var(--font-dana)",
+    persian: "var(--font-amiri)",
 
-    english: "var(--font-open-sans)",
+    english: "var(--font-gesits)",
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -305,29 +305,29 @@ export const themeClasses = {
     // not copper.
     //
 
-  primaryButton: [
-  "bg-[#0B0B0B]",
-  "text-white",
+    primaryButton: [
+        "bg-[#0B0B0B]",
+        "text-white",
 
-  "border",
-  "border-[#0B0B0B]",
+        "border",
+        "border-[#0B0B0B]",
 
-  "hover:bg-[#262626]",
-  "hover:border-[#262626]",
+        "hover:bg-[#262626]",
+        "hover:border-[#262626]",
 
-  "dark:bg-white",
-  "dark:text-[#0B0B0B]",
-  "dark:border-white",
+        "dark:bg-white",
+        "dark:text-[#0B0B0B]",
+        "dark:border-white",
 
-  "dark:hover:bg-[#EDEDED]",
-  "dark:hover:border-[#EDEDED]",
+        "dark:hover:bg-[#EDEDED]",
+        "dark:hover:border-[#EDEDED]",
 
-  "transition-colors",
-  "duration-200",
+        "transition-colors",
+        "duration-200",
 
-  "disabled:pointer-events-none",
-  "disabled:opacity-40",
-].join(" "),
+        "disabled:pointer-events-none",
+        "disabled:opacity-40",
+    ].join(" "),
 
     // ---------------------------------------------------------------------------
     // COPPER BUTTON
@@ -357,31 +357,31 @@ export const themeClasses = {
     // SECONDARY BUTTON
     // ---------------------------------------------------------------------------
 
- secondaryButton: [
-  "bg-transparent",
+    secondaryButton: [
+        "bg-transparent",
 
-  "border",
-  "border-[#0B0B0B]/30",
+        "border",
+        "border-[#0B0B0B]/30",
 
-  "text-[#0B0B0B]",
+        "text-[#0B0B0B]",
 
-  "hover:border-[#0B0B0B]",
-  "hover:bg-[#0B0B0B]",
-  "hover:text-white",
+        "hover:border-[#0B0B0B]",
+        "hover:bg-[#0B0B0B]",
+        "hover:text-white",
 
-  "dark:border-white/35",
-  "dark:text-white",
+        "dark:border-white/35",
+        "dark:text-white",
 
-  "dark:hover:border-white",
-  "dark:hover:bg-white",
-  "dark:hover:text-[#0B0B0B]",
+        "dark:hover:border-white",
+        "dark:hover:bg-white",
+        "dark:hover:text-[#0B0B0B]",
 
-  "transition-colors",
-  "duration-200",
+        "transition-colors",
+        "duration-200",
 
-  "disabled:pointer-events-none",
-  "disabled:opacity-40",
-].join(" "),
+        "disabled:pointer-events-none",
+        "disabled:opacity-40",
+    ].join(" "),
 
     // ---------------------------------------------------------------------------
     // GHOST BUTTON
@@ -405,19 +405,19 @@ export const themeClasses = {
     // ---------------------------------------------------------------------------
 
     activeIndicator: [
-  "bg-[#0B0B0B]",
-  "dark:bg-white",
-].join(" "),
+        "bg-[#0B0B0B]",
+        "dark:bg-white",
+    ].join(" "),
 
-activeText: [
-  "text-[#0B0B0B]",
-  "dark:text-white",
-].join(" "),
+    activeText: [
+        "text-[#0B0B0B]",
+        "dark:text-white",
+    ].join(" "),
 
-activeBorder: [
-  "border-[#0B0B0B]",
-  "dark:border-white",
-].join(" "),
+    activeBorder: [
+        "border-[#0B0B0B]",
+        "dark:border-white",
+    ].join(" "),
 
     // ---------------------------------------------------------------------------
     // PRODUCT CARD
@@ -439,36 +439,36 @@ activeBorder: [
     // NAVBAR
     // ---------------------------------------------------------------------------
 
-   navbar: [
-  "bg-white/95",
-  "text-[#0B0B0B]",
+    navbar: [
+        "bg-white/95",
+        "text-[#0B0B0B]",
 
-  "border-b",
-  "border-[#E5E5E5]",
+        "border-b",
+        "border-[#E5E5E5]",
 
-  "backdrop-blur-md",
+        "backdrop-blur-md",
 
-  "dark:bg-[#0B0B0B]/95",
-  "dark:text-white",
-  "dark:border-[#292929]",
-].join(" "),
+        "dark:bg-[#0B0B0B]/95",
+        "dark:text-white",
+        "dark:border-[#292929]",
+    ].join(" "),
 
     // ---------------------------------------------------------------------------
     // MEGA MENU
     // ---------------------------------------------------------------------------
 
-megaMenu: [
-  "bg-white",
-  "text-[#0B0B0B]",
+    megaMenu: [
+        "bg-white",
+        "text-[#0B0B0B]",
 
-  "dark:bg-[#0B0B0B]",
-  "dark:text-white",
-].join(" "),
+        "dark:bg-[#0B0B0B]",
+        "dark:text-white",
+    ].join(" "),
 
-megaMenuMuted: [
-  "bg-[#F7F7F7]",
-  "dark:bg-[#111111]",
-].join(" "),
+    megaMenuMuted: [
+        "bg-[#F7F7F7]",
+        "dark:bg-[#111111]",
+    ].join(" "),
 
     // ---------------------------------------------------------------------------
     // INPUTS
@@ -502,18 +502,18 @@ megaMenuMuted: [
     // FOCUS
     // ---------------------------------------------------------------------------
 
-   focusRing: [
-  "focus-visible:outline-none",
+    focusRing: [
+        "focus-visible:outline-none",
 
-  "focus-visible:ring-2",
-  "focus-visible:ring-[#0B0B0B]",
+        "focus-visible:ring-2",
+        "focus-visible:ring-[#0B0B0B]",
 
-  "focus-visible:ring-offset-2",
-  "focus-visible:ring-offset-white",
+        "focus-visible:ring-offset-2",
+        "focus-visible:ring-offset-white",
 
-  "dark:focus-visible:ring-white",
-  "dark:focus-visible:ring-offset-[#0B0B0B]",
-].join(" "),
+        "dark:focus-visible:ring-white",
+        "dark:focus-visible:ring-offset-[#0B0B0B]",
+    ].join(" "),
 } as const;
 
 export type ThemeClasses = typeof themeClasses;

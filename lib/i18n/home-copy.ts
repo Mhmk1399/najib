@@ -215,7 +215,7 @@ export const homeCopy: Record<Locale, HomeCopy> = {
 
       eyebrow: "چرا نجیب‌زاده؟",
 
-      title: "فراتر از پوشش.",
+      title: "درباره نجیب زاده",
 
       italicTitle: "معیاری برای تمایز.",
 
@@ -565,7 +565,7 @@ export const homeCopy: Record<Locale, HomeCopy> = {
 
       eyebrow: "Why Najibzadeh?",
 
-      title: "Beyond clothing.",
+      title: "About Najibzadeh",
 
       italicTitle: "A standard of distinction.",
 

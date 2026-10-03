@@ -13,8 +13,7 @@ import {
   locales,
   type Locale,
 } from "@/lib/i18n/config";
-import { ContactSection } from "@/components/static/Contact/ContactServicesSection";
-
+ 
 type ContactPageProps = {
   params: Promise<{
     locale: string;

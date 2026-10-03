@@ -177,7 +177,7 @@ const sizeClasses: Record<ButtonSize, string> = {
     min-h-9
     px-3.5
 
-    text-[7px]
+    text-[8px]
 
     gap-2
   `,
@@ -186,7 +186,7 @@ const sizeClasses: Record<ButtonSize, string> = {
     min-h-11
     px-4.5
 
-    text-[8px]
+    text-[9px]
 
     gap-2.5
   `,
@@ -195,7 +195,7 @@ const sizeClasses: Record<ButtonSize, string> = {
     min-h-12
     px-5
 
-    text-[9px]
+    text-[13px]
 
     gap-3
   `,
@@ -299,7 +299,7 @@ export function Button({
 
     rounded-none
 
-    font-semibold
+    font-bold
 
     tracking-[0.12em]
 

@@ -20,6 +20,7 @@ import { localizedHref } from "@/lib/i18n/routes";
 import { getStorefrontImageStories } from "@/services/catalog/storefront";
 
 import { brandColors } from "@/theme/theme-colors";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ==========================================================================
    TYPES
@@ -166,6 +167,24 @@ function pickHomeStory(stories: ImageStory[]) {
   );
 }
 
+function hotspotAnchorClasses(x: number, y: number) {
+  const horizontal =
+    x <= 18
+      ? "translate-x-0"
+      : x >= 82
+        ? "-translate-x-full"
+        : "-translate-x-1/2";
+
+  const vertical =
+    y <= 12
+      ? "translate-y-0"
+      : y >= 88
+        ? "-translate-y-full"
+        : "-translate-y-1/2";
+
+  return `${horizontal} ${vertical}`;
+}
+
 /* ==========================================================================
    COMPONENT
 ============================================================================ */
@@ -234,7 +253,7 @@ export async function ShoppableImageBanner({
               PRODUCT HOTSPOTS
           =============================================================== */}
 
-          {products.map((product, index) => {
+          {products.map((product) => {
             if (
               typeof product.hotspotX !== "number" ||
               typeof product.hotspotY !== "number"
@@ -243,9 +262,13 @@ export async function ShoppableImageBanner({
             }
 
             const productName = localizedText(
+              product.label,
+              locale,
+              localizedText(
               product.name,
               locale,
               product.slug,
+              ),
             );
 
             return (
@@ -253,13 +276,22 @@ export async function ShoppableImageBanner({
                 key={`${product.id}-hotspot`}
                 href={localizedHref(product.href, locale)}
                 aria-label={`${copy.productAriaPrefix} ${productName}`}
-                className="absolute grid size-9 -translate-x-1/2 -translate-y-1/2 place-items-center border border-white/70 bg-black/55 text-[11px] font-semibold text-white shadow-[0_18px_50px_rgba(0,0,0,0.35)] backdrop-blur-md transition-[background-color,border-color,transform] duration-500 hover:scale-105 hover:border-[var(--shoppable-copper)] hover:bg-[var(--shoppable-copper)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                className={`group/hotspot absolute z-20 inline-flex min-h-9 max-w-[min(250px,calc(100vw-40px))] items-center gap-2 border border-white/30 bg-black/42 px-3 py-2 text-start   font-semibold leading-4 text-white shadow-[0_18px_56px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-xl backdrop-saturate-150 transition-[background-color,border-color,box-shadow,transform] duration-500 hover:border-[var(--shoppable-copper)]/80 hover:bg-black/58 hover:shadow-[0_20px_62px_rgba(0,0,0,0.44),inset_0_1px_0_rgba(255,255,255,0.2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:min-h-10 sm:max-w-[280px] sm:px-3.5 text-[10px] lg:text-sm  ${hotspotAnchorClasses(
+                  product.hotspotX,
+                  product.hotspotY,
+                )}`}
                 style={{
                   left: `${product.hotspotX}%`,
                   top: `${product.hotspotY}%`,
                 }}
               >
-                {formatNumber(index + 1, locale)}
+                <span
+                  aria-hidden="true"
+                  className="size-1.5 shrink-0 bg-[var(--shoppable-copper)] shadow-[0_0_0_4px_rgba(193,84,39,0.16)] transition-[background-color,box-shadow] duration-500 group-hover/hotspot:bg-white group-hover/hotspot:shadow-[0_0_0_5px_rgba(255,255,255,0.16)]"
+                />
+                <span className={`line-clamp-1   ${estedad.className} min-w-0 text-white [text-shadow:0_1px_10px_rgba(0,0,0,0.92)]`}>
+                  {productName}
+                </span>
               </Link>
             );
           })}
@@ -271,23 +303,16 @@ export async function ShoppableImageBanner({
 
         <div className="flex min-h-[520px] flex-col justify-center px-5 py-14 sm:px-8 lg:min-h-[720px] lg:px-10 xl:px-14">
           <div className="max-w-[620px]">
-            <div className="flex items-center gap-3 text-[10px] font-medium text-[var(--shoppable-copper)] sm:text-[11px]">
-              <span
-                className="h-px w-8 bg-[var(--shoppable-copper)]"
-                aria-hidden="true"
-              />
-
-              <span>{copy.eyebrow}</span>
-            </div>
+         
 
             <h2
               id="home-shoppable-banner-title"
-              className="mt-5 text-balance text-[clamp(2.7rem,10vw,4.8rem)] font-semibold leading-[1.05] tracking-[-0.045em] text-white sm:text-[clamp(3.4rem,7vw,5.7rem)] lg:text-[clamp(3.7rem,4.8vw,6rem)]"
+              className="mt-5 text-balance text-2xl font-semibold leading-[1.05] tracking-[-0.045em] text-white  lg:text-4xl"
             >
               {title}
             </h2>
 
-            <p className="mt-5 max-w-[500px] text-pretty text-[12px] leading-7 text-white/62 sm:text-[13px] lg:text-[14px] lg:leading-8">
+            <p className={`mt-5 ${estedad.className} max-w-[500px] text-pretty text-[12px] leading-7 text-white/62 sm:text-[13px] lg:text-[14px] lg:leading-8`}>
               {copy.description}
             </p>
 
@@ -339,16 +364,14 @@ export async function ShoppableImageBanner({
                         </span>
 
                         <span className="min-w-0">
-                          <span className="text-[9px] text-[var(--shoppable-copper)]">
-                            {copy.productLabel} {formatNumber(index + 1, locale)}
-                          </span>
+                          
 
-                          <strong className="mt-1 block truncate text-[14px] font-semibold leading-6 text-white">
+                          <strong className={`mt-1 ${estedad.className} block truncate text-[14px] font-semibold leading-6 text-white`}>
                             {name}
                           </strong>
 
                           {price ? (
-                            <span className="mt-1 block text-[10px] text-white/55">
+                            <span className={`mt-1 ${estedad.className} block text-[10px] text-white/55`}>
                               {price}
                             </span>
                           ) : null}

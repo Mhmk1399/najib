@@ -318,32 +318,11 @@ function StorefrontFooter({ locale }: { locale: Locale }) {
               </Link>
             </div>
 
-            <div className="mt-8 grid w-full gap-7 border-t border-black/[0.09] pt-6 lg:grid-cols-2 lg:gap-12">
-              <div className="flex items-center justify-center text-center lg:justify-start lg:text-start">
-                <p className="max-w-[620px] text-[10px] font-medium leading-6 text-black/[0.48]">
-                  {copy.footer.allProductsDescription}
-                </p>
-              </div>
-
-              <div className="flex flex-col items-center gap-3 lg:items-end">
-                <div className="flex w-full items-center justify-between gap-4 lg:justify-end lg:gap-6">
-                  <p className="text-[8px] font-semibold tracking-[0.08em] text-black/[0.42]">
-                    {copy.footer.followUs}
-                  </p>
-
-                  <span
-                    aria-label={copy.footer.currentLanguage(
-                      localeLabels[locale],
-                    )}
-                    className="text-[8px] font-medium text-black/[0.36]"
-                  >
-                    {localeLabels[locale]}
-                  </span>
-                </div>
-
+            <div className="mt-8 grid w-full gap-7 border-t border-black/[0.09] pt-6 ">
+              <div className="flex flex-col items-center gap-3 lg:items-center">
                 <nav
                   aria-label={copy.footer.socialAria}
-                  className="flex items-center gap-2"
+                  className="flex items-center justify-center gap-2"
                 >
                   {SOCIAL_LINKS.map((social) => (
                     <SocialTextLink
@@ -393,14 +372,6 @@ function StorefrontFooter({ locale }: { locale: Locale }) {
 
       {/* =====================================================================
 
-          IMMERSIVE FULL-SCREEN BRAND WORDMARK
-
-      ===================================================================== */}
-
-      <WordmarkStage href={homeHref} ariaLabel={copy.footer.homeAria} />
-
-      {/* =====================================================================
-
           LEGAL END CAP
 
       ===================================================================== */}
@@ -443,187 +414,6 @@ function StorefrontFooter({ locale }: { locale: Locale }) {
         </div>
       </section>
     </footer>
-  );
-}
-
-/* =============================================================================
-
-
-
-   WORDMARK STAGE
-
-
-
-============================================================================= */
-
-function WordmarkStage({
-  href,
-  ariaLabel,
-}: {
-  href: string;
-  ariaLabel: string;
-}) {
-  const stageRef = useRef<HTMLElement>(null);
-  const surfaceRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const stage = stageRef.current;
-    const surface = surfaceRef.current;
-
-    if (!stage || !surface) return;
-
-    const reduceMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    ).matches;
-
-    let frame: number | null = null;
-
-    const update = () => {
-      frame = null;
-
-      const rect = stage.getBoundingClientRect();
-      const viewport = Math.max(window.innerHeight, 1);
-      const travel = Math.max(stage.offsetHeight - viewport, 1);
-      const rawProgress = -rect.top / travel;
-      const progress = reduceMotion
-        ? 0.5
-        : Math.min(1, Math.max(0, rawProgress));
-
-      // Smoothstep: elegant and fully tied to scroll position.
-      const eased = progress * progress * (3 - 2 * progress);
-      const centerGlow = Math.sin(progress * Math.PI);
-
-      const scale = 0.94 + eased * 0.075;
-      const translateY = 18 - eased * 36;
-      const shine = -34 + eased * 168;
-      const lightX = -46 + eased * 92;
-      const lightOpacity = 0.08 + centerGlow * 0.18;
-      const whiteGlow = 5 + centerGlow * 15;
-      const copperGlow = 12 + centerGlow * 30;
-      const ambientOpacity = 0.38 + centerGlow * 0.42;
-
-      surface.style.setProperty("--wordmark-scale", scale.toFixed(4));
-      surface.style.setProperty("--wordmark-y", `${translateY.toFixed(2)}px`);
-      surface.style.setProperty("--wordmark-shine", `${shine.toFixed(2)}%`);
-      surface.style.setProperty("--wordmark-light-x", `${lightX.toFixed(2)}vw`);
-      surface.style.setProperty(
-        "--wordmark-light-opacity",
-        lightOpacity.toFixed(4),
-      );
-      surface.style.setProperty(
-        "--wordmark-white-glow",
-        `${whiteGlow.toFixed(2)}px`,
-      );
-      surface.style.setProperty(
-        "--wordmark-copper-glow",
-        `${copperGlow.toFixed(2)}px`,
-      );
-      surface.style.setProperty(
-        "--wordmark-ambient-opacity",
-        ambientOpacity.toFixed(4),
-      );
-    };
-
-    const requestUpdate = () => {
-      if (frame !== null) return;
-      frame = requestAnimationFrame(update);
-    };
-
-    requestUpdate();
-    window.addEventListener("scroll", requestUpdate, { passive: true });
-    window.addEventListener("resize", requestUpdate);
-
-    return () => {
-      window.removeEventListener("scroll", requestUpdate);
-      window.removeEventListener("resize", requestUpdate);
-      if (frame !== null) cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  return (
-    <section
-      ref={stageRef}
-      aria-label={ariaLabel}
-      className="relative h-[100svh] bg-[#050505] md:h-[100svh] motion-reduce:h-[100svh] motion-reduce:md:h-[100svh]"
-    >
-      <div
-        ref={surfaceRef}
-        className="sticky top-0 flex h-[100svh] w-full items-center justify-center overflow-hidden bg-[#050505]"
-        style={
-          {
-            "--wordmark-scale": "0.94",
-            "--wordmark-y": "18px",
-            "--wordmark-shine": "-34%",
-            "--wordmark-light-x": "-46vw",
-            "--wordmark-light-opacity": "0.08",
-            "--wordmark-white-glow": "5px",
-            "--wordmark-copper-glow": "12px",
-            "--wordmark-ambient-opacity": "0.38",
-          } as CSSProperties
-        }
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0"
-          style={{
-            opacity: "var(--wordmark-ambient-opacity)",
-            background:
-              "radial-gradient(circle at 50% 108%, rgba(173,122,75,0.24) 0%, rgba(173,122,75,0.08) 22%, transparent 48%), radial-gradient(circle at 50% -8%, rgba(255,255,255,0.075) 0%, transparent 38%), linear-gradient(180deg, #050505 0%, #080706 52%, #050505 100%)",
-          }}
-        />
-
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-[8%] left-1/2 w-[34vw] min-w-[190px] -translate-x-1/2 blur-[72px] motion-reduce:hidden"
-          style={{
-            opacity: "var(--wordmark-light-opacity)",
-            background:
-              "linear-gradient(90deg, transparent 0%, rgba(178,125,73,0.08) 24%, rgba(247,245,240,0.34) 50%, rgba(178,125,73,0.08) 76%, transparent 100%)",
-            transform:
-              "translate3d(var(--wordmark-light-x), 0, 0) translateX(-50%)",
-          }}
-        />
-
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-[6vw] top-[7vh] h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08),rgba(173,122,75,0.42),rgba(255,255,255,0.08),transparent)]"
-        />
-        <span
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-[6vw] bottom-[7vh] h-px bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.06),rgba(173,122,75,0.26),rgba(255,255,255,0.06),transparent)]"
-        />
-
-        <Link
-          href={href}
-          aria-label={ariaLabel}
-          className="relative z-10 flex h-full w-full items-center justify-center overflow-visible px-[2vw] py-[12vh] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-white/70"
-        >
-          <span className="block w-full overflow-visible py-[0.22em] text-center">
-            <span
-              className="inline-block whitespace-nowrap py-[0.12em] text-[clamp(43px,9.45vw,190px)] font-medium uppercase leading-[1.04] tracking-[-0.065em] [backface-visibility:hidden] motion-reduce:transform-none"
-              style={{
-                transform:
-                  "translate3d(0, var(--wordmark-y), 0) scale(var(--wordmark-scale))",
-                transformOrigin: "center center",
-                backgroundImage:
-                  "linear-gradient(90deg, #5f5b56 0%, #d7d2c9 20%, #ffffff 40%, #b47b49 50%, #ffffff 60%, #d7d2c9 80%, #5f5b56 100%)",
-                backgroundSize: "235% 100%",
-                backgroundPosition: "var(--wordmark-shine) 50%",
-                WebkitBackgroundClip: "text",
-                backgroundClip: "text",
-                color: "transparent",
-                WebkitTextFillColor: "transparent",
-                filter:
-                  "drop-shadow(0 0 var(--wordmark-white-glow) rgba(255,255,255,0.10)) drop-shadow(0 0 var(--wordmark-copper-glow) rgba(173,122,75,0.13))",
-                willChange: "transform, background-position",
-              }}
-            >
-              NAJIBZADEH
-            </span>
-          </span>
-        </Link>
-      </div>
-    </section>
   );
 }
 
@@ -893,25 +683,6 @@ function Separator() {
 
 
 ============================================================================= */
-
-function ArrowLeftIcon() {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      fill="none"
-      aria-hidden="true"
-      className="size-3.5"
-    >
-      <path
-        d="M13.5 8H3M6.5 4.5L3 8L6.5 11.5"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-      />
-    </svg>
-  );
-}
 
 function ArrowUpIcon() {
   return (

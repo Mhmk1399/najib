@@ -59,6 +59,7 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ────────────────────────────────────────────────────────────
    TYPES
@@ -1034,7 +1035,9 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
         />
 
         {/* Desktop */}
-        <section className="relative mx-auto hidden max-w-[1920px] lg:block">
+        <section
+          className={`relative mx-auto hidden max-w-[1920px] lg:block ${estedad.className}`}
+        >
           <div className="w-full">
             <div className="px-8 pb-16 pt-0 xl:px-10">
               {/* Desktop filter rail: every filter is exposed individually, like the reference. */}
@@ -1246,7 +1249,9 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
         </section>
 
         {/* Mobile sticky toolbar */}
-        <div className="sticky top-[var(--shop-navbar-offset)] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2.5 backdrop-blur-[16px] transition-[top] duration-300 ease-out lg:hidden">
+        <div
+          className={`sticky  ${estedad.className} top-[var(--shop-navbar-offset)] z-[90] border-b border-[var(--shop-border)] bg-[var(--shop-bg)] px-3 py-2.5 backdrop-blur-[16px] transition-[top] duration-300 ease-out lg:hidden`}
+        >
           <div className="relative z-10 grid grid-cols-2 gap-2.5">
             <button
               type="button"
@@ -1275,7 +1280,9 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
           </div>
         </div>
 
-        <div className="flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden">
+        <div
+          className={`flex min-h-[42px] items-center justify-between border-b border-[var(--shop-border)] px-4 lg:hidden ${estedad.className}`}
+        >
           <span className="text-[6px] font-semibold uppercase tracking-[0.18em] text-black/62">
             {formatTemplate(copy.products.productCountTemplate, {
               count: formatNumber(products.length, locale),
@@ -1287,7 +1294,7 @@ export function ShopPage({ locale, copy }: ShopPageProps) {
         </div>
 
         {/* Mobile grid — ProductCard itself is intentionally untouched. */}
-        <div className="pb-6 lg:hidden">
+        <div className={`pb-6 lg:hidden ${estedad.className}`}>
           {isLoadingProducts ? (
             <ShopProductsState title={copy.products.loading} />
           ) : hasProductsError ? (

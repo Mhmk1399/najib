@@ -21,6 +21,7 @@ import { localizedHref } from "@/lib/i18n/routes";
 import { useStorefrontCatalog } from "@/lib/catalog/storefront-client";
 
 import { brandColors, lightTokens, themeClasses } from "@/theme/theme-colors";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ==========================================================================
    TYPES
@@ -282,7 +283,7 @@ export function ProductEditorialGrid({
     >
       <header className="mx-auto flex w-full max-w-[760px] flex-col items-center px-6 pb-10 pt-16 text-center sm:px-8 sm:pb-12 sm:pt-20 lg:pb-14 lg:pt-24">
         {copy.eyebrow ? (
-          <div className="flex items-center justify-center gap-3 text-[7px] font-semibold uppercase tracking-[0.22em] text-[var(--grid-copper)] sm:text-[8px]">
+          <div className="flex items-center justify-center gap-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-[var(--grid-copper)] sm:text-[10px]">
             <span
               aria-hidden="true"
               className="h-px w-5 bg-[var(--grid-copper)]/80"
@@ -299,29 +300,18 @@ export function ProductEditorialGrid({
 
         <h2
           id="editorial-selection-title"
-          className="mt-4 max-w-[720px] text-[clamp(2.7rem,11vw,4.2rem)] font-normal leading-[0.96] tracking-[-0.05em] text-[var(--grid-text)] sm:text-[clamp(3.2rem,7vw,4.8rem)] lg:text-[clamp(3.7rem,4.4vw,5.2rem)]"
+          className="mt-4 max-w-[720px] text-3xl font-normal leading-[0.96] tracking-[-0.05em] text-[var(--grid-text)]   lg:text-5xl"
         >
           {copy.title}
         </h2>
 
         {copy.description ? (
-          <p className="mt-5 max-w-[510px] text-[11px] leading-[1.75] text-[var(--grid-muted)] sm:text-[12px] lg:mt-6 lg:text-[13px]">
+          <p className={`mt-5 max-w-[400px] text-[11px] ${estedad.className} leading-[1.75] text-[var(--grid-muted)] sm:text-[12px] lg:mt-6 lg:text-[13px]`}>
             {copy.description}
           </p>
         ) : null}
 
-        {copy.action ? (
-          <div className="mt-7">
-            <Button
-              href={localizedHref(copy.action.href, locale)}
-              variant="black"
-              size="lg"
-              icon={<ActionIcon />}
-            >
-              {copy.action.label}
-            </Button>
-          </div>
-        ) : null}
+       
       </header>
 
       <div className="mx-auto w-full max-w-[1680px] px-3 pb-3 sm:px-4 sm:pb-4 lg:px-5 lg:pb-5">
@@ -335,7 +325,9 @@ export function ProductEditorialGrid({
             />
           ))}
         </div>
+        
       </div>
+      
     </section>
   );
 }
@@ -392,7 +384,7 @@ function ProductCard({
             </p>
           ) : null} */}
 
-          <h3 className="mt-2 max-w-[92%] text-[clamp(2.6rem,11vw,4rem)] font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-2xl">
+          <h3 className="mt-2 max-w-[92%] text-2xl font-normal leading-[0.92] tracking-[-0.045em] text-white drop-shadow-[0_3px_18px_rgb(var(--grid-black-rgb)/0.24)] sm:text-[clamp(2.5rem,6vw,3.8rem)] lg:text-3xl">
             {product.title}
           </h3>
 

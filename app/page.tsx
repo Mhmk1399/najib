@@ -5,15 +5,12 @@ import {
   getHomeCategoryShowcaseItems,
 } from "@/components/static/Home/CategoryShowcase";
 import { CollectionShowcase } from "@/components/static/Home/CollectionShowcase";
-import { CinematicVideoSection } from "@/components/static/Home/CinematicVideoSection";
 import { HeroSection } from "@/components/static/Home/HeroSection";
 import { DynamicIslandExperienceSections } from "@/components/static/Home/DynamicIslandExperienceSections";
-import { JournalPreviewSection } from "@/components/static/Home/JournalPreviewSection";
 import { ProductEditorialGrid } from "@/components/static/Home/ProductEditorialGrid";
 import { ShoppableImageBanner } from "@/components/static/Home/ShoppableImageBanner";
 import { WhyChooseUsSection } from "@/components/static/Home/WhyChooseUsSection";
 import { PrivateAppointmentSection } from "@/components/static/Contact/PrivateAppointmentSection";
-import { blogCopy } from "@/lib/i18n/blog-copy";
 import { contactCopy } from "@/lib/i18n/contact-copy";
 import { homeCopy } from "@/lib/i18n/home-copy";
 import { getRequestLocale } from "@/lib/i18n/server";
@@ -83,7 +80,6 @@ export default async function Page() {
   const locale = await getRequestLocale();
   const copy = homeCopy[locale];
   const appointmentCopy = contactCopy[locale].appointment;
-  const journalCopy = blogCopy[locale];
   const categoryShowcaseItems = await getHomeCategoryShowcaseItems(locale);
 
   return (
@@ -100,12 +96,12 @@ export default async function Page() {
         copy={copy.dynamicIsland}
         locale={locale}
       />
-      <CinematicVideoSection
+      {/* <CinematicVideoSection
         copy={copy.cinematic}
         locale={locale}
         videoSrc="/assets/video/videoCinema.mp4"
         posterSrc="/assets/images/p1.webp"
-      />
+      /> */}
       <WhyChooseUsSection
         copy={copy.whyChooseUs}
         locale={locale}

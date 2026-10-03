@@ -19,6 +19,7 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 type CollectionImage = {
   id: string;
@@ -170,12 +171,6 @@ export function CollectionShowcase({
       />
 
       <header className="relative mx-auto flex max-w-[840px] flex-col items-center px-5 pb-9 pt-14 text-center sm:px-7 sm:pb-11 sm:pt-16 lg:pb-13 lg:pt-20">
-        <div className="inline-flex items-center gap-2.5 border border-[#AD633C]/15 bg-white/45 px-3.5 py-1.5 text-[7.5px] font-semibold uppercase tracking-[0.22em] text-[#A45D38] shadow-[inset_0_1px_0_rgba(255,255,255,0.75)] backdrop-blur-sm">
-          <span aria-hidden="true" className="h-px w-5 bg-[#AD633C]/65" />
-          <span>{content.eyebrow}</span>
-          <span aria-hidden="true" className="h-px w-5 bg-[#AD633C]/65" />
-        </div>
-
         <h2
           id="home-collections-title"
           className="mt-4 max-w-[760px] text-balance text-[clamp(2.2rem,7vw,4.8rem)] font-normal leading-[0.94] tracking-[-0.055em] text-[#171513]"
@@ -183,7 +178,9 @@ export function CollectionShowcase({
           {content.title}
         </h2>
 
-        <p className="mt-5 max-w-[520px] text-[10.5px] leading-[1.9] text-[#686159] sm:text-[11.5px]">
+        <p
+          className={`mt-5 max-w-[520px] ${estedad.className} text-[10.5px] leading-[1.9] text-[#686159] sm:text-[12px]`}
+        >
           {content.description}
         </p>
       </header>

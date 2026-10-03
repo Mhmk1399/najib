@@ -42,6 +42,7 @@ import {
   formatProductNumber,
   type ProductDetailCopy,
 } from "@/lib/i18n/product-detail-copy";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ==========================================================================
    TYPES
@@ -358,7 +359,9 @@ export function ProductDetailPage({
         toast.info(copy.loginTitle, {
           description: copy.loginDescription,
         });
-        window.location.assign(localizedHref(loginHref(localizedHref("/cart", locale)), locale));
+        window.location.assign(
+          localizedHref(loginHref(localizedHref("/cart", locale)), locale),
+        );
         return;
       }
       toast.error(copy.addErrorTitle, {
@@ -416,12 +419,12 @@ export function ProductDetailPage({
       dir={direction}
       lang={htmlLang}
       style={themeVars}
-      className="
+      className={`
         min-h-screen
-
+        ${estedad.className}
         bg-[var(--product-cream)]
         text-[var(--product-black)]
-      "
+      `}
     >
       {/* ===============================================================
           NAVBAR CONTRAST
@@ -1975,64 +1978,6 @@ function ProductDetailsSections({
           max-w-[1600px]
         "
       >
-        {/* INTRO */}
-
-        <div
-          className="
-            mb-10
-
-            max-w-[700px]
-
-            lg:mb-14
-          "
-        >
-          <div
-            className="
-              flex
-
-              items-center
-              gap-3
-
-              text-[7px]
-              font-semibold
-
-              uppercase
-              tracking-[0.22em]
-
-              text-[var(--product-copper)]
-            "
-          >
-            {copy.productNotesEyebrow}
-            <span
-              className="
-                h-px
-                w-6
-
-                bg-[var(--product-copper)]
-              "
-            />
-          </div>
-
-          <h2
-            className="
-              mt-5
-
-               
-
-              text-[clamp(2.8rem,8vw,5rem)]
-
-              leading-[0.94]
-              tracking-[-0.055em]
-
-              text-black
-            "
-          >
-            {copy.productNotesTitleTop}
-            <br />
-            {copy.productNotesTitleBottom}
-          </h2>
-        </div>
-
         {/* ACCORDIONS */}
 
         <div

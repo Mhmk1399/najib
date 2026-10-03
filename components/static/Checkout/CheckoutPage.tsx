@@ -21,6 +21,7 @@ import {
 import { getCheckoutCopy } from "@/lib/i18n/checkout-copy";
 import { type Locale } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 type ConfirmResult = {
   payment: Payment;
@@ -28,9 +29,14 @@ type ConfirmResult = {
   sms: { status: string } | null;
 };
 
+function persianDescriptionFont(locale: Locale) {
+  return locale === "fa" ? estedad.className : "";
+}
+
 export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
   const toast = useToast();
   const copy = getCheckoutCopy(locale);
+  const descriptionFont = persianDescriptionFont(locale);
   const queryClient = useQueryClient();
   const [createdCheckoutId, setCreatedCheckoutId] = useState<string | null>(null);
   const [createdPaymentId, setCreatedPaymentId] = useState<string | null>(null);
@@ -290,19 +296,19 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
         {cartQuery.isPending ? <CheckoutLoading /> : null}
 
         {signedOut || availabilitySignedOut ? (
-          <CheckoutState title="برای ادامه خرید وارد حساب شوید" description="پس از ورود، دوباره به همین صفحه برمی‌گردید.">
+          <CheckoutState title="برای ادامه خرید وارد حساب شوید" description="پس از ورود، دوباره به همین صفحه برمی‌گردید." locale={locale}>
             <Button href={loginHref("/checkout")} variant="black" size="lg">ورود به حساب</Button>
           </CheckoutState>
         ) : null}
 
         {cartQuery.isError && !signedOut ? (
-          <CheckoutState title="اطلاعات تکمیل خرید دریافت نشد" description={messageFor(cartQuery.error)}>
+          <CheckoutState title="اطلاعات تکمیل خرید دریافت نشد" description={messageFor(cartQuery.error)} locale={locale}>
             <Button type="button" variant="outline" size="lg" onClick={() => void cartQuery.refetch()}>تلاش دوباره</Button>
           </CheckoutState>
         ) : null}
 
         {!cartQuery.isPending && !cartQuery.isError && (!cart || !cart.items.length) ? (
-          <CheckoutState title="سبد خرید خالی است" description="برای شروع تکمیل خرید ابتدا محصولی را به سبد اضافه کنید.">
+          <CheckoutState title="سبد خرید خالی است" description="برای شروع تکمیل خرید ابتدا محصولی را به سبد اضافه کنید." locale={locale}>
             <Button href={localizedHref("/shop", locale)} variant="black" size="lg">بازگشت به فروشگاه</Button>
           </CheckoutState>
         ) : null}
@@ -320,6 +326,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                       ? "شناسه رزرو شما حفظ شده است و پس از ورود می‌توانید ادامه دهید."
                       : "رزرو قبلی حذف نشده است. ارتباط را دوباره بررسی می‌کنیم تا سفارش تکراری ساخته نشود."
                   }
+                  locale={locale}
                 >
                   {checkoutSignedOut ? (
                     <Button href={loginHref("/checkout")} variant="black" size="lg">ورود به حساب</Button>
@@ -331,6 +338,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                 <FlowState
                   title={checkout.status === "cancelled" ? "رزرو لغو شده است" : expired ? "زمان رزرو پایان یافته است" : "رزرو قابل ادامه نیست"}
                   description="برای بررسی دوباره کالاها و شروع یک رزرو تازه به سبد خرید برگردید."
+                  locale={locale}
                 >
                   <Button href="/cart" variant="black" size="lg">بازگشت به سبد خرید</Button>
                 </FlowState>
@@ -346,7 +354,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                     <MapPin className="mt-1 size-5 text-[#C15427]" aria-hidden />
                     <div>
                       <h2 className="text-xl font-semibold">{copy.deliveryPlan}</h2>
-                      <p className="mt-2 text-xs leading-6 text-black/65">{copy.modalDescription}</p>
+                      <p className={`mt-2 text-xs leading-6 text-black/65 ${descriptionFont}`}>{copy.modalDescription}</p>
                     </div>
                   </div>
                   <div className="mt-7 border border-black/15 bg-[#F6F2EB] p-5">
@@ -393,7 +401,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                     <ShieldCheck className="mt-1 size-5 text-[#C15427]" />
                     <div>
                       <h2 className="text-xl font-semibold">پرداخت آزمایشی</h2>
-                      <p className="mt-2 text-xs leading-6 text-black/65">تا زمان اتصال درگاه واقعی، این بخش فقط نتیجه پرداخت را برای آزمایش فرایند سفارش شبیه‌سازی می‌کند. هیچ اطلاعات بانکی وارد نکنید.</p>
+                      <p className={`mt-2 text-xs leading-6 text-black/65 ${descriptionFont}`}>تا زمان اتصال درگاه واقعی، این بخش فقط نتیجه پرداخت را برای آزمایش فرایند سفارش شبیه‌سازی می‌کند. هیچ اطلاعات بانکی وارد نکنید.</p>
                     </div>
                   </div>
 
@@ -407,6 +415,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                     <FlowState
                       title={paymentSignedOut ? "برای ادامه پرداخت وارد حساب شوید" : "وضعیت پرداخت دریافت نشد"}
                       description="تا مشخص‌شدن وضعیت فعلی، امکان ارسال درخواست پرداخت تازه وجود ندارد."
+                      locale={locale}
                       compact
                     >
                       {paymentSignedOut ? (
@@ -418,8 +427,8 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
                   ) : paymentQuery.isSuccess ? (
                     <div className="mt-8 border border-dashed border-[#C15427]/55 bg-[#F6F2EB] p-5">
                       <p className="text-xs font-semibold text-[#C15427]">محیط پرداخت آزمایشی</p>
-                      <p className="mt-2 text-sm">یکی از نتیجه‌های زیر را برای تست جریان سفارش انتخاب کنید.</p>
-                      {payment?.status === "failed" ? <p className="mt-3 text-xs text-[#A33A32]">تلاش قبلی ناموفق بود؛ در صورت اعتبار رزرو می‌توانید دوباره امتحان کنید.</p> : null}
+                      <p className={`mt-2 text-sm ${descriptionFont}`}>یکی از نتیجه‌های زیر را برای تست جریان سفارش انتخاب کنید.</p>
+                      {payment?.status === "failed" ? <p className={`mt-3 text-xs text-[#A33A32] ${descriptionFont}`}>تلاش قبلی ناموفق بود؛ در صورت اعتبار رزرو می‌توانید دوباره امتحان کنید.</p> : null}
                       <div className="mt-5 flex flex-col gap-3 sm:flex-row">
                         <Button type="button" variant="black" size="lg" loading={confirmMutation.isPending && confirmMutation.variables === "succeeded"} disabled={confirmMutation.isPending} onClick={() => confirmMutation.mutate("succeeded")}>
                           شبیه‌سازی پرداخت موفق
@@ -435,7 +444,7 @@ export function CheckoutPage({ locale = "fa" }: { locale?: Locale }) {
 
               {activeCheckout ? (
                 <div className="flex flex-wrap items-center justify-between gap-4 border-t border-black/15 pt-5">
-                  <p className="text-xs leading-6 text-black/65">لغو رزرو، موجودی نگه‌داشته‌شده را فوراً آزاد می‌کند.</p>
+                  <p className={`text-xs leading-6 text-black/65 ${descriptionFont}`}>لغو رزرو، موجودی نگه‌داشته‌شده را فوراً آزاد می‌کند.</p>
                   <button type="button" disabled={cancelMutation.isPending} onClick={() => cancelMutation.mutate()} className="inline-flex min-h-11 items-center gap-2 text-xs text-[#A33A32] underline underline-offset-4 disabled:opacity-35">
                     <X className="size-3.5" /> {cancelMutation.isPending ? "در حال لغو…" : "لغو رزرو"}
                   </button>
@@ -460,7 +469,7 @@ function ReservationRail({ remaining, expired, locale }: { remaining: number; ex
   return (
     <section className="border-t-2 border-[#C15427] bg-[#111] p-6 text-white sm:p-8">
       <div className="flex items-center justify-between gap-6">
-        <div className="flex items-center gap-3"><Clock3 className="size-5 text-[#C15427]" /><div><p className="text-sm font-semibold">رزرو اختصاصی موجودی</p><p className="mt-1 text-xs leading-5 text-white/75">رنگ و سایز انتخابی برای شما نگه داشته شده است.</p></div></div>
+        <div className="flex items-center gap-3"><Clock3 className="size-5 text-[#C15427]" /><div><p className="text-sm font-semibold">رزرو اختصاصی موجودی</p><p className={`mt-1 text-xs leading-5 text-white/75 ${persianDescriptionFont(locale)}`}>رنگ و سایز انتخابی برای شما نگه داشته شده است.</p></div></div>
         <strong className="text-2xl tabular-nums" dir="ltr" role="timer">{expired ? `${formatLocaleInteger(0, locale, 2)}:${formatLocaleInteger(0, locale, 2)}` : timer}</strong>
       </div>
       <div className="mt-6 h-px bg-white/15"><div className="h-px bg-[#C15427] transition-[width] duration-1000" style={{ width: `${progress}%` }} /></div>
@@ -501,12 +510,12 @@ function FlowLoading({ label, compact = false }: { label: string; compact?: bool
   return <div className={`${compact ? "mt-8 h-24" : "h-48"} animate-pulse bg-white`} role="status" aria-label={label}><span className="sr-only">{label}</span></div>;
 }
 
-function FlowState({ title, description, children, compact = false }: { title: string; description: string; children: React.ReactNode; compact?: boolean }) {
-  return <section className={`${compact ? "mt-8" : ""} border-r-2 border-[#C15427] bg-white p-6 sm:p-8`} role="status"><h2 className="text-xl font-semibold">{title}</h2><p className="mt-3 text-sm leading-7 text-black/65">{description}</p><div className="mt-6">{children}</div></section>;
+function FlowState({ title, description, locale, children, compact = false }: { title: string; description: string; locale: Locale; children: React.ReactNode; compact?: boolean }) {
+  return <section className={`${compact ? "mt-8" : ""} border-r-2 border-[#C15427] bg-white p-6 sm:p-8`} role="status"><h2 className="text-xl font-semibold">{title}</h2><p className={`mt-3 text-sm leading-7 text-black/65 ${persianDescriptionFont(locale)}`}>{description}</p><div className="mt-6">{children}</div></section>;
 }
 
-function CheckoutState({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return <section className="mx-auto max-w-xl py-24 text-center"><h2 className="text-2xl font-semibold">{title}</h2><p className="mt-4 text-sm leading-7 text-black/65">{description}</p><div className="mt-8">{children}</div></section>;
+function CheckoutState({ title, description, locale, children }: { title: string; description: string; locale: Locale; children: React.ReactNode }) {
+  return <section className="mx-auto max-w-xl py-24 text-center"><h2 className="text-2xl font-semibold">{title}</h2><p className={`mt-4 text-sm leading-7 text-black/65 ${persianDescriptionFont(locale)}`}>{description}</p><div className="mt-8">{children}</div></section>;
 }
 
 function Success({ order, locale }: { order: ConfirmResult["order"]; locale: Locale }) {
@@ -516,7 +525,7 @@ function Success({ order, locale }: { order: ConfirmResult["order"]; locale: Loc
         <div className="mx-auto grid size-14 place-items-center border border-[#C15427] text-[#C15427]"><Check className="size-6" /></div>
         <p className="mt-7 text-xs font-semibold tracking-[0.08em] text-[#C15427]">سفارش ثبت شد</p>
         <h1 className="mt-3 text-3xl font-semibold">از انتخاب شما سپاسگزاریم</h1>
-        <p className="mt-5 text-sm leading-7 text-black/65">پرداخت آزمایشی موفق بود و موجودی سفارش قطعی شد.</p>
+        <p className={`mt-5 text-sm leading-7 text-black/65 ${persianDescriptionFont(locale)}`}>پرداخت آزمایشی موفق بود و موجودی سفارش قطعی شد.</p>
         {order?.orderNumber ? <p className="mt-5 border-y border-black/10 py-4 text-sm">شماره سفارش: <strong dir="ltr">{order.orderNumber}</strong></p> : null}
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button href={localizedHref("/customer-dashboard", locale)} variant="black" size="lg">مشاهده سفارش‌ها</Button><Button href={localizedHref("/shop", locale)} variant="outline" size="lg">ادامه خرید</Button></div>
       </section>

@@ -28,12 +28,19 @@ html {
 }
 body {
   margin: 0;
-  font-family: var(--font-family, Inter, "Helvetica Neue", Arial, sans-serif);
+  font-family: var(
+    --font-family,
+    var(--font-amiri),
+    var(--font-gesits),
+    "Helvetica Neue",
+    Arial,
+    sans-serif
+  );
   color: #fff;
   background: #111;
 }
 
-/* Amiri uses its bundled bold face only for the two primary heading levels. */
+/* Primary heading levels resolve to the real bold file of the active font. */
 h1,
 h2 {
   font-weight: 700;

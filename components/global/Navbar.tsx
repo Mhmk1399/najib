@@ -40,6 +40,7 @@ import {
 } from "@/lib/i18n/shell-copy";
 import { themeClasses } from "@/theme/theme-colors";
 import { cartQueryKey, fetchAccountCart } from "@/lib/commerce/client";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 /* ==========================================================================
    TYPES
@@ -94,6 +95,7 @@ const EMPTY_MENU_SECTION: MenuSection = {
 };
 
 type LenisScrollController = {
+  isStopped?: boolean;
   start: () => void;
   stop: () => void;
   resize?: () => void;
@@ -225,6 +227,10 @@ const LANGUAGE_MODAL_COPY: Record<
 function localizeBadge(label: string | undefined, locale: Locale) {
   if (!label) return undefined;
   return BADGE_LABELS[locale][label] ?? label;
+}
+
+function navbarDescriptionFont(locale: Locale) {
+  return locale === "fa" ? estedad.className : undefined;
 }
 
 /* ==========================================================================
@@ -628,14 +634,12 @@ export default function Navbar({
   const direction = getLocaleDirection(locale);
   const htmlLang = getHtmlLang(locale);
   const copy = shellCopy[locale];
+  const descriptionFont = navbarDescriptionFont(locale);
   const pathnameWithoutLocale = splitLocalePathname(
     pathname ?? "/",
   ).pathnameWithoutLocale;
   const homeHref = localizedPath("/", locale);
-  const toLocalizedHref = useCallback(
-    (href: string) => localizedHref(href, locale),
-    [locale],
-  );
+  const toLocalizedHref = (href: string) => localizedHref(href, locale);
   const menuSections = useStorefrontMenuSections(locale);
   const languageCopy = LANGUAGE_MODAL_COPY[locale];
   const languageOptions = useMemo(
@@ -699,7 +703,7 @@ export default function Navbar({
       ? mobileOpen
       : (menuSections[0]?.id ?? EMPTY_MENU_SECTION.id);
 
-  const breadcrumbs = useMemo(() => {
+  const breadcrumbs = (() => {
     if (!pathname) {
       return [];
     }
@@ -725,7 +729,7 @@ export default function Navbar({
         label: localizeBreadcrumbLabel(segment, generatedLabel, locale),
       };
     });
-  }, [locale, pathname, pathnameWithoutLocale]);
+  })();
 
   const showMenu = useCallback(() => {
     if (closeTimerRef.current) {
@@ -981,10 +985,11 @@ export default function Navbar({
     const html = document.documentElement;
     const scrollY = window.scrollY;
     const lenis = getLenisController();
+    const lenisWasStopped = lenis?.isStopped === true;
     const lockPathname = window.location.pathname;
+    const lockDocumentScroll = window.matchMedia("(min-width: 1024px)").matches;
 
     savedScrollPosition.current = scrollY;
-    lenis?.stop();
 
     const previous = {
       bodyPosition: body.style.position,
@@ -997,14 +1002,26 @@ export default function Navbar({
       htmlScrollBehavior: html.style.scrollBehavior,
     };
 
-    html.style.scrollBehavior = "auto";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-    html.style.overflow = "hidden";
+    /*
+     * Mobile intentionally keeps the document itself untouched.
+     * The fixed mega-menu becomes the native scroll container instead.
+     * This avoids the iOS/Lenis combination where a fixed body can swallow
+     * touch scrolling from a nested overflow element.
+     */
+    if (lockDocumentScroll) {
+      html.style.scrollBehavior = "auto";
+      body.style.position = "fixed";
+      body.style.top = `-${scrollY}px`;
+      body.style.left = "0";
+      body.style.right = "0";
+      body.style.width = "100%";
+      body.style.overflow = "hidden";
+      html.style.overflow = "hidden";
+    }
+
+    if (!lenisWasStopped) {
+      lenis?.stop();
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") hideMenu();
@@ -1013,60 +1030,69 @@ export default function Navbar({
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      body.style.position = previous.bodyPosition;
-      body.style.top = previous.bodyTop;
-      body.style.left = previous.bodyLeft;
-      body.style.right = previous.bodyRight;
-      body.style.width = previous.bodyWidth;
-      body.style.overflow = previous.bodyOverflow;
-      html.style.overflow = previous.htmlOverflow;
+      if (lockDocumentScroll) {
+        body.style.position = previous.bodyPosition;
+        body.style.top = previous.bodyTop;
+        body.style.left = previous.bodyLeft;
+        body.style.right = previous.bodyRight;
+        body.style.width = previous.bodyWidth;
+        body.style.overflow = previous.bodyOverflow;
+        html.style.overflow = previous.htmlOverflow;
 
-      const shouldRestoreScroll = window.location.pathname === lockPathname;
+        const shouldRestoreScroll = window.location.pathname === lockPathname;
 
-      if (shouldRestoreScroll) {
-        const restoredScrollY = getClampedScrollY(savedScrollPosition.current);
-
-        window.scrollTo({
-          top: restoredScrollY,
-          left: 0,
-          behavior: "instant",
-        });
-
-        lenis?.scrollTo(restoredScrollY, {
-          force: true,
-          immediate: true,
-          lock: false,
-        });
-        lenis?.resize?.();
-      }
-
-      lenis?.start();
-
-      requestAnimationFrame(() => {
         if (shouldRestoreScroll) {
           const restoredScrollY = getClampedScrollY(
             savedScrollPosition.current,
           );
+
           window.scrollTo({
             top: restoredScrollY,
             left: 0,
             behavior: "instant",
           });
+
           lenis?.scrollTo(restoredScrollY, {
             force: true,
             immediate: true,
             lock: false,
           });
+          lenis?.resize?.();
         }
 
-        html.style.scrollBehavior = previous.htmlScrollBehavior;
-      });
+        requestAnimationFrame(() => {
+          if (shouldRestoreScroll) {
+            const restoredScrollY = getClampedScrollY(
+              savedScrollPosition.current,
+            );
+            window.scrollTo({
+              top: restoredScrollY,
+              left: 0,
+              behavior: "instant",
+            });
+            lenis?.scrollTo(restoredScrollY, {
+              force: true,
+              immediate: true,
+              lock: false,
+            });
+          }
+
+          html.style.scrollBehavior = previous.htmlScrollBehavior;
+        });
+      }
+
+      if (!lenisWasStopped) {
+        lenis?.start();
+        lenis?.resize?.();
+      }
 
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [hideMenu, menuMounted]);
 
-  const commerceSurface = ["/cart", "/checkout", "/recover-checkout"].includes(pathnameWithoutLocale);
+  const commerceSurface = ["/cart", "/checkout", "/recover-checkout"].includes(
+    pathnameWithoutLocale,
+  );
   const commerceLightSurface = commerceSurface && !menuMounted;
   const readableNavbar = menuMounted || scrolled || commerceSurface;
 
@@ -1089,14 +1115,12 @@ export default function Navbar({
     commerceSurface ||
     pathnameWithoutLocale === "/shop" ||
     pathnameWithoutLocale.startsWith("/shop/");
-  const lightBreadcrumbClass =
-    "text-[#231F20] [text-shadow:none]";
-  const overlayBreadcrumbClass =
-    lightBreadcrumbSurface
-      ? lightBreadcrumbClass
-      : overlayTone === "dark"
-        ? "text-white"
-        : "text-white";
+  const lightBreadcrumbClass = "text-[#231F20] [text-shadow:none]";
+  const overlayBreadcrumbClass = lightBreadcrumbSurface
+    ? lightBreadcrumbClass
+    : overlayTone === "dark"
+      ? "text-white"
+      : "text-white";
   if (
     pathnameWithoutLocale === "/login" ||
     pathnameWithoutLocale === "/signup" ||
@@ -1385,17 +1409,25 @@ export default function Navbar({
           id="najibzadeh-luxury-menu"
           dir={direction}
           lang={htmlLang}
-          data-lenis-prevent=""
+          data-lenis-prevent
+          data-lenis-prevent-touch
+          data-lenis-prevent-wheel
           aria-hidden={!open}
           aria-label={copy.navbar.mainMenuAria}
+          onTouchMove={(event) => event.stopPropagation()}
+          onWheel={(event) => event.stopPropagation()}
           className={cx(
-            "fixed inset-x-0 bottom-0 top-[70px] z-[100000000] md:top-[78px]",
+            "fixed inset-x-0 top-[70px] z-[100000000] h-[calc(100dvh-70px)]",
+            "overflow-y-auto overscroll-contain touch-pan-y",
+            "md:top-[78px] md:h-[calc(100dvh-78px)]",
+            "lg:overflow-hidden",
             "transition-opacity duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
             "motion-reduce:transition-none",
             menuVisible
               ? "pointer-events-auto opacity-100"
               : "pointer-events-none opacity-0",
           )}
+          style={{ WebkitOverflowScrolling: "touch" }}
         >
           <button
             type="button"
@@ -1409,7 +1441,7 @@ export default function Navbar({
 
           <div
             className={cx(
-              "relative mx-auto h-full max-w-[1920px] overflow-hidden",
+              "relative mx-auto h-full min-h-0 max-w-[1920px] lg:overflow-hidden",
               "transition-[transform,opacity] duration-[320ms] ease-[cubic-bezier(0.22,1,0.36,1)]",
               "motion-reduce:transition-none",
               menuVisible
@@ -1428,7 +1460,10 @@ export default function Navbar({
                   </span>
                 </div>
 
-                <div className="navbar-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 xl:px-4 xl:py-3.5">
+                <div
+                  data-lenis-prevent
+                  className="navbar-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-3 xl:px-4 xl:py-3.5"
+                >
                   {menuSections.map((section, index) => {
                     const selected = resolvedActiveId === section.id;
 
@@ -1524,6 +1559,7 @@ export default function Navbar({
               </aside>
 
               <section
+                data-lenis-prevent
                 aria-label={copy.navbar.collectionDetails}
                 className="navbar-scrollbar min-h-0 min-w-0 overflow-y-auto px-8 py-8 text-start xl:px-12 xl:py-10"
               >
@@ -1558,6 +1594,7 @@ export default function Navbar({
                       <p
                         className={cx(
                           "mt-4 max-w-[580px] text-[13px] leading-7 xl:text-[14px]",
+                          descriptionFont,
                           themeClasses.textSecondary,
                         )}
                       >
@@ -1641,8 +1678,13 @@ export default function Navbar({
             </div>
 
             <div
+              data-lenis-prevent
+              data-lenis-prevent-touch
+              data-lenis-prevent-wheel
               className={cx(
-                "navbar-scrollbar h-full overflow-y-auto px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-start sm:px-6 lg:hidden",
+                "navbar-scrollbar h-full min-h-0 overflow-y-auto overscroll-contain touch-pan-y",
+                "px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-3 text-start",
+                "sm:px-6 lg:hidden",
                 themeClasses.megaMenu,
               )}
             >
@@ -1670,6 +1712,9 @@ export default function Navbar({
               <div className="mt-3 overflow-hidden border border-black/[0.08] dark:border-white/10">
                 {menuSections.map((section, index) => {
                   const expanded = resolvedMobileOpen === section.id;
+                  const mobileSubcategoryGroups = section.groups.filter(
+                    (group) => group.title !== copy.navbar.quickAccess,
+                  );
 
                   return (
                     <div
@@ -1731,116 +1776,51 @@ export default function Navbar({
                         )}
                       >
                         <div className="overflow-hidden">
-                          <div className="px-4 pb-6 sm:px-5">
-                            <Link
-                              href={toLocalizedHref(section.href)}
-                              onClick={hideMenu}
-                              className="group relative block aspect-[16/8.5] overflow-hidden"
-                            >
-                              <Image
-                                src={section.image}
-                                alt={localizeMenuText(
-                                  section.imageLabel,
-                                  locale,
-                                )}
-                                fill
-                                sizes="(max-width: 1024px) 100vw, 50vw"
-                                className="object-cover transition-transform duration-700 ease-[cubic-bezier(0.22,1,0.36,1)] group-hover:scale-[1.025]"
-                              />
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/10 to-transparent" />
-                              <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-4 text-white">
-                                <div>
-                                  <p className="text-[9px] font-semibold tracking-[0.04em] text-white/55">
-                                    {copy.navbar.curated}
-                                  </p>
-                                  <p className="mt-1 text-[18px] font-bold leading-7 tracking-[-0.015em]">
-                                    {localizeMenuText(
-                                      section.imageLabel,
-                                      locale,
-                                    )}
-                                  </p>
-                                </div>
-                                <span className="flex h-9 w-9 shrink-0 items-center justify-center border border-white/30 bg-white/10 backdrop-blur-md">
-                                  <ArrowIcon />
-                                </span>
-                              </div>
-                            </Link>
-
+                          <div className="px-4 pb-5 pt-1 sm:px-5">
                             <p
                               className={cx(
-                                "mt-4 max-w-[420px] text-[12px] leading-6",
+                                "max-w-[420px] text-[12px] leading-6",
+                                descriptionFont,
                                 themeClasses.textSecondary,
                               )}
                             >
                               {localizeMenuText(section.subtitle, locale)}
                             </p>
 
-                            <div className="mt-6 grid gap-6 sm:grid-cols-2">
-                              {section.groups.map((group) => (
-                                <MobileLuxuryGroup
-                                  key={group.title}
-                                  group={group}
-                                  closeMenu={hideMenu}
-                                  toLocalizedHref={toLocalizedHref}
-                                  locale={locale}
-                                />
-                              ))}
-                            </div>
+                            <Link
+                              href={toLocalizedHref(section.href)}
+                              onClick={hideMenu}
+                              className={cx(
+                                "mt-4 inline-flex min-h-10 items-center gap-2 border px-3 text-[10px] font-semibold transition-[background-color,color,border-color] duration-300",
+                                themeClasses.border,
+                                themeClasses.textPrimary,
+                                themeClasses.focusRing,
+                                "hover:border-black hover:bg-black hover:text-white dark:hover:border-white dark:hover:bg-white dark:hover:text-black",
+                              )}
+                            >
+                              {copy.navbar.viewCollection}
+                              <ArrowIcon />
+                            </Link>
+
+                            {mobileSubcategoryGroups.length > 0 ? (
+                              <div className="mt-5 grid gap-5">
+                                {mobileSubcategoryGroups.map((group) => (
+                                  <MobileLuxuryGroup
+                                    key={group.title}
+                                    group={group}
+                                    closeMenu={hideMenu}
+                                    toLocalizedHref={toLocalizedHref}
+                                    locale={locale}
+                                  />
+                                ))}
+                              </div>
+                            ) : null}
                           </div>
                         </div>
                       </div>
                     </div>
                   );
                 })}
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {quickLinks.map((item, index) => (
-                  <Button
-                    key={`${item.href}-${item.label}-${index}`}
-                    href={toLocalizedHref(item.href)}
-                    onClick={hideMenu}
-                    variant="outline"
-                    size="md"
-                    fullWidth
-                    icon={item.icon}
-                    iconPosition="right"
-                    className="!min-h-[54px] !px-3 !text-[10px] !tracking-normal"
-                  >
-                    {item.label}
-                  </Button>
-                ))}
-              </div>
-
-              <div className="mt-6 border-t border-black/[0.08] pt-5 dark:border-white/10">
-                <p
-                  className={cx(
-                    "mb-3 text-[9px] font-semibold tracking-[0.04em]",
-                    themeClasses.textSoft,
-                  )}
-                >
-                  {copy.navbar.customerCare}
-                </p>
-                <div className="grid gap-1 sm:grid-cols-3">
-                  <LightUtilityLink
-                    href={toLocalizedHref("/contact-us#appointment")}
-                    onClick={hideMenu}
-                  >
-                    {copy.navbar.bookAppointment}
-                  </LightUtilityLink>
-                  <LightUtilityLink
-                    href={toLocalizedHref("/contact-us#location")}
-                    onClick={hideMenu}
-                  >
-                    {copy.navbar.findStore}
-                  </LightUtilityLink>
-                  <LightUtilityLink
-                    href={toLocalizedHref("/contact-us#services")}
-                    onClick={hideMenu}
-                  >
-                    {copy.navbar.customerSupport}
-                  </LightUtilityLink>
-                </div>
               </div>
             </div>
           </div>
@@ -1974,23 +1954,26 @@ function MobileLuxuryGroup({
       >
         {localizeMenuText(group.title, locale)}
       </p>
-      <ul className="space-y-0.5">
+      <ul className="grid grid-cols-2 gap-2">
         {group.items.map((item) => (
           <li key={item.href}>
             <Link
               href={toLocalizedHref(item.href)}
               onClick={closeMenu}
               className={cx(
-                "flex min-h-9 items-center gap-2 text-[12px] font-medium",
+                "flex min-h-[46px] items-center justify-between gap-2 border border-black/[0.08] bg-black/[0.015] px-3 text-[11px] font-semibold leading-5 transition-[background-color,border-color,color] duration-300 dark:border-white/10 dark:bg-white/[0.025]",
+                "hover:border-black/25 hover:bg-black/[0.045] dark:hover:border-white/25 dark:hover:bg-white/[0.07]",
                 themeClasses.textPrimary,
                 themeClasses.focusRing,
               )}
             >
-              {localizeMenuText(item.label, locale)}
+              <span className="min-w-0 truncate">
+                {localizeMenuText(item.label, locale)}
+              </span>
               {item.badge && (
                 <span
                   className={cx(
-                    "text-[8px] font-semibold tracking-normal",
+                    "shrink-0 text-[8px] font-semibold tracking-normal",
                     themeClasses.textAccent,
                   )}
                 >
@@ -2059,7 +2042,12 @@ function LuxuryEditorialCard({
             <h3 className="max-w-[300px] text-[27px] font-bold leading-[1.25] tracking-[-0.02em] xl:text-[31px]">
               {localizeMenuText(section.imageLabel, locale)}
             </h3>
-            <p className="mt-3 max-w-[320px] text-[11px] leading-6 text-white/62">
+            <p
+              className={cx(
+                "mt-3 max-w-[320px] text-[11px] leading-6 text-white/62",
+                navbarDescriptionFont(locale),
+              )}
+            >
               {localizeMenuText(section.subtitle, locale)}
             </p>
           </div>
@@ -2363,29 +2351,6 @@ function DarkUtilityLink({
   );
 }
 
-function LightUtilityLink({
-  href,
-  onClick,
-  children,
-}: {
-  href: string;
-  onClick: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={cx(
-        "flex min-h-10 items-center text-start text-[10px] font-medium transition-opacity hover:opacity-55",
-        themeClasses.textSecondary,
-        themeClasses.focusRing,
-      )}
-    >
-      {children}
-    </Link>
-  );
-}
 /* ==========================================================================
    MENU ICONS — STRICTLY ANGULAR / NO CURVES
 ============================================================================ */

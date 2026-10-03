@@ -19,6 +19,7 @@ import {
 } from "@/lib/i18n/config";
 import { localizedHref } from "@/lib/i18n/routes";
 import { brandColors } from "@/theme/theme-colors";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 type ContactHeroSectionProps = {
   copy: ContactCopy["hero"];
@@ -37,6 +38,12 @@ type Channel = {
   value: string;
   href: string;
   external?: boolean;
+};
+
+const CONTACT_CHANNELS_ARIA: Record<Locale, string> = {
+  fa: "راه‌های ارتباط مستقیم با نجیب‌زاده",
+  en: "Direct ways to contact Najibzadeh",
+  ar: "طرق التواصل المباشر مع نجيب زاده",
 };
 
 const CHANNEL_LABELS: Record<
@@ -153,6 +160,7 @@ export function ContactHeroSection({
       dir={direction}
       lang={htmlLang}
       aria-labelledby="contact-hero-title"
+      aria-describedby="contact-hero-description"
       className={`relative isolate min-h-[100svh] w-full overflow-hidden bg-[var(--contact-black)] text-white ${className}`}
     >
       <Image
@@ -179,7 +187,19 @@ export function ContactHeroSection({
       />
 
       <div className="relative z-10 mx-auto flex min-h-[100svh] w-full max-w-[1920px] flex-col px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-24 sm:px-8 sm:pt-28 lg:px-[5vw] lg:pt-32">
-       
+        <div
+          className={`flex items-center justify-between gap-5 transition-[opacity,transform] duration-700 ease-out motion-reduce:transition-none ${
+            revealed ? "translate-y-0 opacity-100" : "translate-y-3 opacity-0"
+          }`}
+        >
+          <p className="text-[9px] font-semibold tracking-[0.16em] text-white/66 sm:text-[10px]">
+            {copy.houseMark}
+          </p>
+          <div className="flex items-center gap-3 text-[8px] font-semibold tracking-[0.12em] text-[var(--contact-copper)] sm:text-[9px]">
+            <span className="h-px w-8 bg-current/70" aria-hidden="true" />
+            <span>{copy.eyebrow}</span>
+          </div>
+        </div>
 
         <div className="grid flex-1 items-center gap-12 py-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.72fr)] lg:gap-[7vw] lg:py-16">
           <div
@@ -187,17 +207,22 @@ export function ContactHeroSection({
               revealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
             } ${isRtl ? "lg:col-start-2" : ""}`}
           >
-          
+            <p className="mb-5 text-[9px] font-semibold tracking-[0.12em] text-[var(--contact-copper)] sm:text-[10px]">
+              {copy.bottomServiceLabel}
+            </p>
             <h1
               id="contact-hero-title"
-              className="max-w-[760px] text-5xl font-normal leading-[0.92] tracking-[-0.055em] text-white"
+              className="max-w-[760px] text-balance text-[clamp(2.15rem,8.6vw,3rem)] font-normal leading-[1.02] tracking-[-0.045em] text-white sm:text-[clamp(2.55rem,6.4vw,3.75rem)] lg:text-[clamp(3.1rem,4.2vw,4.85rem)] xl:text-[clamp(3.45rem,4vw,5.15rem)]"
             >
               <span className="block">{copy.title}</span>
-              <span className="mt-[0.18em] block max-w-[680px] text-[0.52em] leading-[1.08] tracking-[-0.038em] text-white/68">
+              <span className="mt-[0.2em] block max-w-[680px] text-[0.58em] leading-[1.18] tracking-[-0.025em] text-white/68">
                 {copy.italicTitle}
               </span>
             </h1>
-            <p className="mt-7 max-w-[560px] text-[12px] leading-7 text-white/58 sm:text-[15px] sm:leading-8">
+            <p
+              id="contact-hero-description"
+              className={`${estedad.className} mt-6 max-w-[560px] text-pretty text-[12px] leading-7 text-white/60 sm:mt-7 sm:text-[13px] sm:leading-8 lg:text-[14px]`}
+            >
               {copy.description}
             </p>
           </div>
@@ -207,7 +232,10 @@ export function ContactHeroSection({
               revealed ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
             } ${isRtl ? "lg:col-start-1 lg:row-start-1" : ""}`}
           >
-            <div className="border-y border-white/[0.14] bg-black/[0.18] supports-[backdrop-filter]:bg-black/[0.12] supports-[backdrop-filter]:backdrop-blur-[6px]">
+            <nav
+              aria-label={CONTACT_CHANNELS_ARIA[locale]}
+              className="border-y border-white/[0.14] bg-black/[0.18] supports-[backdrop-filter]:bg-black/[0.12] supports-[backdrop-filter]:backdrop-blur-[6px]"
+            >
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-2">
                 {channels.map((channel, index) => (
                   <ContactChannelCard
@@ -219,7 +247,7 @@ export function ContactHeroSection({
                   />
                 ))}
               </div>
-            </div>
+            </nav>
           </div>
         </div>
 
@@ -252,6 +280,7 @@ function ContactChannelCard({
     <Link
       href={channel.href}
       {...externalProps}
+      aria-label={`${channel.label}: ${channel.value}`}
       className="group relative min-h-[126px] border-b border-white/[0.10] p-4 text-start outline-none transition-[background-color,color] duration-300 hover:bg-white/[0.07] focus-visible:bg-white/[0.08] focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--contact-copper)] sm:min-h-[138px] sm:p-5 md:border-b-0 md:border-e md:last:border-e-0 lg:border-b lg:border-e-0 lg:[&:nth-child(odd)]:border-e lg:[&:nth-last-child(-n+2)]:border-b-0"
     >
       <div className="flex items-start justify-between gap-4">
@@ -271,7 +300,7 @@ function ContactChannelCard({
           dir={
             channel.id === "phone" || channel.id === "email" ? "ltr" : undefined
           }
-          className={`mt-2 line-clamp-2 text-[9px] leading-5 text-white/48 sm:text-[10px] ${
+          className={`${estedad.className} mt-2 line-clamp-2 text-[10px] leading-5 text-white/50 sm:text-[11px] ${
             channel.id === "phone" || channel.id === "email"
               ? isRtl
                 ? "text-right"

@@ -41,8 +41,8 @@ import {
   localizedOpenGraph,
   siteUrl,
 } from "@/lib/i18n/metadata";
-import { Aria } from "@/next-persian-fonts/Aria Family";
 import { AmiriFont } from "@/next-persian-fonts/AmiriFont";
+import { GESITS } from "@/next-persian-fonts/GESITS";
 import { estedad } from "@/next-persian-fonts/estedad";
  
 export const metadata: Metadata = {
@@ -102,11 +102,11 @@ export default async function RootLayout({
   const locale = isLocale(candidateLocale) ? candidateLocale : defaultLocale;
   const direction = getLocaleDirection(locale);
 
-  // Select font based on locale
-  const fontClass = locale === "en" ? Aria.className : AmiriFont.className;
-  
-  // Set CSS variable for font family
-  const fontVariable = locale === "en" ? "--font-aria" : "--font-amiri";
+  const fontClass = locale === "en" ? GESITS.className : AmiriFont.className;
+  const fontFamily =
+    locale === "en" ? "var(--font-gesits)" : "var(--font-amiri)";
+  const fontVariables =
+    `${AmiriFont.variable} ${GESITS.variable} ${estedad.variable}`;
 
   return (
     /*
@@ -120,13 +120,13 @@ export default async function RootLayout({
       lang={getHtmlLang(locale)}
       dir={direction}
       suppressHydrationWarning
-      style={{ '--font-family': fontVariable } as React.CSSProperties}
+      style={{ "--font-family": fontFamily } as React.CSSProperties}
     >
       <head></head>
 
       <body
         dir={direction}
-        className={`${estedad.variable} antialiased ${fontClass} min-h-dvh`}
+        className={`${fontVariables} antialiased ${fontClass} min-h-dvh`}
       >
         <div className="flex min-h-dvh flex-col">
           <LenisProvider>

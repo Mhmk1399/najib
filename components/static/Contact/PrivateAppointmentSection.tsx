@@ -18,6 +18,7 @@ import {
   type Locale,
 } from "@/lib/i18n/config";
 import { brandColors } from "@/theme/theme-colors";
+import { estedad } from "@/next-persian-fonts/estedad";
 
 type PrivateAppointmentSectionProps = {
   copy: ContactCopy["appointment"];
@@ -98,6 +99,7 @@ export function PrivateAppointmentSection({
       lang={htmlLang}
       style={themeVars}
       aria-labelledby="private-appointment-title"
+      aria-describedby="private-appointment-description"
       className={`relative w-full overflow-hidden bg-[#0B0A09] text-white ${className}`}
     >
       <div className="grid min-h-[100svh] lg:grid-cols-[0.92fr_1.08fr]">
@@ -120,14 +122,17 @@ export function PrivateAppointmentSection({
             </p>
             <h2
               id="private-appointment-title"
-              className="mt-4 max-w-[620px] text-[clamp(2.75rem,6.5vw,5.4rem)] font-normal leading-[0.98] tracking-[-0.05em] text-white"
+              className="mt-4 max-w-[620px] text-balance text-[clamp(2rem,8.8vw,2.9rem)] font-normal leading-[1.05] tracking-[-0.04em] text-white sm:text-[clamp(2.35rem,6vw,3.45rem)] lg:text-[clamp(3rem,3.6vw,4.2rem)] xl:text-[clamp(3.2rem,3.4vw,4.5rem)]"
             >
               {copy.title}
             </h2>
-            <p className="mt-3 max-w-[520px] text-[20px] leading-[1.25] tracking-[-0.025em] text-white/60 sm:text-[24px]">
+            <p className="mt-3 max-w-[520px] text-balance text-[clamp(1rem,4.6vw,1.25rem)] leading-[1.35] tracking-[-0.015em] text-white/64 sm:text-[clamp(1.1rem,2.8vw,1.4rem)] lg:text-[clamp(1.2rem,1.6vw,1.65rem)]">
               {copy.italicTitle}
             </p>
-            <p className="mt-5 max-w-[500px] text-[10px] leading-6 text-white/48 sm:text-[11px] sm:leading-7">
+            <p
+              id="private-appointment-description"
+              className={`${estedad.className} mt-5 max-w-[500px] text-pretty text-[12px] leading-7 text-white/52 sm:text-[13px] sm:leading-8 lg:text-[14px]`}
+            >
               {copy.description}
             </p>
           </div>
@@ -149,10 +154,16 @@ export function PrivateAppointmentSection({
                 <span>{copy.eyebrow}</span>
               </div>
               <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
-                <h3 className="text-[28px] font-semibold tracking-[-0.035em] sm:text-[34px]">
+                <h3
+                  id="appointment-form-title"
+                  className="text-[24px] font-semibold leading-[1.2] tracking-[-0.03em] sm:text-[28px] lg:text-[30px]"
+                >
                   {microcopy.formTitle}
                 </h3>
-                <p className="max-w-[360px] text-[9px] leading-5 text-black/44 sm:text-[10px] sm:leading-6">
+                <p
+                  id="appointment-form-note"
+                  className={`${estedad.className} max-w-[380px] text-[11px] leading-6 text-black/46 sm:text-[12px] sm:leading-7 lg:text-[13px]`}
+                >
                   {microcopy.formNote}
                 </p>
               </div>
@@ -160,6 +171,8 @@ export function PrivateAppointmentSection({
 
             <form
               onSubmit={handleSubmit}
+              aria-labelledby="appointment-form-title"
+              aria-describedby="appointment-form-note appointment-form-privacy"
               className="mt-8 grid grid-cols-1 gap-x-5 gap-y-5 sm:grid-cols-2 sm:gap-y-6"
             >
               <Field
@@ -222,7 +235,10 @@ export function PrivateAppointmentSection({
               </div>
 
               <div className="mt-1 flex flex-col gap-4 border-t border-black/[0.10] pt-5 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="max-w-[360px] text-[8px] leading-5 text-black/38 sm:text-[9px]">
+                <p
+                  id="appointment-form-privacy"
+                  className={`${estedad.className} max-w-[380px] text-[10px] leading-5 text-black/42 sm:text-[11px] sm:leading-6`}
+                >
                   {microcopy.privacy}
                 </p>
 
