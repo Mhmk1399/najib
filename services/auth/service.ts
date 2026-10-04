@@ -23,7 +23,7 @@ export type RequestMetadata = { ipAddress?: string; userAgent?: string };
 
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1_000;
-const DUMMY_PASSWORD_HASH_PROMISE = import("@/services/auth/password").then(({ hashPassword }) => hashPassword("not-a-real-account-password"));
+const DUMMY_PASSWORD_HASH_PROMISE = hashPassword("not-a-real-account-password");
 
 function tokenHash(token: string): string {
   return createHash("sha256").update(token).digest("base64url");

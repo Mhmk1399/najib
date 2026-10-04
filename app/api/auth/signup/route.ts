@@ -30,9 +30,19 @@ function metadata(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const parsed = signupSchema.safeParse(await request.json());
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ثبت‌نام را بررسی کنید." },
+        { status: 400 },
+      );
+    }
+
+    const parsed = signupSchema.safeParse(payload);
     if (!parsed.success) {
-      const fields = z.flattenError(parsed.error).fieldErrors;
+      const fields = parsed.error.flatten().fieldErrors;
       return NextResponse.json(
         {
           error: "اطلاعات ثبت‌نام را بررسی کنید.",

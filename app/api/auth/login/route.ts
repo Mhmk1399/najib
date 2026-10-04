@@ -23,9 +23,19 @@ function metadata(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const parsed = loginSchema.safeParse(await request.json());
+    let payload: unknown;
+    try {
+      payload = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "اطلاعات ورود را بررسی کنید." },
+        { status: 400 },
+      );
+    }
+
+    const parsed = loginSchema.safeParse(payload);
     if (!parsed.success) {
-      const fields = z.flattenError(parsed.error).fieldErrors;
+      const fields = parsed.error.flatten().fieldErrors;
       return NextResponse.json({ error: "اطلاعات ورود را بررسی کنید.", fieldErrors: { email: fields.email?.[0] ? "ایمیل معتبر وارد کنید." : undefined, password: fields.password?.[0] ? "رمز عبور باید دست‌کم ۱۲ کاراکتر باشد." : undefined } }, { status: 400 });
     }
 
@@ -44,6 +54,7 @@ export async function POST(request: Request) {
         { status: error.status },
       );
     }
+    console.error("Unexpected login API error", error);
     return NextResponse.json({ error: "سرویس ورود موقتاً در دسترس نیست." }, { status: 500 });
   }
 }
